@@ -101,10 +101,18 @@ export function validateEventForm(values: EventFormValues, mode: 'create' | 'edi
   if (values.plannedEndLocal && !plantLocalToUtc(values.plannedEndLocal, timezone)) errors.plannedEndLocal = 'Not a valid time';
   const seconds = minutesToSeconds(values.durationMinutes);
   if (seconds !== null && (Number.isNaN(seconds) || seconds < 0)) errors.durationMinutes = 'Enter minutes (0 or more)';
-  if (values.physicalType === 'downtime' && values.impactMode === 'fractional') {
+  if ((values.physicalType === 'downtime' && values.impactMode === 'fractional') || (values.physicalType === 'slowdown' && values.impactPercent.trim() !== '')) {
     const percent = Number(values.impactPercent);
     if (values.impactPercent.trim() === '' || !(percent > 0 && percent <= 100)) errors.impactPercent = 'Enter the share of output lost (above 0, up to 100 %)';
   }
+  if (values.physicalType === 'production_output' && (!values.quantity.trim() || !Number.isFinite(Number(values.quantity)) || Number(values.quantity) < 0)) errors.quantity = 'Enter a non-negative output quantity';
+  if (['production_output', 'quality_loss'].includes(values.physicalType) && !values.quantityUom.trim()) errors.quantityUom = 'Enter the quantity unit';
+  if (values.physicalType === 'slowdown' && values.quantity.trim() && values.impactPercent.trim()) errors.impactPercent = 'Choose either measured lost quantity or output lost %, not both';
+  if (values.physicalType === 'slowdown' && values.quantity.trim()) {
+    if (!Number.isFinite(Number(values.quantity)) || Number(values.quantity) < 0) errors.quantity = 'Enter a non-negative lost quantity';
+    if (!values.quantityUom.trim()) errors.quantityUom = 'Enter the quantity unit';
+  }
+  if (values.physicalType === 'slowdown' && !values.quantity.trim() && !values.impactPercent.trim()) errors.impactPercent = 'Enter a lost quantity or the share of output lost';
   return errors;
 }
 
@@ -123,6 +131,8 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
   if (values.scheduleClass) body.scheduleClass = values.scheduleClass as CreateEventBody['scheduleClass'];
   if (values.reasonCodeId) body.reasonCodeId = values.reasonCodeId;
   const downtime = values.physicalType === 'downtime';
+  if (values.physicalType === 'slowdown' && values.quantity.trim() && !values.impactPercent.trim()) body.impactMode = 'measured';
+  if (values.physicalType === 'slowdown' && values.impactPercent.trim()) { body.impactMode = 'fractional'; body.impactFraction = fractionOf(values.impactPercent); }
   if (downtime && values.impactMode) body.impactMode = values.impactMode as CreateEventBody['impactMode'];
   if (downtime && values.impactMode === 'fractional') body.impactFraction = fractionOf(values.impactPercent);
   if (values.originUnitId) body.originUnitId = values.originUnitId;
@@ -165,6 +175,10 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
     changes.plannedEndTime = values.plannedEndLocal ? plantLocalToUtc(values.plannedEndLocal, timezone) : null;
   }
   if (values.originAssetId !== initial.originAssetId) changes.originAssetId = values.originAssetId || null;
+  if (values.physicalType === 'slowdown' && (values.physicalType !== initial.physicalType || values.impactPercent !== initial.impactPercent || values.quantity !== initial.quantity)) {
+    changes.impactMode = values.impactPercent ? 'fractional' : values.quantity ? 'measured' : null;
+    changes.impactFraction = values.impactPercent ? fractionOf(values.impactPercent) : null;
+  }
   Object.assign(changes, failurePatchFields(initial, values), qualityPatchFields(initial, values));
   const impactChanged = values.impactMode !== initial.impactMode || (values.impactMode === 'fractional' && values.impactPercent !== initial.impactPercent);
   if (impactChanged && values.impactMode && values.physicalType === 'downtime') {

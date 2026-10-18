@@ -15,12 +15,13 @@ export type AdjustmentState = (typeof ADJUSTMENT_STATES)[number];
  * adjustment is a separate component of a new actuals result, never an edit of a stored quantity.
  */
 @Entity('actuals_adjustments')
+@Index('IDX_approval_inbox_actuals_adjustments', { synchronize: false })
 @Index('IDX_actuals_adjustments_slice', ['sliceId'])
 @Index('IDX_actuals_adjustments_tenant_period', ['tenantId', 'periodId'])
 @Index('IDX_actuals_adjustments_tenant_unit', ['tenantId', 'unitId'])
 @Check(
   'CHK_actuals_adjustments_independent',
-  '"decided_by" IS NULL OR "decided_by" <> "author_id"',
+  '"decided_by" IS NULL OR "decided_by" <> "author_id" OR "super_admin_override"',
 )
 @Check(
   'CHK_actuals_adjustments_window',
@@ -95,6 +96,10 @@ export class ActualsAdjustment extends TenantScopedEntity {
     default: 'proposed',
   })
   state: AdjustmentState;
+
+  /** Set only from authenticated SuperAdmin context when deciding one's own proposal. */
+  @Column({ name: 'super_admin_override', type: 'boolean', default: false })
+  superAdminOverride: boolean;
 
   @Column({ name: 'decided_by', type: 'uuid', nullable: true })
   decidedBy: string | null;

@@ -193,7 +193,11 @@ export class RuleCommandsService {
     return this.locked(tenantId, target, async (manager, rule) => {
       if (rule.state === 'retired') throw ruleRetired();
       if (!rule.draftDefinition) throw noDraft();
-      if (rule.draftAuthor && rule.draftAuthor === context.userId)
+      if (
+        !context.isSuperAdmin &&
+        rule.draftAuthor &&
+        rule.draftAuthor === context.userId
+      )
         throw separationOfDuties();
       const definition = await this.validDefinition(
         tenantId,

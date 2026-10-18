@@ -22,7 +22,7 @@ export const REPORT_IMPORTERS = [
  * Accounting workflow of plan 2.8 (D06, §13.2): production engineers and manager approvers save draft
  * lines, submit, cancel and request recomputes (`PERIOD_WRITERS`); approving, rejecting, revising an
  * approved period and deciding change proposals need a manager approver — never the submitter (403
- * SEPARATION_OF_DUTIES, enforced in the services for every role including SuperAdmin).
+ * SEPARATION_OF_DUTIES, enforced in the services for all non-SuperAdmin roles).
  */
 export const REVISION_APPROVERS = [
   'manager_approver',

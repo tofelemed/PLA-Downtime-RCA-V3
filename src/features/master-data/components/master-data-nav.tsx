@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { ActionIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { visibleMasterDataSections } from './master-data-sections';
 
@@ -12,7 +11,7 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 /**
  * The master-data sections the user may open as one wrapping row of links (sub-pages instead of
- * overflowing tabs); codes live in Codes & rules, users in User management.
+ * overflowing tabs); codes and rules belong here; users stay in User Management.
  */
 export function MasterDataNav() {
   const capabilities = useCapabilities();
@@ -23,14 +22,6 @@ export function MasterDataNav() {
           {section.label}
         </NavLink>
       ))}
-      {capabilities.canManageMasterData && (
-        <NavLink to="/codes-admin" className={linkClass({ isActive: false })}>
-          <span className="inline-flex items-center gap-1">
-            Codes & rules
-            <ActionIcon.open aria-hidden="true" className="h-3.5 w-3.5" />
-          </span>
-        </NavLink>
-      )}
     </nav>
   );
 }

@@ -188,7 +188,7 @@ export class LotDispositionsService {
       row.unitId,
       DISPOSITION_APPROVERS,
     );
-    if (row.authorId === decider) {
+    if (!context.isSuperAdmin && row.authorId === decider) {
       throw new ForbiddenException({
         code: 'SEPARATION_OF_DUTIES',
         message:
@@ -202,6 +202,7 @@ export class LotDispositionsService {
         {
           state: decision.state,
           decidedBy: decider,
+          superAdminOverride: context.isSuperAdmin && row.authorId === decider,
           decidedAt: new Date(),
           decisionReason: decision.reason,
           updatedBy: decider,

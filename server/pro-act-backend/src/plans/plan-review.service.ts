@@ -46,7 +46,11 @@ export class PlanReviewService {
       const version = await lock(manager, target.id);
       if (version.approvalState === 'submitted') return version;
       if (version.approvalState !== 'draft') {
-        throw invalidTransition('plan version', version.approvalState, 'submitted');
+        throw invalidTransition(
+          'plan version',
+          version.approvalState,
+          'submitted',
+        );
       }
       version.approvalState = 'submitted';
       version.updatedBy = context.userId;
@@ -74,9 +78,18 @@ export class PlanReviewService {
     return this.versions.manager.transaction(async (manager) => {
       const version = await lock(manager, target.id);
       if (version.approvalState !== 'submitted') {
-        throw invalidTransition('plan version', version.approvalState, 'returned');
+        throw invalidTransition(
+          'plan version',
+          version.approvalState,
+          'returned',
+        );
       }
-      assertNotAuthor(version, context.userId, 'plan version');
+      assertNotAuthor(
+        version,
+        context.userId,
+        'plan version',
+        context.isSuperAdmin,
+      );
       version.approvalState = 'draft';
       version.updatedBy = context.userId;
       const saved = await manager.save(version);

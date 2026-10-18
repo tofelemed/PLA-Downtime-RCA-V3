@@ -144,6 +144,7 @@ export class RcaActionsV2Controller {
   @ApiOperation({
     summary: 'Approve or reject a proposed baseline correction (SME CA3)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 ' +
       'NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.',
   })

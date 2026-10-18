@@ -1,3 +1,4 @@
+import type { StopEnginePolicy, StopEngineSettings, DerivedStopPreview } from '../types/stop-policy';
 import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { MicroStopPolicyBody, MicroStopPolicyView, TransitionAllowanceBody, TransitionAllowanceView } from '../types/reliability';
@@ -47,4 +48,17 @@ export function useRecordMicroStopPolicy() {
 /** A new approved oee_policy version with this transition-allowance option, effective now. */
 export function useRecordTransitionAllowance() {
   return usePolicyCommand<TransitionAllowanceBody, TransitionAllowanceView>('/transition-allowance-policies');
+}
+
+export function useStopEnginePolicy(unitId: string) {
+  return usePolicyInForce<StopEnginePolicy>('/stop-event-policies/current', 'stop-engine', unitId);
+}
+export function useRecordStopEnginePolicy() {
+  return usePolicyCommand<StopEngineSettings & { unitId?: string; notes?: string }, StopEnginePolicy>('/stop-event-policies');
+}
+export function useDerivedStopPreview() {
+  return useV2Command<{ unitId: string; from: string; to: string }, DerivedStopPreview>({
+    run: async ({ input }) => (await v2Request<DerivedStopPreview>({ method: 'GET', path: '/derived-stops/preview', query: input })).data,
+    changes: () => null,
+  });
 }

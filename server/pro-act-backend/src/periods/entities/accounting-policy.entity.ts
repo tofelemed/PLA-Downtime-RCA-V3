@@ -27,6 +27,7 @@ export type PolicyKind = (typeof POLICY_KINDS)[number];
  * versions resolve.
  */
 @Entity('accounting_policies')
+@Index('IDX_approval_inbox_accounting_policies', { synchronize: false })
 @Unique('UQ_accounting_policies_kind_scope_version', [
   'tenantId',
   'policyKind',

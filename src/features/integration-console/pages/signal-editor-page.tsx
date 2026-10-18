@@ -44,7 +44,7 @@ export function SignalEditorPage() {
         <DataState state="no-permission" detail="Defining signals needs an integration administrator or manager approver." />
       ) : (
         <div className="space-y-6" data-testid="signal-editor">
-          <SignalFormFields form={form} errors={errors} timezone={timezone} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))} />
+          <SignalFormFields sourceKeyHint={connection.data?.sourceType === 'mqtt' ? (connection.data.endpointConfig?.payloadProfile as { kind?: string } | undefined)?.kind === 'state_json' ? 'For machine-state messages, enter the full MQTT topic. Map the delivered state tokens under Unit State.' : 'Enter the signal field from the MQTT measurement payload, not its topic. Example: EXT1_TOTALIZER.' : undefined} form={form} errors={errors} timezone={timezone} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))} />
           <ConsoleRefusal error={create.error} />
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => void save()} disabled={create.isPending} data-testid="signal-save">

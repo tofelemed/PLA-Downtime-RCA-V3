@@ -8,7 +8,7 @@ import { unitOf } from './support/manager-world';
 import { expectRefused, expectSodDisabled } from './support/hidden-controls';
 
 /**
- * Manager approver persona — journey 5 on `/codes-admin` (plan 3.8, T18 / T22):
+ * Manager approver persona — journey 5 on `/master-data/codes-rules` (plan 3.8, T18 / T22):
  * - T18: Erik (Manager) builds a 3-level reason tree, reparents with the picker (persisted after a
  *   reload), a cycle the API refuses is shown as 422 CODE_CYCLE, retiring a parent shows the impact and
  *   the 409 CODE_HAS_CHILDREN — nothing is retired; a new mapping version leaves the old one; versions
@@ -37,7 +37,8 @@ test.describe('Manager persona — codes and declarative rules (/codes-admin)', 
     const code = (name: string) => `${PREFIX}${name}-${world.suffix}`;
     const [ROOT, CHILD, LEAF, ALT] = [code('ROOT'), code('CHILD'), code('LEAF'), code('ALT')];
     await loginViaUI(page, MANAGERS.erik.email, MANAGERS.erik.password);
-    await expect(page.locator('nav a[href="/codes-admin"]')).toBeVisible();
+    await page.goto('/master-data');
+    await expect(page.locator('nav a[href="/master-data/codes-rules"]')).toBeVisible();
 
     await createCode(page, 'reason-codes', ROOT, `${PREFIX}root`, null);
     await createCode(page, 'reason-codes', CHILD, `${PREFIX}child`, `${ROOT} — ${PREFIX}root`);
@@ -116,7 +117,7 @@ test.describe('Manager persona — codes and declarative rules (/codes-admin)', 
     const before = await downtime(erik.token, world, 30, 2);
     expect(before.classification.scheduleClass).toBe('unknown');
     await loginViaUI(page, MANAGERS.erik.email, MANAGERS.erik.password);
-    await page.goto('/codes-admin?tab=rules');
+    await page.goto('/master-data/codes-rules?tab=rules');
     await page.getByTestId('rule-new').click({ timeout: 60_000 });
     await page.fill('#rule-name', name);
     const condition = (index: number) => page.getByTestId('rule-condition').nth(index);

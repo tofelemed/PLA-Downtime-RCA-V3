@@ -27,7 +27,7 @@ import { UserScopeV2View } from './user-scope-v2.view';
 import { UserScopesV2Service } from './user-scopes-v2.service';
 
 const RULES =
-  'You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a ' +
+  'SuperAdmin may manage its own supplemental grants. Other callers cannot grant or revoke their own access (403 SELF_GRANT_NOT_ALLOWED), a role above their rank or for a ' +
   'user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its ' +
   'home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.';
 

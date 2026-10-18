@@ -156,7 +156,13 @@ export class ValuationRatesService {
       const result = await approveVersion(
         manager,
         ValuationRate,
-        { id, key, supersede, actorId: context.userId },
+        {
+          id,
+          key,
+          supersede,
+          actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
+        },
         WHAT,
       );
       await recordBaselineChanges(manager, [

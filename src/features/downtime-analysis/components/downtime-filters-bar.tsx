@@ -1,4 +1,5 @@
 import { Checkbox } from '@/components/ui/checkbox';
+import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { Label } from '@/components/ui/label';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
@@ -15,6 +16,9 @@ import {
 import { PeriodSelectionFilters } from './period-selection-filters';
 
 export interface DowntimeFiltersBarProps {
+  scope?: 'period' | 'output' | 'operational' | 'reliability';
+  showTrend?: boolean;
+  showSchedule?: boolean;
   filters: DowntimeFilters;
   onChange: (patch: Partial<DowntimeFilters>) => void;
 }
@@ -27,7 +31,7 @@ const trendLabel = (value: string) => value.charAt(0).toUpperCase() + value.slic
  * Server-side filters of every widget (plan 3.3): units, products / shifts / crews (period selection of the
  * downtime summary and breakdowns), window, schedule class, micro-stops, approval.
  */
-export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProps) {
+export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTrend = true, showSchedule = true }: DowntimeFiltersBarProps) {
   const env = useEventHubEnv();
   const choosePreset = (key: string) => {
     const preset = WINDOW_PRESETS.find((entry) => entry.key === key);
@@ -43,7 +47,10 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
         onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
         commitOnClose
       />
-      <PeriodSelectionFilters filters={filters} onChange={onChange} />
+      {scope === 'period' && <PeriodSelectionFilters filters={filters} onChange={onChange} />}
+      <DateRangeInput label="Period dates" value={{ from: filters.from, to: filters.to }} timeZone={env.timezone} onChange={(range) => {
+        if (range.from && range.to) onChange({ from: range.from, to: range.to, windowLabel: 'Chosen dates' });
+      }} />
       <div className="flex items-center gap-2">
         <Label htmlFor="downtime-window">Window</Label>
         <select id="downtime-window" data-testid="downtime-window" className={SELECT} value="" onChange={(event) => choosePreset(event.target.value)}>
@@ -57,7 +64,7 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2">
+      {showSchedule && (scope === 'period' || scope === 'operational') && <div className="flex items-center gap-2">
         <Label htmlFor="downtime-class">Schedule class</Label>
         <select
           id="downtime-class"
@@ -71,8 +78,8 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
             </option>
           ))}
         </select>
-      </div>
-      <div className="flex items-center gap-2">
+      </div>}
+      {showTrend && <div className="flex items-center gap-2">
         <Label htmlFor="downtime-trend">Trend by</Label>
         <select id="downtime-trend" className={SELECT} value={filters.trendBy} onChange={(event) => onChange({ trendBy: event.target.value as TrendGroup })}>
           {TREND_GROUPS.map((value) => (
@@ -81,9 +88,9 @@ export function DowntimeFiltersBar({ filters, onChange }: DowntimeFiltersBarProp
             </option>
           ))}
         </select>
-      </div>
-      <Toggle id="downtime-micro" text="Include micro-stops" checked={filters.includeMicroStops} onChange={(includeMicroStops) => onChange({ includeMicroStops })} />
-      <Toggle id="downtime-approved" text="Approved only" checked={filters.approvedOnly} onChange={(approvedOnly) => onChange({ approvedOnly })} />
+      </div>}
+      {scope === 'period' && <Toggle id="downtime-micro" text="Include micro-stops" checked={filters.includeMicroStops} onChange={(includeMicroStops) => onChange({ includeMicroStops })} />}
+      {scope !== 'operational' && <Toggle id="downtime-approved" text="Approved only" checked={filters.approvedOnly} onChange={(approvedOnly) => onChange({ approvedOnly })} />}
     </div>
   );
 }

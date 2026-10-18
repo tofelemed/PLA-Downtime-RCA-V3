@@ -59,3 +59,12 @@ export function bundleQuery(filters: DowntimeFilters): DowntimeBundleQuery {
 export function viewOf(data: DowntimeBundleData | undefined, token: string | undefined): DowntimeBundleItem | undefined {
   return token ? data?.views.find((view) => view.view === token) : undefined;
 }
+
+/** Request only the breakdowns rendered by the active page; the server always includes its summary. */
+export function pageBundleQuery(filters: DowntimeFilters, page: string, mode: string | null): DowntimeBundleQuery {
+  const views = pageViews(filters);
+  const trend = Object.values(views.trend).filter((token): token is string => Boolean(token));
+  const tokens = page === 'overview' ? trend : page === 'causes' ? [views.assetDuration, views.assetFrequency]
+    : mode === 'crew' ? [views.crew] : mode === 'calendar' ? [] : trend;
+  return { ...bundleQuery(filters), views: [...new Set(tokens)].sort() };
+}

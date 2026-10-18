@@ -26,7 +26,7 @@ export function CloseActions({ view }: { view: MonthCloseView }) {
   const command = useMonthCloseStep();
   const steps = stepsOf(view, caps);
   const run = (step: MonthCloseStep) => (text: string) => command.submit({ month: view.monthKey, step, text });
-  const signedQuantities = userId !== null && view.signOffs.quantitiesClosedBy?.id === userId;
+  const signedQuantities = !caps.isSuperAdmin && userId !== null && view.signOffs.quantitiesClosedBy?.id === userId;
   const busy = command.isPending;
   const problem = command.error ? <FriendlyErrorAlert error={command.error} /> : null;
   return (
@@ -43,7 +43,7 @@ export function CloseActions({ view }: { view: MonthCloseView }) {
           </StepConfirm>
         )}
         {steps.signOff && (
-          <StepConfirm trigger="Finance sign-off…" testId="step-finance-sign-off" disabled={busy || steps.needsReview || signedQuantities} title={`Sign off ${view.monthKey} for finance?`} description="Finance signs off independently of the quantity close." confirmLabel="Sign off" onConfirm={run('finance-sign-off')}>
+          <StepConfirm trigger="Finance sign-off…" testId="step-finance-sign-off" disabled={busy || steps.needsReview || signedQuantities} title={`Sign off ${view.monthKey} for finance?`} description="Record the finance sign-off. SuperAdmin may also have closed the quantities; other signers must be independent." confirmLabel="Sign off" onConfirm={run('finance-sign-off')}>
             {problem}
           </StepConfirm>
         )}

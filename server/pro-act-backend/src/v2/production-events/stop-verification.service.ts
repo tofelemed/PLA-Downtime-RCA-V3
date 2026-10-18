@@ -86,7 +86,11 @@ const STAGES: Readonly<
     Stage,
     {
       roles: readonly string[];
-      refusal: (stop: StopForVerification, actor: string) => string | null;
+      refusal: (
+        stop: StopForVerification,
+        actor: string,
+        isSuperAdmin?: boolean,
+      ) => string | null;
       set: string;
     }
   >
@@ -113,7 +117,7 @@ function skipReason(
   if (!holdsAnyRoleOnUnit(by.context, unit, by.stage.roles)) {
     return 'NOT_AUTHORIZED';
   }
-  return by.stage.refusal(toStop(row), by.actor);
+  return by.stage.refusal(toStop(row), by.actor, by.context.isSuperAdmin);
 }
 
 /**

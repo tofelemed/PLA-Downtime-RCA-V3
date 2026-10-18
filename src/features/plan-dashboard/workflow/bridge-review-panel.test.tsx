@@ -68,6 +68,15 @@ describe('bridge review (SME R8)', () => {
     expect(bodies.find((b) => b !== null)).toEqual({ revision: 2, submittedHash: 'b'.repeat(64) });
   });
 
+  it('SuperAdmin can review their own bridge and then approve it', () => {
+    actAs('SuperAdmin', 'preparer');
+    wrap(<BridgeReviewPanel view={view(BRIDGE)} />);
+    expect(screen.getByTestId('bridge-review-confirm')).toBeTruthy();
+    expect(approveGate(view(BRIDGE), 'preparer', true).code).toBe('BRIDGE_REVIEW_REQUIRED');
+    const reviewed = { ...BRIDGE, review: { by: 'preparer', at: '2026-10-08T16:00:00.000Z' } };
+    expect(approveGate(view(reviewed), 'preparer', true).allowed).toBe(true);
+  });
+
   it('the submitter sees no confirm button', () => {
     actAs('production_accountant', 'preparer');
     wrap(<BridgeReviewPanel view={view(BRIDGE)} />);

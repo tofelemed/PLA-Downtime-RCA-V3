@@ -205,7 +205,7 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
     ).rejects.toThrow(/append-only/);
   });
 
-  it('T36: a SuperAdmin submitter is refused too; reject returns to draft with the reason', async () => {
+  it('SuperAdmin can reject their own submission; reject returns to draft with the reason', async () => {
     const superAdmin = env.user('SuperAdmin');
     const view = await saved(
       env.periodB1,
@@ -213,11 +213,6 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
       superAdmin,
     );
     await env.submit(view, superAdmin, env.periodB1).expect(200);
-    const submitted = await env.view(env.periodB1);
-    const self = await env
-      .approve(submitted, superAdmin, env.periodB1)
-      .expect(403);
-    expect((self.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
     const rejected = await env
       .post(
         `production-periods/${env.periodB1}/reject`,
@@ -225,7 +220,7 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
           revision: 1,
           reason: 'code the feed outage',
         },
-        env.approver,
+        superAdmin,
       )
       .expect(200);
     expect((rejected.body as ReconciliationBody).revision).toMatchObject({

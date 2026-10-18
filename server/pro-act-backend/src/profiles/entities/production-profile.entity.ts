@@ -41,6 +41,7 @@ export interface LegacyProfileValues {
  * (exclusion constraint); a change is a new version, approved rows are only closed or retired.
  */
 @Entity('production_profiles')
+@Index('IDX_approval_inbox_production_profiles', { synchronize: false })
 @Unique('UQ_production_profiles_key_version', [
   'tenantId',
   'unitId',

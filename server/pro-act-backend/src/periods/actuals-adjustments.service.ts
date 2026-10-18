@@ -143,7 +143,7 @@ export class ActualsAdjustmentsService {
       adjustment.unitId,
       ADJUSTMENT_APPROVERS,
     );
-    if (adjustment.authorId === decider) {
+    if (!context.isSuperAdmin && adjustment.authorId === decider) {
       throw new ForbiddenException({
         code: 'SEPARATION_OF_DUTIES',
         message:
@@ -160,6 +160,8 @@ export class ActualsAdjustmentsService {
         {
           state: decision.state,
           decidedBy: decider,
+          superAdminOverride:
+            context.isSuperAdmin && adjustment.authorId === decider,
           decidedAt: new Date(),
           decisionReason: decision.reason,
           updatedBy: decider,

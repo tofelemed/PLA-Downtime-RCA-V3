@@ -69,8 +69,15 @@ describe('capabilitiesOf', () => {
     expect(orgAdmin.canManageMasterData).toBe(true);
   });
 
-  it.each(['viewer', 'Operator', 'operator', 'Manager', 'master_data_admin', 'integration_admin'])('%s does not gain the admin panel', (role) => {
+  it.each(['viewer', 'Operator', 'operator', 'master_data_admin', 'integration_admin'])('%s does not gain the admin panel', (role) => {
     expect(capabilitiesOf([role]).canUseAdminPanel).toBe(false);
+  });
+
+  it('a manager reaches plant settings without gaining tenant administration', () => {
+    const c = capabilitiesOf(['manager_approver']);
+    expect(c.canUseAdminPanel).toBe(true);
+    expect(c.canManagePlantSettings).toBe(true);
+    expect(c.canAdministerTenant).toBe(false);
   });
 
   it('composes with effectiveRoles: a viewer persona switched to Demo Plant', () => {

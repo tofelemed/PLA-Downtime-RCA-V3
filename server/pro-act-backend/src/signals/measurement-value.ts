@@ -29,6 +29,17 @@ export function parseMeasurement(
     stateValue: null,
     quality: envelope.quality.status,
   };
+  if (
+    sample?.semanticType === 'state' &&
+    typeof sample.value === 'string' &&
+    sample.value.trim()
+  ) {
+    return {
+      ...base,
+      stateName: sample.value,
+      qualityFlags: flags.length > 0 ? flags : null,
+    };
+  }
   if (sample?.digital) {
     return {
       ...base,

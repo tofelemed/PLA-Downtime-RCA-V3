@@ -5,7 +5,7 @@ import { createValidationPipe } from '../../common/validation/validation-pipe.fa
 import { auditCsv } from './audit-logs/audit-csv';
 import { readableSummary } from './audit-logs/audit-entry-v2.view';
 import { CreateTaskV2Dto } from './tasks/tasks-v2.dto';
-import { revokeLock } from './user-scopes/scope-grant-rules';
+import { assertMayGrant, revokeLock } from './user-scopes/scope-grant-rules';
 import { CreateUserV2Dto } from './users/users-v2.dto';
 
 const pipe = createValidationPipe();
@@ -96,6 +96,21 @@ describe('v2 administration: pure rules', () => {
       revokeLock(admin, scope({}), { ...holder, role: 'TenantAdmin' }),
     ).toBe('outranks_you');
     expect(revokeLock(admin, scope({}), holder)).toBeNull();
+  });
+
+  it('SuperAdmin manages their own supplemental access while retaining the home-role mirror', () => {
+    const admin = { ...context(['SuperAdmin'], holder.id), isSuperAdmin: true };
+    expect(revokeLock(admin, scope({}), holder)).toBeNull();
+    expect(() =>
+      assertMayGrant(admin, holder, 'quality_approver'),
+    ).not.toThrow();
+    expect(
+      revokeLock(
+        admin,
+        scope({ scopeId: holder.tenantId, role: 'operator' }),
+        holder,
+      ),
+    ).toBe('home_role');
   });
 
   it('validates user and task bodies at the boundary', async () => {

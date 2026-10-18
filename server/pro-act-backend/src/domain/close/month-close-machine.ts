@@ -70,15 +70,19 @@ function partyRefusal(
   action: MonthCloseAction,
   parties: MonthCloseParties,
   actor: string,
+  isSuperAdmin = false,
 ): MonthCloseRefusal | null {
   if (action === 'review_materiality') {
     if (!parties.materialityRequired) return 'MATERIALITY_REVIEW_NOT_REQUIRED';
     if (parties.materialityReviewedBy) return 'INVALID_TRANSITION';
-    if (parties.quantitiesClosedBy === actor) return 'SEPARATION_OF_DUTIES';
+    if (!isSuperAdmin && parties.quantitiesClosedBy === actor)
+      return 'SEPARATION_OF_DUTIES';
   }
   if (action === 'sign_off_finance') {
-    if (parties.quantitiesClosedBy === actor) return 'SEPARATION_OF_DUTIES';
-    if (parties.materialityReviewedBy === actor) return 'SEPARATION_OF_DUTIES';
+    if (!isSuperAdmin && parties.quantitiesClosedBy === actor)
+      return 'SEPARATION_OF_DUTIES';
+    if (!isSuperAdmin && parties.materialityReviewedBy === actor)
+      return 'SEPARATION_OF_DUTIES';
     if (parties.materialityRequired && !parties.materialityReviewedBy)
       return 'MATERIALITY_REVIEW_REQUIRED';
   }
@@ -88,16 +92,16 @@ function partyRefusal(
 /**
  * Whether `actor` may take `action` on a month with these sign-offs. Closing and locking need the
  * prerequisites (`blocked` = some period not approved / certified or an open change proposal); finance
- * never signs a month whose quantities it closed or whose materiality it reviewed (SME R1, segregation).
+ * requires different quantity and materiality signers unless the actor is SuperAdmin (SME R1, segregation).
  */
 export function decideMonthClose(
   action: MonthCloseAction,
   parties: MonthCloseParties,
-  input: { actor: string; blocked: boolean },
+  input: { actor: string; blocked: boolean; isSuperAdmin?: boolean },
 ): MonthCloseDecision {
   if (!FROM[action].includes(parties.state))
     return refuse('INVALID_TRANSITION');
-  const party = partyRefusal(action, parties, input.actor);
+  const party = partyRefusal(action, parties, input.actor, input.isSuperAdmin);
   if (party) return refuse(party);
   const needsPrerequisites =
     action === 'close_quantities' ||

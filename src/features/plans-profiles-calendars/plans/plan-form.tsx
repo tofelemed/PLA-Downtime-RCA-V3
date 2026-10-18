@@ -14,6 +14,7 @@ import { RefusalNotice } from '../components/refusal-notice';
 import type { PlanningRefs } from '../hooks/use-planning-refs';
 import { usePlanForm, type PlanFormMode } from '../hooks/use-plan-form';
 import { CopyFromPlan } from './copy-from-plan';
+import { ManualTargetsEditor } from './manual-targets-editor';
 import { SlicesEditor } from './slices-editor';
 
 export interface PlanFormProps {
@@ -85,8 +86,9 @@ export function PlanForm({ mode, refs, cancelTo, onSaved }: PlanFormProps) {
         <TargetFields form={form} />
       </Section>
       <Section title="Product slices">
-        <SlicesEditor rows={form.values.slices} productOptions={refs.productOptions} errors={form.errors} timezone={refs.timezone} onChange={(rows) => form.set('slices', rows)} />
+        <SlicesEditor rows={form.values.slices} productOptions={refs.productOptions} errors={form.errors} timezone={refs.timezone} onChange={(rows) => form.merge({ slices: rows, ...(rows.length !== form.values.slices.length ? { manualTargets: [] } : {}) })} />
       </Section>
+      {form.values.basis === 'manual' && <ManualTargetsEditor rows={form.values.manualTargets ?? []} slices={form.values.slices} timezone={refs.timezone} errors={form.errors} onChange={(rows) => form.set('manualTargets', rows)} />}
       <RefusalNotice error={form.error} timezone={refs.timezone} />
       <div className="flex gap-2">
         <Button onClick={save} disabled={form.pending} data-testid="plan-save">

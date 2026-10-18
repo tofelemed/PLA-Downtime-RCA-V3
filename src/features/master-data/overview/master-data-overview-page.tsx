@@ -76,19 +76,20 @@ function PlantRecordsOverview() {
   return (
     <MasterDataLayout title="Master data" description="Reference data of the selected plant: units, assets, products and RCA settings.">
       {summary.isError && <FriendlyErrorAlert error={summary.error} onRetry={() => void summary.refetch()} />}
+      <Section title="Equipment setup" description="Start here for one extruder or production unit, from plant records through its first approved period."><Link className="underline font-medium" to="/equipment-setup">Open step-by-step equipment setup</Link></Section>
       <Section title="Plant records" description="Active records; retired ones stay in history and can be restored.">
         <TileGrid tiles={PLANT_TILES} summary={summary.data} loading={summary.isLoading} />
       </Section>
       <Section title="RCA settings">
         <TileGrid tiles={RCA_TILES} summary={summary.data} loading={summary.isLoading} />
       </Section>
-      <Section title="Elsewhere">
+      <Section title="Hierarchy and code libraries">
         <ul className="list-inside list-disc space-y-1 text-sm">
           <li>
             <Link className="underline" to="/master-data/hierarchy">Plant hierarchy</Link> — organisation, plants, units and assets as a tree.
           </li>
           <li>
-            <Link className="underline" to="/codes-admin">Codes & rules</Link> — reason, impact and OEE codes, loss categories and rules.
+            <Link className="underline" to="/master-data/codes-rules">Codes & rules</Link> — reason, impact and OEE codes, loss categories and rules.
           </li>
         </ul>
       </Section>

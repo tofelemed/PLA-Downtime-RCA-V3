@@ -16,6 +16,7 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
  * covers the date, and every value it produces is marked provisional until the final rate is approved.
  */
 @Entity('fx_rates')
+@Index('IDX_approval_inbox_fx_rates', { synchronize: false })
 @Exclusion(
   'EX_fx_rates_approved_no_overlap',
   `USING gist ("tenant_id" WITH =, "rate_type" WITH =, "from_currency" WITH =, "to_currency" WITH =, ` +

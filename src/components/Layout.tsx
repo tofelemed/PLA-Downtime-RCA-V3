@@ -1,3 +1,5 @@
+import { EquipmentSetupProvider } from '@/features/equipment-setup/equipment-setup-provider';
+import { SetupJourneyBar } from '@/features/equipment-setup/setup-journey-bar';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,7 +63,7 @@ export const Layout = ({ children }: LayoutProps) => {
           <AppSidebar nav={nav} />
         </aside>
         <main ref={mainRef} id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 outline-none md:p-6">
-          <PlantAccessGuard>{children}</PlantAccessGuard>
+          <PlantAccessGuard><EquipmentSetupProvider><SetupJourneyBar />{children}</EquipmentSetupProvider></PlantAccessGuard>
         </main>
       </div>
     </div>

@@ -15,17 +15,28 @@ const ADMINS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'];
 const PREVIOUS_MENU: Record<string, string[]> = {
   // Overview
   Dashboard: ALL,
+  'Pending Approvals': ALL,
   Reports: NOT_OPERATOR,
   // Production
   'Event Hub': ALL,
-  'Downtime Analysis': ALL,
-  'Production Loss Analysis': ALL,
   'Plans, Profiles & Calendars': NOT_OPERATOR,
   // EXPERT_REVIEW Area 3: my reconciliation queue (period writers, R-C) and month close (analysis roles, R-B)
   'My Queue': NOT_OPERATOR,
   'Month Close': NOT_OPERATOR,
   // SME E4 uncertainty budgets: read by every analysis role
   'Measurement Uncertainty': NOT_OPERATOR,
+  // Focused analysis pages use the same read capability as the original two pages.
+  'Downtime Analysis': ALL,
+  'Stops & Timeline': ALL,
+  'Causes & Pareto': ALL,
+  'Trends & Comparisons': ALL,
+  'Downtime Reliability': ALL,
+  'Production Loss Analysis': ALL,
+  'Loss Breakdown': ALL,
+  'PLA Trends': ALL,
+  OEE: ALL,
+  'Reconciliation & Data Quality': ALL,
+  'Loss Valuation': ALL,
   // Reliability
   'RCA Analysis': NOT_OPERATOR,
   'Bad Actors': NOT_OPERATOR,
@@ -39,17 +50,14 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Enhanced Historian': NOT_OPERATOR,
   // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
   // stop and plan policy; Operator = operator: standby log); they see only those pages' links
-  'Master Data': [...ADMINS, 'Manager', 'Operator'],
-  'Codes & Rules': NOT_OPERATOR,
+  'Equipment Setup Guide': ALL,
+  'Master Data': ALL,
   Finance: NOT_OPERATOR,
-  'User Management': ADMINS,
-  Permissions: ADMINS,
+  'User Management': [...ADMINS, 'Manager'],
   // SME R1 / R6: administrators for anyone, approval-role holders (Manager = manager_approver) for themselves
-  Delegations: [...ADMINS, 'Manager'],
-  'Admin Panel': ['SuperAdmin', 'TenantAdmin'],
+  'Admin Panel': [...ADMINS, 'Manager'],
   'Audit Logs': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
   // plant settings follow the server's tenant-setting write rule (TenantAdmin / manager_approver)
-  Settings: ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
   'Data Seeding': ADMINS,
 };
 
@@ -83,32 +91,34 @@ describe('navigation items by capability', () => {
 
   it('Codes & Rules and Finance are v2 only: listed without any feature flag', () => {
     const names = visibleNavigationItems(capabilitiesOf(['SuperAdmin']), {}).map((item) => item.name);
-    expect(names).toContain('Codes & Rules');
+    expect(names).toContain('Master Data');
+    expect(names).not.toContain('Codes & Rules');
     expect(names).toContain('Finance');
     expect(names).toContain('Dashboard');
   });
 
   it('a master_data_admin (legacy Analyst) gains Master Data and nothing else', () => {
     const charlotte: RoleSubject = { ...legacyUser('Analyst'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'master_data_admin' }] };
-    expect(menuFor(charlotte)).toEqual([...menuFor(legacyUser('Analyst')), 'Master Data'].sort(byMenuOrder));
+    expect(menuFor(charlotte)).toEqual(menuFor(legacyUser('Analyst')));
   });
 
   it('an integration_admin (legacy Engineer) gains Connectivity, and Master Data for the unit state page', () => {
     const elena: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'integration_admin' }] };
-    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity', 'Master Data'].sort(byMenuOrder));
+    expect(menuFor(elena)).toEqual([...menuFor(legacyUser('Engineer')), 'Connectivity'].sort(byMenuOrder));
   });
 
   it('Master Data is listed for master-data admins and for every writer of one of its reliability pages', () => {
     const roleSets = [['master_data_admin'], ['manager_approver'], ['reliability_engineer'], ['operator'], ['integration_admin'], ['production_engineer'], ['viewer']];
     const listed = roleSets.map((roles) => visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON).some((item) => item.name === 'Master Data'));
-    expect(listed).toEqual([true, true, true, true, true, false, false]);
+    expect(listed).toEqual([true, true, true, true, true, true, true]);
     for (const roles of roleSets) {
       const c = capabilitiesOf(roles);
-      expect(c.canReachMasterData, roles.join()).toBe(c.canManageMasterData || c.canWriteOeePolicy || c.canWriteStandby || c.canWriteWorkOrders || c.canWriteStateMappings);
+      expect(c.canReachMasterData, roles.join()).toBe(c.canViewAnalysis || c.canManageMasterData || c.canWriteOeePolicy || c.canWriteStandby || c.canWriteWorkOrders || c.canWriteStateMappings);
     }
   });
 
   it.each([
+    ['Equipment Setup Guide', 'canReachMasterData'],
     ['Enhanced Historian', 'canViewAnalysis'],
     ['Admin Panel', 'canUseAdminPanel'],
     ['Audit Logs', 'canViewAuditLogs'],
@@ -167,12 +177,12 @@ describe('navigation sections', () => {
   });
 
   it.each([
-    ['SuperAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
-    ['TenantAdmin', ['overview', 'production', 'reliability', 'integration', 'administration']],
-    ['Manager', ['overview', 'production', 'reliability', 'integration', 'administration']],
-    ['Engineer', ['overview', 'production', 'reliability', 'integration', 'administration']],
+    ['SuperAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
+    ['TenantAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
+    ['Manager', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
+    ['Engineer', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
     // operators keep the standby log: Master Data (its standby page) brings the administration section
-    ['Operator', ['overview', 'production', 'reliability', 'administration']],
+    ['Operator', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
   ])('a %s sees only the sections that hold one of its items', (role, sections) => {
     expect(sectionsOf(role)).toEqual(sections);
   });
@@ -183,6 +193,10 @@ describe('navigation sections', () => {
 
   it('active item: own path and sub-paths only, plus activeAlso prefixes', () => {
     const byHref = (href: string) => NAVIGATION_ITEMS.find((item) => item.href === href)!;
+    expect(isNavItemActive(byHref('/equipment-setup'), '/equipment-setup')).toBe(true);
+    expect(isNavItemActive(byHref('/admin'), '/equipment-setup')).toBe(false);
+    expect(isNavItemActive(byHref('/master-data'), '/equipment-setup')).toBe(false);
+    expect(byHref('/equipment-setup').section).toBe('administration');
     expect(isNavItemActive(byHref('/rca'), '/rca')).toBe(true);
     expect(isNavItemActive(byHref('/rca'), '/rca/cases/1')).toBe(true);
     expect(isNavItemActive(byHref('/rca'), '/rca-knowledge-base')).toBe(false);

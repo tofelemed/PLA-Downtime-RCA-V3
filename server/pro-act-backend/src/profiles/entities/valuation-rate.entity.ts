@@ -26,6 +26,7 @@ import { ProductionProfile } from './production-profile.entity';
  * never overlap. Used by valuation (2.6).
  */
 @Entity('valuation_rates')
+@Index('IDX_approval_inbox_valuation_rates', { synchronize: false })
 @Exclusion(
   'EX_valuation_rates_approved_no_overlap',
   `USING gist ((COALESCE("profile_id", "impact_code_id")) WITH =, "basis" WITH =, ` +

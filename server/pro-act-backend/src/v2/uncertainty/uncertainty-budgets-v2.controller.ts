@@ -125,8 +125,9 @@ export class UncertaintyBudgetsV2Controller {
   @Roles(...BUDGET_APPROVERS)
   @ApiOperation({
     summary:
-      'Approve a proposed budget (metrology / instrumentation owner, never the author); it is in force from its effective date and ends the previous one of the boundary',
+      'Approve a proposed budget (metrology / instrumentation owner, except SuperAdmin self-approval); it is in force from its effective date and ends the previous one of the boundary',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a metrology_approver; 403 SEPARATION_OF_DUTIES for the author; ' +
       '409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.',
   })
@@ -147,8 +148,9 @@ export class UncertaintyBudgetsV2Controller {
   @Roles(...BUDGET_APPROVERS)
   @ApiOperation({
     summary:
-      'Reject a proposed budget with a reason (metrology / instrumentation owner, never the author)',
+      'Reject a proposed budget with a reason (metrology / instrumentation owner, except SuperAdmin self-approval)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
@@ -170,6 +172,7 @@ export class UncertaintyBudgetsV2Controller {
     summary:
       'Make the budget’s expanded uncertainty the unit’s absolute reconciliation tolerance (new tolerance version, effective now)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. Explicit decision, never automatic. 403 SEPARATION_OF_DUTIES for the budget’s author; ' +
       '422 BUDGET_NOT_IN_FORCE (not approved or not effective now), BUDGET_REVIEW_OVERDUE, INVALID_POLICY.',
   })

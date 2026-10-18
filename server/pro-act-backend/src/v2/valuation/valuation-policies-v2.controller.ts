@@ -97,6 +97,7 @@ export class ValuationPoliciesV2Controller {
   @ApiOperation({
     summary: 'Record the finance approval of a valuation policy version',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author ' +
       'cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 ' +
       'CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for ' +

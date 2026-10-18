@@ -32,13 +32,13 @@ function Rollup({ day }: { day: DayView }) {
  */
 export function DayCertificationPanel({ unitId, localDate }: { unitId: string; localDate: string }) {
   const pref = useCalendarPreference();
-  const { canCertifyDay } = useCapabilities();
+  const { canCertifyDay, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const query = useProductionDay(unitId, localDate);
   const certify = useCertifyDay();
   const day = query.data;
   if (!day) return null;
-  const submitted = day.periods.some((p) => p.submittedBy === userId);
+  const submitted = !isSuperAdmin && day.periods.some((p) => p.submittedBy === userId);
   return (
     <section className="space-y-2 rounded-md border p-3" data-testid="day-certification" data-state={day.state}>
       <div className="flex flex-wrap items-center gap-2">

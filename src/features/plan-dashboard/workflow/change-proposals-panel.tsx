@@ -97,7 +97,7 @@ function useProblem() {
  * correction of a closing or locked month's period; the server refuses one for an open month (MONTH_OPEN).
  */
 export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelProps) {
-  const { canApproveRevisions, canProposeCorrections } = useCapabilities();
+  const { canApproveRevisions, canProposeCorrections, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const proposals = useChangeProposals(view.periodId);
   const decision = useProposalDecision();
@@ -114,7 +114,7 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
       <div className="space-y-2 text-sm" data-testid="change-proposals">
         {items.length === 0 && <p className="text-muted-foreground">No proposals: the approved figures match the current inputs.</p>}
         {items.map((p) => (
-          <Proposal key={p.id} p={p} timezone={timezone} decide={canApproveRevisions && p.manual?.proposedBy !== userId ? decide : null} />
+          <Proposal key={p.id} p={p} timezone={timezone} decide={canApproveRevisions && (isSuperAdmin || p.manual?.proposedBy !== userId) ? decide : null} />
         ))}
         {canPropose && <ProposeCorrectionDialog onPropose={propose} />}
         {problem && <EditorProblem problem={problem} />}

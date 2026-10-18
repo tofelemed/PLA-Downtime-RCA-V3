@@ -1,16 +1,13 @@
-import { Section } from '@/features/ux-kit/page-layout';
+import { useSearchParams } from 'react-router-dom';
+import { AnalysisModeSelect } from '@/features/analysis-navigation/analysis-mode-select';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { QualityTab } from './quality-tab';
 import { ReconciliationTab } from './reconciliation-tab';
 
-/** Reconciliation view of PLA: status and overdue periods, with the actuals quality coverage behind a disclosure. */
+const MODES = [{ value: 'status', label: 'Reconciliation status' }, { value: 'quality', label: 'Actuals quality coverage' }];
 export function ReconciliationView({ scope }: { scope: AnalyticsScope }) {
-  return (
-    <div className="space-y-6">
-      <ReconciliationTab scope={scope} />
-      <Section title="Actuals quality coverage" collapsible defaultOpen={false} id="quality" description="How much of the output figures were measured, estimated or missing.">
-        <QualityTab scope={scope} />
-      </Section>
-    </div>
-  );
+  const [params] = useSearchParams();
+  return <div className="space-y-4"><AnalysisModeSelect param="inspection" label="Inspect" options={MODES} />
+    {params.get('inspection') === 'quality' ? <QualityTab scope={scope} /> : <ReconciliationTab scope={scope} />}
+  </div>;
 }

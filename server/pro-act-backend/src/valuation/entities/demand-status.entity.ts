@@ -28,6 +28,7 @@ export type DemandStatusValue = (typeof DEMAND_STATUSES)[number];
  * approved status in force at a line's date; none → the line stays unvalued.
  */
 @Entity('demand_statuses')
+@Index('IDX_approval_inbox_demand_statuses', { synchronize: false })
 @Exclusion(
   'EX_demand_statuses_approved_no_overlap',
   `USING gist ("tenant_id" WITH =, "product_id" WITH =, ` +

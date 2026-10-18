@@ -1,8 +1,9 @@
+import { SectionPage } from '@/features/admin/shared/section-page';
 import { useMemo } from 'react';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Section } from '@/features/ux-kit/page-layout';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { CalendarSettingsForm } from './calendar-settings-form';
 import { calendarPreferenceOf, useActingTenant, useSaveWeekStart } from './use-tenant-display-settings';
@@ -18,7 +19,7 @@ const ZONE_SOURCE: Record<string, string> = {
  * Plant settings (replaces the old "coming soon" placeholder): how dates and numbers are shown for the
  * selected plant, and its reporting week (DT-10). The timezone is shown read-only (it is set on the plant's sites and calendars).
  */
-export function SettingsPage() {
+export function SettingsPage({ embedded = false }: { embedded?: boolean }) {
   const tenant = useActingTenant();
   const zone = usePlantTimezone();
   const { canManagePlantSettings } = useCapabilities();
@@ -29,8 +30,7 @@ export function SettingsPage() {
   const saveWeek = useSaveWeekStart();
 
   return (
-    <Page>
-      <PageHeader title="Plant settings" description={tenant.data ? `Settings of ${tenant.data.name}` : undefined} />
+    <SectionPage embedded={embedded} title="Plant settings" description={tenant.data ? `Settings of ${tenant.data.name}` : undefined}>
       <Section title="Date and number display" description="Applies to every screen of this plant, for every user. Exports stay in ISO format (UTC).">
         <DataState state={state} error={tenant.error} onRetry={() => void tenant.refetch()}>
           <CalendarSettingsForm saved={saved} timeZone={zone.timezone} canEdit={canManagePlantSettings} />
@@ -60,6 +60,6 @@ export function SettingsPage() {
           </dd>
         </dl>
       </Section>
-    </Page>
+    </SectionPage>
   );
 }

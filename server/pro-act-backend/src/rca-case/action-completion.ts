@@ -38,7 +38,12 @@ export function hasCompletionEvidence(action: {
 export function applyCompletion(
   previous: Pick<RcaAction, 'status'>,
   next: RcaAction,
-  input: { actorId: string | null; completedAt: Date | null; now: Date },
+  input: {
+    actorId: string | null;
+    completedAt: Date | null;
+    now: Date;
+    isSuperAdmin?: boolean;
+  },
 ): void {
   if (next.status !== 'done') {
     if (previous.status === 'done') {
@@ -59,7 +64,7 @@ export function applyCompletion(
     );
   }
   if (!hasCompletionEvidence(next)) throw evidenceRequired(next);
-  if (next.ownerId && input.actorId === next.ownerId) {
+  if (!input.isSuperAdmin && next.ownerId && input.actorId === next.ownerId) {
     throw new ForbiddenException({
       code: 'SEPARATION_OF_DUTIES',
       message:

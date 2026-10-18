@@ -18,7 +18,7 @@ import { ReadOnlyAllowed } from '../auth/decorators/read-only-allowed.decorator'
 
 /**
  * Settings scoped by owner (plan 3.11): application-wide keys are SuperAdmin-only to change, tenant keys
- * tenant-admin-only, per-user keys (`tabVisibility.<tenant>.<user>`) only their user's. A row the caller
+ * tenant-admin-only, per-user keys (`tabVisibility.<tenant>.<user>`) their user's or SuperAdmin's. A row the caller
  * may not read answers as missing; a write it may not make is 403 `SETTING_NOT_WRITABLE`.
  */
 @ApiTags('App Settings')

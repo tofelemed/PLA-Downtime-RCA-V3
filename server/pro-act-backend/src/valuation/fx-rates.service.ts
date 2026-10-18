@@ -205,6 +205,7 @@ export class FxRatesService {
           },
           supersede,
           actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
         },
         WHAT,
       );

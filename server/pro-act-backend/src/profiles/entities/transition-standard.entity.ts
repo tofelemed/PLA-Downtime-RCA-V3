@@ -25,6 +25,7 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
  * The accounting engine splits a transition's loss into allowance (within the reference) and overrun.
  */
 @Entity('transition_standards')
+@Index('IDX_approval_inbox_transition_standards', { synchronize: false })
 /** SME E1: one version sequence per full key (unit, from, to, catalyst family, operating mode); migration-owned */
 @Index('UQ_transition_standards_key_version', { synchronize: false })
 @Exclusion(

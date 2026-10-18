@@ -170,4 +170,30 @@ describe('app settings scope (plan 3.11)', () => {
     );
     expect(keysA).not.toContain(tabKey(world.tenantA, ids.viewer));
   });
+
+  it('lets SuperAdmin administer another user preference across plants', async () => {
+    const key = tabKey(world.tenantB, ids.b);
+    await setValue(tokens.b, key, { visibleTabs: { IOW: false } }).expect(201);
+    expect((await getValue(tokens.superAdmin, key)).body).toEqual({
+      visibleTabs: { IOW: false },
+    });
+    const listed = await http()
+      .get('/api/app-settings')
+      .set(bearer(tokens.superAdmin))
+      .expect(200);
+    expect((listed.body as Setting[]).map((setting) => setting.key)).toContain(
+      key,
+    );
+    await setValue(tokens.superAdmin, key, {
+      visibleTabs: { IOW: true },
+    }).expect(201);
+    expect((await getValue(tokens.b, key)).body).toEqual({
+      visibleTabs: { IOW: true },
+    });
+    await http()
+      .delete(`/api/app-settings/${key}`)
+      .set(bearer(tokens.superAdmin))
+      .expect(200);
+    expect((await getValue(tokens.b, key)).text).toBe('');
+  });
 });

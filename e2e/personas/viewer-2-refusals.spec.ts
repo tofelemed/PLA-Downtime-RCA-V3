@@ -169,7 +169,7 @@ test.describe('Viewer — every write in Demo Plant is refused (READ_ONLY_ROLE)'
   test('R4 Nadia: Codes and Finance show the Read-only hint, no New code / New policy version; the server refuses both', async ({ page }) => {
     const code = tag('R4').replace(/[^A-Za-z0-9._:-]/g, '-');
     await loginAsViewerInDemoPlant(page, VIEWERS.nadia);
-    await page.goto('/codes-admin');
+    await page.goto('/master-data/codes-rules');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
     await expect(page.getByTestId('read-only-hint').first()).toBeVisible();

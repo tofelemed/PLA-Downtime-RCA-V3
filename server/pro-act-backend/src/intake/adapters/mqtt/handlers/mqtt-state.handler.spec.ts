@@ -3,11 +3,7 @@ import { RawObservation } from '../../../entities/raw-observation.entity';
 import { NormalizationHandlerRegistry } from '../../../normalization/normalization-handler';
 import { decodeMqttMessage } from '../profiles';
 import { exampleDecodeConnection, examplePacket } from '../mqtt-decode.example';
-import {
-  MqttStateHandler,
-  SOURCE_HEALTH_CHANGED,
-  STATE_ENGINE_NOT_BUILT,
-} from './mqtt-state.handler';
+import { MqttStateHandler, SOURCE_HEALTH_CHANGED } from './mqtt-state.handler';
 
 /** A manager that records SQL and entity inserts instead of touching a database. */
 function fakeManager(): {
@@ -93,7 +89,19 @@ describe('MqttStateHandler (plan 1.8 step 3, design §4.5)', () => {
     );
   });
 
-  it('parks a machine-state observation as no_handler with the 1.10 reason (by design)', async () => {
+  it('delegates machine state to effective-dated signal measurement storage, preserving time, quality and retained controls', async () => {
+    const measure = jest
+      .fn()
+      .mockResolvedValue({
+        status: 'applied',
+        outcome: 'sample_stored',
+        canonicalEventId: null,
+      });
+    registry.register({
+      name: 'measurement',
+      supports: (e) => e.kind === 'measurement',
+      handle: measure,
+    });
     const state = envelopeOf('proact/v1/HDPE/Polymer/Line1/Extruder1/state', {
       schema_version: '1.0',
       state: { name: 'RUN', value: 1 },
@@ -101,16 +109,29 @@ describe('MqttStateHandler (plan 1.8 step 3, design §4.5)', () => {
       seq: 1843,
       boot_id: 'gw',
     });
-    await expect(handler.handle(input(state))).resolves.toEqual({
-      status: 'quarantined',
-      outcome: 'no_handler',
-      errorCode: 'no_handler',
-      detail: {
-        reason: STATE_ENGINE_NOT_BUILT,
-        stateRef: 'proact/v1/HDPE/Polymer/Line1/Extruder1/state',
-        value: 'RUN',
-      },
+    await expect(handler.handle(input(state))).resolves.toMatchObject({
+      status: 'applied',
+      outcome: 'sample_stored',
     });
+    expect(measure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        envelope: expect.objectContaining({
+          kind: 'measurement',
+          observedAt: state.observedAt,
+          quality: state.quality,
+          sourceControls: state.sourceControls,
+          values: {
+            sample: {
+              signalRef: 'proact/v1/HDPE/Polymer/Line1/Extruder1/state',
+              value: 'RUN',
+              unit: null,
+              sequence: 1843,
+              semanticType: 'state',
+            },
+          },
+        }),
+      }),
+    );
     expect(queries).toHaveLength(0);
   });
 

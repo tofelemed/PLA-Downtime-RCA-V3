@@ -68,7 +68,7 @@ test('plant calendar, digits and reporting week propagate to dates and server we
       { calendarSystem: 'persian', digits: 'persian', weekStart: 'monday', weekday: 1 },
       { calendarSystem: 'gregorian', digits: 'latin', weekStart: 'saturday', weekday: 6 },
     ] as const) {
-      await page.goto('/settings');
+      await page.goto('/admin?tab=settings');
       await page.locator(`#calendar-${preference.calendarSystem}`).click();
       await page.locator(`#digits-${preference.digits}`).click();
       await saveSettings(page, page.getByRole('button', { name: 'Save', exact: true }).first());
@@ -79,7 +79,7 @@ test('plant calendar, digits and reporting week propagate to dates and server we
       expect(saved.body).toMatchObject({ calendarSystem: preference.calendarSystem, digits: preference.digits, weekStart: preference.weekStart });
       await assertPlantDate(page, saved.body);
       await assertWeeklyBuckets(manager.token, unit!.id, preference.weekday);
-      await page.goto('/settings');
+      await page.goto('/admin?tab=settings');
       for (const id of [`calendar-${preference.calendarSystem}`, `digits-${preference.digits}`, `week-${preference.weekStart}`]) {
         await expect(page.locator(`#${id}`)).toBeChecked();
       }
@@ -110,7 +110,7 @@ test('USD and IRR preference changes the report columns and survives navigation 
       await page.reload();
       await expect(toggle.getByTestId(`display-currency-${currency}`)).toHaveAttribute('data-state', 'on');
       await expect(page.getByTestId('report-value-total')).toContainText(currency);
-      await page.goto('/settings');
+      await page.goto('/admin?tab=settings');
       await expect(toggle.getByTestId(`display-currency-${currency}`)).toHaveAttribute('data-state', 'on');
       await page.goBack();
     }

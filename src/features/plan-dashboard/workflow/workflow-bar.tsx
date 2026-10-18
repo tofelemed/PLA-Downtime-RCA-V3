@@ -27,9 +27,10 @@ type Actions = ReturnType<typeof useWorkflowActions>;
 
 function ReviewButtons({ view, actions, busy }: { view: ReconciliationView; actions: Actions; busy: boolean }) {
   const userId = useCurrentUserId();
-  const gate = reviewGate(view, userId);
-  const approve = approveGate(view, userId);
-  const access = approvalAccess(true, view.revision.submittedBy, userId);
+  const { isSuperAdmin } = useCapabilities();
+  const gate = reviewGate(view, userId, isSuperAdmin);
+  const approve = approveGate(view, userId, isSuperAdmin);
+  const access = approvalAccess(true, view.revision.submittedBy, userId, isSuperAdmin);
   return (
     <>
       <ApproveButton access={access} size="sm" data-testid="wf-approve" disabled={busy || !approve.allowed} onClick={() => void actions.approve()} aria-describedby={approve.reason ? 'approve-gate' : undefined}>
@@ -48,11 +49,11 @@ function ReviewButtons({ view, actions, busy }: { view: ReconciliationView; acti
  * are required fields of the confirmation dialogs; the server decides and its refusals are shown.
  */
 export function WorkflowBar({ view, shown, onShowCurrent }: WorkflowBarProps) {
-  const { canWritePeriods: write, canApproveRevisions: decide } = useCapabilities();
+  const { canWritePeriods: write, canApproveRevisions: decide, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const actions = useWorkflowActions(view);
   const lifecycle = view.revision.lifecycle;
-  const gate = approveGate(view, userId);
+  const gate = approveGate(view, userId, isSuperAdmin);
   const busy = actions.pending !== null;
   return (
     <section className="space-y-2 rounded-md border bg-muted/20 p-2" data-testid="workflow-bar" data-lifecycle={lifecycle}>

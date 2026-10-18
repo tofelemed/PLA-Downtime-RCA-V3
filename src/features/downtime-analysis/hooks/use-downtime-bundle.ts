@@ -14,7 +14,7 @@ import type { DowntimeBundleData, DowntimeBundleQuery } from '../model/bundle-vi
  * `GET /reports/downtime-bundle` — one run selection, one request instead of eight. Cached like every
  * report: the previous result stays while filters change, no refetch on window focus.
  */
-export function useDowntimeBundle(query: DowntimeBundleQuery, tz?: string) {
+export function useDowntimeBundle(query: DowntimeBundleQuery, tz?: string, enabled = true) {
   const tenantId = useV2TenantId();
   const { from, to, unitIds, approvedOnly, ...filters } = query;
   return useQuery<AnalyticsResponse<DowntimeBundleData>>({
@@ -24,7 +24,7 @@ export function useDowntimeBundle(query: DowntimeBundleQuery, tz?: string) {
       filters: { kind: 'downtime-bundle', ...filters },
       revisionSelector: approvedOnly ? 'approved' : 'shown',
     }),
-    enabled: Boolean(tenantId),
+    enabled: Boolean(tenantId) && enabled,
     staleTime: STALE_TIME.reports,
     refetchOnWindowFocus: false,
     placeholderData: (previous, previousQuery) => (sameTenantQuery(tenantId, previousQuery) ? previous : undefined),

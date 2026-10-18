@@ -24,6 +24,7 @@ export const MASTER_DATA_SECTIONS: readonly MasterDataSection[] = [
   { to: '/master-data/assets', label: 'Assets', text: 'Equipment and instruments', visible: managers },
   { to: '/master-data/products', label: 'Products', text: 'Products of the plant', visible: managers },
   { to: '/master-data/hierarchy', label: 'Plant hierarchy', text: 'Organisation, plants, units and assets', visible: managers },
+  { to: '/master-data/codes-rules', label: 'Codes & rules', text: 'Code libraries, reason codes and automatic rules', visible: (c) => c.canViewAnalysis || c.canManageMasterData },
   { to: '/master-data/rca/templates', label: 'RCA templates', text: 'Logic trees', visible: managers },
   { to: '/master-data/rca/causes', label: 'Cause library', text: 'Causes by category', visible: managers },
   { to: '/master-data/rca/checklists', label: 'Verification checklists', text: 'Checks that confirm a fix worked', visible: managers },

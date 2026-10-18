@@ -19,6 +19,8 @@ export type RevisionLifecycle = (typeof REVISION_LIFECYCLES)[number];
  * draft that supersedes it.
  */
 @Entity('accounting_revisions')
+@Index('IDX_approval_inbox_postings', { synchronize: false })
+@Index('IDX_approval_inbox_accounting_revisions', { synchronize: false })
 @Unique('UQ_accounting_revisions_period_revision', ['periodId', 'revision'])
 @Index('UQ_accounting_revisions_period_open', ['periodId'], {
   unique: true,

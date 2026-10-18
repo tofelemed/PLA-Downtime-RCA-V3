@@ -114,7 +114,7 @@ test.describe('Operator — scope and role limits', () => {
     // the sidebar menu (not the dashboard's quick links, which live in their own <nav>)
     const menu = page.locator('aside nav');
     await expect(menu.locator('a[href="/dashboard"]')).toHaveCount(1);
-    for (const href of ['/planning', '/codes-admin', '/finance', '/production-plans', '/rca', '/users']) {
+    for (const href of ['/planning', '/master-data/codes-rules', '/finance', '/production-plans', '/rca', '/users']) {
       await expect(menu.locator(`a[href="${href}"]`), `menu must not offer ${href}`).toHaveCount(0);
     }
     for (const href of ['/events', '/downtime', '/tasks', '/master-data']) {
@@ -122,7 +122,7 @@ test.describe('Operator — scope and role limits', () => {
     }
 
     // Codes & rules by URL: the page renders read-only, New code is not offered (the server refuses it below)
-    await page.goto('/codes-admin');
+    await page.goto('/master-data/codes-rules');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 });
     await expectHidden(page.getByTestId('code-new'));

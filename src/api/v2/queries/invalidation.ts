@@ -1,3 +1,4 @@
+import { refreshApprovalInbox } from './approval-inbox-cache';
 import type { Query, QueryClient } from '@tanstack/react-query';
 import { V2Resource, V2Window, v2Keys, WINDOW_KEY_INDEX } from './query-keys';
 
@@ -91,13 +92,13 @@ const KEEP_RUNNING_FETCH = { cancelRefetch: false } as const;
 
 /** Invalidates the cached results a change can affect, one tenant only; returns the resources touched. */
 export async function invalidateForChange(queryClient: QueryClient, notice: ChangeNotice): Promise<readonly V2Resource[] | null> {
+  const inboxRefresh = refreshApprovalInbox(queryClient, notice.tenantId);
   const resources = resourcesFor(notice.entityType);
   if (!resources) {
-    await queryClient.invalidateQueries({ queryKey: v2Keys.all(notice.tenantId) }, KEEP_RUNNING_FETCH);
+    await Promise.all([inboxRefresh, queryClient.invalidateQueries({ queryKey: v2Keys.all(notice.tenantId) }, KEEP_RUNNING_FETCH)]);
     return null;
   }
-  await Promise.all(
-    resources.map((resource) =>
+  await Promise.all([inboxRefresh, ...resources.map((resource) =>
       queryClient.invalidateQueries(
         {
           queryKey: v2Keys.resource(notice.tenantId, resource),
@@ -106,7 +107,7 @@ export async function invalidateForChange(queryClient: QueryClient, notice: Chan
         KEEP_RUNNING_FETCH,
       ),
     ),
-  );
+  ]);
   return resources;
 }
 

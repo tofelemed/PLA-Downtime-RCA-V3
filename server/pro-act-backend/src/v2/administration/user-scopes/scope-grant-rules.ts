@@ -46,7 +46,8 @@ export function revokeLock(
   scope: UserScope,
   holder: GrantHolder | undefined,
 ): ScopeLock {
-  if (scope.userId === context.userId) return 'own_grant';
+  if (!context.isSuperAdmin && scope.userId === context.userId)
+    return 'own_grant';
   if (!holder) return 'other_plant';
   if (isHomeScope(scope, holder)) return 'home_role';
   if (
@@ -77,7 +78,8 @@ export function assertMayGrant(
   holder: GrantHolder,
   role: string,
 ): void {
-  if (holder.id === context.userId) throw refusal('own_grant');
+  if (!context.isSuperAdmin && holder.id === context.userId)
+    throw refusal('own_grant');
   if (!canGrantRole(context.roles, role) || outranksCaller(context, holder)) {
     throw refusal('outranks_you');
   }

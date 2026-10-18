@@ -28,17 +28,17 @@ interface ImpactForm {
  */
 export function ImpactFields({ form }: { form: ImpactForm }) {
   const { values, errors, setField } = form;
-  if (values.physicalType !== 'downtime') return null;
+  if (!['downtime', 'slowdown'].includes(values.physicalType)) return null;
   return (
     <>
-      <div className="space-y-1">
+      {values.physicalType === 'downtime' && <div className="space-y-1">
         <Label htmlFor="impactMode">Impact on production</Label>
         <select id="impactMode" className={SELECT_CLASS} value={values.impactMode || 'full_stop'} onChange={(e) => setField('impactMode', e.target.value)}>
           {IMPACTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
         {DERIVED[values.impactBasis] && <p className="text-xs text-muted-foreground" data-testid="impact-basis">{DERIVED[values.impactBasis]}</p>}
-      </div>
-      {values.impactMode === 'fractional' && (
+      </div>}
+      {(values.impactMode === 'fractional' || values.physicalType === 'slowdown') && (
         <div className="space-y-1">
           <Label htmlFor="impactPercent">Output lost (%)</Label>
           <Input

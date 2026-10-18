@@ -8,6 +8,12 @@ describe('approvalAccess', () => {
     expect(approvalAccess(true, 'u2', 'u1')).toBe('allowed');
   });
 
+  it('allows authenticated SuperAdmin to approve their own work', () => {
+    expect(approvalAccess(true, 'me', 'me', true)).toBe('allowed');
+    expect(approvalAccess(false, 'me', 'me', true)).toBe('allowed');
+    expect(approvalAccess(false, 'me', null, true)).toBe('hidden');
+  });
+
   it('an unknown author leaves the decision to the server', () => {
     expect(approvalAccess(true, null, 'u1')).toBe('allowed');
     expect(approvalAccess(true, undefined, 'u1')).toBe('allowed');

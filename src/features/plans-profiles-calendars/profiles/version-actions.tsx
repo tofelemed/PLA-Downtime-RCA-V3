@@ -19,7 +19,7 @@ export interface VersionActionsProps {
   /** shown for drafts only (approved versions are immutable: add a new version instead) */
   onEdit?: () => void;
   testId?: string;
-  /** author of the version: the author cannot approve it (separation of duties) */
+  /** author of the version: only SuperAdmin may approve its own version */
   authorId?: string | null;
 }
 
@@ -71,7 +71,7 @@ export function VersionActions({ resource, id, state, timezone, onEdit, testId, 
   const finance = resource === 'valuation-rates';
   const canWriteProfiles = finance ? capabilities.canMaintainValuation : capabilities.canWriteProfiles;
   const canApproveProfiles = finance ? capabilities.canApproveValuation : capabilities.canApproveProfiles;
-  const access = approvalAccess(canApproveProfiles, authorId, useCurrentUserId());
+  const access = approvalAccess(canApproveProfiles, authorId, useCurrentUserId(), capabilities.isSuperAdmin);
   const transition = useVersionTransition();
   const [supersede, setSupersede] = useState(false);
   const supersedeId = useId();

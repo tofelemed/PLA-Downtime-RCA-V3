@@ -193,6 +193,48 @@ describe('month close transitions (SME R1 / R4)', () => {
     ).toEqual({ ok: false, refusal: 'MATERIALITY_REVIEW_NOT_REQUIRED' });
   });
 
+  it('SuperAdmin can sign all stages, but materiality review and prerequisites still apply', () => {
+    const material = { ...closed, materialityRequired: true };
+    const input = {
+      actor: 'plant-manager',
+      blocked: false,
+      isSuperAdmin: true,
+    };
+    expect(decideMonthClose('sign_off_finance', material, input)).toEqual({
+      ok: false,
+      refusal: 'MATERIALITY_REVIEW_REQUIRED',
+    });
+    expect(decideMonthClose('review_materiality', material, input)).toEqual({
+      ok: true,
+      to: 'quantities_closed',
+    });
+    const reviewed = { ...material, materialityReviewedBy: input.actor };
+    expect(decideMonthClose('sign_off_finance', reviewed, input)).toEqual({
+      ok: true,
+      to: 'finance_signed_off',
+    });
+    expect(
+      decideMonthClose('sign_off_finance', reviewed, {
+        ...input,
+        blocked: true,
+      }),
+    ).toEqual({ ok: false, refusal: 'CLOSE_PREREQUISITES' });
+    expect(
+      decideMonthClose(
+        'lock',
+        {
+          ...reviewed,
+          state: 'finance_signed_off',
+          financeSignedOffBy: input.actor,
+        },
+        input,
+      ),
+    ).toEqual({ ok: true, to: 'locked' });
+    expect(
+      decideMonthClose('reopen', { ...reviewed, state: 'locked' }, input),
+    ).toEqual({ ok: false, refusal: 'INVALID_TRANSITION' });
+  });
+
   it('a locked month is never reopened; a closing one is', () => {
     expect(
       decideMonthClose(

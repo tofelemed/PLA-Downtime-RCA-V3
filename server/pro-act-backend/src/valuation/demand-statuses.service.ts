@@ -137,6 +137,7 @@ export class DemandStatusesService {
           key: { tenantId: row.tenantId, productId: row.productId },
           supersede,
           actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
         },
         WHAT,
       );

@@ -12,7 +12,7 @@ export interface DemandStatusV2View {
   state: string;
   effectiveFrom: string;
   effectiveTo: string | null;
-  /** the draft's author: never its approver (403 SEPARATION_OF_DUTIES) */
+  /** the draft's author: requires another approver unless SuperAdmin (403 SEPARATION_OF_DUTIES) */
   createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;

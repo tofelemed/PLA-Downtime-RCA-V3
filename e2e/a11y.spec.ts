@@ -87,9 +87,9 @@ test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / crit
     ['Source priority', '/connectivity/source-authority', 'main'],
     ['Delegations', '/delegations', 'main'],
     ['Connectivity', '/connectivity', '[data-testid="integration-console"]'],
-    ['Codes and rules', '/codes-admin', 'main'],
+    ['Codes and rules', '/master-data/codes-rules', 'main'],
     ['Tasks', '/tasks', 'main'],
-    ['Settings', '/settings', 'main'],
+    ['Settings', '/admin?tab=settings', 'main'],
   ];
 
   for (const [name, path, ready] of STATIC_PAGES) {

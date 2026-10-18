@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { roleLabel } from '@/features/ux-kit/labels/role-labels';
-import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { SectionPage } from '@/features/admin/shared/section-page';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { DelegationForm } from './delegation-form';
@@ -76,7 +76,7 @@ function columns(timezone: string, mayRevoke: (d: RoleDelegationView) => boolean
   ];
 }
 
-function DelegationsScreen() {
+function DelegationsScreen({ embedded }: { embedded: boolean }) {
   const { canAdministerTenant, canDelegateApprovals } = useCapabilities();
   const userId = useCurrentUserId();
   const { timezone } = usePlantTimezone();
@@ -86,11 +86,11 @@ function DelegationsScreen() {
   const mayRevoke = (d: RoleDelegationView) =>
     !d.revokedAt && new Date(d.validUntil).getTime() > Date.now() && (canAdministerTenant || d.delegatorId === userId || d.delegateId === userId);
   return (
-    <Page width="wide">
+    <>
       <div className="space-y-4" data-testid="delegations">
-        <PageHeader
+        <SectionPage embedded={embedded}
           title="Delegations"
-          description="Hand an approval role to a delegate for an absence (at most 90 days). The delegate approves like the role holder; separation of duties still applies — nobody approves their own work."
+          description="Hand an approval role to a delegate for an absence (at most 90 days). The delegate approves like the role holder; ordinary users must remain independent; SuperAdmin may complete every stage personally."
           actions={
             canDelegateApprovals && userId ? (
               <Button size="sm" data-testid="delegation-new" onClick={() => setAdding((v) => !v)}>
@@ -98,7 +98,7 @@ function DelegationsScreen() {
               </Button>
             ) : undefined
           }
-        />
+        >
         {adding && userId && <DelegationForm isAdmin={canAdministerTenant} userId={userId} timezone={timezone} onDone={() => setAdding(false)} />}
         <div className="flex gap-2">
           <Button size="sm" variant={state === 'in_force' ? 'default' : 'outline'} onClick={() => setState('in_force')}>
@@ -116,14 +116,15 @@ function DelegationsScreen() {
           status={{ isLoading: list.isLoading, isError: list.isError, error: list.error }}
           empty={{ title: 'No delegation', text: state === 'in_force' ? 'Nobody acts as a delegate right now.' : 'No delegation was recorded in this plant.' }}
         />
+        </SectionPage>
       </div>
-    </Page>
+    </>
   );
 }
 
 /** SME R1 / R6 delegates at `/delegations`: who holds an approval role for whom, until when, and why. */
-export function DelegationsPage() {
+export function DelegationsPage({ embedded = false }: { embedded?: boolean }) {
   const tenantId = useV2TenantId();
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its delegations." />;
-  return <DelegationsScreen />;
+  return <DelegationsScreen embedded={embedded} />;
 }

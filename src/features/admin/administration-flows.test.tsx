@@ -117,12 +117,12 @@ describe('administration screens on v2', () => {
     expect(calls.some((call) => call.url.pathname === '/api/v2/tasks/summary')).toBe(true);
   });
 
-  it('keeps the admin panel at four sections (no dashboard settings, FE-02) and hides branding from plant administrators', async () => {
+  it('groups plant settings with the related administration sections (no dashboard settings, FE-02) and hides branding from plant administrators', async () => {
     wrap(<AdminPage />, '/admin');
-    expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual(['Plants & organizations', 'Custom attributes', 'Branding', 'Status automation']);
+    expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual(['Plants & organizations', 'Custom attributes', 'Branding', 'Status automation', 'Plant settings']);
     actAs('TenantAdmin');
     wrap(<AdminPage />, '/admin?tab=branding');
-    await waitFor(() => expect(screen.getAllByRole('tablist').at(-1)?.querySelectorAll('[role="tab"]').length).toBe(3));
+    await waitFor(() => expect(screen.getAllByRole('tablist').at(-1)?.querySelectorAll('[role="tab"]').length).toBe(4));
   });
 
   it('lets OrgAdmin reach plant administration while retaining global and server row guards', async () => {

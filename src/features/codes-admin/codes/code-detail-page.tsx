@@ -64,7 +64,7 @@ function CodeTabs({ library, code }: { library: CodeLibraryPath; code: CodeDetai
 function CodePage({ library, codeId }: { library: CodeLibraryPath; codeId: string }) {
   const query = useCode(library, codeId);
   const code = query.data;
-  const back = { to: `/codes-admin?library=${library}`, label: LIBRARIES[library].label };
+  const back = { to: `/master-data/codes-rules?library=${library}`, label: LIBRARIES[library].label };
   if (!code) {
     return (
       <Page>
@@ -83,13 +83,13 @@ function CodePage({ library, codeId }: { library: CodeLibraryPath; codeId: strin
   );
 }
 
-/** `/codes-admin/:library/:codeId`: one code with its editor, default mappings and version history. */
+/** `/master-data/codes-rules/:library/:codeId`: one code with its editor, default mappings and version history. */
 export function CodeDetailPage() {
   const { library, codeId } = useParams();
   if (!isCodeLibrary(library) || !codeId) {
     return (
       <Page>
-        <PageHeader title="Code not found" back={{ to: '/codes-admin', label: 'Codes & rules' }} />
+        <PageHeader title="Code not found" back={{ to: '/master-data/codes-rules', label: 'Codes & rules' }} />
         <DataState state="empty" detail="This address does not name a code library." />
       </Page>
     );

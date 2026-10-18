@@ -93,6 +93,7 @@ export class RcaActionsService {
       await assertActionConsistent(manager, scope, action);
       applyCompletion({ status: 'open' }, action, {
         actorId: scope.userId,
+        isSuperAdmin: context.isSuperAdmin,
         completedAt: date(body.completedAt),
         now,
       });
@@ -127,6 +128,7 @@ export class RcaActionsService {
       await assertActionConsistent(manager, scope, next);
       applyCompletion(action, next, {
         actorId: scope.userId,
+        isSuperAdmin: context.isSuperAdmin,
         completedAt: date(body.completedAt),
         now,
       });

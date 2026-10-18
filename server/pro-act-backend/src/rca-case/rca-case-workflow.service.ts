@@ -227,7 +227,9 @@ export class RcaCaseWorkflowService {
       return {
         residualRisk: input.residualRisk?.trim() ?? null,
         closureRequestedBy: input.scope.userId,
-        investigatorIds: withInvestigators(input.rca.investigatorIds, [input.scope.userId]),
+        investigatorIds: withInvestigators(input.rca.investigatorIds, [
+          input.scope.userId,
+        ]),
         closureRequestedAt: now,
         effectivenessVerdict: input.rca.effectivenessVerdict ?? null,
         closureNote: input.note,
@@ -259,6 +261,8 @@ export class RcaCaseWorkflowService {
     context: RequestContext,
     rca: RCA,
   ): RcaCaseReadinessV2View['approver'] {
+    if (context.isSuperAdmin && context.userId)
+      return { canApprove: true, reason: null };
     if (!context.roles.includes(CLOSURE_APPROVER) && !context.isSuperAdmin) {
       return {
         canApprove: false,

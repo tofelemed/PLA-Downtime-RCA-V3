@@ -80,14 +80,12 @@ describe('PlanApprovalService.approve — separation of duties (D06)', () => {
     });
   });
 
-  it('refuses the creator even as SuperAdmin', async () => {
+  it('lets SuperAdmin pass the author gate for their own version', async () => {
     const error = await approve(
       openVersion(AUTHOR),
       managerContext(AUTHOR, true),
     );
-    expect((error as ForbiddenException).getResponse()).toMatchObject({
-      code: 'SEPARATION_OF_DUTIES',
-    });
+    expect(error).toBeInstanceOf(PastTheGate);
   });
 
   it('lets another manager approve, including one who only edited the draft', async () => {

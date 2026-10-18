@@ -59,8 +59,8 @@ test.describe('Master data admin — Master Data screen and user lists', () => {
   test('MDA-01a Charlotte: menu, unit created (duplicate code refused), edited, found, verified, persists', async ({ page }) => {
     await loginViaUI(page, MDA.charlotte.email, MDA.charlotte.password);
     await expect(page.locator('nav a[href="/master-data"]')).toBeVisible();
-    for (const href of ['/codes-admin', '/planning', '/finance', '/tasks']) await expect(page.locator(`nav a[href="${href}"]`)).toBeVisible();
-    for (const href of ['/users', '/permissions', '/connectivity', '/settings', '/audit', '/admin']) await expect(page.locator(`nav a[href="${href}"]`)).toHaveCount(0);
+    for (const href of ['/master-data', '/planning', '/finance', '/tasks']) await expect(page.locator(`nav a[href="${href}"]`)).toBeVisible();
+    for (const href of ['/users', '/permissions', '/connectivity', '/admin?tab=settings', '/audit', '/admin']) await expect(page.locator(`nav a[href="${href}"]`)).toHaveCount(0);
 
     await openSection(page, '/master-data/units', 'Production units');
     await page.getByRole('link', { name: 'Add unit' }).click();

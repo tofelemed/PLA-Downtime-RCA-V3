@@ -117,7 +117,13 @@ export class PlantFlowRoutesService {
       const result = await approveVersion(
         manager,
         PlantFlowRoute,
-        { id, key: keyOf(row), supersede, actorId: context.userId },
+        {
+          id,
+          key: keyOf(row),
+          supersede,
+          actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
+        },
         WHAT,
       );
       await this.changed(manager, result.approved, 'approved');

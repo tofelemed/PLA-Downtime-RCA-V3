@@ -46,7 +46,7 @@ export function ProposeCorrectionDialog({ onPropose }: ProposeCorrectionDialogPr
         </Button>
       }
       title="Propose a correction of the approved period"
-      description="For a period of a closing or locked month. Another approver accepts or dismisses it; an accepted correction opens a new revision and its restatement."
+      description="For a period of a closing or locked month. An approver accepts or dismisses it (SuperAdmin may decide their own proposal); an accepted correction opens a new revision and its restatement."
       confirmLabel="Propose correction"
       confirmDisabled={!ready}
       onConfirm={submit}

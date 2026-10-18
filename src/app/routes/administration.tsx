@@ -1,4 +1,6 @@
+import { AdministrationRedirect } from '@/features/admin/shared/administration-redirect';
 import { lazyNamedWithPreload } from '@/lib/lazy-with-preload';
+import { UserManagementRedirect } from '@/features/users/user-management-redirect';
 import type { AppRoute } from './route-types';
 
 /** Master data on v2: overview, units, assets, products, plant hierarchy and RCA settings as sub-pages. */
@@ -34,11 +36,9 @@ const PolicyDetail = lazyNamedWithPreload(() => import('@/features/finance/polic
 const PolicyNew = lazyNamedWithPreload(() => import('@/features/finance/policies/policy-new-page'), 'PolicyNewPage');
 const FxRateDetail = lazyNamedWithPreload(() => import('@/features/finance/fx/fx-rate-detail-page'), 'FxRateDetailPage');
 /** Administration on v2: users and their access, permissions, admin panel sections, tasks, audit log. */
-const Users = lazyNamedWithPreload(() => import('@/features/users/users-page'), 'UsersPage');
+const Users = lazyNamedWithPreload(() => import('@/features/users/user-management-page'), 'UserManagementPage');
 const UserForm = lazyNamedWithPreload(() => import('@/features/users/user-form-page'), 'UserFormPage');
-const Permissions = lazyNamedWithPreload(() => import('@/features/permissions/permissions-page'), 'PermissionsPage');
 /** SME R1 / R6: delegations of approval roles. */
-const Delegations = lazyNamedWithPreload(() => import('@/features/delegations/delegations-page'), 'DelegationsPage');
 const AdminPanel = lazyNamedWithPreload(() => import('@/features/admin/admin-page'), 'AdminPage');
 const OrganizationNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationNewPage');
 const PlantNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'PlantNewPage');
@@ -47,12 +47,14 @@ const Tasks = lazyNamedWithPreload(() => import('@/features/tasks/tasks-page'), 
 const TaskForm = lazyNamedWithPreload(() => import('@/features/tasks/task-form-page'), 'TaskFormPage');
 const AuditLog = lazyNamedWithPreload(() => import('@/features/audit/audit-page'), 'AuditPage');
 const AuditEntry = lazyNamedWithPreload(() => import('@/features/audit/audit-entry-page'), 'AuditEntryPage');
-/** Plant settings (calendar system, digits; timezone read-only). */
-const PlantSettings = lazyNamedWithPreload(() => import('@/features/settings/settings-page'), 'SettingsPage');
+/** Cross-page equipment setup guide, listed separately under Administration. */
+const EquipmentSetup = lazyNamedWithPreload(() => import('@/features/equipment-setup/equipment-setup-page'), 'EquipmentSetupPage');
 
 /** Administration area: master data, codes, finance, users, permissions, audit, settings (T5, T7, T8). */
 export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data', element: <MasterData />, preload: MasterData.preload },
+  { path: '/equipment-setup', element: <EquipmentSetup />, preload: EquipmentSetup.preload },
+  { path: '/master-data/setup', element: <AdministrationRedirect kind="setup" /> },
   { path: '/master-data/units', element: <Units />, preload: Units.preload },
   { path: '/master-data/units/new', element: <UnitDetail />, preload: UnitDetail.preload },
   { path: '/master-data/units/:unitId', element: <UnitDetail />, preload: UnitDetail.preload },
@@ -77,10 +79,10 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data/unit-impact-rules', element: <UnitImpactRules />, preload: UnitImpactRules.preload },
   { path: '/master-data/work-orders', element: <WorkOrders />, preload: WorkOrders.preload },
   { path: '/master-data/unit-state', element: <UnitState />, preload: UnitState.preload },
-  { path: '/codes-admin', element: <CodesAdmin />, preload: CodesAdmin.preload },
-  { path: '/codes-admin/rules/new', element: <RuleNew />, preload: RuleNew.preload },
-  { path: '/codes-admin/rules/:ruleId', element: <RuleDetail />, preload: RuleDetail.preload },
-  { path: '/codes-admin/:library/:codeId', element: <CodeDetail />, preload: CodeDetail.preload },
+  { path: '/master-data/codes-rules', element: <CodesAdmin />, preload: CodesAdmin.preload },
+  { path: '/master-data/codes-rules/rules/new', element: <RuleNew />, preload: RuleNew.preload },
+  { path: '/master-data/codes-rules/rules/:ruleId', element: <RuleDetail />, preload: RuleDetail.preload },
+  { path: '/master-data/codes-rules/:library/:codeId', element: <CodeDetail />, preload: CodeDetail.preload },
   { path: '/finance', element: <Finance />, preload: Finance.preload },
   { path: '/finance/policies/new', element: <PolicyNew />, preload: PolicyNew.preload },
   { path: '/finance/policies/:policyId', element: <PolicyDetail />, preload: PolicyDetail.preload },
@@ -88,8 +90,8 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/users', element: <Users />, preload: Users.preload },
   { path: '/users/new', element: <UserForm />, preload: UserForm.preload },
   { path: '/users/:userId', element: <UserForm />, preload: UserForm.preload },
-  { path: '/permissions', element: <Permissions />, preload: Permissions.preload },
-  { path: '/delegations', element: <Delegations />, preload: Delegations.preload },
+  { path: '/permissions', element: <UserManagementRedirect tab="permissions" /> },
+  { path: '/delegations', element: <UserManagementRedirect tab="delegations" /> },
   { path: '/admin', element: <AdminPanel />, preload: AdminPanel.preload },
   { path: '/admin/organizations/new', element: <OrganizationNew />, preload: OrganizationNew.preload },
   { path: '/admin/plants/new', element: <PlantNew />, preload: PlantNew.preload },
@@ -100,5 +102,6 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/tasks/:taskId', element: <TaskForm />, preload: TaskForm.preload },
   { path: '/audit', element: <AuditLog />, preload: AuditLog.preload },
   { path: '/audit/:entryId', element: <AuditEntry />, preload: AuditEntry.preload },
-  { path: '/settings', element: <PlantSettings />, preload: PlantSettings.preload },
+  { path: '/settings', element: <AdministrationRedirect kind="settings" /> },
+  { path: '/codes-admin/*', element: <AdministrationRedirect kind="codes" /> },
 ];

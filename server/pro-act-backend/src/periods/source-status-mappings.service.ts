@@ -173,7 +173,12 @@ export class SourceStatusMappingsService {
       if (mapping.state !== 'draft') {
         throw invalidTransition('status mapping', mapping.state, 'approved');
       }
-      assertNotAuthor(mapping, context.userId, 'Source status mapping');
+      assertNotAuthor(
+        mapping,
+        context.userId,
+        'Source status mapping',
+        context.isSuperAdmin,
+      );
       await this.lockSource(manager, tenantId, mapping.sourceSystem);
       await this.closePrevious(manager, mapping);
       await manager.update(SourceStatusMapping, mapping.id, {

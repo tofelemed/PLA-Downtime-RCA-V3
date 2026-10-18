@@ -1,85 +1,55 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnalysisPageNav } from '@/features/analysis-navigation/analysis-page-nav';
+import { DOWNTIME_PAGES, type DowntimeView } from '@/features/analysis-navigation/analysis-pages';
 import { CloseStopDialog } from '@/features/event-hub/components/close-stop-dialog';
 import { CodeEventDialog } from '@/features/event-hub/components/code-event-dialog';
-import { CurrentStopsPanel } from '@/features/event-hub/components/current-stops-panel';
 import { EventHubFrame } from '@/features/event-hub/event-hub-frame';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { Page } from '@/features/ux-kit/page-layout';
-import { BadActors } from './components/bad-actors';
-import { CalendarComparison } from './components/calendar-comparison';
-import { CrewComparison } from './components/crew-comparison';
+import { unitsLabel } from '@/features/pla-analytics/model/links';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { DowntimeFiltersBar } from './components/downtime-filters-bar';
 import { DowntimeHeader } from './components/downtime-header';
-import { DrillEvents } from './components/drill-events';
-import { KpiSummary } from './components/kpi-summary';
-import { LostProductionPareto } from './components/lost-production-pareto';
-import { ReasonPareto } from './components/reason-pareto';
-import { ReliabilityCard } from './components/reliability-card';
-import { TrendPanel } from './components/trend-panel';
 import { useDowntimeBundle } from './hooks/use-downtime-bundle';
 import { useDowntimeFilters } from './hooks/use-downtime-filters';
-import { bundleQuery, pageViews } from './model/bundle-views';
-import { hasPeriodSelection, toSearchParams } from './model/downtime-filters';
-import type { DrillSelection } from './model/reason-drill';
+import { DOWNTIME_SCOPE_NOTES, downtimePageSettings } from './model/page-settings';
+import { pageBundleQuery } from './model/bundle-views';
 
-const StateTimeline = lazy(() => import('./components/state-timeline').then((module) => ({ default: module.StateTimeline })));
+const PAGES = {
+  overview: lazy(() => import('./pages/overview-page').then((module) => ({ default: module.DowntimeOverviewPage }))),
+  stops: lazy(() => import('./pages/stops-page').then((module) => ({ default: module.DowntimeStopsPage }))),
+  causes: lazy(() => import('./pages/causes-page').then((module) => ({ default: module.DowntimeCausesPage }))),
+  trends: lazy(() => import('./pages/trends-page').then((module) => ({ default: module.DowntimeTrendsPage }))),
+  reliability: lazy(() => import('./pages/reliability-page').then((module) => ({ default: module.DowntimeReliabilityPage }))),
+};
 
-/**
- * Downtime Analysis (plan 3.3, AN01): what is down, why, how often, where and whether it is improving.
- * The summary, bad actors, crews and trend share one bundle response (T24, one request); the Pareto,
- * reliability and the previous-window column are their own reads. Filters live in the URL; events open
- * as their own page and Back returns here.
- */
 export function DowntimeAnalysisPage() {
-  return (
-    <EventHubFrame noTenantText="Choose a plant to analyse its downtime.">
-      <DowntimeScreen />
-    </EventHubFrame>
-  );
+  const { pathname } = useLocation();
+  const view = DOWNTIME_PAGES.find((page) => page.path === pathname)?.key ?? 'overview';
+  return <EventHubFrame noTenantText="Choose a plant to analyse its downtime."><DowntimeScreen view={view} /></EventHubFrame>;
 }
 
-function DowntimeScreen() {
+function DowntimeScreen({ view }: { view: DowntimeView }) {
   const env = useEventHubEnv();
   const { filters, change } = useDowntimeFilters();
-  const filterKey = toSearchParams(filters).toString();
-  const views = useMemo(() => pageViews(filters), [filters]);
-  const bundle = useDowntimeBundle(useMemo(() => bundleQuery(filters), [filters]), env.timezone);
-  const [drill, setDrill] = useState<{ key: string; selection: DrillSelection } | null>(null);
+  const [params] = useSearchParams();
   const [closing, setClosing] = useState<ProductionEventView | null>(null);
   const [coding, setCoding] = useState<ProductionEventView | null>(null);
-  const selection = drill && drill.key === filterKey ? drill.selection : null;
+  const { mode, bundled, scope, page, showTrend } = downtimePageSettings(view, params);
+  const bundle = useDowntimeBundle(pageBundleQuery(filters, view, mode), env.timezone, bundled);
+  const Content = PAGES[view];
   return (
     <Page width="wide">
-      <div className="space-y-6" data-testid="downtime-analysis">
-        <DowntimeHeader filters={filters} bundle={bundle} />
-        <DowntimeFiltersBar filters={filters} onChange={change} />
-        {hasPeriodSelection(filters) && (
-          <p className="text-xs text-muted-foreground" data-testid="period-selection-note">
-            Product, shift and crew filters keep whole periods: they narrow the summary, Pareto, trend, bad actors, crews and comparison; reliability and lost production
-            show every period of the units.
-          </p>
-        )}
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="min-w-0 space-y-6">
-            <KpiSummary bundle={bundle} />
-            <ReliabilityCard filters={filters} />
-          </div>
-          <CurrentStopsPanel unitIds={filters.unitIds} onClose={setClosing} onCode={setCoding} />
-        </div>
-        {/* SME D14: the default ranking is lost tonnes; duration and stop counts follow as alternatives */}
-        <LostProductionPareto filters={filters} />
-        <ReasonPareto filters={filters} onChange={change} onEvents={(next) => setDrill({ key: filterKey, selection: next })} />
-        {selection && <DrillEvents filters={filters} selection={selection} onDismiss={() => setDrill(null)} />}
-        <TrendPanel filters={filters} bundle={bundle} views={views} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <BadActors bundle={bundle} views={views} />
-          <CrewComparison bundle={bundle} views={views} />
-        </div>
-        <CalendarComparison filters={filters} bundle={bundle} />
-        <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-          <StateTimeline filters={filters} />
+      <div className="space-y-5" data-testid="downtime-analysis">
+        {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime Analysis · ${page.label}`} />
+          : <PageHeader title={`Downtime Analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {filters.windowLabel} · {env.timezone}</p>} />}
+        <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
+        <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={params.get('presentation') !== 'timeline' || view !== 'stops'} />
+        <p className="text-xs text-muted-foreground" data-testid="period-selection-note">{DOWNTIME_SCOPE_NOTES[scope]}</p>
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <Content filters={filters} bundle={bundle} onChange={change} onClose={setClosing} onCode={setCoding} />
         </Suspense>
         {closing && <CloseStopDialog event={closing} onClose={() => setClosing(null)} onDone={() => setClosing(null)} />}
         {coding && <CodeEventDialog event={coding} onClose={() => setCoding(null)} onDone={() => setCoding(null)} />}

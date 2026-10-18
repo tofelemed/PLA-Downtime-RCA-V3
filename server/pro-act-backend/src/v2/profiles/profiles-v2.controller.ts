@@ -150,7 +150,8 @@ export class ProfilesV2Controller {
   @ApiOperation({
     summary: 'Approve a draft profile version',
     description:
-      'Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). ' +
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
+      'Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, all non-SuperAdmin roles). ' +
       '409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version ' +
       'of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; ' +
       '422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.',

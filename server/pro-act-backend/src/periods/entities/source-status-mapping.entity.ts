@@ -17,6 +17,7 @@ export interface SourceStatusEntry {
  * `EXTERNAL_REPORT_CERTIFIED_STATUSES` environment list.
  */
 @Entity('source_status_mappings')
+@Index('IDX_approval_inbox_source_status_mappings', { synchronize: false })
 @Unique('UQ_source_status_mappings_version', [
   'tenantId',
   'sourceSystem',

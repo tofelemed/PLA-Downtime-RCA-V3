@@ -1,3 +1,5 @@
+import { MqttSetupPanel } from './mqtt-setup-panel';
+import { SignalsPanel } from '../signals/signals-panel';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -18,7 +20,7 @@ export interface MqttConnectionPanelProps {
   timezone: string;
 }
 
-const TABS = ['subscription', 'profile', 'quarantine'] as const;
+const TABS = ['subscription', 'signals', 'profile', 'quarantine', 'setup'] as const;
 type MqttTab = (typeof TABS)[number];
 
 /**
@@ -36,6 +38,8 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
     <Tabs value={tab} onValueChange={(next) => setTab(next as MqttTab)}>
       <TabsList className="h-auto flex-wrap">
         <TabsTrigger value="subscription" data-testid="tab-subscription">Subscription</TabsTrigger>
+        <TabsTrigger value="signals" data-testid="tab-signals">Signals</TabsTrigger>
+        <TabsTrigger value="setup" data-testid="tab-setup">Setup readiness</TabsTrigger>
         <TabsTrigger value="profile" data-testid="tab-profile">Payload profile</TabsTrigger>
         <TabsTrigger value="quarantine" data-testid="tab-mqtt-quarantine">Quarantine</TabsTrigger>
       </TabsList>
@@ -47,6 +51,8 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
         </DataState>
         {canWriteIntegration && <MqttTestPanel connection={connection} last={session.testOf(connection.id)} timezone={timezone} onTested={(result) => session.recordTest(connection.id, result)} />}
       </TabsContent>
+      <TabsContent value="signals" className="mt-4"><SignalsPanel connectionId={connection.id} timezone={timezone} allowBackfill={false} /></TabsContent>
+      <TabsContent value="setup" className="mt-4"><MqttSetupPanel connectionId={connection.id} timezone={timezone} /></TabsContent>
       <TabsContent value="profile" className="mt-4">
         <ProfileEditor connection={connection} />
       </TabsContent>

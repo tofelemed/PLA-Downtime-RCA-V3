@@ -54,7 +54,7 @@ export interface PlanVersionV2View {
   targetSource: string;
   distribution: string;
   approvalState: string;
-  /** the version's author (its creator): never its approver (403 SEPARATION_OF_DUTIES) */
+  /** the version's author (its creator): requires another approver unless SuperAdmin (403 SEPARATION_OF_DUTIES) */
   createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;

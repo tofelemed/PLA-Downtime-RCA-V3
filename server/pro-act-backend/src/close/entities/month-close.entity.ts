@@ -1,3 +1,4 @@
+import { Index } from 'typeorm';
 import { Check, Column, Entity, Unique } from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
 import { MonthCloseState } from '../../domain/close/month-close-machine';
@@ -10,6 +11,7 @@ import { MonthCloseState } from '../../domain/close/month-close-machine';
  * was first acted on under is kept, so its deadlines do not move with a later policy version.
  */
 @Entity('month_closes')
+@Index('IDX_approval_inbox_month_closes', { synchronize: false })
 @Unique('UQ_month_closes_tenant_first_date', ['tenantId', 'firstDate'])
 @Check('CHK_month_closes_dates', '"end_date" > "first_date"')
 @Check(

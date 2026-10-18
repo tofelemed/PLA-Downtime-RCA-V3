@@ -1,4 +1,5 @@
 import type { LotDispositionView } from '@/api/v2/types/periods';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { approvalAccess } from '@/features/auth/approval-gate';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
@@ -10,7 +11,8 @@ import { ReasonConfirm } from '../workflow/reason-confirm';
 export function DispositionActions({ disposition }: { disposition: LotDispositionView }) {
   const approve = useDecideDisposition('approve');
   const reject = useDecideDisposition('reject');
-  const access = approvalAccess(true, disposition.authorId, useCurrentUserId());
+  const { isSuperAdmin } = useCapabilities();
+  const access = approvalAccess(true, disposition.authorId, useCurrentUserId(), isSuperAdmin);
   const busy = approve.isPending || reject.isPending;
   return (
     <div className="space-y-1">

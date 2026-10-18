@@ -14,8 +14,8 @@ import { RevaluationQueued } from '../components/revaluation-queued';
  * server decides overlaps and separation of duties; the answer says which periods it revalues (SME V7).
  */
 export function DemandActions({ status }: { status: DemandStatusView }) {
-  const { canApproveValuation } = useCapabilities();
-  const access = approvalAccess(canApproveValuation, status.createdBy, useCurrentUserId());
+  const { canApproveValuation, isSuperAdmin } = useCapabilities();
+  const access = approvalAccess(canApproveValuation, status.createdBy, useCurrentUserId(), isSuperAdmin);
   const transition = useDemandTransition();
   const [queued, setQueued] = useState<RevaluationRequested | null>(null);
   if (status.state === 'retired' || !canApproveValuation) return <RevaluationQueued revaluation={queued} />;

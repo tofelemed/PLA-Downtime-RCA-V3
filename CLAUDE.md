@@ -70,3 +70,12 @@ Docker: `cp .env.example .env` → `docker compose up -d --build` (see `docs/DOC
 - Don't change public API contracts (routes, DTOs, response shapes) without flagging it and updating the OpenAPI snapshot (`npm run openapi:v2:update` → `server/pro-act-backend/openapi/v2.json`).
 - Don't put fabricated or random data in product code (no heuristic KPIs, `Math.random` fallbacks, demo defaults). Demo data belongs in isolated seeders.
 - Don't compute business numbers in the browser or write to the server on page render.
+
+<!-- claude-reflect: learned rules (saved from the band; edit freely) -->
+## Learned rules
+- When changing a plant setting such as date or time format, apply the change everywhere that setting is displayed in the app.
+- Treat the MQTT feed as owned by the data engineering team; Pro-Act only subscribes to it and does not handle the PI-to-MQTT publishing.
+- Default the plant week start to Saturday, since Iran's weekend is Thursday and Friday, not Monday.
+- Display monetary amounts in USD by default, with a user option to switch the display to IRR.
+- Before seeding data or running full plant end-to-end tests, check with the user first and wait for their go-ahead.
+<!-- end claude-reflect -->

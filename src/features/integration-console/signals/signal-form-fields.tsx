@@ -11,6 +11,7 @@ import type { SignalForm, SignalFormErrors } from '../model/signal-form';
 
 export interface SignalFormFieldsProps {
   form: SignalForm;
+  sourceKeyHint?: string;
   errors: SignalFormErrors;
   timezone: string;
   onChange: (patch: Partial<SignalForm>) => void;
@@ -44,12 +45,12 @@ function BasicFields(props: SignalFormFieldsProps) {
       <Field id="signal-unit" label="Production unit" error={errors.unitId}>
         <NativeSelect id="signal-unit" testId="signal-unit" value={form.unitId} placeholder={units.isLoading ? 'Loading…' : 'Choose a unit'} options={units.options} onChange={(unitId) => onChange({ unitId })} />
       </Field>
-      <TextField name="sourceKey" label="Source stream id" hint="The PI point or attribute WebId, or the MQTT topic." props={props} />
+      <TextField name="sourceKey" label="Source stream id" hint={props.sourceKeyHint ?? "The source identifier of this signal (PI WebId or the MQTT payload signal field)."} props={props} />
       <TextField name="sourcePath" label="Source path (optional, for reference)" props={props} />
       <Field id="signal-type" label="Kind of measurement">
         <NativeSelect id="signal-type" testId="signal-type" value={form.semanticType} options={TYPES} onChange={(semanticType) => onChange({ semanticType })} />
       </Field>
-      <TextField name="canonicalUom" label="Unit of measure (e.g. t, t/h)" hint="Samples in another unit are quarantined." props={props} />
+      <TextField name="canonicalUom" label="Unit of measure (e.g. t, t/h)" hint={form.semanticType === 'rate' ? 'Enter the incoming rate unit (e.g. t/h) and matching time base (per hour). Integration produces tonnes; mismatched time bases are refused.' : 'Enter the incoming sample unit (e.g. t for a counter). State tokens need no quantity unit.'} props={props} />
       {timed && (
         <Field id="signal-timebase" label="Time base" error={errors.rateTimebase}>
           <NativeSelect id="signal-timebase" value={form.rateTimebase} options={TIMEBASES} onChange={(rateTimebase) => onChange({ rateTimebase })} />

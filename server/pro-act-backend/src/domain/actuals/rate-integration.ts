@@ -1,3 +1,4 @@
+import { rateQuantityUnit } from './rate-quantity-unit';
 import {
   EngineException,
   EngineSample,
@@ -72,7 +73,7 @@ function rateMethod(signal: EngineSignal): QuantityMethod {
     interpolation: signal.interpolation,
     timebase,
     timebaseSeconds: timebase ? timebaseSeconds(timebase) : null,
-    uom: signal.canonicalUom ?? null,
+    uom: rateQuantityUnit(signal.canonicalUom, signal.rateTimebase).uom,
   };
 }
 
@@ -88,6 +89,11 @@ function rateRefusal(
       detail: { expected: 'rate', actual: signal.semanticType },
     };
   }
+  if (!rateQuantityUnit(signal.canonicalUom, signal.rateTimebase).matches)
+    return {
+      code: 'rate_uom_timebase_mismatch',
+      detail: { uom: signal.canonicalUom, timebase: signal.rateTimebase },
+    };
   if (signal.rateTimebase) return null;
   return {
     code: 'missing_timebase',

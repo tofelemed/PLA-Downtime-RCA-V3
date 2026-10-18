@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { QueryParams } from '@/api/v2/request-url';
 import type { ProductionEventView } from '@/api/v2/types/events';
@@ -37,6 +37,7 @@ export interface LossEventsProps {
 export function LossEvents({ scope, onChange }: LossEventsProps) {
   const env = useEventHubEnv();
   const navigate = useNavigate();
+  const location = useLocation();
   const { from, to, unitIds, ...filters } = lossEventsQuery(scope);
   const events = usePagedQuery<ProductionEventView>({
     resource: 'production-events',
@@ -64,7 +65,7 @@ export function LossEvents({ scope, onChange }: LossEventsProps) {
         pager={events.pager}
         status={events.status}
         empty={{ text: 'No loss events in this window.' }}
-        onRowClick={(e) => navigate(`/events/${e.id}`)}
+        onRowClick={(e) => navigate(`/events/${e.id}`, { state: { listSearch: `${location.pathname}${location.search}` } })}
         rowLabel={(e) => `${labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType)} on ${env.unitName(e.unitId)}`}
         density="compact"
       />

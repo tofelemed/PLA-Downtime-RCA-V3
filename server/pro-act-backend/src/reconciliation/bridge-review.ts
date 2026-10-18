@@ -123,12 +123,13 @@ export async function bridgeReviewOf(
 /**
  * Approval gate (SME R8 `second_review`): a submission with a bridge above the limit needs a bridge review
  * of that submission by a second independent reviewer (409 BRIDGE_REVIEW_REQUIRED); the reviewer never
- * approves it as well (403 SEPARATION_OF_DUTIES).
+ * approves it as well (403 SEPARATION_OF_DUTIES), except SuperAdmin who may perform both steps.
  */
 export async function assertBridgeReviewed(
   manager: EntityManager,
   state: RevisionState,
   approver: string,
+  isSuperAdmin = false,
 ): Promise<void> {
   const current = await bridgeReviewOf(manager, state);
   if (!current.required) return;
@@ -140,5 +141,6 @@ export async function assertBridgeReviewed(
       details: { findings: current.findings },
     });
   }
-  if (current.review.by === approver) throw separationOfDuties();
+  if (!isSuperAdmin && current.review.by === approver)
+    throw separationOfDuties();
 }

@@ -103,7 +103,12 @@ export class PlanApprovalService {
       `plan_approval:${target.scenarioId}:${target.unitId}`,
     ]);
     const version = assertApprovable(await lock(manager, target.id));
-    assertNotAuthor(version, context.userId, 'plan version');
+    assertNotAuthor(
+      version,
+      context.userId,
+      'plan version',
+      context.isSuperAdmin,
+    );
     const slices = await manager.findBy(PlanProductSlice, {
       planVersionId: version.id,
     });

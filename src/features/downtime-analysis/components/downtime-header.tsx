@@ -9,63 +9,47 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ActionIcon } from '@/lib/icons';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
-import { reportBase, type DowntimeFilters } from '../model/downtime-filters';
+import { hasPeriodSelection, reportBase, type DowntimeFilters } from '../model/downtime-filters';
 
-/**
- * Page title, the UX03 status line (said once for every figure of the snapshot) and the export of the
- * shown snapshot (T24): header, tiles, breakdowns and export request come from one bundle response and
- * one filter object, so they name the same calculation runs. Export covers approved figures only (2.9).
- */
-export function DowntimeHeader({ filters, bundle }: { filters: DowntimeFilters; bundle: DowntimeBundleResult }) {
+interface DowntimeHeaderProps { filters: DowntimeFilters; bundle: DowntimeBundleResult; title?: string; }
+type Snapshot = ReturnType<typeof reportSnapshot> | null;
+
+/** Calculated metadata/export stay tied to the same historical scope as the visible figures. */
+export function DowntimeHeader({ filters, bundle, title = 'Downtime analysis' }: DowntimeHeaderProps) {
+  const snapshot = bundle.data ? reportSnapshot(bundle.data, reportBase(filters)) : null;
+  return <PageHeader title={title} description="What is down, why, how often and where"
+    meta={<DowntimeMetadata filters={filters} bundle={bundle} snapshot={snapshot} />}
+    actions={<DowntimeExport filters={filters} snapshot={snapshot} />} />;
+}
+
+function DowntimeMetadata({ filters, bundle, snapshot }: DowntimeHeaderProps & { snapshot: Snapshot }) {
   const env = useEventHubEnv();
   const { number } = useNumberFormat();
-  const snapshot = bundle.data ? reportSnapshot(bundle.data, reportBase(filters)) : null;
+  const scope = filters.unitIds.length === 0 ? 'All units in your scope' : filters.unitIds.map(env.unitName).join(', ');
+  return <div className="space-y-1">
+    <ScopeHeader scopeLabel={`${scope} · ${filters.windowLabel}`} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
+      uom="time in h:mm" isProvisional={bundle.data?.isProvisional} asOf={bundle.data?.asOf ?? null} />
+    {snapshot && <p className="text-xs" data-testid="snapshot-runs" data-run-ids={snapshot.calculationRunIds.join(',')}>
+      Historical downtime summary and breakdowns use {snapshot.calculationRunIds.length === 1 ? 'the same calculation run' : `the same ${number(snapshot.calculationRunIds.length)} calculation runs`}.
+    </p>}
+  </div>;
+}
+
+function DowntimeExport({ filters, snapshot }: { filters: DowntimeFilters; snapshot: Snapshot }) {
+  const exportRequest = hasPeriodSelection(filters) ? null : snapshot?.exportRequest;
   const exporter = useCreateExport();
   const { toast } = useToast();
-  const scope = filters.unitIds.length === 0 ? 'All units in your scope' : filters.unitIds.map(env.unitName).join(', ');
   const startExport = async () => {
-    if (!snapshot?.exportRequest) return;
+    if (!exportRequest) return;
     try {
-      await exporter.submit(snapshot.exportRequest);
+      await exporter.submit(exportRequest);
       toast({ title: 'Export started', description: 'The period summary is being prepared from the approved figures.' });
     } catch (error) {
       toast({ ...friendlyToastContent(error), variant: 'destructive' });
     }
   };
-  const meta = (
-    <div className="space-y-1">
-      <ScopeHeader
-        scopeLabel={`${scope} · ${filters.windowLabel}`}
-        timezone={env.timezone}
-        timezoneIsFallback={env.timezoneIsFallback}
-        uom="time in h:mm"
-        isProvisional={bundle.data?.isProvisional}
-        asOf={bundle.data?.asOf ?? null}
-      />
-      {snapshot && (
-        <p className="text-xs" data-testid="snapshot-runs" data-run-ids={snapshot.calculationRunIds.join(',')}>
-          Every figure on this page comes from the same {snapshot.calculationRunIds.length === 1 ? 'calculation run' : `${number(snapshot.calculationRunIds.length)} calculation runs`}.
-        </p>
-      )}
-    </div>
-  );
-  return (
-    <PageHeader
-      title="Downtime analysis"
-      description="What is down, why, how often and where"
-      meta={meta}
-      actions={
-        <Button
-          variant="outline"
-          disabled={!snapshot?.exportRequest || exporter.isPending}
-          title={snapshot?.exportRequest ? undefined : 'Exports contain approved figures only: tick “Approved only” and wait for approved periods'}
-          onClick={startExport}
-          data-testid="downtime-export"
-        >
-          <ActionIcon.export aria-hidden className="mr-1 h-4 w-4" />
-          Export period summary
-        </Button>
-      }
-    />
-  );
+  const hint = hasPeriodSelection(filters) ? 'This export supports units and dates. Clear product, shift and crew filters to export matching figures.'
+    : 'Exports contain approved figures only: tick “Approved only” and wait for approved periods';
+  return <Button variant="outline" disabled={!exportRequest || exporter.isPending} title={exportRequest ? undefined : hint}
+    onClick={startExport} data-testid="downtime-export"><ActionIcon.export aria-hidden className="mr-1 h-4 w-4" />Export period summary</Button>;
 }

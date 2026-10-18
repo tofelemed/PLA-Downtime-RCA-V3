@@ -10,9 +10,8 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { humanize } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import type { AnalyticsScope } from '../model/analytics-scope';
 
-const SeriesChart = lazy(() => import('../charts/series-chart').then((m) => ({ default: m.SeriesChart })));
+const SeriesChart = lazy(() => import('@/features/pla-analytics/charts/series-chart').then((m) => ({ default: m.SeriesChart })));
 
 function DayChart({ days, label }: { days: readonly ActivityDayView[]; label: string }) {
   const pref = useCalendarPreference();
@@ -79,16 +78,16 @@ function AuditActivity({ audit }: { audit: AuditActivitySummaryView }) {
 }
 
 /**
- * Work summary (the v1 Reports RCA, task and audit summaries): RCA cases and tasks created in the chosen
+ * Audit Logs work summary: RCA cases and tasks created in the chosen
  * dates by status and priority with open and overdue counts, and — for those who may read the audit log —
  * audit activity; all counted on the server, days in the plant calendar.
  */
-export function WorkSummary({ scope }: { scope: AnalyticsScope }) {
-  const query = useActivitySummary({ from: scope.from, to: scope.to });
+export function WorkSummary({ window }: { window: { from: string; to: string } }) {
+  const query = useActivitySummary(window);
   const data = query.data?.data;
   return (
     <div className="space-y-4" data-testid="report-work-summary">
-      <p className="text-sm text-muted-foreground">Records created on the chosen dates, for every unit you can see; the unit filter does not apply here.</p>
+      <p className="text-sm text-muted-foreground">Records created on the chosen dates, for every unit you can see. Counts follow your access in the selected plant.</p>
       <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
         {data && (
           <>

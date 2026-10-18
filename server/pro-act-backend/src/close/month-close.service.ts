@@ -109,6 +109,7 @@ export class MonthCloseService {
       const decision = decideMonthClose(command.action, row, {
         actor,
         blocked,
+        isSuperAdmin: context.isSuperAdmin,
       });
       if (!decision.ok) {
         throw monthCloseRefused(

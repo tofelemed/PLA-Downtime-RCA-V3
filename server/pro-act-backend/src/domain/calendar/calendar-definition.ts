@@ -39,6 +39,16 @@ export function assertCalendarDefinition(definition: CalendarDefinition): void {
     assertPeriod(w, 'working interval'),
   );
   for (const holiday of definition.holidays) {
+    if (holiday.workingIntervals !== undefined) {
+      if (holiday.workingIntervals.length === 0)
+        fail(
+          'INVALID_HOLIDAY',
+          'Reduced-hours working windows cannot be empty',
+        );
+      holiday.workingIntervals.forEach((w) =>
+        assertPeriod(w, 'holiday working interval'),
+      );
+    }
     if (!isLocalDate(holiday.date)) {
       fail('INVALID_HOLIDAY', `holiday date ${holiday.date} is not a date`);
     }

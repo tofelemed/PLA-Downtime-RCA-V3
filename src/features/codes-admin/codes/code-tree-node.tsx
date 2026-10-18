@@ -70,7 +70,7 @@ export function CodeTreeNode({ code, depth, tree }: NodeProps) {
           <span className="inline-block w-7" aria-hidden="true" />
         )}
         <Link
-          to={`/codes-admin/${tree.library}/${code.id}`}
+          to={`/master-data/codes-rules/${tree.library}/${code.id}`}
           className="min-w-0 flex-1 truncate rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="code-select"
           onMouseEnter={() => tree.seed(code)}

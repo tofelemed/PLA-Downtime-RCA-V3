@@ -1,3 +1,5 @@
+import { ApprovalInboxService } from './approvals/approval-inbox.service';
+import { EQUIPMENT_READINESS_SERVICES } from './equipment-setup/readiness-providers';
 import { RcaCaseModule } from '../rca-case/rca-case.module';
 import { RcaKnowledgeSharedService } from '../rca-knowledge-base/knowledge-shared.service';
 import { RcaKnowledgeSimilarService } from '../rca-knowledge-base/knowledge-similar.service';
@@ -515,13 +517,29 @@ function withStopEventsV2Stubs(
   );
 }
 
+function withReadinessStubs(
+  builder: TestingModuleBuilder,
+): TestingModuleBuilder {
+  return [
+    ...EQUIPMENT_READINESS_SERVICES,
+    ApprovalInboxService,
+  ].reduce<TestingModuleBuilder>(
+    (next, service) => next.overrideProvider(service).useValue({}),
+    builder,
+  );
+}
+
 async function generate(): Promise<string> {
   const moduleRef = await withStopEventsV2Stubs(
     withCloseStubs(
       withReliabilityStubs(
         withAdministrationStubs(
           withMasterDataStubs(
-            Test.createTestingModule({ imports: [V2Module, ClockModuleStub] }),
+            withReadinessStubs(
+              Test.createTestingModule({
+                imports: [V2Module, ClockModuleStub],
+              }),
+            ),
           ),
         ),
       ),

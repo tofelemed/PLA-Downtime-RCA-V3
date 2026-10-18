@@ -88,7 +88,7 @@ export class BridgeReviewService {
         revisionOpenedBy: revision.supersedesId ? revision.createdBy : null,
         lineAuthors: state.lines.map((line) => line.authorId),
       });
-      if (conflict) throw separationOfDuties();
+      if (!context.isSuperAdmin && conflict) throw separationOfDuties();
       const current = await bridgeReviewOf(manager, state);
       if (!current.required)
         throw conflictOf(

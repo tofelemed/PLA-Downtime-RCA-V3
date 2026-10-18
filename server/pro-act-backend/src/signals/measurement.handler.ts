@@ -50,6 +50,12 @@ export class MeasurementHandler implements NormalizationHandler, OnModuleInit {
         observedAt: envelope.observedAt,
       });
     }
+    if (sample.semanticType === 'state' && signal.semanticType !== 'state') {
+      return quarantine(
+        'mapping_invalid_target',
+        'Machine-state topics must bind to a state signal',
+      );
+    }
     // a summary's unit is the integrated one (t for t/h); its basis is checked by timebase instead
     const unitChecked = !sample.summary && sample.unit && signal.canonicalUom;
     if (

@@ -20,6 +20,7 @@ export function SidebarGroup({ group, pathname, collapsed, open, onToggle }: Sid
   const { section, items } = group;
   const holdsActive = items.some((item) => isNavItemActive(item, pathname));
   const shown = collapsed || open || holdsActive;
+  const visible = railItems(group, pathname, collapsed);
   const listId = `nav-section-${section.key}`;
   const Chevron = shown ? UiIcon.chevronDown : UiIcon.chevronRight;
   return (
@@ -38,7 +39,7 @@ export function SidebarGroup({ group, pathname, collapsed, open, onToggle }: Sid
         </button>
       )}
       <ul id={listId} hidden={!shown} aria-label={collapsed ? section.label : undefined} className="space-y-1">
-        {items.map((item) => (
+        {visible.map((item) => (
           <li key={item.href}>
             <SidebarLink item={item} collapsed={collapsed} active={isNavItemActive(item, pathname)} />
           </li>
@@ -46,4 +47,9 @@ export function SidebarGroup({ group, pathname, collapsed, open, onToggle }: Sid
       </ul>
     </li>
   );
+}
+
+function railItems(group: NavGroup, pathname: string, collapsed: boolean) {
+  if (!collapsed || (group.section.key !== 'downtime' && group.section.key !== 'pla')) return group.items;
+  return [group.items.find((item) => isNavItemActive(item, pathname)) ?? group.items[0]].filter(Boolean);
 }

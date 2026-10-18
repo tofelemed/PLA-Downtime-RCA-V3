@@ -65,7 +65,7 @@ export class ToleranceAdoptionService {
       TOLERANCE_ADOPTERS,
     );
     const now = this.clock.now();
-    assertAdoptable(budget, user, now);
+    assertAdoptable(budget, user, now, context.isSuperAdmin);
     return this.manager.transaction(async (manager) => {
       const engine = await this.policies.resolveEngine(
         manager,
@@ -104,8 +104,9 @@ function assertAdoptable(
   budget: UncertaintyBudget,
   user: string,
   now: Date,
+  isSuperAdmin = false,
 ): void {
-  if (budget.authorId === user) {
+  if (!isSuperAdmin && budget.authorId === user) {
     throw new ForbiddenException({
       code: 'SEPARATION_OF_DUTIES',
       message:

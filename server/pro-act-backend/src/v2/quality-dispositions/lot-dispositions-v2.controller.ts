@@ -103,8 +103,9 @@ export class LotDispositionsV2Controller {
   @Roles(...DISPOSITION_APPROVERS)
   @ApiOperation({
     summary:
-      'Approve a proposed disposition (Quality / Lab approver, never the author); the periods of its production interval are recalculated',
+      'Approve a proposed disposition (Quality / Lab approver, except SuperAdmin self-approval); the periods of its production interval are recalculated',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not ' +
       'proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.',
   })
@@ -125,8 +126,9 @@ export class LotDispositionsV2Controller {
   @Roles(...DISPOSITION_APPROVERS)
   @ApiOperation({
     summary:
-      'Reject a proposed disposition with a reason (Quality / Lab approver, never the author)',
+      'Reject a proposed disposition with a reason (Quality / Lab approver, except SuperAdmin self-approval)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

@@ -45,6 +45,7 @@ const decimal = (name: string, precision = 24, scale = 8) => ({
  * boundary ends the one in force, which keeps its row. A budget justifies a tolerance; it never sets one.
  */
 @Entity('uncertainty_budgets')
+@Index('IDX_approval_inbox_uncertainty_budgets', { synchronize: false })
 @Index('IDX_uncertainty_budgets_tenant_unit_boundary', [
   'tenantId',
   'unitId',
@@ -70,7 +71,7 @@ const decimal = (name: string, precision = 24, scale = 8) => ({
 )
 @Check(
   'CHK_uncertainty_budgets_independent',
-  '"decided_by" IS NULL OR "decided_by" <> "author_id"',
+  '"decided_by" IS NULL OR "decided_by" <> "author_id" OR "super_admin_override"',
 )
 export class UncertaintyBudget extends TenantOwnedEntity {
   @Column({ name: 'unit_id', type: 'uuid' })
@@ -127,6 +128,10 @@ export class UncertaintyBudget extends TenantOwnedEntity {
 
   @Column({ name: 'state', type: 'varchar', length: 16, default: 'proposed' })
   state: UncertaintyBudgetState;
+
+  /** Set only from authenticated SuperAdmin context when deciding one's own proposal. */
+  @Column({ name: 'super_admin_override', type: 'boolean', default: false })
+  superAdminOverride: boolean;
 
   @Column({ name: 'decided_by', type: 'uuid', nullable: true })
   decidedBy: string | null;

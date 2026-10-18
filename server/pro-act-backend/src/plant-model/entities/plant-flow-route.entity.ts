@@ -35,6 +35,7 @@ const decimal = (name: string, precision = 24, scale = 8) => ({
  * (maker-checker, supersede, no overlapping approved version); approved routes never form a cycle.
  */
 @Entity('plant_flow_routes')
+@Index('IDX_approval_inbox_plant_flow_routes', { synchronize: false })
 @Unique('UQ_plant_flow_routes_version', ['fromUnitId', 'toUnitId', 'version'])
 @Exclusion(
   'EX_plant_flow_routes_approved_no_overlap',

@@ -194,6 +194,7 @@ export class RulesV2Controller {
   @ApiOperation({
     summary: 'Activate the draft as the next version',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       `Requires \`Idempotency-Key\` and \`If-Match\`. ${TENANT_WIDE}The draft author cannot activate it ` +
       '(403 SEPARATION_OF_DUTIES); 409 NO_DRAFT / RULE_RETIRED. Earlier versions are kept unchanged.',
   })

@@ -123,8 +123,9 @@ export class SourceAuthorityV2Controller {
   @Roles(...SOURCE_AUTHORITY_APPROVERS)
   @ApiOperation({
     summary:
-      'Approve a draft version (production accounting, never the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated',
+      'Approve a draft version (production accounting, except SuperAdmin self-approval): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; ' +
       '403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; ' +
       '409 STALE_DRAFT when the version it was prepared from is no longer in force.',
@@ -144,8 +145,9 @@ export class SourceAuthorityV2Controller {
   @Roles(...SOURCE_AUTHORITY_APPROVERS)
   @ApiOperation({
     summary:
-      'Reject a draft version with a reason (production accounting, never the author); the version in force stays',
+      'Reject a draft version with a reason (production accounting, except SuperAdmin self-approval); the version in force stays',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

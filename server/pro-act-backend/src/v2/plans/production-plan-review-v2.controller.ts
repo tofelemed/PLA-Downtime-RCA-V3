@@ -65,10 +65,12 @@ export class ProductionPlanReviewV2Controller {
   @Idempotent()
   @Roles(...PLAN_APPROVERS)
   @ApiOperation({
-    summary: 'Return the submitted version to its author with a reason (submitted → draft)',
+    summary:
+      'Return the submitted version to its author with a reason (submitted → draft)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. The reason is kept on the plan for the author. 403 SEPARATION_OF_DUTIES ' +
-      'for the author of the version (any role); 409 INVALID_TRANSITION unless the version is submitted.',
+      'for the author of the version (all non-SuperAdmin roles); 409 INVALID_TRANSITION unless the version is submitted.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async returnToAuthor(

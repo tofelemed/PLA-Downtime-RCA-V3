@@ -11,7 +11,8 @@ export const LOSS_LINES_NOTE =
 
 /** Downtime Analysis with the same window and units (the stops behind the losses). */
 export function downtimeLink(scope: AnalyticsScope): string {
-  const params = new URLSearchParams({ from: scope.from, to: scope.to });
+  const params = new URLSearchParams({ from: scope.from, to: scope.to, window: scope.windowLabel });
   if (scope.unitIds.length > 0) params.set('units', scope.unitIds.join(','));
-  return `/downtime?${params.toString()}`;
+  if (scope.approvedOnly) params.set('approved', '1');
+  return `/downtime/stops?${params.toString()}`;
 }

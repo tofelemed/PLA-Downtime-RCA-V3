@@ -97,7 +97,11 @@ export class RcaBaselineCorrectionsService {
           message: 'the baseline has no correction waiting for a decision',
         });
       }
-      if (correction.proposedBy && correction.proposedBy === scope.userId) {
+      if (
+        !context.isSuperAdmin &&
+        correction.proposedBy &&
+        correction.proposedBy === scope.userId
+      ) {
         throw new ForbiddenException({
           code: 'SEPARATION_OF_DUTIES',
           message:

@@ -260,7 +260,7 @@ describe('MQTT profile decoders (plan 1.8 WP3 step 2, design §5 envelope mappin
       expect(envelope).toMatchObject({
         kind: 'state',
         messageId: `Extruder1:${BOOT}:7`,
-        sourceObjectId: `${UNIT}/state`,
+        sourceObjectId: `${UNIT}/state@2026-10-11T06:07:14.187Z`,
         sourceRevision: '7',
         observedAt: '2026-10-11T06:07:14.187Z',
         values: {

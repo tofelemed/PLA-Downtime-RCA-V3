@@ -27,6 +27,7 @@ export interface PlanFormValues {
   headerTarget: string | null;
   distribution: Distribution;
   slices: SliceRow[];
+  manualTargets?: Array<{ slicePosition: number; startLocal: string; target: string | null }>;
   changeReason: string;
 }
 
@@ -42,6 +43,7 @@ export const emptyPlanForm = (): PlanFormValues => ({
   headerTarget: null,
   distribution: 'scheduled_capacity',
   slices: [emptySlice()],
+  manualTargets: [],
   changeReason: '',
 });
 
@@ -63,6 +65,7 @@ export function planFormOf(plan: Pick<PlanView, 'name' | 'scenarioId'>, version:
       target: slice.target,
     })),
     changeReason: '',
+    manualTargets: (version.manualTargets ?? []).map((row) => ({ slicePosition: row.slicePosition, startLocal: utcToPlantLocal(row.utcStart, timezone), target: row.target })),
   };
 }
 
@@ -79,6 +82,7 @@ export function copiedPlanValues(version: PlanVersionView): Partial<PlanFormValu
     headerTarget: version.headerTarget,
     distribution: version.distribution,
     slices: slices.length > 0 ? slices : [emptySlice()],
+    manualTargets: (version.manualTargets ?? []).map((row) => ({ slicePosition: row.slicePosition, startLocal: '', target: row.target })),
   };
 }
 
@@ -101,6 +105,14 @@ export function validatePlanForm(values: PlanFormValues, timezone: string, creat
     if (!slice.productId) errors[`slices.${index}.productId`] = 'Choose a product';
   });
   const sliceTargets = values.slices.length > 0 && values.slices.every((slice) => slice.target);
+  if (values.basis === 'manual') {
+    if (!values.manualTargets?.length) errors.manualTargets = 'Add per-shift targets';
+    values.manualTargets?.forEach((row, index) => {
+      if (!plantLocalToUtc(row.startLocal, timezone)) errors[`manualTargets.${index}.utcStart`] = 'Enter the exact shift start on the published calendar';
+      if (row.target === null || row.target.trim() === '' || !Number.isFinite(Number(row.target)) || Number(row.target) < 0) errors[`manualTargets.${index}.target`] = 'Enter a non-negative quantity';
+      if (!values.slices[row.slicePosition]) errors[`manualTargets.${index}.slicePosition`] = 'Choose a product slice';
+    });
+  }
   if (values.basis === 'quantity' && !values.headerTarget && !sliceTargets) {
     errors.headerTarget = 'A quantity plan needs a header target (or a target on every slice)';
   }
@@ -117,6 +129,7 @@ function content(values: PlanFormValues, timezone: string) {
     basis: values.basis,
     headerTarget: values.basis === 'time' ? null : values.headerTarget,
     distribution: values.distribution,
+    manualTargets: values.basis === 'manual' ? (values.manualTargets ?? []).map((row) => ({ slicePosition: row.slicePosition, utcStart: plantLocalToUtc(row.startLocal, timezone) as string, target: row.target as string })) : null,
     slices: values.slices.map((slice) => ({
       productId: slice.productId,
       campaignFrom: instant(slice.campaignFrom, timezone),

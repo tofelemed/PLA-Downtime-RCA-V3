@@ -97,7 +97,7 @@ export function assertNoOverlap(instances: readonly GeneratedShift[]): void {
 function shiftsOfDay(context: DayContext, date: string): GeneratedShift[] {
   const { definition } = context;
   const holiday = definition.holidays.find((h) => h.date === date);
-  if (holiday?.treatment === 'reduced') {
+  if (holiday?.treatment === 'reduced' && !holiday.workingIntervals?.length) {
     context.warnings.push({
       code: 'holiday_reduced',
       localDate: date,
@@ -106,11 +106,43 @@ function shiftsOfDay(context: DayContext, date: string): GeneratedShift[] {
     });
   }
   const weekday = isoWeekday(date);
-  return definition.shiftTemplates
+  const shifts = definition.shiftTemplates
     .filter((template) => appliesOn(template, weekday))
     .flatMap((template) =>
       templateOccurrence(context, template, date, holiday),
     );
+  return applyHolidayWindows(context, shifts, date, holiday);
+}
+
+/** Keep the ordinary shifts, marking time outside explicitly entered holiday windows as excluded. */
+function applyHolidayWindows(
+  context: DayContext,
+  shifts: GeneratedShift[],
+  date: string,
+  holiday: Holiday | undefined,
+): GeneratedShift[] {
+  if (
+    holiday?.treatment !== 'reduced' ||
+    !holiday.workingIntervals?.length ||
+    !shifts.length
+  )
+    return shifts;
+  const working = holiday.workingIntervals
+    .filter((window) => appliesOn(window, isoWeekday(date)))
+    .flatMap((window) => {
+      const [start, end] = wallIntervalOn(window, date, context.dayStartMs);
+      return context.timeline.preimage(start, end);
+    });
+  const span = {
+    start: new Date(Math.min(...shifts.map((s) => s.utcStart.getTime()))),
+    end: new Date(Math.max(...shifts.map((s) => s.utcEnd.getTime()))),
+  };
+  const gaps = complementWindows(working, span).map((gap) => ({
+    ...gap,
+    kind: 'holiday' as const,
+    reason: holiday.name,
+  }));
+  return markWindows(shifts, gaps, context.timeline);
 }
 
 function templateOccurrence(

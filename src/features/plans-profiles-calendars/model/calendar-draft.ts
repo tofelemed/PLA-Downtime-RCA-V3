@@ -84,6 +84,7 @@ function listErrors(draft: CalendarDraft): FieldErrors {
   const errors: FieldErrors = {};
   draft.holidays.forEach((h, i) => {
     if (!LOCAL_DATE.test(h.date)) errors[`holidays.${i}.date`] = 'Enter a date';
+    if (h.treatment === 'reduced' && (!h.workingIntervals?.length || h.workingIntervals.some((w) => !LOCAL_TIME.test(w.startLocal) || !LOCAL_TIME.test(w.endLocal)))) errors[`holidays.${i}.workingIntervals`] = 'Enter at least one working window with valid local start and end times';
     if (!h.name.trim()) errors[`holidays.${i}.name`] = 'Enter a name';
   });
   draft.exclusions.forEach((e, i) => {

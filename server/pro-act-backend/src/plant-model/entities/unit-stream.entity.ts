@@ -23,6 +23,7 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
  * capacity is its streams' share over the time they ran its product.
  */
 @Entity('unit_streams')
+@Index('IDX_approval_inbox_unit_streams', { synchronize: false })
 @Unique('UQ_unit_streams_code_version', ['unitId', 'code', 'version'])
 @Exclusion(
   'EX_unit_streams_approved_no_overlap',

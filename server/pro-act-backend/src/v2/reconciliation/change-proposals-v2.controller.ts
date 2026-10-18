@@ -62,6 +62,7 @@ export class ChangeProposalsV2Controller {
     summary:
       'Propose a correction of an approved period of a closing or locked month (manual change proposal)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). ' +
       '409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.',
   })

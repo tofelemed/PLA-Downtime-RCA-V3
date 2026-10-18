@@ -41,11 +41,6 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
   const query = useScopeWaterfall(waterfallQuery(scope), env.timezone);
   const data = query.data?.data;
   const { number } = useNumberFormat();
-  const closes = data && (
-    <Badge variant={data.closes ? 'default' : 'destructive'} data-testid="waterfall-closes" data-closes={String(data.closes)}>
-      {data.closes ? 'Closes to actual' : 'Does not close'}
-    </Badge>
-  );
   return (
     <AnalyticsCard
       title={`Waterfall · ${scope.ledger === 'plan' ? 'plan ledger (target → actual)' : 'capacity ledger (capacity → good)'}`}
@@ -54,14 +49,17 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
       response={query.data}
       isEmpty={data !== undefined && data.bars.length === 0}
       emptyText="No computable period in this scope for this ledger."
-      actions={closes}
+      actions={<WaterfallState data={data} />}
     >
       {data && (
         <div className="space-y-3" data-testid="waterfall" data-ledger={data.ledger} data-closes={String(data.closes)} data-opening={data.opening ?? ''} data-closing={data.closing ?? ''}>
+          <WaterfallTotals data={data} plan={scope.ledger === 'plan'} />
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <WaterfallChart bars={data.bars} uom={data.uom} />
           </Suspense>
-          <DataTable caption="Waterfall bars" columns={columnsOf(data.uom)} rows={data.bars} getRowKey={(bar) => bar.key} pager="none" density="compact" />
+          <details><summary className="cursor-pointer text-sm text-primary">View waterfall values</summary>
+            <DataTable caption="Waterfall bars" columns={columnsOf(data.uom)} rows={data.bars} getRowKey={(bar) => bar.key} pager="none" density="compact" />
+          </details>
           {data.excluded.length > 0 && (
             <p className="text-xs text-muted-foreground" data-testid="waterfall-excluded">
               {number(data.excluded.length)} slices left out (figure unknown): {[...new Set(data.excluded.map((e) => humanize(e.reason)))].join(', ')}
@@ -71,4 +69,16 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
       )}
     </AnalyticsCard>
   );
+}
+
+function WaterfallTotals({ data, plan }: { data: ScopeWaterfallView; plan: boolean }) {
+  return <dl className="grid grid-cols-2 gap-3">
+    <div className="rounded-md border p-3"><dt className="text-sm text-muted-foreground">{plan ? 'Plan target' : 'Sustained capacity'}</dt><dd className="text-xl font-semibold"><Quantity value={data.opening} uom={data.uom} /></dd></div>
+    <div className="rounded-md border p-3"><dt className="text-sm text-muted-foreground">Actual good output</dt><dd className="text-xl font-semibold"><Quantity value={data.closing} uom={data.uom} /></dd></div>
+  </dl>;
+}
+
+function WaterfallState({ data }: { data: ScopeWaterfallView | undefined }) {
+  if (!data) return null;
+  return <Badge variant={data.closes ? 'default' : 'destructive'} data-testid="waterfall-closes" data-closes={String(data.closes)}>{data.closes ? 'Closes to actual' : 'Does not close'}</Badge>;
 }

@@ -17,13 +17,14 @@ export interface Capabilities {
   canViewAnalysis: boolean;
   canManageMasterData: boolean;
   /**
-   * the Master data menu entry: master-data administrators, and the roles that write one of its
-   * reliability pages (stop policy, standby, work orders, unit state) — they see only those pages' links
+   * the Master data menu entry: code-library readers, master-data administrators, and writers of
+   * reliability pages; each section retains its own capability gate
    */
   canReachMasterData: boolean;
   canUseIntegrationConsole: boolean;
   /** user management, permissions, settings of the plant */
   canAdministerTenant: boolean;
+  canUseUserManagement: boolean;
   canUseAdminPanel: boolean;
   canViewAuditLogs: boolean;
   /** approve plans, profiles, rules and RCAs */
@@ -117,7 +118,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canAdministerTenant' | 'canUseUserManagement' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -173,6 +174,7 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
   const held = [...roles];
   const readOnly = !held.some((role) => !READ_ONLY_ROLES.has(role));
   const writes = writeCapabilitiesOf(held, readOnly);
+  const canViewAnalysis = held.some((role) => !OPERATIONS_ONLY_ROLES.has(role));
   const canManageMasterData = holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'master_data_admin']);
   return {
     ...writes,
@@ -180,13 +182,14 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     isSuperAdmin: held.includes('SuperAdmin'),
     isReadOnly: readOnly,
     canViewOperations: held.length > 0,
-    canViewAnalysis: held.some((role) => !OPERATIONS_ONLY_ROLES.has(role)),
+    canViewAnalysis,
     canManageMasterData,
     canReachMasterData:
-      canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
+      canViewAnalysis || canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
-    canUseAdminPanel: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
+    canUseUserManagement: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']) || writes.canDelegateApprovals,
+    canUseAdminPanel: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']) || writes.canManagePlantSettings,
     // the server's GET /audit-logs roles (read in the acting plant only)
     canViewAuditLogs: ServerRoles.satisfiesAnyRole(held, ServerRoles.AUDIT_READERS),
     canApprove: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'Manager', 'manager_approver']),

@@ -1,72 +1,66 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { lazy, Suspense } from 'react';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AnalysisSnapshotContext } from '@/features/analysis-navigation/analysis-snapshot-context';
+import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { unitsLabel } from './model/links';
+import { AnalysisPageNav } from '@/features/analysis-navigation/analysis-page-nav';
+import { legacyPlaPath, PLA_PAGES, type PlaView } from '@/features/analysis-navigation/analysis-pages';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page } from '@/features/ux-kit/page-layout';
 import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
-import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsFilters } from './components/analytics-filters';
 import { AnalyticsHeader } from './components/analytics-header';
 import { useAnalyticsScope } from './hooks/use-analytics-scope';
-import { PLA_TABS, type PlaTab } from './model/analytics-scope';
-import { TAB_LABELS } from './model/display';
-import { prefetchView } from './model/prefetch';
-import { LossesTab } from './tabs/losses-tab';
-import { OeeTab } from './tabs/oee-tab';
-import { ReconciliationView } from './tabs/reconciliation-view';
-import { TrendsTab } from './tabs/trends-tab';
-import { WaterfallTab } from './tabs/waterfall-tab';
 
-/**
- * Production loss analysis (plan 3.6, AN02 / AN03): one scope in the URL feeds every view — waterfall,
- * losses (loss tree, top opportunities, repeat causes, loss events), trends, reconciliation (with actuals
- * quality) and OEE — each a server snapshot; only the open view fetches, the others are prefetched when
- * their tab is hovered or focused. Nothing is computed in the browser.
- */
+const PAGES = {
+  overview: lazy(() => import('./tabs/waterfall-tab').then((module) => ({ default: module.WaterfallTab }))),
+  losses: lazy(() => import('./tabs/losses-tab').then((module) => ({ default: module.LossesTab }))),
+  trends: lazy(() => import('./tabs/trends-tab').then((module) => ({ default: module.TrendsTab }))),
+  reconciliation: lazy(() => import('./tabs/reconciliation-view').then((module) => ({ default: module.ReconciliationView }))),
+  oee: lazy(() => import('./tabs/oee-tab').then((module) => ({ default: module.OeeTab }))),
+  valuation: lazy(() => import('./pages/valuation-page').then((module) => ({ default: module.LossValuationPage }))),
+};
+
 export function PlaAnalyticsPage() {
   const tenantId = useV2TenantId();
+  const location = useLocation();
+  const view = PLA_PAGES.find((page) => page.path === location.pathname)?.key ?? 'overview';
+  const [params] = useSearchParams();
+  const tab = params.get('tab');
+  const anchor = location.hash.slice(1);
+  const legacy = view === 'overview' ? legacyPlaPath(tab ?? ({ opportunities: 'losses', 'repeat-causes': 'losses', 'loss-events': 'losses', quality: 'reconciliation' } as Record<string, string>)[anchor] ?? null) : null;
+  if (legacy) {
+    const next = new URLSearchParams(params);
+    next.delete('tab');
+    const detail = ['opportunities', 'repeat-causes', 'loss-events'].includes(anchor) ? anchor : tab;
+    if (detail && ['opportunities', 'repeat-causes', 'loss-events'].includes(detail)) next.set('breakdown', detail);
+    if (anchor === 'quality' || tab === 'quality') next.set('inspection', 'quality');
+    return <Navigate to={{ pathname: legacy, search: `?${next}` }} replace />;
+  }
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to analyse its production losses." />;
-  return (
-    <EventHubEnvProvider tenantId={tenantId}>
-      <PlaAnalyticsScreen />
-    </EventHubEnvProvider>
-  );
+  return <EventHubEnvProvider tenantId={tenantId}><PlaAnalyticsScreen view={view} /></EventHubEnvProvider>;
 }
 
-function PlaAnalyticsScreen() {
+function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   const { scope, change } = useAnalyticsScope();
+  const [params] = useSearchParams();
+  const breakdown = params.get('breakdown');
+  const lossRecords = view === 'losses' && breakdown === 'loss-events';
+  const quantifiedLosses = view === 'losses' && breakdown !== 'loss-events' && breakdown !== 'repeat-causes';
   const env = useEventHubEnv();
-  const client = useQueryClient();
-  const prefetch = (tab: PlaTab) => prefetchView(client, { tenantId: env.tenantId, tab, scope, tz: env.timezone });
+  const page = PLA_PAGES.find((entry) => entry.key === view) ?? PLA_PAGES[0];
+  const Content = PAGES[view];
   return (
     <Page width="wide">
-      <div className="space-y-4" data-testid="pla-analytics-v2">
-        <AnalyticsHeader scope={scope} />
-        <AnalyticsFilters scope={scope} onChange={change} />
-        <Tabs value={scope.tab} onValueChange={(tab) => change({ tab: tab as PlaTab })}>
-          <TabsList className="h-auto flex-wrap justify-start">
-            {PLA_TABS.map((tab) => (
-              <TabsTrigger key={tab} value={tab} data-testid={`tab-${tab}`} onPointerEnter={() => prefetch(tab)} onFocus={() => prefetch(tab)}>
-                {TAB_LABELS[tab]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          <TabsContent value="waterfall">
-            <WaterfallTab scope={scope} />
-          </TabsContent>
-          <TabsContent value="losses">
-            <LossesTab scope={scope} onChange={change} />
-          </TabsContent>
-          <TabsContent value="trends">
-            <TrendsTab scope={scope} onChange={change} />
-          </TabsContent>
-          <TabsContent value="reconciliation">
-            <ReconciliationView scope={scope} />
-          </TabsContent>
-          <TabsContent value="oee">
-            <OeeTab scope={scope} />
-          </TabsContent>
-        </Tabs>
+      <div className="space-y-5" data-testid="pla-analytics-v2" data-view={view}>
+        <AnalyticsHeader scope={scope} title={`Production Loss Analysis · ${page.label}`} description={page.description} overview={view === 'overview'} />
+        <AnalysisPageNav label="Production loss analysis pages" pages={PLA_PAGES} />
+        <AnalyticsFilters scope={scope} onChange={change} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />
+        <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>
+        </AnalysisSnapshotContext.Provider>
       </div>
     </Page>
   );

@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { analysisHref } from '@/features/analysis-navigation/analysis-pages';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { preloadRoute } from '@/app/routes';
 import type { NavigationItem } from '@/features/auth/navigation-items';
@@ -16,10 +17,12 @@ export interface SidebarLinkProps {
  */
 export function SidebarLink({ item, collapsed, active }: SidebarLinkProps) {
   const Icon = item.icon;
+  const location = useLocation();
   const link = (
     <NavLink
-      to={item.href}
-      aria-label={collapsed ? item.name : undefined}
+      to={analysisHref(item.href, location)}
+      end={item.exact}
+      aria-label={collapsed || item.label ? item.name : undefined}
       aria-current={active ? 'page' : undefined}
       onMouseEnter={() => preloadRoute(item.href)}
       onFocus={() => preloadRoute(item.href)}
@@ -30,7 +33,7 @@ export function SidebarLink({ item, collapsed, active }: SidebarLinkProps) {
       )}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden />
-      {!collapsed && <span className="truncate">{item.name}</span>}
+      {!collapsed && <span className={item.label ? 'min-w-0 whitespace-normal leading-snug' : 'truncate'}>{item.label ?? item.name}</span>}
     </NavLink>
   );
   if (!collapsed) return link;

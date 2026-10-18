@@ -139,7 +139,13 @@ export class UnitImpactRulesService {
       const result = await approveVersion(
         manager,
         UnitImpactRule,
-        { id, key: keyOf(row), supersede, actorId: context.userId },
+        {
+          id,
+          key: keyOf(row),
+          supersede,
+          actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
+        },
         WHAT,
       );
       // a superseded predecessor now ends where the approved version starts: the same window changes

@@ -141,6 +141,15 @@ describe('display formatting and gates', () => {
     expect(reviewGate(view(), 'someone-else').allowed).toBe(false);
   });
 
+  it('SuperAdmin reviews and approves their own lines but cannot approve stale inputs', () => {
+    const base = view();
+    const submitted = view({ revision: { ...base.revision, lifecycle: 'in_review', submittedBy: 'u1' } });
+    expect(reviewGate(submitted, 'u1', true).allowed).toBe(true);
+    expect(approveGate(submitted, 'u1', true).allowed).toBe(true);
+    expect(approveGate({ ...submitted, revision: { ...submitted.revision, isStale: true } }, 'u1', true).code).toBe('STALE_SUBMISSION');
+    expect(approveGate(base, 'u1', true).allowed).toBe(false);
+  });
+
   it('a line author may reject but not approve (separation of duties, RC-01)', () => {
     const base = view();
     const submitted = view({

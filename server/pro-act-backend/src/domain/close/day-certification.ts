@@ -43,11 +43,13 @@ export function certifyRefusal(
   certifier: string,
   periods: readonly DayPeriod[],
   certified: boolean,
+  isSuperAdmin = false,
 ): CertifyRefusal | null {
   if (certified) return 'DAY_CERTIFIED';
   if (dayState(periods, false) !== 'ready') return 'DAY_NOT_READY';
   const submitters = periods.filter(needsApproval).map((p) => p.submittedBy);
-  if (submitters.includes(certifier)) return 'SEPARATION_OF_DUTIES';
+  if (!isSuperAdmin && submitters.includes(certifier))
+    return 'SEPARATION_OF_DUTIES';
   return null;
 }
 

@@ -93,11 +93,12 @@ const CONFLICT_WORDS = {
   past_investigator: 'took part in the investigation',
 } as const;
 
-/** CA1: a manager approver independent of the investigation (403 otherwise, SuperAdmin included). */
+/** CA1: a manager approver independent of the investigation (403 otherwise, except SuperAdmin). */
 export function assertIndependentApprover(
   context: RequestContext,
   rca: RCA,
 ): void {
+  if (context.isSuperAdmin && context.userId) return;
   if (!context.roles.includes(CLOSURE_APPROVER) && !context.isSuperAdmin) {
     throw new ForbiddenException({
       code: 'FORBIDDEN_ROLE',

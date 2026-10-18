@@ -212,6 +212,7 @@ export class RcaCasesV2Controller {
   @ApiOperation({
     summary: 'Move the case through its workflow (RCA-01 / SME CA1)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       `Requires \`If-Match\` (428/412). ${SCOPE} Draft → In Progress → Analysis → Monitoring (investigation ` +
       'accepted: 422 INVESTIGATION_BLOCKED) → Closure Review (residualRisk; 422 CLOSE_BLOCKED) → Closed. ' +
       'Closure Review → Closed / Monitoring and Closed → Analysis are decided by a manager approver who did not ' +

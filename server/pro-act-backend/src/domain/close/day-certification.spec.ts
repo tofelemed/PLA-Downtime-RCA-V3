@@ -36,6 +36,16 @@ describe('day certification over the shift periods (SME R2, owner decision 14 Oc
     ).toBe('DAY_NOT_READY');
   });
 
+  it('SuperAdmin certifies their own submitted day, only when ready', () => {
+    expect(certifyRefusal('preparer', [shift()], false, true)).toBeNull();
+    expect(certifyRefusal('preparer', [shift()], true, true)).toBe(
+      'DAY_CERTIFIED',
+    );
+    expect(
+      certifyRefusal('preparer', [shift({ workflow: 'draft' })], false, true),
+    ).toBe('DAY_NOT_READY');
+  });
+
   it('worked example: shifts of 100, 110 and 90 t make a 300 t day — summed once, per unit of measure', () => {
     const figures = (actual: string, uom = 't') => ({
       uom,

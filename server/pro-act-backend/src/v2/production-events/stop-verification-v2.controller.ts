@@ -71,6 +71,7 @@ export class StopVerificationV2Controller {
   @ApiOperation({
     summary: 'Verify the coding of stops as their supervisor (SME D13)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are ' +
       'skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor ' +
       '"investigation pending", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later ' +
@@ -90,6 +91,7 @@ export class StopVerificationV2Controller {
     summary:
       'Validate the technical failure detail of a verified stop (SME D13, maintenance)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, ' +
       'NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. ' +
       'A later change of the failure detail clears the validation.',

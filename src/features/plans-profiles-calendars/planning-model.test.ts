@@ -131,7 +131,7 @@ describe('plan form (PLAN02 / PLAN03)', () => {
     expect(validatePlanForm({ ...values, basis: 'time' }, TEHRAN, true)).toEqual({});
     expect(planCreateBody({ ...values, headerTarget: '1000' }, TEHRAN)).toEqual({
       name: 'P', unitId: 'u', validFrom: '2026-11-01T02:30:00.000Z', validTo: '2026-11-02T02:30:00.000Z', basis: 'quantity', headerTarget: '1000',
-      distribution: 'scheduled_capacity', changeReason: null,
+      distribution: 'scheduled_capacity', changeReason: null, manualTargets: null,
       slices: [{ productId: 'p', campaignFrom: null, campaignTo: null, weight: null, target: null, stream: 'sequential' }],
     });
   });
@@ -154,7 +154,7 @@ describe('start from an existing plan (replaces v1 plan templates)', () => {
       slices: [{ productId: 'p1', weight: '2', target: null, campaignFrom: '2026-11-01T00:00:00.000Z', campaignTo: null }],
     } as unknown as Parameters<typeof copiedPlanValues>[0];
     expect(copiedPlanValues(version)).toEqual({
-      unitId: 'u1', basis: 'quantity', headerTarget: '5000', distribution: 'explicit_weights',
+      unitId: 'u1', basis: 'quantity', headerTarget: '5000', distribution: 'explicit_weights', manualTargets: [],
       slices: [{ productId: 'p1', campaignFrom: '', campaignTo: '', weight: '2', target: null }],
     });
   });

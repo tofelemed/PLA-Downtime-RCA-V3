@@ -117,12 +117,11 @@ function separationSuite(name: string, harness: Harness): void {
       expect(save).not.toHaveBeenCalled();
     });
 
-    it('refuses the author even as SuperAdmin', async () => {
-      const { approve } = harness(draftRow(AUTHOR));
-      const error = await approve(managerContext(AUTHOR, true)).catch(
-        (e: unknown) => e,
-      );
-      expectSeparationOfDuties(error);
+    it('lets SuperAdmin approve their own draft and retains the actual approver', async () => {
+      const { approve, save } = harness(draftRow(AUTHOR));
+      const approved = await approve(managerContext(AUTHOR, true));
+      expect(approved.approvedBy).toBe(AUTHOR);
+      expect(save).toHaveBeenCalled();
     });
 
     it('lets another manager approve the draft', async () => {

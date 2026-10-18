@@ -1,4 +1,5 @@
 import { Checkbox } from '@/components/ui/checkbox';
+import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { Label } from '@/components/ui/label';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
@@ -7,6 +8,8 @@ import { presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
 import { SiteFilter } from './site-filter';
 
 export interface AnalyticsFiltersProps {
+  showLedger?: boolean;
+  showApproved?: boolean;
   scope: AnalyticsScope;
   onChange: (patch: Partial<AnalyticsScope>) => void;
 }
@@ -14,7 +17,7 @@ export interface AnalyticsFiltersProps {
 export const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
 
 /** Scope filters shared by every view (server-side): site (selects its units), units (sent when the list closes), window, ledger, approved only. */
-export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
+export function AnalyticsFilters({ scope, onChange, showLedger = true, showApproved = true }: AnalyticsFiltersProps) {
   const env = useEventHubEnv();
   const choosePreset = (key: string) => {
     const preset = WINDOW_PRESETS.find((entry) => entry.key === key);
@@ -31,6 +34,9 @@ export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
         onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
         commitOnClose
       />
+      <DateRangeInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={env.timezone} onChange={(range) => {
+        if (range.from && range.to) onChange({ from: range.from, to: range.to, windowLabel: 'Chosen dates' });
+      }} />
       <div className="flex items-center gap-2">
         <Label htmlFor="pla-window">Window</Label>
         <select id="pla-window" data-testid="pla-window" className={SELECT_CLASS} value="" onChange={(event) => choosePreset(event.target.value)}>
@@ -44,7 +50,7 @@ export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
           ))}
         </select>
       </div>
-      <div className="flex items-center gap-2" role="radiogroup" aria-labelledby="pla-ledger-label">
+      {showLedger && <div className="flex items-center gap-2" role="radiogroup" aria-labelledby="pla-ledger-label">
         <span id="pla-ledger-label" className="text-sm font-medium">
           Ledger
         </span>
@@ -54,11 +60,11 @@ export function AnalyticsFilters({ scope, onChange }: AnalyticsFiltersProps) {
             {ledger === 'plan' ? 'Plan' : 'Capacity'}
           </label>
         ))}
-      </div>
-      <div className="flex items-center gap-2">
+      </div>}
+      {showApproved && <div className="flex items-center gap-2">
         <Checkbox id="pla-approved" checked={scope.approvedOnly} onCheckedChange={(value) => onChange({ approvedOnly: value === true })} data-testid="pla-approved" />
         <Label htmlFor="pla-approved">Approved only</Label>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -26,6 +26,34 @@ const rate = (overrides: Partial<EngineSignal> = {}): EngineSignal => ({
 });
 
 describe('integrateRate (plan 1.7, ACT04)', () => {
+  it('integrates t/h as tonnes and refuses a denominator inconsistent with the selected timebase', () => {
+    const points = samples([
+      [0, '28'],
+      [60, '28'],
+    ]);
+    const result = integrateRate(
+      points,
+      rate({ canonicalUom: 't/h' }),
+      window(0, 60),
+    );
+    expect(result.quantity).toBe('28');
+    expect(result.method.uom).toBe('t');
+    const wrong = integrateRate(
+      points,
+      rate({ canonicalUom: 't/min' }),
+      window(0, 60),
+    );
+    expect(wrong.quantity).toBeNull();
+    expect(wrong.exceptions[0].code).toBe('rate_uom_timebase_mismatch');
+    const kg = integrateRate(
+      points,
+      rate({ canonicalUom: 'kg/h' }),
+      window(0, 60),
+    );
+    expect(kg.method.uom).toBe('kg');
+    expect(kg.quantity).toBe('28');
+  });
+
   it.each(['step', 'linear'] as const)(
     'T25: 120 t/h for 30 min is 60 t (%s), method and timebase recorded',
     (interpolation) => {

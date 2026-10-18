@@ -1,4 +1,6 @@
-import type { ReactNode } from 'react';
+import { useContext, type ReactNode } from 'react';
+import { AnalysisSnapshotContext } from '@/features/analysis-navigation/analysis-snapshot-context';
+import { SnapshotStatus } from './snapshot-status';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +41,7 @@ export function AnalyticsCard(props: AnalyticsCardProps) {
       </CardHeader>
       <CardContent className="relative space-y-2">
         {refreshing && <div className="absolute inset-x-6 top-0 h-0.5 animate-pulse bg-primary/60" role="status" aria-label="Refreshing" />}
+        <CalculationDetails response={response} />
         {note && <p className="text-xs text-muted-foreground">{note}</p>}
         <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? emptyText : undefined}>
           {children}
@@ -46,4 +49,14 @@ export function AnalyticsCard(props: AnalyticsCardProps) {
       </CardContent>
     </Card>
   );
+}
+
+function hasSnapshot(response: Pick<AnalyticsResponse<unknown>, 'isProvisional'>): response is AnalyticsResponse<{ calculationRunIds: string[] }> {
+  return 'data' in response && 'coverage' in response && 'dataQuality' in response && 'asOf' in response;
+}
+
+function CalculationDetails({ response }: Pick<AnalyticsCardProps, 'response'>) {
+  const scope = useContext(AnalysisSnapshotContext);
+  if (!scope || !response || !hasSnapshot(response)) return null;
+  return <details><summary className="cursor-pointer text-xs text-primary">Calculation details</summary><SnapshotStatus {...scope} response={response} /></details>;
 }

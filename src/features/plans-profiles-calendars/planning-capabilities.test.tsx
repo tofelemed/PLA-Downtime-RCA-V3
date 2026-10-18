@@ -63,6 +63,15 @@ describe('planning screens show only the controls the role can use (owner decisi
     expect(screen.getByTestId('sod-disabled').getAttribute('title')).toMatch(/separation of duties/);
   });
 
+  it('SuperAdmin approves their own plan and profile drafts', () => {
+    actAs('SuperAdmin', 'me');
+    openVersion({ ...VERSION, createdBy: 'me' });
+    expect(screen.getByTestId('approve-plan-submit').hasAttribute('disabled')).toBe(false);
+    wrap(<VersionActions resource="profiles" id="p1" state="draft" authorId="me" timezone="UTC" />);
+    expect(screen.getByTestId('approve-version').hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByTestId('sod-disabled')).toBeNull();
+  });
+
   it('canApproveProfiles / canWriteProfiles: a master-data admin edits drafts, never approves or retires', () => {
     actAs('master_data_admin');
     wrap(<VersionActions resource="profiles" id="p1" state="draft" timezone="UTC" onEdit={() => undefined} />);

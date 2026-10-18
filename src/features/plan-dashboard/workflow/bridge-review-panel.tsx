@@ -17,7 +17,7 @@ import { reviewGate } from '../model/display';
  * wrote the lines confirms them; someone else approves. Hidden when no bridge is above the limit.
  */
 export function BridgeReviewPanel({ view }: { view: ReconciliationView }) {
-  const { canApproveRevisions } = useCapabilities();
+  const { canApproveRevisions, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const tenantId = useV2TenantId();
   const queryClient = useQueryClient();
@@ -26,7 +26,7 @@ export function BridgeReviewPanel({ view }: { view: ReconciliationView }) {
   const bridge = view.bridgeReview;
   const users = useUserNames(bridge?.review?.by ? [bridge.review.by] : []);
   if (!bridge?.required || view.revision.lifecycle !== 'in_review') return null;
-  const independent = reviewGate(view, userId).allowed && !view.lines.some((l) => l.authorId === userId);
+  const independent = reviewGate(view, userId, isSuperAdmin).allowed && (isSuperAdmin || !view.lines.some((l) => l.authorId === userId));
   const review = () =>
     command
       .submit({ period: periodRefOf(view), revision: view.revision.revision, submittedHash: view.revision.submittedHash ?? '' })
@@ -49,9 +49,9 @@ export function BridgeReviewPanel({ view }: { view: ReconciliationView }) {
         </p>
       )}
       {bridge.review ? (
-        <p data-testid="bridge-reviewed">Reviewed by {users.nameOf(bridge.review.by ?? '')}; another approver approves the period.</p>
+        <p data-testid="bridge-reviewed">Reviewed by {users.nameOf(bridge.review.by ?? '')}; {isSuperAdmin ? 'you may also approve the period as SuperAdmin.' : 'another approver approves the period.'}</p>
       ) : (
-        <p>A second independent reviewer confirms the bridge before the period can be approved.</p>
+        <p>{isSuperAdmin ? 'Confirm the bridge review, then approve the period as SuperAdmin.' : 'A second independent reviewer confirms the bridge before the period can be approved.'}</p>
       )}
       {canApproveRevisions && !bridge.review && independent && (
         <Button size="sm" variant="outline" data-testid="bridge-review-confirm" disabled={command.isPending} onClick={() => void review()}>

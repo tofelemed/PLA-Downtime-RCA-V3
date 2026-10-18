@@ -1,3 +1,4 @@
+import { SectionPage } from '@/features/admin/shared/section-page';
 import { useSearchParams } from 'react-router-dom';
 import { useUser, useUsersPage } from '@/api/v2/queries/administration-users';
 import type { UserView } from '@/api/v2/types/administration';
@@ -7,7 +8,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { roleLabel } from '@/features/ux-kit/labels';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Section } from '@/features/ux-kit/page-layout';
 import { placeOf } from '@/features/users/components/user-columns';
 import { UserActivationButton } from '@/features/users/components/user-activation-button';
 import { UserStatusBadge } from '@/features/users/components/user-status-badge';
@@ -21,16 +22,16 @@ const COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
 ];
 
 /** Users with the modules their role reaches, and activation (owner requirement "v2 only"). */
-export function PermissionsPage() {
+export function PermissionsPage({ embedded = false }: { embedded?: boolean }) {
   const { canAdministerTenant } = useCapabilities();
   return (
     <PageGate title="Permissions" allowed={canAdministerTenant} deniedText="You don't have permission to manage user permissions.">
-      <PermissionsScreen />
+      <PermissionsScreen embedded={embedded} />
     </PageGate>
   );
 }
 
-function PermissionsScreen() {
+function PermissionsScreen({ embedded }: { embedded: boolean }) {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const selectedId = params.get('user');
@@ -46,8 +47,7 @@ function PermissionsScreen() {
       return next;
     });
   return (
-    <Page width="wide">
-      <PageHeader title="Permissions" description="See what each user's role reaches and activate or deactivate users." />
+    <SectionPage embedded={embedded} title="Permissions" description="See what each user's role reaches and activate or deactivate users.">
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Users">
           <DebouncedSearchInput label="Search users" value={q} onChange={(text) => update({ q: text || null })} />
@@ -67,7 +67,7 @@ function PermissionsScreen() {
           {selected.data && <ActivationSection user={selected.data} />}
         </div>
       </div>
-    </Page>
+    </SectionPage>
   );
 }
 

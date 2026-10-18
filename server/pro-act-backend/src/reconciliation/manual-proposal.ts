@@ -47,14 +47,15 @@ export function manualDetailOf(
 
 /**
  * Separation of duties of a manual proposal: whoever proposed the correction never accepts or dismisses it
- * (403 SEPARATION_OF_DUTIES, every role including SuperAdmin).
+ * (403 SEPARATION_OF_DUTIES, all non-SuperAdmin roles).
  */
 export function assertNotProposer(
   proposal: PeriodChangeProposal,
   userId: string,
+  isSuperAdmin = false,
 ): void {
   const manual = manualDetailOf(proposal);
-  if (manual && manual.proposedBy === userId) {
+  if (!isSuperAdmin && manual && manual.proposedBy === userId) {
     throw new ForbiddenException({
       code: 'SEPARATION_OF_DUTIES',
       message:

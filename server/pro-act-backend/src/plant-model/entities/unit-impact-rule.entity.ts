@@ -26,6 +26,7 @@ import { decimalStringTransformer } from '../../v2/common/decimal-string.transfo
  * approved version. Stops whose impact a person stated keep it (the manual override).
  */
 @Entity('unit_impact_rules')
+@Index('IDX_approval_inbox_unit_impact_rules', { synchronize: false })
 @Unique('UQ_unit_impact_rules_version', ['unitId', 'assetId', 'version'])
 @Exclusion(
   'EX_unit_impact_rules_approved_no_overlap',

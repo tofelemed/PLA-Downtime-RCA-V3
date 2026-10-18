@@ -14,6 +14,7 @@ import { RuleDefinition } from '../grammar/rule-definition';
  * working copy that becomes the next version when a second person activates it (separation of duties).
  */
 @Entity('rules')
+@Index('IDX_approval_inbox_rules', { synchronize: false })
 @Unique('UQ_rules_tenant_name', ['tenantId', 'name'])
 @Index('IDX_rules_tenant_kind_state', ['tenantId', 'kind', 'state'])
 export class Rule extends TenantScopedEntity {

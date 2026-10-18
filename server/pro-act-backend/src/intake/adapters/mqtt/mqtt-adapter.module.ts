@@ -13,7 +13,7 @@ import { MqttAdapter } from './mqtt.adapter';
 /**
  * MQTT intake (plan 1.8): the adapter (config, test, discover), the worker-side subscriber host with
  * its clock (active where schedulers run), and the normalisers of MQTT interval events (through the PI
- * frame path) and states (availability → source health; run state parked until 1.10). Measurements
+ * frame path) and states (availability → source health; machine state → state signal samples). Measurements
  * are handled by `MeasurementHandler` (signals module), retractions by `RetractionHandler` (intake).
  */
 @Module({

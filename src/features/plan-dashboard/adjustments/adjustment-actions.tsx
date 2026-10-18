@@ -1,4 +1,5 @@
 import type { PeriodAdjustmentView } from '@/api/v2/types/periods';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { approvalAccess } from '@/features/auth/approval-gate';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
@@ -10,7 +11,8 @@ import { useDecideAdjustment } from '../hooks/use-adjustment-commands';
 export function AdjustmentActions({ adjustment }: { adjustment: PeriodAdjustmentView }) {
   const approve = useDecideAdjustment('approve');
   const reject = useDecideAdjustment('reject');
-  const access = approvalAccess(true, adjustment.authorId, useCurrentUserId());
+  const { isSuperAdmin } = useCapabilities();
+  const access = approvalAccess(true, adjustment.authorId, useCurrentUserId(), isSuperAdmin);
   const busy = approve.isPending || reject.isPending;
   return (
     <div className="space-y-1">

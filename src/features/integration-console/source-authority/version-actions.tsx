@@ -12,11 +12,11 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
  * puts it in force from now; periods already calculated keep their version until recalculated.
  */
 export function VersionActions({ version }: { version: SourceAuthorityVersionView }) {
-  const { canApproveSourceAuthority } = useCapabilities();
+  const { canApproveSourceAuthority, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const decide = useDecideSourceAuthorityVersion();
   if (version.state !== 'proposed') return null;
-  const access = approvalAccess(canApproveSourceAuthority, version.createdBy, userId);
+  const access = approvalAccess(canApproveSourceAuthority, version.createdBy, userId, isSuperAdmin);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1">

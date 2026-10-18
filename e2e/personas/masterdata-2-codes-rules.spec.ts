@@ -7,7 +7,7 @@ import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, asUser, mdaUnit, sessionOf, shortId, type Session } from './support/masterdata-world';
 
 /**
- * Master data admin persona — journeys 2 and 3 on `/codes-admin`:
+ * Master data admin persona — journeys 2 and 3 on `/master-data/codes-rules`:
  * - Hiro (CODE_WRITERS) builds a `P-MDA-` reason tree (persists after reload), reparents, sees a cycle
  *   refused as 422 CODE_CYCLE and the retirement impact + 409 CODE_HAS_CHILDREN (nothing retired),
  *   creates an impact code and an OEE code, default mappings reason → OEE (two versions, history kept)
@@ -43,7 +43,8 @@ test.describe('Master data admin — codes, default mappings and declarative rul
 
   test('MDA-02a Hiro: reason tree persists, reparent, cycle 422, retire impact 409 (not retired), versions', async ({ page }) => {
     await loginViaUI(page, MDA.hiro.email, MDA.hiro.password);
-    await expect(page.locator('nav a[href="/codes-admin"]')).toBeVisible();
+    await page.goto('/master-data');
+    await expect(page.locator('nav a[href="/master-data/codes-rules"]')).toBeVisible();
     await createCode(page, 'reason-codes', ROOT, `${PREFIX}root`, null);
     await createCode(page, 'reason-codes', CHILD, `${PREFIX}child`, `${ROOT} — ${PREFIX}root`);
     await createCode(page, 'reason-codes', LEAF, `${PREFIX}leaf`, `${CHILD} — ${PREFIX}child`);
@@ -139,7 +140,7 @@ test.describe('Master data admin — codes, default mappings and declarative rul
 
   test('MDA-03 Zara drafts a rule (live 422), activation refused for her and Hiro (403), simulates; Jonas activates; rollback refused', async ({ page, browser }) => {
     await loginViaUI(page, MDA.zara.email, MDA.zara.password);
-    await page.goto('/codes-admin?tab=rules');
+    await page.goto('/master-data/codes-rules?tab=rules');
     await page.getByTestId('rule-new').click({ timeout: 60_000 });
     await expect(page.getByTestId('rule-kind')).toHaveValue('coding_default');
     await page.fill('#rule-name', ruleName);

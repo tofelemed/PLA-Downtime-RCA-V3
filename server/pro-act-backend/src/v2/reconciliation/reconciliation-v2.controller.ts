@@ -140,8 +140,9 @@ export class ReconciliationV2Controller {
   @ApiOperation({
     summary: 'Approve the submitted revision (snapshot, immutable afterwards)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       IDEMPOTENT +
-      '403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after ' +
+      '403 SEPARATION_OF_DUTIES for the submitter (all non-SuperAdmin roles); 409 STALE_SUBMISSION when inputs changed after ' +
       'submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit ' +
       'waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.',
   })
@@ -163,6 +164,7 @@ export class ReconciliationV2Controller {
     summary:
       'SME R8: second independent review of the bridges above the unit limit of the submitted revision',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       IDEMPOTENT +
       'By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must ' +
       'be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.',
@@ -188,6 +190,7 @@ export class ReconciliationV2Controller {
     summary:
       'Reject the submitted revision back to its preparer with a reason, the failed lines and a new due time',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       IDEMPOTENT +
       '403 SEPARATION_OF_DUTIES for the submitter; 422 INVALID_REFERENCE for a failed line that is not in the ' +
       'reviewed revision. The rejection (history `detail`) carries the new due time from the reconciliation SLA ' +

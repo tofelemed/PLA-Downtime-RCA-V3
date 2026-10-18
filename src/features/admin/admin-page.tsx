@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,15 +11,17 @@ import { PageGate } from './shared/page-gate';
 
 const PlantsSection = lazy(() => import('./plants/plants-section').then((m) => ({ default: m.PlantsSection })));
 const AttributeDefinitionsPanel = lazy(() => import('./attributes/attribute-definitions-panel').then((m) => ({ default: m.AttributeDefinitionsPanel })));
+const PlantSettings = lazy(() => import('@/features/settings/settings-page').then((m) => ({ default: m.SettingsPage })));
 const BrandingSection = lazy(() => import('./branding/branding-section').then((m) => ({ default: m.BrandingSection })));
 
-type AdminTab = 'plants' | 'attributes' | 'branding' | 'automation';
+type AdminTab = 'plants' | 'attributes' | 'branding' | 'automation' | 'settings';
 
 interface TabSpec {
   value: AdminTab;
   label: string;
   /** shown to super administrators only (application-wide settings) */
   superAdminOnly?: boolean;
+  settingsOnly?: boolean;
 }
 
 const TABS: readonly TabSpec[] = [
@@ -25,9 +29,11 @@ const TABS: readonly TabSpec[] = [
   { value: 'attributes', label: 'Custom attributes' },
   { value: 'branding', label: 'Branding', superAdminOnly: true },
   { value: 'automation', label: 'Status automation' },
+  { value: 'settings', label: 'Plant settings', settingsOnly: true },
 ];
 
 function TabBody({ tab }: { tab: AdminTab }) {
+  if (tab === 'settings') return <PlantSettings embedded />;
   if (tab === 'plants') return <PlantsSection />;
   if (tab === 'attributes') return <AttributeDefinitionsPanel />;
   if (tab === 'branding') return <BrandingSection />;
@@ -35,24 +41,26 @@ function TabBody({ tab }: { tab: AdminTab }) {
 }
 
 /**
- * Admin panel (owner requirement "v2 only"): four sections, the active one in the URL (`?tab=`). Users moved
+ * Admin panel (owner requirement "v2 only"): related sections, the active one in the URL (`?tab=`). Users moved
  * to Users (`/users`), units and assets to Master data; branding is application-wide (super administrators).
  */
 export function AdminPage() {
-  const { canUseAdminPanel } = useCapabilities();
+  const { canUseAdminPanel, canViewOperations } = useCapabilities();
+  const [params] = useSearchParams();
+  const mayReadSettings = params.get('tab') === 'settings' && canViewOperations;
   return (
-    <PageGate title="Admin panel" allowed={canUseAdminPanel} deniedText="You don't have permission to access the admin panel.">
+    <PageGate title="Admin panel" allowed={canUseAdminPanel || mayReadSettings} deniedText="You don't have permission to access the admin panel.">
       <AdminScreen />
     </PageGate>
   );
 }
 
 function AdminScreen() {
-  const { isSuperAdmin } = useCapabilities();
+  const { isSuperAdmin, canAdministerTenant, canViewOperations, canUseUserManagement } = useCapabilities();
   const [params, setParams] = useSearchParams();
-  const tabs = TABS.filter((tab) => !tab.superAdminOnly || isSuperAdmin);
+  const tabs = TABS.filter((tab) => tab.settingsOnly ? canViewOperations : tab.superAdminOnly ? isSuperAdmin : canAdministerTenant);
   const requested = params.get('tab');
-  const active = tabs.find((tab) => tab.value === requested)?.value ?? 'plants';
+  const active = tabs.find((tab) => tab.value === requested)?.value ?? tabs[0]?.value ?? 'settings';
   const select = (value: string) =>
     setParams((current) => {
       const next = new URLSearchParams();
@@ -62,7 +70,7 @@ function AdminScreen() {
     });
   return (
     <Page width="wide">
-      <PageHeader title="Admin panel" description="Plants and organizations, custom attributes and branding." />
+      <PageHeader title="Admin panel" description="Plants and organizations, custom attributes, branding and plant settings." actions={canUseUserManagement && <Button asChild variant="outline"><Link to="/users">User management</Link></Button>} />
       <Tabs value={active} onValueChange={select}>
         <TabsList className="h-auto flex-wrap justify-start">
           {tabs.map((tab) => (

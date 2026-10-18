@@ -10,11 +10,11 @@ import { ConsoleRefusal } from '../components/console-refusal';
 const STATE_LABELS: Readonly<Record<string, string>> = { draft: 'Draft — waiting for the source owner', approved: 'Approved', retired: 'Retired' };
 
 function Approve({ version }: { version: SourceStatusMappingView }) {
-  const { canApproveStatusMappings } = useCapabilities();
+  const { canApproveStatusMappings, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const approve = useApproveStatusMapping();
   if (version.state !== 'draft' || !canApproveStatusMappings) return null;
-  if (version.createdBy === userId) return <p className="text-xs text-muted-foreground">You drafted this version; another source owner approves it.</p>;
+  if (!isSuperAdmin && version.createdBy === userId) return <p className="text-xs text-muted-foreground">You drafted this version; another source owner approves it.</p>;
   return (
     <div className="space-y-1">
       <Button size="sm" onClick={() => void approve.submit({ id: version.id }).catch(() => undefined)} disabled={approve.isPending} data-testid="mapping-approve">

@@ -30,6 +30,7 @@ const list = (values: readonly string[]) =>
  * which keeps its row (`superseded`), so earlier actuals runs stay reproducible.
  */
 @Entity('lot_dispositions')
+@Index('IDX_approval_inbox_lot_dispositions', { synchronize: false })
 @Index('IDX_lot_dispositions_tenant_unit_production', [
   'tenantId',
   'unitId',
@@ -63,7 +64,7 @@ const list = (values: readonly string[]) =>
 )
 @Check(
   'CHK_lot_dispositions_independent',
-  '"decided_by" IS NULL OR "decided_by" <> "author_id"',
+  '"decided_by" IS NULL OR "decided_by" <> "author_id" OR "super_admin_override"',
 )
 export class LotDisposition extends TenantOwnedEntity {
   @Column({ name: 'unit_id', type: 'uuid' })
@@ -157,6 +158,10 @@ export class LotDisposition extends TenantOwnedEntity {
 
   @Column({ name: 'state', type: 'varchar', length: 16, default: 'proposed' })
   state: LotDispositionState;
+
+  /** Set only from authenticated SuperAdmin context when deciding one's own proposal. */
+  @Column({ name: 'super_admin_override', type: 'boolean', default: false })
+  superAdminOverride: boolean;
 
   @Column({ name: 'decided_by', type: 'uuid', nullable: true })
   decidedBy: string | null;

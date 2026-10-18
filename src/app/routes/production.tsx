@@ -1,3 +1,4 @@
+import { DOWNTIME_PAGES, PLA_PAGES } from '@/features/analysis-navigation/analysis-pages';
 import { lazyNamedWithPreload } from '@/lib/lazy-with-preload';
 import { PLANNING_ROUTES } from './production-planning';
 import type { AppRoute } from './route-types';
@@ -18,7 +19,7 @@ export const PRODUCTION_ROUTES: readonly AppRoute[] = [
   { path: '/events/rca-triggers', element: <RcaTriggerSettings />, preload: RcaTriggerSettings.preload },
   { path: '/events/:eventId', element: <EventDetail />, preload: EventDetail.preload },
   { path: '/events/:eventId/edit', element: <EventForm />, preload: EventForm.preload },
-  { path: '/downtime', element: <DowntimeAnalysis />, preload: DowntimeAnalysis.preload },
-  { path: '/pla-analytics', element: <PlaAnalyticsV2 />, preload: PlaAnalyticsV2.preload },
+  ...DOWNTIME_PAGES.map((page) => ({ path: page.path, element: <DowntimeAnalysis />, preload: DowntimeAnalysis.preload })),
+  ...PLA_PAGES.map((page) => ({ path: page.path, element: <PlaAnalyticsV2 />, preload: PlaAnalyticsV2.preload })),
   ...PLANNING_ROUTES,
 ];

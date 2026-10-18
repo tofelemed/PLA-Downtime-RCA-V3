@@ -35,6 +35,7 @@ export interface AffectedReport {
  * proposal per approved revision; a later change refreshes it.
  */
 @Entity('period_change_proposals')
+@Index('IDX_approval_inbox_period_change_proposals', { synchronize: false })
 @Index('UQ_period_change_proposals_open', ['approvedRevisionId'], {
   unique: true,
   where: `"state" = 'open'`,

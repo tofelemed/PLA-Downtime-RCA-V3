@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSourceAuthorityInForce, useSourceAuthorityVersions } from '@/api/v2/queries/source-authority';
 import { useUnits } from '@/api/v2/queries/units';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
@@ -54,7 +55,9 @@ function UnitVersions({ unitId, timezone }: { unitId: string; timezone: string }
 function SourceAuthorityScreen() {
   const units = useUnits();
   const unitOptions = flattenPages(units.data?.pages).map((unit) => ({ value: unit.id, label: unit.name }));
-  const [unitId, setUnitId] = useState('');
+  const [params, setParams] = useSearchParams();
+  const unitId = params.get('unitId') ?? '';
+  const setUnitId = (id: string) => setParams((current) => { const next = new URLSearchParams(current); next.set('unitId', id); return next; });
   const [drafting, setDrafting] = useState(false);
   const { timezone } = usePlantTimezone();
   const { canWriteSourceAuthority } = useCapabilities();
@@ -65,7 +68,7 @@ function SourceAuthorityScreen() {
         <PageHeader
           title="Source priority"
           back={{ to: CONSOLE_PATH, label: 'Connectivity' }}
-          description="Which measurement source counts for a unit's output, best first. A new version is a draft by the integration owner or production accounting; it applies only once production accounting approves it, never its author. Periods already calculated keep their version until they are recalculated."
+          description="Which measurement source counts for a unit's output, best first. A new version is a draft by the integration owner or production accounting; it applies only once production accounting approves it, SuperAdmin may approve their own version. Periods already calculated keep their version until they are recalculated."
           actions={
             canWriteSourceAuthority &&
             chosen && (

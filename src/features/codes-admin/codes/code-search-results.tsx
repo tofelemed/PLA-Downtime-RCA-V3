@@ -34,7 +34,7 @@ export function CodeSearchResults({ library, includeRetired, text }: CodeSearchR
       getRowKey={(code) => code.id}
       status={{ isLoading: lookup.isLoading, isError: lookup.isError, error: lookup.error, onRetry: () => void lookup.refetch() }}
       empty={{ title: 'No matching codes', text: 'Try another code or name.' }}
-      onRowClick={(code) => navigate(`/codes-admin/${library}/${code.id}`)}
+      onRowClick={(code) => navigate(`/master-data/codes-rules/${library}/${code.id}`)}
       rowLabel={(code) => `${code.code} ${code.name}`}
     />
   );

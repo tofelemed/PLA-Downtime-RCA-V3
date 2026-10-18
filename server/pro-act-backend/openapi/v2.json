@@ -1,6 +1,164 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/api/v2/approval-inbox": {
+      "get": {
+        "operationId": "ApprovalInboxV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 1024,
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "kind",
+            "required": false,
+            "in": "query",
+            "description": "Exact workflow kind returned by an inbox row",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalInboxView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pending records for the caller’s approval roles and record scopes, oldest first. Read-only; decisions use existing domain commands.",
+        "tags": [
+          "v2 · Approvals"
+        ]
+      }
+    },
+    "/api/v2/equipment-setup/readiness": {
+      "get": {
+        "operationId": "EquipmentReadinessV2Controller_read_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "operatingMode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maxLength": 64,
+              "default": "normal",
+              "type": "string"
+            }
+          },
+          {
+            "name": "connectionId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "planId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "periodId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EquipmentReadinessView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read equipment configuration, approval and telemetry gaps for one unit/product/window (maximum 31 days); no writes or automatic certification.",
+        "tags": [
+          "v2 · Equipment setup"
+        ]
+      }
+    },
     "/api/v2/production-events/merge": {
       "post": {
         "description": "Each event carries the `expectedVersion` the caller read (412 STALE_REVISION). One new event spans the union; contributors become superseded with `merged_from` lineage. 422: MERGE_DIFFERENT_UNITS, MERGE_INCOMPATIBLE_CLASSIFICATION, MERGE_GAP_EXCEEDED, MERGE_CODING_CONFLICT (details list the conflicts); 409 INVALID_STATE for superseded or retracted events; 404 for foreign or unknown ids.",
@@ -257,7 +415,7 @@
     },
     "/api/v2/production-events/verification": {
       "post": {
-        "description": "Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor \"investigation pending\", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later change of the coding clears the verification. 422 SELECTION_REQUIRED unless exactly one of eventIds / periodId.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Supervisor = manager_approver or production_engineer of the stop’s unit. Stops that do not qualify are skipped with the reason (NOT_FOUND, NOT_AUTHORIZED, NOT_A_STOP, NOT_CODED — neither a reason code nor \"investigation pending\", ALREADY_VERIFIED, OWN_CODING — the verifier entered the current coding). A later change of the coding clears the verification. 422 SELECTION_REQUIRED unless exactly one of eventIds / periodId.",
         "operationId": "StopVerificationV2Controller_verify_v2",
         "parameters": [],
         "requestBody": {
@@ -288,7 +446,7 @@
     },
     "/api/v2/production-events/{id}/validate-failure": {
       "post": {
-        "description": "Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. A later change of the failure detail clears the validation.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Maintenance = reliability_engineer of the stop’s unit. Skipped with the reason: NO_FAILURE_DETAIL, NOT_VERIFIED (the supervisor verifies first), ALREADY_VALIDATED, OWN_CODING, NOT_AUTHORIZED, NOT_FOUND. A later change of the failure detail clears the validation.",
         "operationId": "StopVerificationV2Controller_validate_v2",
         "parameters": [
           {
@@ -4176,6 +4334,46 @@
         ]
       }
     },
+    "/api/v2/connections/{id}/mqtt-preview": {
+      "post": {
+        "description": "Uses the saved payload profile, timestamp/quality/identity validation and tenant/unit-scoped signal lookup. Does not prove actual ingestion, event mapping, output authority or period accounting readiness.",
+        "operationId": "MqttPreviewV2Controller_preview_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MqttPreviewV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Decode a supplied MQTT packet and check effective signal binding; no broker I/O or writes",
+        "tags": [
+          "v2 · Connections"
+        ]
+      }
+    },
     "/api/v2/ingestion-jobs": {
       "get": {
         "operationId": "IngestionJobsV2Controller_list_v2",
@@ -5953,7 +6151,7 @@
     },
     "/api/v2/profiles/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, all non-SuperAdmin roles). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same unit, product and mode, unless `supersede` closes the predecessor at its effectiveFrom; 422 PROFILE_INCOMPLETE without quantityUom and rateTimebase.",
         "operationId": "ProfilesV2Controller_approve_v2",
         "parameters": [
           {
@@ -6218,7 +6416,7 @@
     },
     "/api/v2/rates/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
         "operationId": "RatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -6488,7 +6686,7 @@
     },
     "/api/v2/valuation-rates/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
         "operationId": "ValuationRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -6748,7 +6946,7 @@
     },
     "/api/v2/transition-standards/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
+        "description": "Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).",
         "operationId": "TransitionStandardsV2Controller_approve_v2",
         "parameters": [
           {
@@ -7435,7 +7633,7 @@
     },
     "/api/v2/production-plans/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The author of the version (its creator) cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. The author of the version (its creator) cannot approve it (403 SEPARATION_OF_DUTIES, all non-SuperAdmin roles). 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; 409 INVALID_TRANSITION for an approved or superseded version.",
         "operationId": "ProductionPlansV2Controller_approve_v2",
         "parameters": [
           {
@@ -7531,7 +7729,7 @@
     },
     "/api/v2/production-plans/{id}/return": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The reason is kept on the plan for the author. 403 SEPARATION_OF_DUTIES for the author of the version (any role); 409 INVALID_TRANSITION unless the version is submitted.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. The reason is kept on the plan for the author. 403 SEPARATION_OF_DUTIES for the author of the version (all non-SuperAdmin roles); 409 INVALID_TRANSITION unless the version is submitted.",
         "operationId": "ProductionPlanReviewV2Controller_returnToAuthor_v2",
         "parameters": [
           {
@@ -8020,7 +8218,7 @@
     },
     "/api/v2/actuals/adjustments/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
         "operationId": "ActualsAdjustmentsV2Controller_approve_v2",
         "parameters": [
           {
@@ -8068,7 +8266,7 @@
     },
     "/api/v2/actuals/adjustments/{id}/reject": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
         "operationId": "ActualsAdjustmentsV2Controller_reject_v2",
         "parameters": [
           {
@@ -8308,7 +8506,7 @@
     },
     "/api/v2/lot-dispositions/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 RECOVERY_EXCEEDS_DISPOSITION / INVALID_SUPERSEDE when the linked disposition changed since.",
         "operationId": "LotDispositionsV2Controller_approve_v2",
         "parameters": [
           {
@@ -8348,7 +8546,7 @@
             "bearer": []
           }
         ],
-        "summary": "Approve a proposed disposition (Quality / Lab approver, never the author); the periods of its production interval are recalculated",
+        "summary": "Approve a proposed disposition (Quality / Lab approver, except SuperAdmin self-approval); the periods of its production interval are recalculated",
         "tags": [
           "v2 · Production periods"
         ]
@@ -8356,7 +8554,7 @@
     },
     "/api/v2/lot-dispositions/{id}/reject": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a quality_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.",
         "operationId": "LotDispositionsV2Controller_reject_v2",
         "parameters": [
           {
@@ -8396,7 +8594,7 @@
             "bearer": []
           }
         ],
-        "summary": "Reject a proposed disposition with a reason (Quality / Lab approver, never the author)",
+        "summary": "Reject a proposed disposition with a reason (Quality / Lab approver, except SuperAdmin self-approval)",
         "tags": [
           "v2 · Production periods"
         ]
@@ -8601,7 +8799,7 @@
     },
     "/api/v2/uncertainty-budgets/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a metrology_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a metrology_approver; 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed; 422 INVALID_EFFECTIVE_FROM when not after the budget in force.",
         "operationId": "UncertaintyBudgetsV2Controller_approve_v2",
         "parameters": [
           {
@@ -8641,7 +8839,7 @@
             "bearer": []
           }
         ],
-        "summary": "Approve a proposed budget (metrology / instrumentation owner, never the author); it is in force from its effective date and ends the previous one of the boundary",
+        "summary": "Approve a proposed budget (metrology / instrumentation owner, except SuperAdmin self-approval); it is in force from its effective date and ends the previous one of the boundary",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -8649,7 +8847,7 @@
     },
     "/api/v2/uncertainty-budgets/{id}/reject": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES; 409 INVALID_TRANSITION when not proposed.",
         "operationId": "UncertaintyBudgetsV2Controller_reject_v2",
         "parameters": [
           {
@@ -8689,7 +8887,7 @@
             "bearer": []
           }
         ],
-        "summary": "Reject a proposed budget with a reason (metrology / instrumentation owner, never the author)",
+        "summary": "Reject a proposed budget with a reason (metrology / instrumentation owner, except SuperAdmin self-approval)",
         "tags": [
           "v2 · Reconciliation and approval"
         ]
@@ -8697,7 +8895,7 @@
     },
     "/api/v2/uncertainty-budgets/{id}/adopt-as-tolerance": {
       "post": {
-        "description": "Requires `Idempotency-Key`. Explicit decision, never automatic. 403 SEPARATION_OF_DUTIES for the budget’s author; 422 BUDGET_NOT_IN_FORCE (not approved or not effective now), BUDGET_REVIEW_OVERDUE, INVALID_POLICY.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. Explicit decision, never automatic. 403 SEPARATION_OF_DUTIES for the budget’s author; 422 BUDGET_NOT_IN_FORCE (not approved or not effective now), BUDGET_REVIEW_OVERDUE, INVALID_POLICY.",
         "operationId": "UncertaintyBudgetsV2Controller_adopt_v2",
         "parameters": [
           {
@@ -8902,7 +9100,7 @@
     },
     "/api/v2/unit-streams/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 409 STREAM_SHARE_EXCEEDED when the unit's approved streams would provide more than its whole rate.",
+        "description": "Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 409 STREAM_SHARE_EXCEEDED when the unit's approved streams would provide more than its whole rate.",
         "operationId": "UnitStreamsV2Controller_approve_v2",
         "parameters": [
           {
@@ -9309,7 +9507,7 @@
     },
     "/api/v2/flow-routes/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 422 FLOW_CYCLE when an approved path leads back from its to-unit to its from-unit.",
+        "description": "Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). 422 FLOW_CYCLE when an approved path leads back from its to-unit to its from-unit.",
         "operationId": "FlowRoutesV2Controller_approve_v2",
         "parameters": [
           {
@@ -9560,7 +9758,7 @@
     },
     "/api/v2/unit-impact-rules/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). The asset's stops starting in its validity are resolved again (worker).",
+        "description": "Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). The asset's stops starting in its validity are resolved again (worker).",
         "operationId": "UnitImpactRulesV2Controller_approve_v2",
         "parameters": [
           {
@@ -10035,7 +10233,7 @@
     },
     "/api/v2/source-authority/versions/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force.",
         "operationId": "SourceAuthorityV2Controller_approve_v2",
         "parameters": [
           {
@@ -10075,7 +10273,7 @@
             "bearer": []
           }
         ],
-        "summary": "Approve a draft version (production accounting, never the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated",
+        "summary": "Approve a draft version (production accounting, except SuperAdmin self-approval): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated",
         "tags": [
           "v2 · Production periods"
         ]
@@ -10083,7 +10281,7 @@
     },
     "/api/v2/source-authority/versions/{id}/reject": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.",
         "operationId": "SourceAuthorityV2Controller_reject_v2",
         "parameters": [
           {
@@ -10123,7 +10321,7 @@
             "bearer": []
           }
         ],
-        "summary": "Reject a draft version with a reason (production accounting, never the author); the version in force stays",
+        "summary": "Reject a draft version with a reason (production accounting, except SuperAdmin self-approval); the version in force stays",
         "tags": [
           "v2 · Production periods"
         ]
@@ -10591,7 +10789,7 @@
     },
     "/api/v2/production-periods/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (any role); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter (all non-SuperAdmin roles); 409 STALE_SUBMISSION when inputs changed after submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.",
         "operationId": "ReconciliationV2Controller_approve_v2",
         "parameters": [
           {
@@ -10639,7 +10837,7 @@
     },
     "/api/v2/production-periods/{id}/bridge-review": {
       "post": {
-        "description": "Requires `Idempotency-Key`. By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. By a revision approver independent of the submission (403 SEPARATION_OF_DUTIES); the final approver must be someone else. 409 BRIDGE_REVIEW_NOT_REQUIRED / BRIDGE_ALREADY_REVIEWED / STALE_SUBMISSION.",
         "operationId": "ReconciliationV2Controller_bridgeReview_v2",
         "parameters": [
           {
@@ -10687,7 +10885,7 @@
     },
     "/api/v2/production-periods/{id}/reject": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter; 422 INVALID_REFERENCE for a failed line that is not in the reviewed revision. The rejection (history `detail`) carries the new due time from the reconciliation SLA policy and escalates the configured n-th rejection (SME R6: the third) to production accounting.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the submitter; 422 INVALID_REFERENCE for a failed line that is not in the reviewed revision. The rejection (history `detail`) carries the new due time from the reconciliation SLA policy and escalates the configured n-th rejection (SME R6: the third) to production accounting.",
         "operationId": "ReconciliationV2Controller_reject_v2",
         "parameters": [
           {
@@ -11069,7 +11267,7 @@
     },
     "/api/v2/period-change-proposals": {
       "post": {
-        "description": "Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). 409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). 409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.",
         "operationId": "ChangeProposalsV2Controller_propose_v2",
         "parameters": [
           {
@@ -12197,7 +12395,7 @@
     },
     "/api/v2/fx-rates/{id}/approve": {
       "post": {
-        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite. SME V7: final and provisional versions never overlap their own kind; a provisional draft is refused with 409 FINAL_RATE_EXISTS where an approved final rate covers part of its window. A final rate wins over a provisional one, so approving it revalues what the provisional rate valued.",
+        "description": "FX rates apply to every unit: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) rate queues a recalculation of the periods it values — its whole months, every unit — and `revaluation` says so; approved periods get a change proposal, never an overwrite. SME V7: final and provisional versions never overlap their own kind; a provisional draft is refused with 409 FINAL_RATE_EXISTS where an approved final rate covers part of its window. A final rate wins over a provisional one, so approving it revalues what the provisional rate valued.",
         "operationId": "FxRatesV2Controller_approve_v2",
         "parameters": [
           {
@@ -12440,7 +12638,7 @@
     },
     "/api/v2/demand-statuses/{id}/approve": {
       "post": {
-        "description": "A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).",
+        "description": "A status applies to every unit making the product: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). 409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open). SME V7: approving (or retiring an approved) status queues a recalculation of the periods it covers (`revaluation`).",
         "operationId": "DemandStatusesV2Controller_approve_v2",
         "parameters": [
           {
@@ -12661,7 +12859,7 @@
     },
     "/api/v2/valuation-policies/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for revaluation (`revaluation`); approved periods get a change proposal.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. A tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED); the author cannot approve (403 SEPARATION_OF_DUTIES); 409 INVALID_TRANSITION when already approved; 422 CURRENCY_UNDECIDED for the XXX placeholder. SME V7: the periods from its start are queued for revaluation (`revaluation`); approved periods get a change proposal.",
         "operationId": "ValuationPoliciesV2Controller_approve_v2",
         "parameters": [
           {
@@ -13301,7 +13499,7 @@
     },
     "/api/v2/rules/{id}/activate": {
       "post": {
-        "description": "Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). The draft author cannot activate it (403 SEPARATION_OF_DUTIES); 409 NO_DRAFT / RULE_RETIRED. Earlier versions are kept unchanged.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key` and `If-Match`. Rules are tenant-wide: a tenant-wide grant is required (403 TENANT_SCOPE_REQUIRED). The draft author cannot activate it (403 SEPARATION_OF_DUTIES); 409 NO_DRAFT / RULE_RETIRED. Earlier versions are kept unchanged.",
         "operationId": "RulesV2Controller_activate_v2",
         "parameters": [
           {
@@ -13865,7 +14063,7 @@
     },
     "/api/v2/rcas/{id}/transitions": {
       "post": {
-        "description": "Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Draft → In Progress → Analysis → Monitoring (investigation accepted: 422 INVESTIGATION_BLOCKED) → Closure Review (residualRisk; 422 CLOSE_BLOCKED) → Closed. Closure Review → Closed / Monitoring and Closed → Analysis are decided by a manager approver who did not open, lead, join or request the case (403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES); rejecting and reopening need a note (422 NOTE_REQUIRED). Other moves: 422 INVALID_TRANSITION. Closing feeds the knowledge base and marks linked events RCA completed.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). Draft → In Progress → Analysis → Monitoring (investigation accepted: 422 INVESTIGATION_BLOCKED) → Closure Review (residualRisk; 422 CLOSE_BLOCKED) → Closed. Closure Review → Closed / Monitoring and Closed → Analysis are decided by a manager approver who did not open, lead, join or request the case (403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES); rejecting and reopening need a note (422 NOTE_REQUIRED). Other moves: 422 INVALID_TRANSITION. Closing feeds the knowledge base and marks linked events RCA completed.",
         "operationId": "RcaCasesV2Controller_transition_v2",
         "parameters": [
           {
@@ -14717,7 +14915,7 @@
     },
     "/api/v2/rca-actions/{id}/baseline-correction/decision": {
       "post": {
-        "description": "Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.",
         "operationId": "RcaActionsV2Controller_decideCorrection_v2",
         "parameters": [
           {
@@ -16506,7 +16704,7 @@
         ]
       },
       "post": {
-        "description": "`userId` of a user the plant sees, or `email` (exact) of a user of the plant’s organization for a first grant (404 when none). 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.",
+        "description": "`userId` of a user the plant sees, or `email` (exact) of a user of the plant’s organization for a first grant (404 when none). 409 SCOPE_EXISTS, 422 USER_INACTIVE / INVALID_REFERENCE. SuperAdmin may manage its own supplemental grants. Other callers cannot grant or revoke their own access (403 SELF_GRANT_NOT_ALLOWED), a role above their rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.",
         "operationId": "UserScopesV2Controller_grant_v2",
         "parameters": [],
         "requestBody": {
@@ -16537,7 +16735,7 @@
     },
     "/api/v2/user-scopes/{id}": {
       "delete": {
-        "description": "You cannot grant or revoke your own access (403 SELF_GRANT_NOT_ALLOWED), a role above your rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.",
+        "description": "SuperAdmin may manage its own supplemental grants. Other callers cannot grant or revoke their own access (403 SELF_GRANT_NOT_ALLOWED), a role above their rank or for a user who is not ranked below you (403 ROLE_GRANT_NOT_ALLOWED); the grant mirroring a user’s role in its home plant changes with the role (422 HOME_SCOPE_REQUIRED). Every grant and revoke is audited.",
         "operationId": "UserScopesV2Controller_revoke_v2",
         "parameters": [
           {
@@ -22040,7 +22238,7 @@
     },
     "/api/v2/month-closes/{month}/materiality-review": {
       "post": {
-        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 MATERIALITY_REVIEWER without a reviewer role of the policy, SEPARATION_OF_DUTIES for the quantity signer; 409 MATERIALITY_REVIEW_NOT_REQUIRED.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 MATERIALITY_REVIEWER without a reviewer role of the policy, SEPARATION_OF_DUTIES for the quantity signer; 409 MATERIALITY_REVIEW_NOT_REQUIRED.",
         "operationId": "MonthCloseV2Controller_reviewMateriality_v2",
         "parameters": [
           {
@@ -22090,7 +22288,7 @@
     },
     "/api/v2/month-closes/{month}/finance-sign-off": {
       "post": {
-        "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 SEPARATION_OF_DUTIES for the quantity signer or the materiality reviewer; 409 MATERIALITY_REVIEW_REQUIRED; 422 CLOSE_PREREQUISITES.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 INVALID_TRANSITION from another state; 403 SEPARATION_OF_DUTIES for the quantity signer or the materiality reviewer; 409 MATERIALITY_REVIEW_REQUIRED; 422 CLOSE_PREREQUISITES.",
         "operationId": "MonthCloseV2Controller_signOffFinance_v2",
         "parameters": [
           {
@@ -22570,7 +22768,7 @@
     },
     "/api/v2/source-status-mappings/{id}/approve": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 422 VERSION_OVERLAP when an approved version starts at or after it; the open approved version ends where this one starts.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 422 VERSION_OVERLAP when an approved version starts at or after it; the open approved version ends where this one starts.",
         "operationId": "SourceStatusMappingsV2Controller_approve_v2",
         "parameters": [
           {
@@ -22600,7 +22798,7 @@
             "bearer": []
           }
         ],
-        "summary": "The source owner approves a draft mapping version (never its author)",
+        "summary": "The source owner approves a draft mapping version (except SuperAdmin self-approval)",
         "tags": [
           "v2 · Production periods and actuals"
         ]
@@ -22697,7 +22895,7 @@
     },
     "/api/v2/production-days/{unitId}/{localDate}/certify": {
       "post": {
-        "description": "Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 422 CODING_INCOMPLETE when the SME D12 daily coding gate (`dayGate`, warn at 99 % by default) is set to block and fails, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.",
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 422 DAY_NOT_READY (details list the shifts not approved), 409 DAY_CERTIFIED, 422 CODING_INCOMPLETE when the SME D12 daily coding gate (`dayGate`, warn at 99 % by default) is set to block and fails, 403 SEPARATION_OF_DUTIES for a submitter of one of the shifts. A revise of a shift reopens the day.",
         "operationId": "ProductionDaysV2Controller_certify_v2",
         "parameters": [
           {
@@ -22925,6 +23123,239 @@
       }
     },
     "schemas": {
+      "ApprovalActionView": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "retire",
+              "reject",
+              "return",
+              "activate"
+            ]
+          },
+          "disabledReason": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "action",
+          "disabledReason"
+        ]
+      },
+      "ApprovalItemView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "kindLabel": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "unitId": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitName": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorId": {
+            "type": "string",
+            "nullable": true
+          },
+          "authorName": {
+            "type": "string",
+            "nullable": true
+          },
+          "requiredRoles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reviewHref": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string",
+            "nullable": true
+          },
+          "commandId": {
+            "type": "string"
+          },
+          "version": {
+            "type": "number",
+            "nullable": true
+          },
+          "rowVersion": {
+            "type": "number"
+          },
+          "supersede": {
+            "type": "boolean"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApprovalActionView"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "kindLabel",
+          "title",
+          "summary",
+          "state",
+          "createdAt",
+          "unitId",
+          "unitName",
+          "authorId",
+          "authorName",
+          "requiredRoles",
+          "reviewHref",
+          "resource",
+          "commandId",
+          "version",
+          "rowVersion",
+          "supersede",
+          "actions"
+        ]
+      },
+      "ApprovalInboxView": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApprovalItemView"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "asOf": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "asOf",
+          "scope"
+        ]
+      },
+      "ReadinessCheckView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready",
+              "missing",
+              "needs_attention",
+              "not_checked",
+              "optional"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "number",
+            "nullable": true,
+            "description": "Observed/configured share of the selected window, 0–1; null when not evaluated."
+          }
+        },
+        "required": [
+          "id",
+          "stepId",
+          "label",
+          "status",
+          "detail",
+          "coverage"
+        ]
+      },
+      "EquipmentReadinessView": {
+        "type": "object",
+        "properties": {
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productId": {
+            "type": "string",
+            "nullable": true
+          },
+          "operatingMode": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReadinessCheckView"
+            }
+          }
+        },
+        "required": [
+          "asOf",
+          "tenantId",
+          "unitId",
+          "productId",
+          "operatingMode",
+          "from",
+          "to",
+          "checks"
+        ]
+      },
       "EventVersionRefDto": {
         "type": "object",
         "properties": {
@@ -24139,6 +24570,33 @@
           "reason"
         ]
       },
+      "MqttPreviewV2Dto": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "payload": {
+            "type": "string",
+            "maxLength": 65536,
+            "description": "Raw JSON payload text; decoded by the saved profile"
+          },
+          "receivedAt": {
+            "type": "string",
+            "description": "Receive instant for timestamp validation, ISO 8601"
+          },
+          "retained": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "topic",
+          "payload",
+          "receivedAt"
+        ]
+      },
       "JobCommandV2Dto": {
         "type": "object",
         "properties": {
@@ -24192,7 +24650,7 @@
           },
           "sourceKey": {
             "type": "string",
-            "description": "Source stream id: PI point/attribute WebId (or a topic)"
+            "description": "Source stream id: PI WebId, MQTT measurement payload signal field, or full MQTT state_json topic"
           },
           "sourcePath": {
             "type": "string",
@@ -24380,7 +24838,14 @@
               "excluded",
               "reduced"
             ],
-            "description": "excluded = out of scheduled time; reduced = kept (preview warning only)"
+            "description": "excluded = out of scheduled time; reduced = only the explicit working intervals are scheduled"
+          },
+          "workingIntervals": {
+            "description": "Working windows on a reduced-hours operational date. Legacy omitted windows retain their schedule with a warning.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
           }
         },
         "required": [

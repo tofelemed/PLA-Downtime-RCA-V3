@@ -42,6 +42,7 @@ export type EngineExceptionCode =
   | 'invalid_window'
   | 'wrong_semantic_type'
   | 'missing_timebase'
+  | 'rate_uom_timebase_mismatch'
   | 'no_data'
   | 'gap'
   | 'bad_quality'

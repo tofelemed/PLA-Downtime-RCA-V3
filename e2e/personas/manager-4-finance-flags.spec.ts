@@ -198,7 +198,7 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     expect(entry?.userId).toBe(anna.userId);
 
     await loginViaUI(page, ADMINS.anna.email, ADMINS.anna.password);
-    for (const href of ['/downtime', '/planning', '/codes-admin', '/finance']) await expect(page.locator(`nav a[href="${href}"]`)).toBeVisible();
+    for (const href of ['/downtime', '/planning', '/master-data', '/finance']) await expect(page.locator(`nav a[href="${href}"]`)).toBeVisible();
     await expect(page.locator('nav a[href="/admin"]')).toBeVisible(); // Admin Panel: plant-level tabs for a TenantAdmin
   });
 });

@@ -17,7 +17,11 @@ const MICRO: MicroStopPolicyView = {
 };
 const ALLOWANCE: TransitionAllowanceView = { id: 'p1', unitId: null, version: 4, transitionAllowanceInPlan: 'planned', effectiveFrom: MICRO.effectiveFrom, notes: null };
 
+const STOP = { id: 'p1', unitId: null, version: 4, effectiveFrom: MICRO.effectiveFrom, notes: null, deriveFromState: true, debounceSeconds: 5, restartConfirmSeconds: 10, duplicateToleranceSeconds: 120, autoMergeDuplicates: true, incidentWindowSeconds: 120 };
+
 function reply(call: V2Call) {
+  if (call.url.pathname.endsWith('/stop-event-policies/current')) return jsonResponse(200, STOP);
+  if (call.url.pathname.endsWith('/stop-event-policies')) return jsonResponse(201, { ...STOP, ...(call.body ?? {}), version: 5 });
   if (call.url.pathname.endsWith('/micro-stop-policies/current')) return jsonResponse(200, MICRO);
   if (call.url.pathname.endsWith('/transition-allowance-policies/current')) return jsonResponse(200, ALLOWANCE);
   if (call.method === 'POST' && call.url.pathname.endsWith('/transition-allowance-policies')) {
@@ -71,6 +75,20 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(await screen.findByText('A plant-wide policy needs an approver for the whole plant')).toBeInTheDocument();
     expect(screen.getByText(/Choose one of your units, or ask a plant-level approver/)).toBeInTheDocument();
     expect(screen.queryByText('Choose a plant first')).toBeNull();
+  });
+
+  it('validates whole seconds and records only the declared stop-engine fields', async () => {
+    const calls = stubV2Fetch(reply);
+    actAs('SuperAdmin');
+    renderPage();
+    const debounce = await screen.findByLabelText('Stop debounce (seconds)');
+    fireEvent.change(debounce, { target: { value: '-1' } });
+    const save = screen.getByRole('button', { name: 'Record stop-engine settings (effective from now)' });
+    expect(save).toBeDisabled();
+    fireEvent.change(debounce, { target: { value: '8' } });
+    fireEvent.click(save);
+    await screen.findByRole('status');
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ deriveFromState: true, debounceSeconds: 8, restartConfirmSeconds: 10, duplicateToleranceSeconds: 120, autoMergeDuplicates: true, incidentWindowSeconds: 120, notes: '' });
   });
 
   it('a reader sees the settings without any way to record a version', async () => {

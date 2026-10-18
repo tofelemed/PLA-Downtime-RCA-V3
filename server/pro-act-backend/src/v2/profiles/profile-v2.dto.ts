@@ -109,7 +109,7 @@ export class ProfilePatchDto extends PartialType(ProfileContentDto) {}
 
 /** OpenAPI description shared by the approve commands of rates and valuation rates. */
 export const APPROVE_DESCRIPTION =
-  'Requires `Idempotency-Key`. The draft author cannot approve it (403 SEPARATION_OF_DUTIES, any role). ' +
+  'Requires `Idempotency-Key`. SuperAdmin may approve its own draft; other authors cannot (403 SEPARATION_OF_DUTIES). ' +
   '409 VERSION_OVERLAP (details.conflicts) when it overlaps an approved version of ' +
   'the same key, unless `supersede` closes the predecessor exactly at its effectiveFrom (half-open).';
 

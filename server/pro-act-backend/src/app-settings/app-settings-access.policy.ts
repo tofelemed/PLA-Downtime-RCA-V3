@@ -33,12 +33,13 @@ function isMemberOf(context: RequestContext, tenantId: string): boolean {
 
 /**
  * Plan 3.11: application-wide settings are readable by every signed-in user; tenant settings by the
- * tenant's members; per-user settings only by their user.
+ * tenant's members; per-user settings by their user or SuperAdmin.
  */
 export function canReadSetting(
   owner: SettingOwner,
   context: RequestContext,
 ): boolean {
+  if (context.isSuperAdmin) return true;
   if (owner.userId) return context.userId === owner.userId;
   if (owner.tenantId) return isMemberOf(context, owner.tenantId);
   return context.userId !== null;
@@ -46,12 +47,13 @@ export function canReadSetting(
 
 /**
  * Application-wide settings (branding, ...) change only by a SuperAdmin; tenant settings by that
- * tenant's administrators (acting in it); per-user settings only by their user, in that tenant.
+ * tenant's administrators (acting in it); per-user settings by their user in that tenant or SuperAdmin.
  */
 export function canWriteSetting(
   owner: SettingOwner,
   context: RequestContext,
 ): boolean {
+  if (context.isSuperAdmin) return true;
   if (owner.userId) {
     return (
       context.userId === owner.userId &&

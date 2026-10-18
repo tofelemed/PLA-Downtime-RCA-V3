@@ -192,7 +192,13 @@ export class TransitionStandardsService {
       const result = await approveVersion(
         manager,
         GradeTransitionStandard,
-        { id, key: keyOf(row), supersede, actorId: context.userId },
+        {
+          id,
+          key: keyOf(row),
+          supersede,
+          actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
+        },
         WHAT,
       );
       await recordStandardChanges(manager, [

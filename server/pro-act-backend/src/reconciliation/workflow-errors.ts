@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { WorkflowIssue } from '../domain/reconciliation/reconciliation.types';
 
-/** 403: D06 — the submitter never approves or rejects their own submission, whatever their roles. */
+/** 403: D06 — the submitter never approves or rejects their own submission, unless they are SuperAdmin. */
 export function separationOfDuties(): ForbiddenException {
   return new ForbiddenException({
     code: 'SEPARATION_OF_DUTIES',

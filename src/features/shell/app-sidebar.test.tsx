@@ -28,6 +28,19 @@ const renderAt = (path: string) =>
   );
 
 describe('AppSidebar', () => {
+  it('keeps the analysis rail compact and opens every page in the expanded group with its scope', async () => {
+    window.localStorage.clear();
+    renderAt('/downtime/causes?units=u1&products=p1');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    expect(within(nav).getByRole('link', { name: 'Causes & Pareto' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).queryByRole('link', { name: 'Downtime Analysis' })).toBeNull();
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    expect(within(nav).getByRole('button', { name: 'Downtime Analysis' })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav).getByRole('link', { name: 'Stops & Timeline' })).toHaveAttribute('href', '/downtime/stops?units=u1&products=p1');
+    expect(within(nav).getByRole('link', { name: 'Downtime Analysis' })).not.toHaveAttribute('aria-current');
+    expect(within(nav).getByRole('link', { name: 'Loss Valuation' })).toHaveAttribute('href', '/pla-analytics/valuation?units=u1');
+  });
+
   it('collapsed rail: every link has an accessible name, the toggle is "Expand sidebar"', () => {
     window.localStorage.clear();
     renderAt('/rca-knowledge-base');

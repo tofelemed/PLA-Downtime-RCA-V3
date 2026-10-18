@@ -1,3 +1,6 @@
+import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { StopEngineSection } from './stop-engine-section';
+import { DerivedStopPreview } from './derived-stop-preview';
 import { useSearchParams } from 'react-router-dom';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -14,6 +17,7 @@ import { TransitionAllowanceControl } from './transition-allowance-control';
  */
 export function StopPolicyPage() {
   const { canWriteOeePolicy } = useCapabilities();
+  const { timezone } = usePlantTimezone();
   const format = useReliabilityFormat();
   const [params, setParams] = useSearchParams();
   const unitId = params.get('unitId') ?? '';
@@ -28,6 +32,8 @@ export function StopPolicyPage() {
         <UnitSelect id="policy-scope" label="Applies to" value={unitId} onChange={choose} allowAll allLabel="The whole plant" />
       </div>
       {!canWriteOeePolicy && <p className="text-sm text-muted-foreground">Only manager approvers record new versions.</p>}
+      <Section title="Stop-engine settings"><StopEngineSection key={unitId} unitId={unitId} canWrite={canWriteOeePolicy} timezone={timezone} /></Section>
+      <Section title="State engine preview"><DerivedStopPreview key={unitId} unitId={unitId} timezone={timezone} /></Section>
       <Section title="Micro-stops and trips">
         <MicroStopSection unitId={unitId} canWrite={canWriteOeePolicy} format={format} />
       </Section>

@@ -49,7 +49,7 @@ function ProposeForm({ action }: { action: RcaActionView }) {
           Propose
         </Button>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">Another person (a manager approver) approves it before it counts.</p>
+      <p className="mt-1 text-xs text-muted-foreground">A manager approver approves it before it counts. SuperAdmin may approve their own correction.</p>
       {propose.error ? <RcaErrorAlert error={propose.error} /> : null}
     </details>
   );
@@ -80,12 +80,12 @@ function DecideButtons({ action }: { action: RcaActionView }) {
 
 /** CA3: the counted baseline is corrected only by a proposal (with a reason) that someone else approves. */
 export function BaselineCorrection({ action, baseline }: { action: RcaActionView; baseline: RcaActionBaseline }) {
-  const { canWriteRca } = useCapabilities();
+  const { canWriteRca, isSuperAdmin } = useCapabilities();
   const approver = useRcaApprover();
   const { session } = useAuth();
   const correction = baseline.correction ?? null;
   const pending = correction?.status === 'pending';
-  const canDecide = pending && approver && correction?.proposedBy !== session?.user.id;
+  const canDecide = pending && approver && (isSuperAdmin || correction?.proposedBy !== session?.user.id);
   return (
     <div className="space-y-1">
       {correction && <CorrectionState correction={correction} />}

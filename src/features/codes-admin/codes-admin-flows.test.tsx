@@ -134,7 +134,7 @@ describe('codes & rules flows (plan 3.8)', () => {
     const root = await screen.findByText('MECH');
     const roots = calls.find((call) => call.url.searchParams.get('rootsOnly') === 'true');
     expect(roots?.url.searchParams.get('limit')).toBe('20');
-    expect(root.closest('a')?.getAttribute('href')).toBe('/codes-admin/reason-codes/r1');
+    expect(root.closest('a')?.getAttribute('href')).toBe('/master-data/codes-rules/reason-codes/r1');
     expect(calls.some((call) => call.url.searchParams.has('parentId'))).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: 'Show sub-codes of MECH' }));
     expect(await screen.findByText('MECH-BRG')).toBeTruthy();

@@ -324,3 +324,56 @@ function assertContiguous(instances: GeneratedShift[]): void {
     );
   }
 }
+
+describe('explicit reduced-hours holidays', () => {
+  it.each([
+    ['Asia/Dubai', '2026-10-17', '06:00', '10:00', 4],
+    ['Asia/Dubai', '2026-10-17', '22:00', '02:00', 4],
+    ['Europe/Berlin', '2026-10-24', '22:00', '06:00', 9],
+    ['Europe/Berlin', '2026-03-28', '22:00', '06:00', 7],
+  ])(
+    '%s %s keeps only explicit %s–%s working time (%s h)',
+    (zone, date, startLocal, endLocal, hours) => {
+      const definition = threeShifts(zone as string);
+      definition.holidays = [
+        {
+          date: date as string,
+          name: 'Reduced production',
+          treatment: 'reduced',
+          workingIntervals: [
+            { startLocal: startLocal as string, endLocal: endLocal as string },
+          ],
+        },
+      ];
+      const { instances, warnings } = generateShifts(definition, {
+        from: date as string,
+        to: date as string,
+      });
+      expect(
+        instances
+          .filter((s) => !s.isExcluded)
+          .reduce((sum, s) => sum + seconds(s), 0),
+      ).toBe(Number(hours) * 3600);
+      expect(
+        instances
+          .filter((s) => s.isExcluded)
+          .every((s) => s.exclusionKind === 'holiday'),
+      ).toBe(true);
+      expect(warnings.some((w) => w.code === 'holiday_reduced')).toBe(false);
+    },
+  );
+  it('rejects invalid explicit local windows', () => {
+    const definition = threeShifts('UTC');
+    definition.holidays = [
+      {
+        date: '2026-10-17',
+        name: 'Bad window',
+        treatment: 'reduced',
+        workingIntervals: [{ startLocal: '30:00', endLocal: '10:00' }],
+      },
+    ];
+    expect(() =>
+      generateShifts(definition, { from: '2026-10-17', to: '2026-10-17' }),
+    ).toThrow(CalendarDefinitionError);
+  });
+});

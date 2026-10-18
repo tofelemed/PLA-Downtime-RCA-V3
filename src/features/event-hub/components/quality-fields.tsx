@@ -19,16 +19,17 @@ function Message({ text }: { text?: string }) {
 /**
  * SME E3: how much product a quality loss affected and what happened to it — sold as a downgrade at a
  * discount, scrapped, or sent to rework. A later recovery of reworked material is recorded on the lot
- * disposition, never by raising good output here. Quality-loss events only.
+ * disposition, never by raising good output here. Output and measured slowdown share the quantity controls.
  */
 export function QualityFields({ form }: { form: QualityForm }) {
   const { values, errors, setField } = form;
-  if (values.physicalType !== 'quality_loss') return null;
+  if (!['quality_loss', 'production_output', 'slowdown'].includes(values.physicalType)) return null;
   return (
     <fieldset className="grid gap-3 rounded-md border p-3 sm:col-span-2 sm:grid-cols-3" data-testid="quality-fields">
-      <legend className="px-1 text-sm font-medium">Off-spec product</legend>
+      <legend className="px-1 text-sm font-medium">{values.physicalType === 'quality_loss' ? 'Off-spec product' : values.physicalType === 'production_output' ? 'Production output' : 'Slowdown loss'}</legend>
+      {values.physicalType === 'slowdown' && <p className="text-xs text-muted-foreground sm:col-span-3">Enter either measured lost quantity with its unit or Output lost (%). The server attributes it within the computed performance loss.</p>}
       <div className="space-y-1">
-        <Label htmlFor="quantity">Quantity</Label>
+        <Label htmlFor="quantity">{values.physicalType === 'slowdown' ? 'Lost quantity (optional when output loss % is given)' : 'Quantity'}</Label>
         <DecimalInput id="quantity" value={values.quantity} onChange={(v) => setField('quantity', v ?? '')} />
         <Message text={errors.quantity} />
       </div>
@@ -37,7 +38,7 @@ export function QualityFields({ form }: { form: QualityForm }) {
         <Input id="quantityUom" value={values.quantityUom} maxLength={32} placeholder="t" onChange={(e) => setField('quantityUom', e.target.value)} />
         <Message text={errors.quantityUom} />
       </div>
-      <div className="space-y-1">
+      {values.physicalType === 'quality_loss' && <div className="space-y-1">
         <Label htmlFor="dispositionClass">Disposition</Label>
         <select id="dispositionClass" className={SELECT_CLASS} value={values.dispositionClass} onChange={(e) => setField('dispositionClass', e.target.value)}>
           <option value="">— not decided yet —</option>
@@ -46,7 +47,7 @@ export function QualityFields({ form }: { form: QualityForm }) {
           ))}
         </select>
         <Message text={errors.dispositionClass} />
-      </div>
+      </div>}
     </fieldset>
   );
 }

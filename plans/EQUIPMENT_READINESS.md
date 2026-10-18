@@ -1,0 +1,23 @@
+# Equipment setup readiness
+
+Owner request: implement automatic checks for missing records, approvals and actual telemetry coverage in the Administration equipment guide.
+
+- [x] Add a read-only, tenant/unit-scoped GET `/api/v2/equipment-setup/readiness` with bounded (maximum 31-day) explicit time window, selected product/mode, optional remembered connection/plan/period. Update the OpenAPI snapshot and generated frontend contract. No schema change or first-use seeding.
+- [x] Check equipment/reference records, effective published calendar, approved profiles/planning+sustained rates, policies/source priority, financial policy/margin/FX coverage, mapped state and actual output samples. Use existing calculation rules; report uncertainty, gaps, missing selection and evaluation limits explicitly.
+- [x] Check remembered first-plan/period workflow without confusing configuration readiness with final accounting approval; retain manual review for evidence and analysis.
+- [x] Show scope, last check, status summary, actionable gaps and links to actual guide steps. Refresh automatically for scope changes and on return, with explicit refresh; never mark visited pages as completed or mutate configuration.
+- [x] Add unit/component and isolated database integration checks covering tenancy/unit isolation, effective-date gaps, pending approval, actual/missing/bad telemetry and query bounds. Run lint/typecheck/OpenAPI/build checks.
+- [x] Update the extruder document/decisions; deploy updated API/worker/frontend and verify health without seeding or running the live plant scenario.
+
+Readiness is a snapshot for the selected unit/product/mode/window. A positive named configuration check does not certify plant correctness, prove broker availability now, approve a plan or replace period/coding/finance evidence gates.
+
+Implementation checks so far: 9 isolated `proact_test` integration cases pass (including real stored state/output and immutable sample corrections); 10 effective-window/policy unit cases pass. The broader frontend regression passes 269 tests in 21 files; the final readiness/journey suite passes 11 tests after the UI model split. Both typechecks pass; root lint has 0 errors / 233 existing warnings. Backend changed-file lint passes. OpenAPI snapshot was regenerated and frontend contract parity passes. Production build/deployment verification completed below.
+
+
+## Final verification and activation
+
+- Backend effective-window/state/rate/OpenAPI regression: 4 suites / 24 tests pass. Valuation/direct-inverse/provisional-FX fixtures: 2 suites / 20 tests pass. Readiness API integration: 9 cases pass against isolated `proact_test`. Frontend: 21 files / 269 tests pass, plus the final readiness/journey suite (11 tests) after the presentation model split. Frontend and backend typechecks, generated contract parity, backend changed-file lint and root lint (0 errors / 233 warnings) pass.
+- One broader test invocation referenced a nonexistent optional `src/domain/valuation/fx.spec.ts` and returned `ENOENT: no such file or directory`; corrected to the actual `test/fixtures/valuation.spec.ts` / `valuation-provisional-fx.spec.ts`, both passing. The four actual unit/OpenAPI suites were rerun successfully. Initial integration fixture failures (missing row versions and attempted sample mutation) were corrected to proper versioned fixtures and append-only sample corrections; those real-engine tests also caught and fixed numeric state normalization (`1.00000000` → `1`). No unresolved test failure remains.
+- Built the production API/worker/frontend images and recreated only these main application services. Frontend `1ac0455221a48258ad1a6257545087ebc31ca73b48a0e15f0db185b4d8add8f4`; API/worker `41fbdf596814aa2f37741dea1e368d1803091e6dd5eacc57f39c9a6d393f7f76`. All three are healthy; direct API and proxy health return 200, database connected. No new schema/migration.
+- Served entry `/assets/index-DRQriflL.js` and guide `/assets/equipment-setup-page-DBWnIbNj.js` return 200 and contain automatic readiness controls and the new endpoint. Initial entry/module preloads are 191,447 bytes gzip across 5 chunks, within the 300 kB budget. Unauthenticated readiness requests return 401.
+- An authenticated live read-only probe using the documented `test@example.com` seed credentials returned login 401. Its credentials/account state were not changed; live authenticated readiness is therefore unverified. All authenticated scope/data checks above ran against `proact_test`. Browser automation timed out; rendered-screen visual verification is also unverified. No live plant setup was seeded/executed and no MQTT source packets were published.

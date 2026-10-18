@@ -52,7 +52,7 @@ export interface RejectCommand {
 
 /**
  * Approval and rejection of a submitted revision (WF01–WF03, D06; plan 2.8 step 4). Both need a manager
- * approver in scope who is not the submitter (403 SEPARATION_OF_DUTIES — also for SuperAdmin and for a
+ * approver in scope who is not the submitter (403 SEPARATION_OF_DUTIES — except SuperAdmin; it still applies to a
  * user holding both roles). Approval needs a revision that is in review, not stale, with the submitted
  * hash the approver saw and a reviewed content that still hashes to it (409 STALE_SUBMISSION); it stores
  * the approval snapshot, makes the revision `approved` (immutable from then on), labels the period
@@ -80,7 +80,8 @@ export class ApprovalService {
         periodId,
         command.revision,
       );
-      if (revision.submittedBy === approver) throw separationOfDuties();
+      if (!context.isSuperAdmin && revision.submittedBy === approver)
+        throw separationOfDuties();
       if (revision.isStale)
         throw staleSubmission(revision.staleReason ?? 'inputs changed');
       if (command.submittedHash !== revision.submittedHash)
@@ -93,8 +94,14 @@ export class ApprovalService {
       );
       if (contentHashOf(state) !== revision.submittedHash)
         throw staleSubmission('the reviewed content changed');
-      if (approvalConflictOf(approver, state)) throw separationOfDuties();
-      await assertBridgeReviewed(manager, state, approver);
+      if (!context.isSuperAdmin && approvalConflictOf(approver, state))
+        throw separationOfDuties();
+      await assertBridgeReviewed(
+        manager,
+        state,
+        approver,
+        context.isSuperAdmin,
+      );
       await markApproved(manager, state, context, command);
       return manager.findOneByOrFail(AccountingRevision, { id: revision.id });
     });
@@ -113,7 +120,8 @@ export class ApprovalService {
         periodId,
         command.revision,
       );
-      if (revision.submittedBy === reviewer) throw separationOfDuties();
+      if (!context.isSuperAdmin && revision.submittedBy === reviewer)
+        throw separationOfDuties();
       const failedLines = await this.failedLinesOf(
         manager,
         { period, revision },

@@ -1,4 +1,4 @@
-/** `GET /v2/reports/activity-summary` (Reports → Work summary): work items and audit activity of a window. */
+/** `GET /v2/reports/activity-summary` (Audit Logs → Work summary): work items and audit activity of a window. */
 export interface ActivityCountView {
   /** status, priority, action or entity type as stored */
   key: string;

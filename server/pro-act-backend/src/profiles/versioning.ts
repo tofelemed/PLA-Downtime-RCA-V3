@@ -23,7 +23,7 @@ export interface Versioned extends ObjectLiteral {
   effectiveTo: Date | null;
   approvedBy: string | null;
   approvedAt: Date | null;
-  /** the draft's author: never its approver (403 SEPARATION_OF_DUTIES) */
+  /** the draft's author: requires another approver unless SuperAdmin (403 SEPARATION_OF_DUTIES) */
   createdBy: string | null;
   updatedBy: string | null;
 }
@@ -36,6 +36,8 @@ export interface ApproveCommand {
   key: VersionKey;
   supersede: boolean;
   actorId: string | null;
+  /** Resolved by authentication, never accepted from the request body. */
+  isSuperAdmin?: boolean;
 }
 
 export interface ApproveResult<T> {
@@ -96,7 +98,7 @@ export async function nextVersion<T extends Versioned>(
 }
 
 /**
- * Approves a draft (plan 2.2): refused with 403 `SEPARATION_OF_DUTIES` when the actor created the draft,
+ * Approves a draft (plan 2.2): refused with 403 `SEPARATION_OF_DUTIES` when a non-SuperAdmin actor created the draft,
  * and with 409 `VERSION_OVERLAP` (naming the conflicting versions)
  * when it would overlap an approved version of its family, unless `supersede` lets it close its one
  * predecessor exactly at its `from` (half-open, so no instant is covered twice or lost). The exclusion
@@ -113,7 +115,7 @@ export async function approveVersion<T extends Versioned>(
   const row = await lockRow(manager, target, command.id, what);
   if (row.state !== 'draft')
     throw invalidTransition(what, row.state, 'approved');
-  assertNotAuthor(row, command.actorId, what);
+  assertNotAuthor(row, command.actorId, what, command.isSuperAdmin);
   const approved = await whereKey(
     manager
       .createQueryBuilder(target, 'v')

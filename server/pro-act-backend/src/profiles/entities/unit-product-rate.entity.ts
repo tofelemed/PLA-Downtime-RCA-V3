@@ -30,6 +30,7 @@ import { RateImport } from './rate-import.entity';
  * approved row is only closed at its successor's `from` (supersede) or retired.
  */
 @Entity('unit_product_rates')
+@Index('IDX_approval_inbox_unit_product_rates', { synchronize: false })
 @Unique('UQ_unit_product_rates_profile_kind_version', [
   'profileId',
   'rateKind',

@@ -22,10 +22,12 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
  * server's summed terms, shown with their labels, cohorts and null reasons; nothing is added up here. The
  * switch adds the server's controllable availability (SME D15) beside the headline figures.
  */
-export function KpiSummary({ bundle }: { bundle: DowntimeBundleResult }) {
+export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundleResult; compact?: boolean }) {
   const summary = bundle.data?.data.summary;
   const [controllable, setControllable] = useState(false);
-  const tiles = controllable ? [...SUMMARY_TILES, CONTROLLABLE_TILE] : SUMMARY_TILES;
+  const headline = new Set(['downtime_total', 'stop_count', 'scheduled_availability', 'coded_downtime_ratio']);
+  const shown = compact ? SUMMARY_TILES.filter((tile) => headline.has(tile.metric)) : SUMMARY_TILES;
+  const tiles = controllable ? [...shown, CONTROLLABLE_TILE] : shown;
   return (
     <ReportCard
       title="Downtime summary"
@@ -40,11 +42,14 @@ export function KpiSummary({ bundle }: { bundle: DowntimeBundleResult }) {
           <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
         </Alert>
       )}
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <dl className={compact ? 'grid grid-cols-2 gap-3 lg:grid-cols-4' : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5'}>
         {tiles.map((tile) => (
           <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
         ))}
       </dl>
+      {compact && <details className="mt-3"><summary className="cursor-pointer text-sm text-primary">More downtime figures</summary>
+        <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">{SUMMARY_TILES.filter((tile) => !headline.has(tile.metric)).map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}</dl>
+      </details>}
     </ReportCard>
   );
 }

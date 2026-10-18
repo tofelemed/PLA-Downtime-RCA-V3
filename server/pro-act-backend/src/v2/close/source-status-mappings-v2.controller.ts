@@ -195,8 +195,9 @@ export class SourceStatusMappingsV2Controller {
   @Roles(...SOURCE_OWNERS)
   @ApiOperation({
     summary:
-      'The source owner approves a draft mapping version (never its author)',
+      'The source owner approves a draft mapping version (except SuperAdmin self-approval)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 422 VERSION_OVERLAP when an approved version starts at or after it; the open approved version ends where this one starts.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

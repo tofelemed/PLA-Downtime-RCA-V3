@@ -1,7 +1,11 @@
 import { DecodeInput, DecodeResult, ProfileDecoder } from '../decode-result';
 import { pickMessage } from '../decode-stages';
 import { buildEnvelope } from '../envelope-base';
-import { messageIdFor, sampleSourceRevision } from '../identity';
+import {
+  messageIdFor,
+  sampleSourceObjectId,
+  sampleSourceRevision,
+} from '../identity';
 import { mapState, tokenOf } from '../value-maps';
 import { decodeTiming, failureOf, isFailure } from './profile-support';
 
@@ -10,7 +14,7 @@ import { decodeTiming, failureOf, isFailure } from './profile-support';
  * the state token mapped through `valueMaps.state` (unmapped → `UNMAPPED_VALUE`, never defaulted)
  * and the previous token mapped when possible. A retained state is a stored state, not a new
  * transition (MQ02): the flag travels in `sourceControls.mqtt.retained` with the original event
- * time. Until plan 1.10 exists the handler side quarantines these as `no_handler` by design.
+ * time. The state normalizer stores digital samples for the unit state engine.
  */
 const KIND = 'state_json';
 
@@ -42,7 +46,7 @@ export const stateDecoder: ProfileDecoder = {
       ok: true,
       envelope: buildEnvelope(input, picked, timing.common, {
         messageId: identity.messageId,
-        sourceObjectId: input.topic,
+        sourceObjectId: sampleSourceObjectId(input.topic, timing.observedAt),
         sourceRevision: sampleSourceRevision(
           timing.common.seq,
           input.receivedAt,

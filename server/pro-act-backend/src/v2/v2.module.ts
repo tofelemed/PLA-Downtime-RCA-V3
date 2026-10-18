@@ -1,3 +1,9 @@
+import { ApprovalInboxService } from './approvals/approval-inbox.service';
+import { ApprovalInboxV2Controller } from './approvals/approval-inbox-v2.controller';
+import { EquipmentReadinessV2Controller } from './equipment-setup/equipment-readiness-v2.controller';
+import { EQUIPMENT_READINESS_SERVICES } from './equipment-setup/readiness-providers';
+import { MqttPreviewV2Controller } from './intake/mqtt-preview-v2.controller';
+import { MqttPreviewV2Service } from './intake/mqtt-preview-v2.service';
 import { Module } from '@nestjs/common';
 import { RcaCaseModule } from '../rca-case/rca-case.module';
 import { RcaKnowledgeModule } from '../rca-knowledge-base/rca-knowledge.module';
@@ -238,6 +244,8 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     NotificationsV2Module,
   ],
   controllers: [
+    ApprovalInboxV2Controller,
+    EquipmentReadinessV2Controller,
     ProductionEventOperationsV2Controller,
     StopVerificationV2Controller,
     ProductionEventsV2Controller,
@@ -252,6 +260,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     CodeMappingRulesV2Controller,
     JobsV2Controller,
     ConnectionsV2Controller,
+    MqttPreviewV2Controller,
     IngestionJobsV2Controller,
     IngestionExceptionsV2Controller,
     ReplayRunsV2Controller,
@@ -308,6 +317,8 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     RcaPoliciesV2Controller,
   ],
   providers: [
+    ApprovalInboxService,
+    ...EQUIPMENT_READINESS_SERVICES,
     ProductionEventsV2Service,
     ProductionEventHistoryService,
     ProductionEventsV2CommandService,
@@ -318,6 +329,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     AttributeMappingsV2Service,
     AttributeMappingPreviewService,
     IntakeQueriesV2Service,
+    MqttPreviewV2Service,
     SignalsV2Service,
     CalendarsV2Service,
     ProfilesV2Service,

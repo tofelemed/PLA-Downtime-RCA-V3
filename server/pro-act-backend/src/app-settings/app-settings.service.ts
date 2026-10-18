@@ -26,7 +26,7 @@ function serialize(value: unknown): string {
 /**
  * Key/value settings with an owner (plan 3.11): application-wide rows are read by everyone signed in and
  * written by a SuperAdmin; tenant rows by the tenant's members / administrators; per-user rows
- * (`tabVisibility.<tenant>.<user>`) only by their user. Unreadable rows behave as missing.
+ * (`tabVisibility.<tenant>.<user>`) by their user or SuperAdmin. Unreadable rows behave as missing.
  */
 @Injectable()
 export class AppSettingsService {
@@ -38,6 +38,9 @@ export class AppSettingsService {
 
   /** Application-wide rows, the caller's own rows and the rows of tenants it belongs to. */
   findAll(context: RequestContext): Promise<AppSettings[]> {
+    if (context.isSuperAdmin) {
+      return this.settingsRepository.find({ order: { key: 'ASC' } });
+    }
     const tenants = memberTenants(context);
     const qb = this.settingsRepository
       .createQueryBuilder('s')
@@ -46,9 +49,7 @@ export class AppSettingsService {
           where
             .where('s.tenant_id IS NULL AND s.user_id IS NULL')
             .orWhere('s.user_id = :userId', { userId: context.userId });
-          if (context.isSuperAdmin) {
-            where.orWhere('s.user_id IS NULL AND s.tenant_id IS NOT NULL');
-          } else if (tenants.length > 0) {
+          if (tenants.length > 0) {
             where.orWhere(
               's.user_id IS NULL AND s.tenant_id IN (:...tenants)',
               {

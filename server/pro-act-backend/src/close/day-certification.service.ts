@@ -133,7 +133,12 @@ export class DayCertificationService {
       }
       const before = await this.read(manager, key);
       const certified = before.certification?.state === 'certified';
-      const refusal = certifyRefusal(certifier, before.periods, certified);
+      const refusal = certifyRefusal(
+        certifier,
+        before.periods,
+        certified,
+        context.isSuperAdmin,
+      );
       if (refusal) throw refusalError(refusal, before);
       if (before.codingGate) assertCodingGate(before.codingGate);
       const row = await manager.save(

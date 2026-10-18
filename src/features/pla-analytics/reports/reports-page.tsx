@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,14 +15,12 @@ import { LossValueCard } from './loss-value-card';
 import { DowntimeReasonCard, OeeByDay } from './production-report';
 import { ReportsFilters } from './reports-filters';
 import { ReportsHeader } from './reports-header';
-import { WorkSummary } from './work-summary';
 
 const MAX_UNITS = 100;
 const VIEWS = [
   { key: 'production', label: 'OEE and downtime' },
   { key: 'reconciliation', label: 'Reconciliation' },
   { key: 'value', label: 'Loss value' },
-  { key: 'activity', label: 'Work summary' },
   { key: 'exports', label: 'Exports' },
 ] as const;
 type ReportView = (typeof VIEWS)[number]['key'];
@@ -30,12 +28,21 @@ const viewOf = (value: string | null): ReportView => VIEWS.find((view) => view.k
 
 /**
  * Reports (plan 3.6 step 4): named units (always sent), periods by their plant dates, approved-only or
- * approved-else-draft revisions; views for OEE and downtime, reconciliation, loss value, the work summary
- * (RCA cases, tasks, audit activity) and asynchronous CSV / PDF exports of approved content. The view is in the
+ * approved-else-draft revisions; views for OEE and downtime, reconciliation, loss value,
+ * and asynchronous CSV / PDF exports of approved content. The view is in the
  * URL (`?view=`), so Back and shared links keep it.
  */
 export function ReportsV2Page() {
   const tenantId = useV2TenantId();
+  const [params] = useSearchParams();
+  if (params.get('view') === 'activity') {
+    const search = new URLSearchParams({ view: 'work-summary' });
+    for (const key of ['from', 'to']) {
+      const value = params.get(key);
+      if (value) search.set(key, value);
+    }
+    return <Navigate to={{ pathname: '/audit', search: `?${search}` }} replace />;
+  }
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see its reports." />;
   return (
     <EventHubEnvProvider tenantId={tenantId}>
@@ -82,9 +89,6 @@ function ReportsScreen() {
           <TabsContent value="value" className="space-y-4">
             <LossValueCard scope={named} />
             <EconomicBreakdownCard scope={named} />
-          </TabsContent>
-          <TabsContent value="activity">
-            <WorkSummary scope={named} />
           </TabsContent>
           <TabsContent value="exports">
             <Exports scope={named} />

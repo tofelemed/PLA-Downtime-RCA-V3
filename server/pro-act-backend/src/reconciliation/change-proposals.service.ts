@@ -70,7 +70,7 @@ export class ChangeProposalsService implements OnModuleInit {
     const actor = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
       const proposal = await this.open(manager, context, proposalId);
-      assertNotProposer(proposal, actor);
+      assertNotProposer(proposal, actor, context.isSuperAdmin);
       const period = await periodInScope(manager, context, proposal.periodId);
       await lockPeriod(manager, period.id);
       const approved = await manager.findOneByOrFail(AccountingRevision, {
@@ -121,7 +121,7 @@ export class ChangeProposalsService implements OnModuleInit {
     const actor = requireUser(context);
     return this.dataSource.transaction(async (manager) => {
       const proposal = await this.open(manager, context, proposalId);
-      assertNotProposer(proposal, actor);
+      assertNotProposer(proposal, actor, context.isSuperAdmin);
       await manager.update(PeriodChangeProposal, proposal.id, {
         state: 'dismissed',
         resolvedBy: actor,

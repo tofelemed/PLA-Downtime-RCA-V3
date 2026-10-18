@@ -131,7 +131,7 @@ test.describe('Integration admin — access, cross-plant, refusals', () => {
 
   test('INT-09b (diego): Codes & Rules shows the codes without New code, and the server refuses a create with 403', async ({ page }) => {
     await uiLogin(page, INT_USERS.diego);
-    await page.goto('/codes-admin');
+    await page.goto('/master-data/codes-rules');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 });
     await expectHidden(page.getByTestId('code-new'));

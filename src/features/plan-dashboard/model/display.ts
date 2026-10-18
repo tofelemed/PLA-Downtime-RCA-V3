@@ -119,10 +119,10 @@ export interface ActionGate {
 }
 
 /** Approve / reject offered only for a submitted revision; the submitter is told why not (D06, T36). */
-export function reviewGate(view: ReconciliationView, userId: string | null): ActionGate {
+export function reviewGate(view: ReconciliationView, userId: string | null, isSuperAdmin = false): ActionGate {
   const revision = view.revision;
   if (revision.lifecycle !== 'in_review') return { allowed: false, reason: 'Only a submitted revision can be reviewed.', code: null };
-  if (userId && revision.submittedBy === userId) {
+  if (!isSuperAdmin && userId && revision.submittedBy === userId) {
     return { allowed: false, reason: 'You submitted this revision: another manager approver must review it (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
   }
   if (revision.isStale) {
@@ -132,21 +132,21 @@ export function reviewGate(view: ReconciliationView, userId: string | null): Act
 }
 
 /** Approve also needs independence from the content: not an author of any reviewed line (D06, RC-01). */
-export function approveGate(view: ReconciliationView, userId: string | null): ActionGate {
-  const review = reviewGate(view, userId);
+export function approveGate(view: ReconciliationView, userId: string | null, isSuperAdmin = false): ActionGate {
+  const review = reviewGate(view, userId, isSuperAdmin);
   if (!review.allowed || !userId) return review;
-  if (view.lines.some((line) => line.authorId === userId)) {
+  if (!isSuperAdmin && view.lines.some((line) => line.authorId === userId)) {
     return { allowed: false, reason: 'You wrote lines in this revision: another manager approver must approve it (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
   }
-  return bridgeGate(view, userId) ?? review;
+  return bridgeGate(view, userId, isSuperAdmin) ?? review;
 }
 
 /** SME R8: a bridge above the unit limit waits for its second reviewer, who never approves it as well. */
-function bridgeGate(view: ReconciliationView, userId: string): ActionGate | null {
+function bridgeGate(view: ReconciliationView, userId: string, isSuperAdmin: boolean): ActionGate | null {
   const bridge = view.bridgeReview;
   if (!bridge?.required) return null;
   if (!bridge.review) return { allowed: false, reason: 'A bridge is above the unit limit: a second independent reviewer reviews it before approval.', code: 'BRIDGE_REVIEW_REQUIRED' };
-  if (bridge.review.by === userId) return { allowed: false, reason: 'You reviewed the bridges: someone else approves the period (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
+  if (!isSuperAdmin && bridge.review.by === userId) return { allowed: false, reason: 'You reviewed the bridges: someone else approves the period (separation of duties).', code: 'SEPARATION_OF_DUTIES' };
   return null;
 }
 

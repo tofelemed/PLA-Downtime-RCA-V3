@@ -47,6 +47,7 @@ export interface GenerationFailure {
  * (DB trigger `plan_periods_frozen`).
  */
 @Entity('plan_versions')
+@Index('IDX_approval_inbox_plan_versions', { synchronize: false })
 @Unique('UQ_plan_versions_plan_version', ['planId', 'version'])
 @Index('UQ_plan_versions_plan_open', ['planId'], {
   unique: true,

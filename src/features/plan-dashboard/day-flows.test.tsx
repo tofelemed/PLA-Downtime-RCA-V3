@@ -79,6 +79,15 @@ describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
     expect(gate.textContent).toContain('daily target 99');
   });
 
+  it('SuperAdmin certifies a day whose shifts they submitted', async () => {
+    actAs('SuperAdmin', 'preparer-1');
+    wrap();
+    const button = await screen.findByTestId('day-certify');
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(button);
+    await waitFor(() => expect(posts).toEqual(['/api/v2/production-days/u1/2026-10-08/certify']));
+  });
+
   it('a submitter of a shift cannot certify the day', async () => {
     actAs('manager_approver', 'preparer-1');
     wrap();

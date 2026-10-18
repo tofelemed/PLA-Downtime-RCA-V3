@@ -22,7 +22,8 @@ export interface PolicyApproveProps {
 export function PolicyApprove({ policy, status }: PolicyApproveProps) {
   const approve = useApproveValuationPolicy();
   const [open, setOpen] = useState(false);
-  const access = approvalAccess(useCapabilities().canApproveValuation, policy.createdBy, useCurrentUserId());
+  const { canApproveValuation, isSuperAdmin } = useCapabilities();
+  const access = approvalAccess(canApproveValuation, policy.createdBy, useCurrentUserId(), isSuperAdmin);
   if (status !== 'unapproved' || access === 'hidden') return null;
   const onOpenChange = (next: boolean) => {
     setOpen(next);

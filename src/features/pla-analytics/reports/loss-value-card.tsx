@@ -42,16 +42,18 @@ function columnsOf(currencies: readonly string[], unitName: (id: string) => stri
  * display currency first (the server reports both IRR and USD, D08); a missing amount says why (policy not
  * approved, FX rate missing), never 0. Units 20 per page; the total below.
  */
-export function LossValueCard({ scope }: { scope: AnalyticsScope }) {
+export function LossValueCard({ scope, metric = 'margin' }: { scope: AnalyticsScope; metric?: 'margin' | 'standard_cost' | 'operational_cost' }) {
   const env = useEventHubEnv();
-  const query = useReport<LossValueReportView>('loss-value', lossValueQuery(scope), env.timezone);
+  const reportQuery = { ...lossValueQuery(scope), metric };
+  const query = useReport<LossValueReportView>('loss-value', reportQuery, env.timezone);
   const data = query.data?.data;
+  const label = { margin: 'contribution margin', standard_cost: 'standard cost', operational_cost: 'operational cost' }[metric];
   const { currency } = useDisplayCurrency();
   const { digits } = useCalendarPreference();
   const currencies = entriesInCurrency(data?.total.currencies.map((c) => c.currency) ?? [], (c) => c, currency);
   return (
     <AnalyticsCard
-      title={`Loss value · ${data?.label ?? 'contribution margin'} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
+      title={`Loss value · ${data?.label ?? label} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
       testId="report-loss-value"
       query={query}
       response={query.data}

@@ -1,9 +1,10 @@
+import { DOWNTIME_PAGES, PLA_PAGES } from '@/features/analysis-navigation/analysis-pages';
 import { EntityIcon, type AppIcon } from '@/lib/icons';
 import type { FeatureFlagKey } from '@/api/v2/types/flags';
 import type { Capabilities, CapabilityKey } from './capabilities';
 
 /** Sidebar sections, in display order (docs/UI_UX_AUDIT.md §1). */
-export type NavSectionKey = 'overview' | 'production' | 'reliability' | 'integration' | 'administration';
+export type NavSectionKey = 'overview' | 'production' | 'downtime' | 'pla' | 'reliability' | 'integration' | 'administration';
 
 export interface NavSection {
   key: NavSectionKey;
@@ -14,6 +15,8 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   { key: 'overview', label: 'Overview', icon: EntityIcon.dashboard },
   { key: 'production', label: 'Production', icon: EntityIcon.plant },
+  { key: 'downtime', label: 'Downtime Analysis', icon: EntityIcon.downtime },
+  { key: 'pla', label: 'Production Loss Analysis (PLA)', icon: EntityIcon.lossAnalysis },
   { key: 'reliability', label: 'Reliability', icon: EntityIcon.rcaCase },
   { key: 'integration', label: 'Integration', icon: EntityIcon.integration },
   { key: 'administration', label: 'Administration', icon: EntityIcon.administration },
@@ -21,6 +24,8 @@ export const NAV_SECTIONS: readonly NavSection[] = [
 
 export interface NavigationItem {
   name: string;
+  label?: string;
+  exact?: boolean;
   href: string;
   icon: AppIcon;
   section: NavSectionKey;
@@ -54,17 +59,9 @@ const DEV_ITEMS: readonly NavigationItem[] = import.meta.env.DEV
  */
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: EntityIcon.dashboard, section: 'overview', capability: 'canViewOperations', description: 'Key figures of the selected plant' },
+  { name: 'Pending Approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canViewOperations', description: 'Pending records for your approval roles in the selected plant' },
   { name: 'Reports', href: '/reports', icon: EntityIcon.report, section: 'overview', capability: 'canViewAnalysis', description: 'OEE, loss, downtime and reconciliation reports' },
   { name: 'Event Hub', href: '/events', icon: EntityIcon.event, section: 'production', capability: 'canViewOperations', description: 'Stops and production events' },
-  {
-    name: 'Downtime Analysis',
-    href: '/downtime',
-    icon: EntityIcon.downtime,
-    section: 'production',
-    capability: 'canViewOperations',
-    description: 'What is down, why, how often and where',
-  },
-  { name: 'Production Loss Analysis', href: '/pla-analytics', icon: EntityIcon.lossAnalysis, section: 'production', capability: 'canViewOperations', description: 'Where production is lost and why' },
   {
     name: 'Plans, Profiles & Calendars',
     href: '/planning',
@@ -100,6 +97,8 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Uncertainty budgets per measurement boundary that justify the reconciliation tolerance',
   },
+  ...DOWNTIME_PAGES.map((page): NavigationItem => ({ name: page.name, label: page.label, href: page.path, icon: page.icon, section: 'downtime', capability: 'canViewOperations', description: page.description, exact: true })),
+  ...PLA_PAGES.map((page): NavigationItem => ({ name: page.name, label: page.label, href: page.path, icon: page.icon, section: 'pla', capability: 'canViewOperations', description: page.description, exact: true })),
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewAnalysis', description: 'Root cause investigations' },
   { name: 'Bad Actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
   { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
@@ -111,15 +110,8 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Source Priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canViewAnalysis', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
   // listed for integration roles; the page reads signals and their samples, which every plant member may read
   { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canViewAnalysis', description: 'Time series of plant signals' },
-  { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', description: 'Plant hierarchy, units, assets, products and reliability plant data' },
-  {
-    name: 'Codes & Rules',
-    href: '/codes-admin',
-    icon: EntityIcon.code,
-    section: 'administration',
-    capability: 'canViewAnalysis',
-    description: 'Code libraries and status rules',
-  },
+  { name: 'Equipment Setup Guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachMasterData', description: 'Six phases from equipment records to the first approved period and analysis' },
+  { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', activeAlso: ['/codes-admin'], description: 'Plant records, codes, rules and reliability data' },
   {
     name: 'Finance',
     href: '/finance',
@@ -128,15 +120,13 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Valuation policy and exchange rates',
   },
-  { name: 'User Management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canAdministerTenant', description: 'Users and their access' },
-  { name: 'Permissions', href: '/permissions', icon: EntityIcon.permission, section: 'administration', capability: 'canAdministerTenant', description: 'Roles and permissions' },
+  { name: 'User Management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canUseUserManagement', activeAlso: ['/permissions', '/delegations'], description: 'Users, permissions and approval delegations' },
   // SME R1 / R6: administrators record delegations for anyone, approval-role holders for themselves
-  { name: 'Delegations', href: '/delegations', icon: EntityIcon.delegation, section: 'administration', capability: 'canDelegateApprovals', description: 'Approval roles handed to a delegate for an absence' },
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
-  { name: 'Admin Panel', href: '/admin', icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Administration tools' },
+  { name: 'Admin Panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Plants, branding, custom attributes and plant settings' },
   { name: 'Audit Logs', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
   // the server's tenant-setting write rule (TenantAdmin / manager_approver in the plant, SuperAdmin)
-  { name: 'Settings', href: '/settings', icon: EntityIcon.settings, section: 'administration', capability: 'canManagePlantSettings', description: 'Plant settings: calendar and number display' },
+
   ...DEV_ITEMS,
 ];
 
@@ -165,7 +155,8 @@ export function groupNavigationItems(items: readonly NavigationItem[], sections:
  * Whether `pathname` belongs to the item: the path itself or a sub-path (`/rca/cases/1` is RCA, but
  * `/rca-knowledge-base` is not), plus the item's `activeAlso` prefixes.
  */
-export function isNavItemActive(item: Pick<NavigationItem, 'href' | 'activeAlso'>, pathname: string): boolean {
+export function isNavItemActive(item: Pick<NavigationItem, 'href' | 'activeAlso' | 'exact'>, pathname: string): boolean {
+  if (item.exact) return pathname === item.href;
   if (pathname === item.href || pathname.startsWith(`${item.href}/`)) return true;
   return (item.activeAlso ?? []).some((prefix) => pathname.startsWith(prefix));
 }

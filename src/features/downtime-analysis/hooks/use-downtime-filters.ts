@@ -8,6 +8,13 @@ export interface DowntimeFiltersState {
   change: (patch: Partial<DowntimeFilters>) => void;
 }
 
+const FILTER_KEYS = new Set(['from', 'to', 'window', 'units', 'class', 'micro', 'approved', 'metric', 'trend', 'reasons', 'products', 'shifts', 'crews']);
+const withOthers = (filters: DowntimeFilters, current: URLSearchParams) => {
+  const next = toSearchParams(filters);
+  current.forEach((value, key) => { if (!FILTER_KEYS.has(key)) next.set(key, value); });
+  return next;
+};
+
 const DRILL_KEEPING: ReadonlyArray<keyof DowntimeFilters> = ['metric', 'trendBy', 'reasonPath'];
 
 /**
@@ -21,14 +28,14 @@ export function useDowntimeFilters(): DowntimeFiltersState {
   const filters = useMemo(() => parseFilters(params, openedAt), [params, openedAt]);
 
   useEffect(() => {
-    if (!params.get('from') || !params.get('to')) setParams(toSearchParams(filters), { replace: true });
+    if (!params.get('from') || !params.get('to')) setParams((current) => withOthers(filters, current), { replace: true });
   }, [params, filters, setParams]);
 
   const change = useCallback(
     (patch: Partial<DowntimeFilters>) => {
       const keepsDrill = Object.keys(patch).every((key) => DRILL_KEEPING.includes(key as keyof DowntimeFilters));
       const next = { ...filters, ...(keepsDrill ? {} : { reasonPath: [] }), ...patch };
-      setParams(toSearchParams(next));
+      setParams((current) => withOthers(next, current));
     },
     [filters, setParams],
   );

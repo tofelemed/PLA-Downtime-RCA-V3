@@ -28,6 +28,7 @@ export type ReconciliationMode = (typeof RECONCILIATION_MODES)[number];
  * suggestion no longer matches. Every decision is also a revision of the events (audited).
  */
 @Entity('stop_reconciliations')
+@Index('IDX_approval_inbox_stop_reconciliations', { synchronize: false })
 @Index(
   'UQ_stop_reconciliations_pair',
   ['tenantId', 'keptEventId', 'evidenceEventId'],

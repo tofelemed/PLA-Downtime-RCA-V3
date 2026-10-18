@@ -224,7 +224,11 @@ function assertApprovable(
 ): void {
   assertTenantWideWriter(context, policy.tenantId);
   if (policy.approvedAt) throw invalidTransition(WHAT, 'approved', 'approved');
-  if (policy.createdBy && policy.createdBy === context.userId) {
+  if (
+    !context.isSuperAdmin &&
+    policy.createdBy &&
+    policy.createdBy === context.userId
+  ) {
     throw new ForbiddenException({
       code: 'SEPARATION_OF_DUTIES',
       message:

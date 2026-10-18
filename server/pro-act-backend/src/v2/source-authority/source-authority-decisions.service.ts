@@ -189,7 +189,12 @@ export class SourceAuthorityDecisionsService {
       const state = versionStateOf(draft);
       if (state !== 'proposed')
         throw invalidTransition(WHAT, state, decision.kind);
-      assertNotAuthor(draft, context.userId, 'Source authority');
+      assertNotAuthor(
+        draft,
+        context.userId,
+        'Source authority',
+        context.isSuperAdmin,
+      );
       await apply(manager, draft);
       await appendAudit(manager, [
         {

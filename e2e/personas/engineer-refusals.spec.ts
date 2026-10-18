@@ -20,7 +20,7 @@ test.describe('Engineer — refusals (journey 5)', () => {
   test('Mateo on /codes-admin: reason codes are readable, New code is not offered, the server refuses a create with 403 and nothing is stored', async ({ page }) => {
     const code = `P-ENG-REFUSED-${suffix}`;
     await loginViaUI(page, MATEO.email, MATEO.password);
-    await page.goto('/codes-admin');
+    await page.goto('/master-data/codes-rules');
     await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('code-row').first()).toBeVisible({ timeout: 30_000 }); // reads are allowed
     await expectHidden(page.getByTestId('code-new'));

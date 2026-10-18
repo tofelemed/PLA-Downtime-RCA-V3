@@ -40,7 +40,7 @@ export function RuleDetail({ rule, schema, currentUserId }: RuleDetailProps) {
     <div className="space-y-6" data-testid="rule-detail" data-state={rule.state} data-active-version={rule.activeVersion ?? ''} data-has-draft={Boolean(rule.draft)}>
       <PageHeader
         title={rule.name}
-        back={{ to: '/codes-admin?tab=rules', label: 'Rules' }}
+        back={{ to: '/master-data/codes-rules?tab=rules', label: 'Rules' }}
         description={<RuleSummary rule={rule} ownDraft={ownDraft} />}
         actions={<RuleActions rule={rule} currentUserId={currentUserId} />}
       />

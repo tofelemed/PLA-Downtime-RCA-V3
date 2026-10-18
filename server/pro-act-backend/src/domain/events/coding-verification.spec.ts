@@ -54,6 +54,24 @@ describe('coding verification (SME D13)', () => {
     expect(validateRefusal(verified, 'operator')).toBe('OWN_CODING');
   });
 
+  it('SuperAdmin verifies and validates their own coding without skipping prerequisites', () => {
+    expect(verifyRefusal(stop, 'operator', true)).toBeNull();
+    expect(
+      validateRefusal({ ...stop, verifiedAt: at }, 'operator', true),
+    ).toBeNull();
+    expect(
+      verifyRefusal({ ...stop, reasonCodeId: null }, 'operator', true),
+    ).toBe('NOT_CODED');
+    expect(validateRefusal(stop, 'operator', true)).toBe('NOT_VERIFIED');
+    expect(
+      validateRefusal(
+        { ...stop, verifiedAt: at, hasFailureDetail: false },
+        'operator',
+        true,
+      ),
+    ).toBe('NO_FAILURE_DETAIL');
+  });
+
   it('a coding change clears the verification, a failure-detail change the validation', () => {
     expect(verificationReset(['reasonCodeId'])).toEqual({
       verifiedBy: null,

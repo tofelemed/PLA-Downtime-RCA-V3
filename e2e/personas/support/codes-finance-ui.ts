@@ -2,19 +2,19 @@ import { expect, type Page } from '@playwright/test';
 import { findRule } from '../../test-utils/codes-world';
 
 /**
- * UI steps of `/codes-admin` and `/finance` after the T5 redesign: one library at a time (`?library=`),
+ * UI steps of `/master-data/codes-rules` and `/finance` after the T5 redesign: one library at a time (`?library=`),
  * a tree that starts collapsed (deep codes are found with the search, `?q=`), a page per code
- * (`/codes-admin/:library/:id`), per rule (`/codes-admin/rules/:id`), per FX rate (`/finance/fx/:id`)
+ * (`/master-data/codes-rules/:library/:id`), per rule (`/master-data/codes-rules/rules/:id`), per FX rate (`/finance/fx/:id`)
  * and per policy version (`/finance/policies/:id`); destructive and approving actions ask first.
  */
 export type Library = 'reason-codes' | 'impact-codes' | 'oee-codes' | 'failure-code-groups' | 'loss-category-defs';
 
 export const adminRefusal = (page: Page) => page.getByTestId('admin-refusal');
 
-/** The library tab of `/codes-admin`, optionally with a search. */
+/** The library tab of `/master-data/codes-rules`, optionally with a search. */
 export async function openLibrary(page: Page, library: Library = 'reason-codes', search = ''): Promise<void> {
   const query = new URLSearchParams({ library, ...(search ? { q: search } : {}) });
-  await page.goto(`/codes-admin?${query.toString()}`);
+  await page.goto(`/master-data/codes-rules?${query.toString()}`);
   // first visit compiles the lazy page chunk on the dev server
   await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
 }
@@ -56,7 +56,7 @@ export async function moveCode(page: Page, library: Library, code: string, targe
 export async function openRule(page: Page, token: string, name: string): Promise<void> {
   const rule = await findRule(token, name);
   expect(rule, `rule ${name}`).not.toBeNull();
-  await page.goto(`/codes-admin/rules/${rule?.id}`);
+  await page.goto(`/master-data/codes-rules/rules/${rule?.id}`);
   await expect(page.getByTestId('rule-detail')).toBeVisible({ timeout: 60_000 });
 }
 

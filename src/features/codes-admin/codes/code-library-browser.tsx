@@ -49,7 +49,7 @@ function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary
         )}
       </div>
       {creating && (
-        <CodeCreateDialog library={library} parentId={null} onClose={() => setCreating(false)} onCreated={(id) => navigate(`/codes-admin/${library}/${id}`)} />
+        <CodeCreateDialog library={library} parentId={null} onClose={() => setCreating(false)} onCreated={(id) => navigate(`/master-data/codes-rules/${library}/${id}`)} />
       )}
     </div>
   );

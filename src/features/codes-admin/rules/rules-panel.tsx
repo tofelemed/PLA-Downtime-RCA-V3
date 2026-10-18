@@ -49,7 +49,7 @@ export function RulesPanel() {
         </div>
         <div className="ml-auto">
           {canAuthorRules ? (
-            <Button onClick={() => navigate('/codes-admin/rules/new')} data-testid="rule-new">
+            <Button onClick={() => navigate('/master-data/codes-rules/rules/new')} data-testid="rule-new">
               <ActionIcon.add aria-hidden="true" />
               New rule
             </Button>
@@ -66,7 +66,7 @@ export function RulesPanel() {
         pager={rules.pager}
         status={rules.status}
         empty={{ title: 'No rules yet', text: 'Rules become active only when a second person activates them.' }}
-        onRowClick={(rule) => navigate(`/codes-admin/rules/${rule.id}`)}
+        onRowClick={(rule) => navigate(`/master-data/codes-rules/rules/${rule.id}`)}
         rowLabel={(rule) => `Rule ${rule.name}`}
       />
     </div>

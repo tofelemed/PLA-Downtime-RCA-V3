@@ -139,6 +139,15 @@ describe('finance — exchange rates and valuation policy commands', () => {
     await waitFor(() => expect(posts()[0]?.url.pathname).toMatch(/\/v2\/fx-rates\/f2\/retire$/));
   });
 
+  it('SuperAdmin sees approval controls for their own valuation policy and FX', () => {
+    actAs('SuperAdmin', 'author-1');
+    wrap(<PolicyApprove policy={{ ...POLICY, createdBy: 'author-1' }} status="unapproved" />);
+    wrap(<FxVersionActions rate={{ ...FX, createdBy: 'author-1' }} />);
+    expect((screen.getByTestId('policy-approve-start') as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByTestId('fx-approve') as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId('sod-disabled')).toBeNull();
+  });
+
   it('a SEPARATION_OF_DUTIES refusal from the server is still shown as such (fallback)', async () => {
     reply = (call) =>
       call.method === 'POST' ? json(403, refusal('SEPARATION_OF_DUTIES', { message: 'a valuation policy version is approved by someone other than its author' })) : json(200, { items: [], nextCursor: null });

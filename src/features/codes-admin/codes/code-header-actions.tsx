@@ -32,7 +32,7 @@ export function CodeHeaderActions({ library, code }: CodeHeaderActionsProps) {
       )}
       {canWriteCodes && code.active && <CodeRetireAction library={library} code={code} />}
       {creating && (
-        <CodeCreateDialog library={library} parentId={code.id} onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); navigate(`/codes-admin/${library}/${id}`); }} />
+        <CodeCreateDialog library={library} parentId={code.id} onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); navigate(`/master-data/codes-rules/${library}/${id}`); }} />
       )}
     </>
   );

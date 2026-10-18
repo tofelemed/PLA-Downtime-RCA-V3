@@ -1,8 +1,9 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuditPage, useAuditSummary } from '@/api/v2/queries/administration-audit';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuditPage, useAuditSummary, type AuditFilters } from '@/api/v2/queries/administration-audit';
 import { DAY_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ALL, FilterSelect, type FilterOption } from '@/features/admin/shared/filter-select';
 import { PageGate } from '@/features/admin/shared/page-gate';
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
@@ -17,7 +18,8 @@ import { ExportAuditButton } from './components/export-audit-button';
 import { toAuditFilters, type AuditUrlFilters } from './model/audit-filters';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
-/** Charts pull in recharts: loaded only when the "Activity" section is opened. */
+/** Summary and chart modules load only when their tab/section is opened. */
+const WorkSummary = lazy(() => import('./work-summary').then((module) => ({ default: module.WorkSummary })));
 const AuditCharts = lazy(() => import('./components/audit-charts').then((module) => ({ default: module.AuditCharts })));
 
 const optionsOf = (keys: readonly string[], label: (key: string) => string, allLabel: string): FilterOption[] => [
@@ -36,28 +38,61 @@ export function AuditPage() {
 }
 
 function AuditScreen() {
-  const { number } = useNumberFormat();
-  const navigate = useNavigate();
   const dates = usePlantDates();
+  const [params, setParams] = useSearchParams();
   const [defaults] = useState<AuditUrlFilters>(() => ({ ...rollingWindow(30 * DAY_MS), q: '', action: ALL, entity: ALL }));
   const [values, setValues] = useUrlFilters(defaults);
   const filters = toAuditFilters(values);
+  const view = params.get('view') === 'work-summary' ? 'work-summary' : 'entries';
+  const chooseView = (next: string) => setParams((current) => {
+    const copy = new URLSearchParams(current);
+    if (next === 'entries') copy.delete('view');
+    else copy.set('view', next);
+    return copy;
+  });
+  return (
+    <Page width="wide">
+      <PageHeader title="Audit log" description="Changes, work items and audit activity in the selected plant." actions={view === 'entries' ? <ExportAuditButton filters={filters} timezone={dates.timezone} /> : undefined} />
+      <Section title="Period">
+        <DateRangeInput label="Period" value={{ from: values.from || null, to: values.to || null }} timeZone={dates.timezone} onChange={(range) => {
+          if (range.from && range.to) setValues({ from: range.from, to: range.to });
+        }} />
+      </Section>
+      <Tabs value={view} onValueChange={chooseView}>
+        <TabsList aria-label="Audit log views">
+          <TabsTrigger value="entries">Entries</TabsTrigger>
+          <TabsTrigger value="work-summary">Work summary</TabsTrigger>
+        </TabsList>
+        <TabsContent value="entries"><AuditEntries filters={filters} values={values} setValues={setValues} /></TabsContent>
+        <TabsContent value="work-summary">
+          <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+            <WorkSummary window={{ from: values.from || defaults.from, to: values.to || defaults.to }} />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+    </Page>
+  );
+}
+
+interface AuditEntriesProps {
+  filters: AuditFilters;
+  values: AuditUrlFilters;
+  setValues: (patch: Partial<AuditUrlFilters>) => void;
+}
+
+function AuditEntries({ filters, values, setValues }: AuditEntriesProps) {
+  const { number } = useNumberFormat();
+  const navigate = useNavigate();
+  const dates = usePlantDates();
   const entries = useAuditPage(filters);
   const summary = useAuditSummary({ from: filters.from, to: filters.to });
   const columns = useMemo(() => auditColumns(dates.dateTime), [dates]);
   const actions = optionsOf((summary.data?.byAction ?? []).map((row) => row.key), actionLabel, 'All actions');
   const entities = optionsOf((summary.data?.byEntityType ?? []).map((row) => row.key), entityLabel, 'All records');
   return (
-    <Page width="wide">
-      <PageHeader title="Audit log" description="Who changed what, and when, in the selected plant." actions={<ExportAuditButton filters={filters} timezone={dates.timezone} />} />
+    <>
       <Section title="Filters">
         <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
-          <DateRangeInput
-            label="Period"
-            value={{ from: values.from || null, to: values.to || null }}
-            timeZone={dates.timezone}
-            onChange={(range) => setValues({ from: range.from ?? '', to: range.to ?? '' })}
-          />
           <DebouncedSearchInput label="Search actions, records and details" value={values.q} onChange={(q) => setValues({ q })} />
           <FilterSelect label="Action filter" value={values.action} options={actions} onChange={(action) => setValues({ action })} />
           <FilterSelect label="Record type filter" value={values.entity} options={entities} onChange={(entity) => setValues({ entity })} />
@@ -84,6 +119,6 @@ function AuditScreen() {
           rowLabel={(entry) => `Open entry: ${actionLabel(entry.action)} ${entityLabel(entry.entityType)}`}
         />
       </Section>
-    </Page>
+    </>
   );
 }

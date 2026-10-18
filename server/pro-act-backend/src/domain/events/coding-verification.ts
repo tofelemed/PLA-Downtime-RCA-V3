@@ -78,11 +78,12 @@ export type VerifyRefusal =
 export function verifyRefusal(
   stop: StopForVerification,
   verifier: string,
+  isSuperAdmin = false,
 ): VerifyRefusal | null {
   if (!stop.isStop) return 'NOT_A_STOP';
   if (!stop.reasonCodeId && !stop.investigationPending) return 'NOT_CODED';
   if (stop.verifiedAt) return 'ALREADY_VERIFIED';
-  if (stop.codedBy === verifier) return 'OWN_CODING';
+  if (!isSuperAdmin && stop.codedBy === verifier) return 'OWN_CODING';
   return null;
 }
 
@@ -100,11 +101,12 @@ export type ValidateRefusal =
 export function validateRefusal(
   stop: StopForVerification,
   validator: string,
+  isSuperAdmin = false,
 ): ValidateRefusal | null {
   if (!stop.isStop) return 'NOT_A_STOP';
   if (!stop.hasFailureDetail) return 'NO_FAILURE_DETAIL';
   if (!stop.verifiedAt) return 'NOT_VERIFIED';
   if (stop.validatedAt) return 'ALREADY_VALIDATED';
-  if (stop.codedBy === validator) return 'OWN_CODING';
+  if (!isSuperAdmin && stop.codedBy === validator) return 'OWN_CODING';
   return null;
 }

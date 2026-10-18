@@ -26,6 +26,7 @@ import { RCATemplate } from '../rca-template/rca-template.entity';
   `"effectiveness_verdict" IS NULL OR "effectiveness_verdict" IN ('effective', 'not_effective', 'insufficient_evidence')`,
 )
 @Entity('rcas')
+@Index('IDX_approval_inbox_rcas', { synchronize: false })
 export class RCA {
   @PrimaryGeneratedColumn('uuid')
   id: string;

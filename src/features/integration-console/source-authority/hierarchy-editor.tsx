@@ -94,7 +94,7 @@ function EditorForm({ initial, unitId, onDone }: { initial: HierarchyFormValues;
 
 /**
  * Drafts a new source authority version for the unit or the whole plant, starting from the version in force
- * for that scope. It applies only once production accounting — someone other than its author — approves it;
+ * for that scope. It applies only once production accounting — an independent approver, or the author acting as SuperAdmin — approves it;
  * the server checks ranks, classes, boundaries and lags and its refusal is shown as it is.
  */
 export function HierarchyEditor({ unitId, onDone }: { unitId: string; onDone: () => void }) {

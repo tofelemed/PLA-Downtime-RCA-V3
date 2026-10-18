@@ -14,16 +14,13 @@ import {
 /** Outbox event of a source becoming (un)available (design §4.5, T11): health, never a stop. */
 export const SOURCE_HEALTH_CHANGED = 'SourceHealthChanged';
 
-export const STATE_ENGINE_NOT_BUILT =
-  'state engine (plan 1.10) not built: run-state observations are retained for replay';
-
 /**
  * Normaliser of MQTT `state` envelopes (plan 1.8 WP3 step 3). Availability messages (contract §3.5,
  * `sourceControls.mqtt.availability`) update the subscription's health (`sourceAvailable`,
  * `lastAvailabilityAt`, `sourcePiConnected`) and publish `SourceHealthChanged`; a Last Will OFFLINE
  * therefore means "source unavailable", never "equipment stopped" (MQ04, T11). Plain machine-state
- * envelopes are quarantined `no_handler` by design until the 1.10 state engine exists; their raw rows
- * stay replayable.
+ * observations become digital measurements bound to a state signal by their MQTT topic. The shared
+ * measurement normalizer preserves effective-dated binding, quality and replay idempotency.
  */
 @Injectable()
 export class MqttStateHandler implements NormalizationHandler, OnModuleInit {
@@ -49,16 +46,7 @@ export class MqttStateHandler implements NormalizationHandler, OnModuleInit {
   async handle(input: NormalizationInput): Promise<NormalizationResult> {
     const { envelope } = input;
     if (envelope.sourceControls?.mqtt?.availability !== true) {
-      return {
-        status: 'quarantined',
-        outcome: 'no_handler',
-        errorCode: 'no_handler',
-        detail: {
-          reason: STATE_ENGINE_NOT_BUILT,
-          stateRef: envelope.values?.state?.stateRef ?? null,
-          value: envelope.values?.state?.value ?? null,
-        },
-      };
+      return this.recordState(input);
     }
     const available = envelope.values?.state?.value === 'ONLINE';
     await this.dataSource.transaction((manager) =>
@@ -70,6 +58,41 @@ export class MqttStateHandler implements NormalizationHandler, OnModuleInit {
       canonicalEventId: null,
       detail: { observedAt: envelope.observedAt },
     };
+  }
+
+  private async recordState(
+    input: NormalizationInput,
+  ): Promise<NormalizationResult> {
+    const state = input.envelope.values?.state;
+    if (!state)
+      return {
+        status: 'quarantined',
+        outcome: 'processing_failed',
+        errorCode: 'processing_failed',
+        detail: { reason: 'State observation has no state value' },
+      };
+    const envelope: CanonicalEnvelope = {
+      ...input.envelope,
+      kind: 'measurement',
+      values: {
+        sample: {
+          signalRef: state.stateRef,
+          value: String(state.value),
+          unit: null,
+          sequence: state.sequence,
+          semanticType: 'state',
+        },
+      },
+    };
+    const handler = this.registry.find(envelope);
+    if (!handler)
+      return {
+        status: 'quarantined',
+        outcome: 'processing_failed',
+        errorCode: 'processing_failed',
+        detail: { reason: 'Measurement normalizer is unavailable' },
+      };
+    return handler.handle({ ...input, envelope });
   }
 
   private async recordAvailability(

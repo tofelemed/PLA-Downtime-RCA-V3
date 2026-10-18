@@ -238,8 +238,9 @@ export class ProductionPlansV2Controller {
     summary:
       'Approve the open version (PLAN04); the previous approved version is superseded',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. The author of the version (its creator) cannot approve it (403 ' +
-      'SEPARATION_OF_DUTIES, any role). 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan ' +
+      'SEPARATION_OF_DUTIES, all non-SuperAdmin roles). 409 PLAN_OVERLAP (details.conflicts) when an approved version of another plan ' +
       'in the same scenario plans the unit and product in an overlapping interval; 409 PERIODS_NOT_GENERATED; ' +
       '409 INVALID_TRANSITION for an approved or superseded version.',
   })

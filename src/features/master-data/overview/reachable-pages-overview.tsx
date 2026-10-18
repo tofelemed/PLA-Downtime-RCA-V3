@@ -12,7 +12,7 @@ export function ReachablePagesOverview() {
   const capabilities = useCapabilities();
   const pages = visibleMasterDataSections(capabilities).filter((s) => !s.end);
   return (
-    <MasterDataLayout title="Master data" description="The reliability plant data your role maintains." alsoAllowed={capabilities.canReachMasterData}>
+    <MasterDataLayout title="Master data" description="Equipment setup, code libraries and the plant-data pages your role can reach." alsoAllowed={capabilities.canReachMasterData}>
       <Section title="Your pages">
         <ul className="space-y-1 text-sm" aria-label="Master data pages you can open">
           {pages.map((page) => (

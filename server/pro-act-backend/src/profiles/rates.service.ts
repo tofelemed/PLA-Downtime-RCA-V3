@@ -99,6 +99,7 @@ export class RatesService {
           key: { profileId: rate.profileId, rateKind: rate.rateKind },
           supersede,
           actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
         },
         `${rate.rateKind} rate`,
       );

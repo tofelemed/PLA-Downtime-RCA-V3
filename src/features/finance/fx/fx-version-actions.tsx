@@ -30,8 +30,8 @@ function SupersedeChoice({ checked, onChange }: { checked: boolean; onChange: (o
  * listed in the dialog). Only finance approvers see these actions (SME V1); the author sees approve disabled.
  */
 export function FxVersionActions({ rate }: { rate: FxRateView }) {
-  const { canApproveValuation } = useCapabilities();
-  const access = approvalAccess(canApproveValuation, rate.createdBy, useCurrentUserId());
+  const { canApproveValuation, isSuperAdmin } = useCapabilities();
+  const access = approvalAccess(canApproveValuation, rate.createdBy, useCurrentUserId(), isSuperAdmin);
   const transition = useFxTransition();
   const [pending, setPending] = useState<Pending>(null);
   const [supersede, setSupersede] = useState(false);

@@ -2,6 +2,8 @@ import { Navigate } from 'react-router-dom';
 import { lazyNamedWithPreload } from '@/lib/lazy-with-preload';
 import type { AppRoute } from './route-types';
 
+const Approvals = lazyNamedWithPreload(() => import('@/features/approvals/approval-inbox-page'), 'ApprovalInboxPage');
+
 /** Plans, profiles & calendars: the list page and its record / form sub-pages. */
 const Planning = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/planning-page'), 'PlanningPage');
 const PlanPage = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/plans/plan-page'), 'PlanPage');
@@ -31,6 +33,7 @@ const MeasurementUncertainty = lazyNamedWithPreload(() => import('@/features/mea
  * The old `/production-plans` list now lives in `/planning?tab=plans`; its links keep working.
  */
 export const PLANNING_ROUTES: readonly AppRoute[] = [
+  { path: '/approvals', element: <Approvals />, preload: Approvals.preload },
   { path: '/production-plans', element: <Navigate to="/planning?tab=plans" replace />, preload: Planning.preload },
   { path: '/planning', element: <Planning />, preload: Planning.preload },
   { path: '/planning/plans/new', element: <NewPlan />, preload: NewPlan.preload },

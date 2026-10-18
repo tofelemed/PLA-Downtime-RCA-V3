@@ -39,7 +39,7 @@ const TEXT: Record<string, string> = {
   dst_gap: 'Clock jumps forward: the missing hour contributes no time',
   dst_repeat: 'Clock falls back: the repeated hour is counted twice',
   dst_split: 'A shift boundary falls in the repeated hour: two instances with distinct offsets',
-  holiday_reduced: 'Reduced holiday: shifts kept (no reduction rule decided yet)',
+  holiday_reduced: 'Legacy reduced holiday has no working windows: original shifts retained; edit a new version to enter the hours',
   crew_conflict: 'More than one crew rotates onto this shift',
   timezone_fallback: 'The site has no valid time zone: UTC was used',
 };

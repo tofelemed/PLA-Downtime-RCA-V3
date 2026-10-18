@@ -16,7 +16,7 @@ export function StatusRulesMoved() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Link className="underline" to="/codes-admin?tab=rules">
+        <Link className="underline" to="/master-data/codes-rules?tab=rules">
           Open the rules
         </Link>
       </CardContent>

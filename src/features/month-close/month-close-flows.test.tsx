@@ -128,6 +128,19 @@ describe('month close screen (SME R1 / R4)', () => {
     expect((screen.getByTestId('step-finance-sign-off') as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it('SuperAdmin can sign finance after closing quantities themselves', async () => {
+    actAs('SuperAdmin', 'plant-manager');
+    reply = () => json(200, {
+      ...VIEW, state: 'quantities_closed',
+      prerequisites: { ...VIEW.prerequisites, met: true, approved: 90, pendingCount: 0, pending: [] },
+      signOffs: { ...VIEW.signOffs, quantitiesClosedBy: { id: 'plant-manager', name: 'Demo plant manager' }, quantitiesClosedAt: '2026-10-25T06:00:00.000Z' },
+    });
+    renderPage();
+    const button = await screen.findByTestId('step-finance-sign-off');
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByTestId('close-sod')).toBeNull();
+  });
+
   it('a reopen sends the required reason to the server', async () => {
     actAs('finance_approver', 'finance-1');
     const signed: MonthCloseView = { ...VIEW, state: 'finance_signed_off', prerequisites: { ...VIEW.prerequisites, met: true, pendingCount: 0, pending: [] } };

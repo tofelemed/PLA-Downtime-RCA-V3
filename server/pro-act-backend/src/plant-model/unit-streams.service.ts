@@ -131,7 +131,13 @@ export class UnitStreamsService {
       const result = await approveVersion(
         manager,
         UnitStream,
-        { id, key: keyOf(row), supersede, actorId: context.userId },
+        {
+          id,
+          key: keyOf(row),
+          supersede,
+          actorId: context.userId,
+          isSuperAdmin: context.isSuperAdmin,
+        },
         WHAT,
       );
       await this.changed(manager, result.approved, 'approved');

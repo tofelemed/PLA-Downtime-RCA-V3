@@ -8,7 +8,7 @@ import { downtime, findCode, findRule, retireRule, seedCodesWorld, type CodesWor
 import { adminRefusal, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openLibrary, openRule } from './personas/support/codes-finance-ui';
 
 /**
- * Plan 3.8 exit tests on `/codes-admin` (flag `v2.codesAdmin`, switched on for the demo tenant by the
+ * Plan 3.8 exit tests on `/master-data/codes-rules` (flag `v2.codesAdmin`, switched on for the demo tenant by the
  * manager and left on):
  * - T18 UI: 3-level reason tree → reload → identical (collapsed tree, paged top level, search); reparent ("Move under") → persisted; a cycle
  *   the API refuses → 422 shown; retire a parent → impact dialog with counts, 409 with counts; a new
@@ -172,7 +172,7 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     const before = await downtime(manager, world, 30, 2);
     expect(before.classification.scheduleClass).toBe('unknown');
     await loginViaUI(page, MANAGER.email, MANAGER.password);
-    await page.goto('/codes-admin?tab=rules');
+    await page.goto('/master-data/codes-rules?tab=rules');
     await page.getByTestId('rule-new').click({ timeout: 60_000 });
     await page.fill('#rule-name', name);
     const condition = (index: number) => page.getByTestId('rule-condition').nth(index);

@@ -102,6 +102,7 @@ export class MonthCloseV2Controller {
   @ApiOperation({
     summary: 'Extra review of a month above a materiality threshold',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       STEP +
       '403 MATERIALITY_REVIEWER without a reviewer role of the policy, SEPARATION_OF_DUTIES for the quantity ' +
       'signer; 409 MATERIALITY_REVIEW_NOT_REQUIRED.',
@@ -122,6 +123,7 @@ export class MonthCloseV2Controller {
   @ApiOperation({
     summary: 'Finance signs the month off',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       STEP +
       '403 SEPARATION_OF_DUTIES for the quantity signer or the materiality reviewer; 409 ' +
       'MATERIALITY_REVIEW_REQUIRED; 422 CLOSE_PREREQUISITES.',

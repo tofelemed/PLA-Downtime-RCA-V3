@@ -15,12 +15,12 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
  * budget in force as the unit's absolute reconciliation tolerance — an explicit decision, never automatic.
  */
 export function BudgetActions({ budget }: { budget: UncertaintyBudgetView }) {
-  const { canApproveUncertaintyBudgets, canAdoptTolerance } = useCapabilities();
+  const { canApproveUncertaintyBudgets, canAdoptTolerance, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const decide = useDecideUncertaintyBudget();
   const adopt = useAdoptBudgetAsTolerance();
-  const approve = approvalAccess(canApproveUncertaintyBudgets, budget.authorId, userId);
-  const adoption = approvalAccess(canAdoptTolerance, budget.authorId, userId);
+  const approve = approvalAccess(canApproveUncertaintyBudgets, budget.authorId, userId, isSuperAdmin);
+  const adoption = approvalAccess(canAdoptTolerance, budget.authorId, userId, isSuperAdmin);
   const busy = decide.isPending || adopt.isPending;
   const format = useNumberFormat();
   return (

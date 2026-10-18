@@ -16,19 +16,13 @@ export interface HolidaysEditorProps {
 const TREATMENTS = HOLIDAY_TREATMENTS.map((value) => ({ value, label: HOLIDAY_TREATMENT_LABELS[value] }));
 
 /**
- * Holidays per operational date. "No production" takes the day out of scheduled time; "Reduced hours" is
- * stored and only flagged in the preview — no reduction rule is decided yet, so the screen says so.
+ * Holidays per operational date. "No production" takes the day out of scheduled time; "Reduced hours" requires explicit local working windows; the server applies the exclusions.
  */
 export function HolidaysEditor({ rows, errors, readOnly, onChange }: HolidaysEditorProps) {
   const update = (index: number, patch: Partial<Holiday>) => onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   return (
     <fieldset className="space-y-2" data-testid="holidays">
       <legend className="text-sm font-medium">Holidays</legend>
-      {rows.some((row) => row.treatment === 'reduced') && (
-        <p className="text-xs text-amber-700" data-testid="reduced-undecided">
-          Holidays with “Reduced hours” keep their shifts for now: the preview flags them, but the hours are not reduced yet.
-        </p>
-      )}
       {rows.map((row, index) => (
         <div key={index} className="space-y-1">
           <div className="grid grid-cols-[10rem_minmax(0,1fr)_9rem_auto] gap-2">
@@ -41,6 +35,16 @@ export function HolidaysEditor({ rows, errors, readOnly, onChange }: HolidaysEdi
               </Button>
             )}
           </div>
+          {row.treatment === 'reduced' && <div className="space-y-2 rounded border p-3">
+            <p className="text-xs text-muted-foreground">Working windows on this operational date, in calendar local time. Time outside these windows is excluded. An end at or before its start continues into the next day.</p>
+            {(row.workingIntervals ?? []).map((window, wi) => <div key={wi} className="flex flex-wrap items-center gap-2">
+              <label className="text-sm">Working start <Input type="time" aria-label={`Holiday ${index + 1} working start ${wi + 1}`} value={window.startLocal} disabled={readOnly} onChange={(e) => update(index, { workingIntervals: row.workingIntervals?.map((w, j) => j === wi ? { ...w, startLocal: e.target.value } : w) })} /></label>
+              <label className="text-sm">Working end <Input type="time" aria-label={`Holiday ${index + 1} working end ${wi + 1}`} value={window.endLocal} disabled={readOnly} onChange={(e) => update(index, { workingIntervals: row.workingIntervals?.map((w, j) => j === wi ? { ...w, endLocal: e.target.value } : w) })} /></label>
+              {!readOnly && <Button type="button" variant="ghost" onClick={() => update(index, { workingIntervals: row.workingIntervals?.filter((_, j) => j !== wi) })}>Remove window</Button>}
+            </div>)}
+            {!readOnly && <Button type="button" variant="outline" size="sm" onClick={() => update(index, { workingIntervals: [...(row.workingIntervals ?? []), { startLocal: '', endLocal: '' }] })}>Add working window</Button>}
+            {errors[`holidays.${index}.workingIntervals`] && <p className="text-xs text-destructive">{errors[`holidays.${index}.workingIntervals`]}</p>}
+          </div>}
           {[errors[`holidays.${index}.date`], errors[`holidays.${index}.name`]].filter(Boolean).map((message) => (
             <p key={message} className="text-xs text-destructive">
               {message}

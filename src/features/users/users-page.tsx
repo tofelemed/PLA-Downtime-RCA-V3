@@ -1,3 +1,4 @@
+import { SectionPage } from '@/features/admin/shared/section-page';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUsersPage, type UserFilters } from '@/api/v2/queries/administration-users';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable } from '@/features/ux-kit/data-table';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { LEGACY_ROLE_LABELS } from '@/features/ux-kit/labels';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { GrantByEmailDialog } from './components/grant-by-email-dialog';
 import { USER_COLUMNS } from './components/user-columns';
@@ -30,22 +31,21 @@ function toFilters(values: Record<keyof typeof DEFAULTS, string>): UserFilters {
 }
 
 /** Users of the selected plant (owner requirement "v2 only": replaces the v1 User Management page). */
-export function UsersPage() {
+export function UsersPage({ embedded = false }: { embedded?: boolean }) {
   const { canAdministerTenant } = useCapabilities();
   return (
     <PageGate title="Users" allowed={canAdministerTenant} deniedText="You don't have permission to access user management.">
-      <UsersScreen />
+      <UsersScreen embedded={embedded} />
     </PageGate>
   );
 }
 
-function UsersScreen() {
+function UsersScreen({ embedded }: { embedded: boolean }) {
   const navigate = useNavigate();
   const [values, setValues] = useUrlFilters(DEFAULTS);
   const users = useUsersPage(toFilters(values));
   return (
-    <Page width="wide">
-      <PageHeader
+    <SectionPage embedded={embedded}
         title="Users"
         description="Members of the selected plant: their role, status and access. Users granted access from another plant show their home plant."
         actions={
@@ -59,7 +59,7 @@ function UsersScreen() {
             </Button>
           </div>
         }
-      />
+      >
       <Section title="Members">
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <DebouncedSearchInput label="Search users by name or e-mail" value={values.q} onChange={(q) => setValues({ q })} />
@@ -78,6 +78,6 @@ function UsersScreen() {
           rowLabel={(user) => `Open ${user.name}`}
         />
       </Section>
-    </Page>
+    </SectionPage>
   );
 }

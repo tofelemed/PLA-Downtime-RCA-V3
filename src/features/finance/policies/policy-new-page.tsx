@@ -20,7 +20,7 @@ export function PolicyNewPage() {
   const waiting = fromId !== null && !source.data;
   return (
     <Page>
-      <PageHeader title={title} back={BACK} description="The new version values nothing until another manager approver approves it." />
+      <PageHeader title={title} back={BACK} description="Approve the new version before it values losses. SuperAdmin may approve their own version." />
       {waiting ? (
         <DataState state={dataStateOf(source)} error={source.error} onRetry={() => void source.refetch()} />
       ) : (

@@ -27,6 +27,8 @@ export interface Holiday {
   date: string;
   name: string;
   treatment: HolidayTreatment;
+  /** Explicit working windows for this reduced-hours operational date. */
+  workingIntervals?: WorkingInterval[];
 }
 
 export interface ScheduleExclusion {

@@ -18,7 +18,7 @@ interface ColumnContext {
 
 const uomOf = (signal: SignalView) => `${signal.canonicalUom ?? '—'}${signal.rateTimebase ? ` ${labelOf(SIGNAL_TIMEBASE_LABELS, signal.rateTimebase)}` : ''}`;
 
-function columnsOf({ unitName, selectedId, onSelect }: ColumnContext): DataTableColumn<SignalView>[] {
+function columnsOf({ unitName, selectedId, onSelect }: ColumnContext, allowBackfill: boolean): DataTableColumn<SignalView>[] {
   return [
     {
       id: 'name',
@@ -35,10 +35,10 @@ function columnsOf({ unitName, selectedId, onSelect }: ColumnContext): DataTable
     { id: 'version', header: 'Version', nowrap: true, cell: (signal) => `v${signal.version}${signal.effectiveTo === null ? ' (current)' : ''}` },
     {
       id: 'actions',
-      header: 'Quantity and backfill',
+      header: allowBackfill ? 'Quantity and backfill' : 'Stored samples and quantity',
       cell: (signal) => (
         <Button size="sm" variant={signal.id === selectedId ? 'secondary' : 'outline'} aria-pressed={signal.id === selectedId} onClick={() => onSelect(signal)}>
-          Preview / backfill
+          {allowBackfill ? 'Preview / backfill' : 'Preview samples / quantity'}
         </Button>
       ),
     },
@@ -49,12 +49,12 @@ function columnsOf({ unitName, selectedId, onSelect }: ColumnContext): DataTable
  * Typed signals of a connection (plan 1.7), every version, 20 per page: a name opens its trend in the
  * historian; a row's preview shows the server's quantity for a period and writers can backfill it.
  */
-export function SignalsPanel({ connectionId, timezone }: { connectionId: string; timezone: string }) {
+export function SignalsPanel({ connectionId, timezone, allowBackfill = true }: { connectionId: string; timezone: string; allowBackfill?: boolean }) {
   const { canWriteIntegration } = useCapabilities();
   const signals = useSignalsPage(connectionId);
   const units = useUnitNames();
   const [selected, setSelected] = useState<SignalView | null>(null);
-  const columns = useMemo(() => columnsOf({ unitName: units.nameOf, selectedId: selected?.id ?? null, onSelect: setSelected }), [units, selected]);
+  const columns = useMemo(() => columnsOf({ unitName: units.nameOf, selectedId: selected?.id ?? null, onSelect: setSelected }, allowBackfill), [units, selected, allowBackfill]);
   return (
     <section aria-label="Signals" className="space-y-3" data-testid="signals-panel">
       {canWriteIntegration && (
@@ -75,7 +75,7 @@ export function SignalsPanel({ connectionId, timezone }: { connectionId: string;
         status={signals.status}
         empty={{ title: 'No signals yet', text: 'Define the measurements this connection delivers (rates, counters, states) to trend and account them.' }}
       />
-      {selected && <SignalActions key={selected.id} signal={selected} timezone={timezone} />}
+      {selected && <SignalActions key={selected.id} signal={selected} timezone={timezone} allowBackfill={allowBackfill} />}
     </section>
   );
 }

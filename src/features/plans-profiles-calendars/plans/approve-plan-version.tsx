@@ -51,7 +51,8 @@ function ReturnToAuthor({ version, timezone, disabled }: ApprovePlanVersionProps
 export function ApprovePlanVersion({ version, timezone }: ApprovePlanVersionProps) {
   const approve = useApprovePlan();
   const [reason, setReason] = useState('');
-  const access = approvalAccess(useCapabilities().canApprovePlans, version.createdBy, useCurrentUserId());
+  const { canApprovePlans, isSuperAdmin } = useCapabilities();
+  const access = approvalAccess(canApprovePlans, version.createdBy, useCurrentUserId(), isSuperAdmin);
   if (access === 'hidden') return null;
   const submit = () => approve.submit({ planId: version.planId, expectedVersion: version.version, reason: reason.trim() || undefined }).catch(() => undefined);
   return (

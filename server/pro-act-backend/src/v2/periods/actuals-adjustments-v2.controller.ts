@@ -74,6 +74,7 @@ export class ActualsAdjustmentsV2Controller {
     summary:
       'Approve a proposed adjustment (independent approver); the period is recalculated',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
@@ -95,6 +96,7 @@ export class ActualsAdjustmentsV2Controller {
     summary:
       'Reject a proposed adjustment with a reason (independent approver)',
     description:
+      'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 SEPARATION_OF_DUTIES for the author; 409 INVALID_TRANSITION when not proposed.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

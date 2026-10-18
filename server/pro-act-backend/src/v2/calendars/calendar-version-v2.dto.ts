@@ -96,10 +96,23 @@ export class HolidayDto {
   @ApiProperty({
     enum: HOLIDAY_TREATMENTS,
     description:
-      'excluded = out of scheduled time; reduced = kept (preview warning only)',
+      'excluded = out of scheduled time; reduced = only the explicit working intervals are scheduled',
   })
   @IsIn(HOLIDAY_TREATMENTS)
   treatment: (typeof HOLIDAY_TREATMENTS)[number];
+
+  @ApiPropertyOptional({
+    type: [WorkingIntervalDto],
+    description:
+      'Working windows on a reduced-hours operational date. Legacy omitted windows retain their schedule with a warning.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(24)
+  @ValidateNested({ each: true })
+  @Type(() => WorkingIntervalDto)
+  workingIntervals?: WorkingIntervalDto[];
 }
 
 export class ScheduleExclusionDto {

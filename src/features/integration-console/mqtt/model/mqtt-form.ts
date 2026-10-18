@@ -76,11 +76,11 @@ export const PROFILE_PRESETS: Record<ProfileKind, { label: string; topicTemplate
     description: 'PI point values with unit and quality, keyed by the signal source key.',
   },
   state_json: {
-    label: 'Run state (quarantined no_handler until plan 1.10)',
+    label: 'Machine state (state signal)',
     topicTemplate: 'proact/v1/{site}/{area}/{line}/{unit}/state',
     topics: 'proact/v1/+/+/+/+/state',
     identityStrategy: 'seq_boot',
-    description: 'Retained machine state tokens mapped through the state value map.',
+    description: 'Machine-state samples bound to a state signal by the full MQTT topic; configure Unit State to derive stops.',
   },
   availability: {
     label: 'Gateway availability (ONLINE / OFFLINE, Last Will)',

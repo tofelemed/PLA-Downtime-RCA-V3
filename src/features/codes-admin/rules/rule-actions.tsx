@@ -26,13 +26,13 @@ function useConfirm(command: Command) {
  * reason; roles that can never approve do not see either action.
  */
 export function RuleActions({ rule, currentUserId }: { rule: RuleView; currentUserId: string | null }) {
-  const { canApproveRules } = useCapabilities();
+  const { canApproveRules, isSuperAdmin } = useCapabilities();
   const activate = useActivateRule();
   const retire = useRetireRule();
   const activation = useConfirm(activate);
   const retirement = useConfirm(retire);
   if (rule.state === 'retired') return null;
-  const access = approvalAccess(canApproveRules, rule.draft?.authorId, currentUserId);
+  const access = approvalAccess(canApproveRules, rule.draft?.authorId, currentUserId, isSuperAdmin);
   return (
     <>
       {rule.draft && (
