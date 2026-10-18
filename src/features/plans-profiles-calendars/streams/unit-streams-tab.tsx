@@ -80,6 +80,7 @@ export function UnitStreamsTab() {
             columns={columnsOf(refs)}
             rows={rows}
             getRowKey={(s) => s.id}
+            getRowAnchor={(s) => `unit-stream-${s.id}`}
             status={{ isLoading: streams.isLoading, isError: streams.isError, error: streams.error, onRetry: () => void streams.refetch() }}
             empty={{ title: 'No streams', text: 'The unit is one stream: every product slice uses the whole period.' }}
           />

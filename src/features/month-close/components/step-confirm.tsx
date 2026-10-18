@@ -33,7 +33,7 @@ export function StepConfirm({ trigger, testId, title, description, confirmLabel,
   return (
     <ConfirmDialog
       trigger={
-        <Button size="sm" variant={destructive ? 'outline' : 'default'} data-testid={testId} disabled={disabled}>
+        <Button id={`close-${testId}`} size="sm" variant={destructive ? 'outline' : 'default'} data-testid={testId} disabled={disabled}>
           {trigger}
         </Button>
       }

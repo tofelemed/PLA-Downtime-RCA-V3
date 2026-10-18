@@ -11,6 +11,7 @@ import { useBranding } from '@/features/shell/use-branding';
 import { useResponsiveNav, useShellMode } from '@/features/shell/use-shell-mode';
 import { PlantAccessGuard } from '@/features/v2-foundation/plant-access-guard';
 import { RouteErrorBoundary } from '@/features/ux-kit/errors/route-error-boundary';
+import { HighlightTarget } from '@/features/ux-kit/highlight-target';
 import { useSyncAppName } from '@/features/ux-kit/page-layout/app-name';
 import { cn } from '@/lib/utils';
 
@@ -85,6 +86,7 @@ export const Layout = ({ children }: LayoutProps) => {
           <RouteErrorBoundary resetKey={pathname}>
             <PlantAccessGuard><EquipmentSetupProvider><SetupJourneyBar />{children}</EquipmentSetupProvider></PlantAccessGuard>
           </RouteErrorBoundary>
+          <HighlightTarget />
         </main>
       </div>
     </div>

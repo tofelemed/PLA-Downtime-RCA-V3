@@ -33,6 +33,19 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "decidable",
+            "required": false,
+            "in": "query",
+            "description": "Only records the caller may decide (the requester rule applied; the decision command still decides)",
+            "schema": {
+              "enum": [
+                "true",
+                "false"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -97,6 +110,50 @@
           }
         ],
         "summary": "One pending record of the inbox (approval detail): same role, scope and separation-of-duties actions as the list; 404 once decided or outside the caller’s approval scope.",
+        "tags": [
+          "v2 · Approvals"
+        ]
+      }
+    },
+    "/api/v2/approval-inbox/{kind}/{id}/changes": {
+      "get": {
+        "operationId": "ApprovalInboxV2Controller_changes_v2",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalChangesView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "What exactly needs approval: each field of the pending record against its approved / effective predecessor (or its full content without one). Read-only; same 404 / 400 as the record read.",
         "tags": [
           "v2 · Approvals"
         ]
@@ -24044,6 +24101,104 @@
           "disabledReason"
         ]
       },
+      "ApprovalChangeFieldView": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string",
+            "nullable": true,
+            "description": "Value of the approved / effective predecessor (null without one)"
+          },
+          "after": {
+            "type": "string",
+            "nullable": true,
+            "description": "Pending value"
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "text",
+              "number",
+              "quantity",
+              "money",
+              "instant",
+              "date",
+              "boolean",
+              "duration"
+            ]
+          },
+          "group": {
+            "type": "string",
+            "nullable": true,
+            "description": "Money values of one figure in several currencies share a group"
+          },
+          "changed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "before",
+          "after",
+          "unit",
+          "currency",
+          "format",
+          "group",
+          "changed"
+        ]
+      },
+      "ApprovalTargetView": {
+        "type": "object",
+        "properties": {
+          "periodId": {
+            "type": "string",
+            "nullable": true
+          },
+          "planId": {
+            "type": "string",
+            "nullable": true
+          },
+          "revision": {
+            "type": "number",
+            "nullable": true
+          },
+          "monthKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "eventId": {
+            "type": "string",
+            "nullable": true
+          },
+          "profileId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "periodId",
+          "planId",
+          "revision",
+          "monthKey",
+          "eventId",
+          "profileId"
+        ]
+      },
       "ApprovalItemView": {
         "type": "object",
         "properties": {
@@ -24115,6 +24270,26 @@
             "items": {
               "$ref": "#/components/schemas/ApprovalActionView"
             }
+          },
+          "canDecide": {
+            "type": "boolean",
+            "description": "Whether the caller may decide this record (role, scope and the requester rule); the decision command still decides"
+          },
+          "decisionBlockedReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "headline": {
+            "nullable": true,
+            "description": "The one-line change of the row (first changed field); null where the change is read on the approval page only",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalChangeFieldView"
+              }
+            ]
+          },
+          "target": {
+            "$ref": "#/components/schemas/ApprovalTargetView"
           }
         },
         "required": [
@@ -24136,7 +24311,11 @@
           "version",
           "rowVersion",
           "supersede",
-          "actions"
+          "actions",
+          "canDecide",
+          "decisionBlockedReason",
+          "headline",
+          "target"
         ]
       },
       "ApprovalInboxView": {
@@ -24164,6 +24343,47 @@
           "nextCursor",
           "asOf",
           "scope"
+        ]
+      },
+      "ApprovalChangesView": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "diff",
+              "full",
+              "compare"
+            ],
+            "description": "diff: against the approved / effective predecessor; full: no predecessor, the pending content; compare: two records side by side"
+          },
+          "beforeLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "afterLabel": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApprovalChangeFieldView"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "mode",
+          "beforeLabel",
+          "afterLabel",
+          "fields"
         ]
       },
       "ReadinessCheckView": {

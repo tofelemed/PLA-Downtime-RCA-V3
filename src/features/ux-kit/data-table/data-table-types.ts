@@ -39,6 +39,8 @@ export interface DataTableProps<T> {
   columns: ReadonlyArray<DataTableColumn<T>>;
   rows: readonly T[];
   getRowKey: (row: T) => string;
+  /** DOM id of a row, so a deep link (`#rate-<id>`) can scroll to and highlight it */
+  getRowAnchor?: (row: T) => string | undefined;
   /**
    * `'client'` (default): the table pages `rows` itself, 20 per page. A `PagerModel` (from
    * `usePagedQuery` / `useClientPager`): `rows` is already the current page. `'none'`: all rows, only

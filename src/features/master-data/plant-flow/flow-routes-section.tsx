@@ -66,6 +66,7 @@ export function FlowRoutesSection({ refs, routes, canWrite }: FlowRoutesSectionP
         columns={columnsOf(refs)}
         rows={flattenPages(routes.data?.pages)}
         getRowKey={(r) => r.id}
+        getRowAnchor={(r) => `flow-route-${r.id}`}
         status={{ isLoading: routes.isLoading, isError: routes.isError, error: routes.error, onRetry: () => void routes.refetch() }}
         empty={{ title: 'No routes', text: 'Without routes no stop propagates between units: each unit counts its own losses only.' }}
       />

@@ -17,6 +17,7 @@ import { RequestContext } from '../../common/context/request-context';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { ApprovalInboxService } from './approval-inbox.service';
 import {
+  ApprovalChangesView,
   ApprovalInboxQueryDto,
   ApprovalInboxView,
   ApprovalItemView,
@@ -51,5 +52,18 @@ export class ApprovalInboxV2Controller {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<ApprovalItemView> {
     return this.inbox.get(context, kind, id);
+  }
+  @Get(':kind/:id/changes')
+  @ApiOperation({
+    summary:
+      'What exactly needs approval: each field of the pending record against its approved / effective predecessor (or its full content without one). Read-only; same 404 / 400 as the record read.',
+  })
+  @ApiOkResponse({ type: ApprovalChangesView })
+  changes(
+    @Ctx() context: RequestContext,
+    @Param('kind') kind: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<ApprovalChangesView> {
+    return this.inbox.changesOf(context, kind, id);
   }
 }

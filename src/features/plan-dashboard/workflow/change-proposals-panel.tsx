@@ -56,10 +56,11 @@ function ManualDetail({ p }: { p: ChangeProposalView }) {
   );
 }
 
-function Proposal({ p, timezone, decide }: { p: ChangeProposalView; timezone: string; decide: ((p: ChangeProposalView, d: 'accept' | 'dismiss', reason: string) => Promise<unknown>) | null }) {
+/** One change proposal with its before / after and, for an approver who may decide it, accept / dismiss. */
+export function ChangeProposalCard({ p, timezone, decide }: { p: ChangeProposalView; timezone: string; decide: ((p: ChangeProposalView, d: 'accept' | 'dismiss', reason: string) => Promise<unknown>) | null }) {
   const { number } = useNumberFormat();
   return (
-    <div className="space-y-1 rounded-md border p-2" data-testid="change-proposal" data-state={p.state}>
+    <div id={`change-proposal-${p.id}`} className="scroll-mt-24 space-y-1 rounded-md border p-2" data-testid="change-proposal" data-state={p.state} data-highlight-label="the change proposal">
       <p>
         <Badge variant={p.state === 'open' ? 'destructive' : 'secondary'}>{labelOf(STATE_LABELS, p.state)}</Badge> <span data-testid="proposal-triggers">{proposalTriggersText(p)}</span> · <PlantTime iso={p.createdAt} tz={timezone} withDate />
       </p>
@@ -104,7 +105,7 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
       <div className="space-y-2 text-sm" data-testid="change-proposals">
         {items.length === 0 && <p className="text-muted-foreground">No proposals: the approved figures match the current inputs.</p>}
         {items.map((p) => (
-          <Proposal key={p.id} p={p} timezone={timezone} decide={canApproveRevisions && (isSuperAdmin || p.manual?.proposedBy !== userId) ? decide : null} />
+          <ChangeProposalCard key={p.id} p={p} timezone={timezone} decide={canApproveRevisions && (isSuperAdmin || p.manual?.proposedBy !== userId) ? decide : null} />
         ))}
         {canPropose && <ProposeCorrectionDialog onPropose={propose} />}
         {problem && <EditorProblem problem={problem} />}

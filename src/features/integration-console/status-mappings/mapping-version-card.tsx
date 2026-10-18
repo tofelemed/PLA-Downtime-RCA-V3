@@ -29,7 +29,7 @@ function Approve({ version }: { version: SourceStatusMappingView }) {
 /** One mapping version: its status rules, when it applies, who drafted and approved it, and whether it is in force. */
 export function MappingVersionCard({ version, timezone }: { version: SourceStatusMappingView; timezone: string }) {
   return (
-    <div className="space-y-2 rounded-md border p-3 text-sm" data-testid="mapping-version" data-state={version.state} data-in-force={version.inForce}>
+    <div id={`status-mapping-${version.id}`} className="scroll-mt-24 space-y-2 rounded-md border p-3 text-sm" data-testid="mapping-version" data-state={version.state} data-in-force={version.inForce}>
       <p className="flex flex-wrap items-center gap-2">
         <span className="font-medium">Version {version.version}</span>
         <Badge variant={version.state === 'draft' ? 'outline' : 'secondary'}>{STATE_LABELS[version.state] ?? version.state}</Badge>

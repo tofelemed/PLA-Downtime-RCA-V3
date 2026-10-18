@@ -6,11 +6,12 @@ import { configureV2Session } from '@/api/v2/config';
 import type { ApprovalItem } from '@/api/v2/types/approvals';
 import { actAs } from '@/test/acting-user';
 import { approvalCommand } from './approval-command';
+import { approvalItem } from '@/test/approval-item';
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () => ({ timezone: 'UTC' }) }));
 const { ApprovalInboxPage } = await import('./approval-inbox-page');
-const item = (extra: Partial<ApprovalItem> = {}): ApprovalItem => ({ id: 'profile-1', kind: 'profile', kindLabel: 'Production profile', title: 'Extruder HDPE', summary: 'HDPE-BL3 · t/h', state: 'draft', createdAt: '2026-10-01T00:00:00.000000Z', unitId: 'unit-1', unitName: 'EX-01', authorId: 'author', authorName: 'Engineer A', requiredRoles: ['manager_approver'], reviewHref: '/planning/profiles/profile-1', resource: 'profiles', commandId: 'profile-1', version: 1, rowVersion: 3, supersede: true, actions: [{ action: 'approve', disabledReason: null }, { action: 'retire', disabledReason: null }], ...extra });
+const item = (extra: Partial<ApprovalItem> = {}): ApprovalItem => approvalItem({ reviewHref: '/planning/profiles/profile-1', ...extra });
 interface Call { method: string; url: URL; body: Record<string, unknown> | null; headers: Headers }
 let rows: ApprovalItem[], calls: Call[], reject = false, recordVersion = 3, client: QueryClient;
 let pausedInbox: Promise<Response> | null = null;
@@ -71,12 +72,29 @@ describe('pending approvals UI', () => {
     expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(3);
   });
   it('lets SuperAdmin continue a review-stage decision in the existing workspace', async () => {
-    rows = [item({ kind: 'period-review', state: 'in_review', resource: null, actions: [], reviewHref: '/plans/plan-1/periods/period-1' })];
+    rows = [item({ id: 'rev-1', kind: 'period-review', kindLabel: 'Period reconciliation', state: 'in_review', resource: null, actions: [], reviewHref: '/plans/plan-1/periods/period-1/review#period-review' })];
     mount(); await screen.findByText('in review');
     expect(screen.getByText('SuperAdmin can act for every approval role')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Review & decide' }).getAttribute('href')).toBe('/plans/plan-1/periods/period-1');
+    expect(screen.getByRole('link', { name: 'Review & decide Extruder HDPE' }).getAttribute('href')).toBe('/approvals/period-review/rev-1');
+    expect(screen.getByRole('link', { name: 'Open workspace' }).getAttribute('href')).toBe('/plans/plan-1/periods/period-1/review#period-review');
   });
-  it('each pending record opens its approval page', async () => { mount(); await screen.findByText('Extruder HDPE'); expect(screen.getByRole('link', { name: 'Review Extruder HDPE' }).getAttribute('href')).toBe('/approvals/profile/profile-1'); expect(screen.getByRole('link', { name: 'Extruder HDPE' }).getAttribute('href')).toBe('/approvals/profile/profile-1'); });
+  it('each pending record opens its approval page', async () => { mount(); await screen.findByText('Extruder HDPE'); expect(screen.getByRole('link', { name: 'Review & decide Extruder HDPE' }).getAttribute('href')).toBe('/approvals/profile/profile-1'); expect(screen.getByRole('link', { name: 'Extruder HDPE' }).getAttribute('href')).toBe('/approvals/profile/profile-1'); });
+  it('groups rows by workflow and shows the one-line change of each row', async () => {
+    rows = [item(), item({ id: 'rate-2', kind: 'rate', kindLabel: 'Production rate', commandId: 'rate-2', title: 'planning rate', resource: 'rates', headline: { key: 'rate', label: 'Rate', before: '28', after: '29', unit: 't/h', currency: null, format: 'quantity', group: null, changed: true } })];
+    mount(); await screen.findByText('planning rate');
+    const groups = screen.getAllByTestId('approval-group');
+    expect(groups.map((group) => group.getAttribute('data-kind'))).toEqual(['profile', 'rate']);
+    expect(within(groups[1]).getByRole('heading', { name: /Production rate/ })).toBeTruthy();
+    const headline = within(groups[1]).getByTestId('approval-headline');
+    expect(headline.textContent).toMatch(/Rate\s*28\.00\s*t\/h.*→.*29\.00\s*t\/h/);
+  });
+  it('“Only what I can decide” asks the server for decidable records and explains the empty result', async () => {
+    mount(); await screen.findByText('Extruder HDPE');
+    rows = [];
+    fireEvent.click(screen.getByLabelText('Only what I can decide'));
+    await waitFor(() => expect(calls.some((call) => call.url.searchParams.get('decidable') === 'true')).toBe(true));
+    expect(await screen.findByText(/Nothing waits for your decision/)).toBeTruthy();
+  });
   it('filters workflows on the server', async () => { mount(); await screen.findByText('Extruder HDPE'); fireEvent.change(screen.getByLabelText('Workflow'), { target: { value: 'fx-rate' } }); await waitFor(() => expect(calls.some((call) => call.url.searchParams.get('kind') === 'fx-rate')).toBe(true)); });
 });
 describe('workflow command contracts', () => {

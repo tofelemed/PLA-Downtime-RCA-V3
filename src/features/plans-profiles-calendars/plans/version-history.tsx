@@ -34,6 +34,7 @@ export function VersionHistory({ planId, timezone }: { planId: string; timezone:
           columns={columns}
           rows={items}
           getRowKey={(v) => v.id}
+          getRowAnchor={(v) => `plan-version-${v.version}`}
           status={{ isLoading: versions.isLoading, isError: versions.isError, error: versions.error, onRetry: () => void versions.refetch() }}
           empty={{ text: 'No versions yet.' }}
         />

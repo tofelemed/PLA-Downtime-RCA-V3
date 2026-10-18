@@ -78,6 +78,7 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
           columns={columnsOf(timezone)}
           rows={items}
           getRowKey={(r) => r.id}
+          getRowAnchor={(r) => `valuation-rate-${r.id}`}
           status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
           empty={{ text: 'No valuation rates: losses of this profile stay unvalued.' }}
         />

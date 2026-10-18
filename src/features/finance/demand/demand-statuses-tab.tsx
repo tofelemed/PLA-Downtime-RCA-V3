@@ -66,6 +66,7 @@ export function DemandStatusesTab() {
         columns={columns}
         rows={statuses.rows}
         getRowKey={(s) => s.id}
+        getRowAnchor={(s) => `demand-status-${s.id}`}
         pager={statuses.pager}
         status={statuses.status}
         empty={{ title: 'No demand statuses', text: 'Without an approved status, the economic view of lost output stays unvalued.' }}

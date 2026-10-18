@@ -82,6 +82,7 @@ export function UnitImpactRulesPage() {
           columns={columnsOf({ refs, assetLabel: labelOf, percent: (f) => shareText(Number(f) * 100, percent), seconds: (v) => number(v) })}
           rows={flattenPages(rules.data?.pages)}
           getRowKey={(r) => r.id}
+          getRowAnchor={(r) => `unit-impact-rule-${r.id}`}
           status={{ isLoading: rules.isLoading, isError: rules.isError, error: rules.error, onRetry: () => void rules.refetch() }}
           empty={{ title: 'No rules', text: 'Every equipment stop stops its unit unless a person records another impact on the stop.' }}
         />

@@ -65,7 +65,7 @@ function WorkflowBarBody({ view, shown, onShowCurrent, actions }: WorkflowBarPro
   const gate = approveGate(view, userId, isSuperAdmin);
   const busy = actions.pending !== null;
   return (
-    <section className="space-y-2 rounded-md border bg-muted/20 p-2" data-testid="workflow-bar" data-lifecycle={lifecycle}>
+    <section id="period-review" className="scroll-mt-24 space-y-2 rounded-md border bg-muted/20 p-2" data-highlight-label="the period review" data-testid="workflow-bar" data-lifecycle={lifecycle}>
       <div className="flex flex-wrap items-center gap-2">
         <ReadOnlyHint />
         {write && lifecycle !== 'approved' && shown === 'current' && (

@@ -3,30 +3,74 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
-import type { ApprovalItem } from '@/api/v2/types/approvals';
+import type { ApprovalChanges, ApprovalItem } from '@/api/v2/types/approvals';
+import type { ReconciliationView } from '@/api/v2/types/reconciliation';
+import type { RestatementView } from '@/api/v2/types/restatement';
 import { Toaster } from '@/components/ui/toaster';
 import { actAs } from '@/test/acting-user';
+import { approvalItem } from '@/test/approval-item';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () => ({ timezone: 'UTC' }) }));
 const { ApprovalDetailPage } = await import('./approval-detail-page');
 
-const base: ApprovalItem = {
-  id: 'profile-1', kind: 'profile', kindLabel: 'Production profile', title: 'normal profile', summary: 'Product HDPE-BL3 · t / h', state: 'draft',
-  createdAt: '2026-10-01T00:00:00.000000Z', unitId: 'unit-1', unitName: 'EX-01', authorId: 'author', authorName: 'Engineer A', requiredRoles: ['manager_approver'],
-  reviewHref: '/planning/profiles/profile-1', resource: 'profiles', commandId: 'profile-1', version: 2, rowVersion: 3, supersede: true,
-  actions: [{ action: 'approve', disabledReason: null }, { action: 'retire', disabledReason: null }],
+const PERIOD_TARGET = { periodId: 'p1', planId: 'plan-1', revision: 2, monthKey: null, eventId: null, profileId: null };
+const PROFILE = approvalItem({ title: 'normal profile', version: 2, reviewHref: '/planning/profiles/profile-1#profile-version' });
+const RATE = approvalItem({ id: 'rate-2', kind: 'rate', kindLabel: 'Production rate', title: 'planning rate', resource: 'rates', commandId: 'rate-2', reviewHref: '/planning/profiles/profile-1#rate-rate-2' });
+const PLAN = approvalItem({ id: 'pv-1', kind: 'plan', kindLabel: 'Production plan version', title: 'October plan', resource: 'production-plans', commandId: 'plan-1', version: 7, supersede: false, actions: [{ action: 'approve', disabledReason: null }, { action: 'return', disabledReason: null }] });
+const workflow = (extra: Partial<ApprovalItem>): ApprovalItem => approvalItem({ resource: null, version: null, supersede: false, actions: [], target: PERIOD_TARGET, ...extra });
+const PERIOD = workflow({ id: 'rev-2', kind: 'period-review', kindLabel: 'Period reconciliation', title: 'EX-01 · 17 Oct · Shift A', state: 'in_review', authorId: 'preparer', reviewHref: '/plans/plan-1/periods/p1/review#period-review' });
+const POSTING = workflow({ id: 'rev-2', kind: 'finance-posting', kindLabel: 'Restatement posting', title: '2026-10-17 · restatement 2', state: 'awaiting_posting', reviewHref: '/plans/plan-1/periods/p1/review#restatement' });
+const PROPOSAL = workflow({ id: 'cp-1', kind: 'change-proposal', kindLabel: 'Period change proposal', title: 'Approved-period change', state: 'open', reviewHref: '/plans/plan-1/periods/p1/history#change-proposal-cp-1' });
+
+const field = (key: string, label: string, [before, after]: [string | null, string], extra: Partial<ApprovalChanges['fields'][number]> = {}) =>
+  ({ key, label, before, after, unit: null, currency: null, format: 'text' as const, group: null, changed: before !== null && before !== after, ...extra });
+const RATE_CHANGES: ApprovalChanges = {
+  kind: 'rate', id: 'rate-2', mode: 'diff', beforeLabel: 'Approved now', afterLabel: 'Pending',
+  fields: [field('rate', 'Rate', ['28', '29'], { unit: 't/h', format: 'quantity' }), field('rateKind', 'Rate kind', ['planning', 'planning'])],
 };
-const PLAN: ApprovalItem = { ...base, id: 'pv-1', kind: 'plan', kindLabel: 'Production plan version', title: 'October plan', resource: 'production-plans', commandId: 'plan-1', version: 7, supersede: false, reviewHref: '/planning/plans/plan-1', actions: [{ action: 'approve', disabledReason: null }, { action: 'return', disabledReason: null }] };
-const DISPOSITION: ApprovalItem = { ...base, id: 'd-1', kind: 'disposition', kindLabel: 'Quality disposition', title: 'Lot 42 downgrade', resource: 'lot-dispositions', commandId: 'd-1', supersede: false, actions: [{ action: 'approve', disabledReason: null }, { action: 'reject', disabledReason: null }] };
-const PERIOD: ApprovalItem = { ...base, id: 'per-1', kind: 'period-review', kindLabel: 'Period reconciliation', title: 'EX-01 · 17 Oct · Shift A', state: 'in_review', resource: null, commandId: 'per-1', version: null, supersede: false, reviewHref: '/plans/plan-1/periods/per-1', actions: [] };
+const FULL: ApprovalChanges = { kind: 'profile', id: 'profile-1', mode: 'full', beforeLabel: null, afterLabel: 'Pending', fields: [field('operatingMode', 'Operating mode', [null, 'normal'])] };
+
+const VIEW = {
+  periodId: 'p1', unitId: 'u1', utcStart: '2026-10-17T06:00:00.000Z', utcEnd: '2026-10-17T14:00:00.000Z', rowVersion: 4,
+  revision: { id: 'rev-2', revision: 2, lifecycle: 'in_review', supersedesId: null, submittedBy: 'preparer', submittedHash: 'b'.repeat(64), isStale: false, openedBy: null },
+  publishedRevision: 1, baseRunId: 'run1', contentHash: 'hash', openProposalId: 'cp-1', bridgeReview: null,
+  slices: [{ sliceId: 's1', uom: 't', target: '1000', actual: '850', gap: '150', attributed: '140', toleranceAdjustment: '0', unadjustedResidual: '10', residual: '10', overAccounted: '0', overproduction: '0', tolerance: '0', flags: [] }],
+  candidates: [], lines: [],
+} as unknown as ReconciliationView;
+const RESTATEMENT: RestatementView = {
+  periodId: 'p1', revision: 2, lifecycle: 'approved', afterClose: false, supersededRevision: 1, operationalEffectiveDate: '2026-10-17', posting: null,
+  totals: [], actuals: [], lines: [],
+};
+const PROPOSAL_VIEW = {
+  id: 'cp-1', periodId: 'p1', unitId: 'u1', approvedRevisionId: 'rev-1', trigger: 'event_change', state: 'open', inputHash: null, before: {}, after: null,
+  affectedReports: [], detail: {}, resolvedBy: null, resolvedAt: null, resolutionReason: null, createdRevisionId: null, manual: null,
+  createdAt: '2026-10-18T00:00:00Z', updatedAt: '2026-10-18T00:00:00Z', rowVersion: 1,
+};
 
 interface Call { method: string; url: URL; body: Record<string, unknown> | null }
 let item: ApprovalItem | null;
+let changes: ApprovalChanges;
+let restatement: RestatementView;
 let calls: Call[];
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const posts = () => calls.filter((call) => call.method === 'POST');
+
+function respond(call: Call): Response {
+  const path = call.url.pathname;
+  if (call.method === 'POST') {
+    if (path.endsWith('/posting')) restatement = { ...restatement, posting: { postingDate: '2026-11-03', treatment: 'correction', note: null, decidedBy: 'f1', decidedAt: '2026-11-03T08:00:00Z' } } as RestatementView;
+    return json(200, path.endsWith('/posting') ? restatement : { state: 'approved' });
+  }
+  if (path.endsWith('/changes')) return json(200, changes);
+  if (path.includes('/approval-inbox/')) return item ? json(200, item) : json(404, { code: 'NOT_FOUND', message: 'This record is not pending your approval', correlationId: 't' });
+  if (path.endsWith('/approval-inbox')) return json(200, { items: [], nextCursor: null, asOf: 'now', scope: { tenantId: 'tenant-a' } });
+  if (path.endsWith('/reconciliation')) return json(200, VIEW);
+  if (path.endsWith('/change-proposals')) return json(200, { items: [PROPOSAL_VIEW], nextCursor: null });
+  if (path.endsWith('/restatement')) return json(200, restatement);
+  return json(200, { state: 'draft', operatingMode: 'normal', evidence: 'Trial run report TR-7', rowVersion: 3, version: { rowVersion: 3 } });
+}
 
 function mount(current: ApprovalItem | null, path = current ? `/approvals/${current.kind}/${current.id}` : '/approvals/profile/gone-1') {
   item = current;
@@ -47,16 +91,13 @@ function mount(current: ApprovalItem | null, path = current ? `/approvals/${curr
 beforeEach(() => {
   actAs('Manager', 'manager-1');
   calls = [];
+  changes = FULL;
+  restatement = RESTATEMENT;
   configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
     const call: Call = { method: init.method ?? 'GET', url: new URL(url), body: init.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null };
     calls.push(call);
-    if (call.method === 'POST') return json(200, { state: 'approved' });
-    if (call.url.pathname.includes('/approval-inbox/')) {
-      return item ? json(200, item) : json(404, { code: 'NOT_FOUND', message: 'This record is not pending your approval', correlationId: 't' });
-    }
-    if (call.url.pathname.endsWith('/approval-inbox')) return json(200, { items: [], nextCursor: null, asOf: 'now', scope: { tenantId: 'tenant-a' } });
-    return json(200, { state: 'draft', operatingMode: 'normal', validFrom: '2026-10-01T00:00:00Z', evidence: 'Trial run report TR-7', rowVersion: 3, version: { rowVersion: 3 } });
+    return respond(call);
   }));
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -70,25 +111,32 @@ async function decide(action: string, reason?: string) {
 }
 
 describe('approval detail page', () => {
-  it('shows what needs approval, the record content and who may decide, from the inbox read', async () => {
-    mount(base);
+  it('shows the full pending content, who may decide and the exact workspace link, from the inbox read', async () => {
+    mount(PROFILE);
     expect(await screen.findByRole('heading', { level: 1, name: 'normal profile' })).toBeTruthy();
-    const summary = screen.getByTestId('approval-summary');
-    expect(within(summary).getByText('Engineer A')).toBeTruthy();
-    expect(within(summary).getByText(/version 2/)).toBeTruthy();
-    expect(within(summary).getByText('manager approver')).toBeTruthy();
-    expect(await screen.findByText('Trial run report TR-7')).toBeTruthy();
+    const changesTable = await screen.findByTestId('approval-changes');
+    expect(changesTable.getAttribute('data-mode')).toBe('full');
+    expect(within(changesTable).getByText(/no approved predecessor/)).toBeTruthy();
     expect(screen.getByTestId('approval-eligibility').textContent).toContain('You can decide here: Approve, Retire.');
-    expect(screen.getByRole('link', { name: 'Open full workspace' }).getAttribute('href')).toBe('/planning/profiles/profile-1');
-    expect(calls.some((call) => call.url.pathname.endsWith('/approval-inbox/profile/profile-1'))).toBe(true);
+    expect(screen.getByRole('link', { name: 'Open in workspace' }).getAttribute('href')).toBe('/planning/profiles/profile-1#profile-version');
+    expect(within(screen.getByTestId('approval-summary')).getByText('Engineer A')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Record content/ }));
+    expect(await screen.findByText('Trial run report TR-7')).toBeTruthy();
     expect(posts()).toHaveLength(0);
   });
 
-  it('approves a profile version with the existing command, then returns to the inbox with a toast', async () => {
-    mount(base);
+  it('rate approval: shows exactly what changes (28 → 29 t/h), then approves with the existing command', async () => {
+    changes = RATE_CHANGES;
+    mount(RATE);
+    const rows = await screen.findAllByTestId('approval-change-row');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toMatch(/Rate\s*Changed\s*28\.00\s*t\/h\s*29\.00\s*t\/h/);
+    expect(screen.getByText('1 field differ from the approved now.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show unchanged fields (1)' }));
+    expect(screen.getAllByTestId('approval-change-row')).toHaveLength(2);
     await decide('Approve');
     await waitFor(() => expect(posts()).toHaveLength(1));
-    expect(posts()[0].url.pathname).toMatch(/\/profiles\/profile-1\/approve$/);
+    expect(posts()[0].url.pathname).toMatch(/\/rates\/rate-2\/approve$/);
     expect(posts()[0].body).toEqual({ supersede: false });
     expect(await screen.findByText('Inbox page')).toBeTruthy();
     expect(await screen.findByText('Approved')).toBeTruthy();
@@ -103,30 +151,67 @@ describe('approval detail page', () => {
     expect(await screen.findByText('Returned to author')).toBeTruthy();
   });
 
-  it('rejects a quality disposition only with a reason', async () => {
-    mount(DISPOSITION);
-    fireEvent.click(await screen.findByRole('button', { name: 'Reject' }));
-    const dialog = await screen.findByRole('alertdialog');
-    await within(dialog).findByText('Current record details');
-    expect(within(dialog).getByRole('button', { name: 'Reject' }).hasAttribute('disabled')).toBe(true);
-    fireEvent.change(within(dialog).getByLabelText(/^Reason/), { target: { value: 'Lab certificate missing' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
-    await waitFor(() => expect(posts()[0]?.body).toEqual({ reason: 'Lab certificate missing' }));
-  });
-
   it('explains separation of duties for the author and offers only what is allowed', async () => {
-    mount({ ...base, actions: [{ action: 'approve', disabledReason: 'A different approver must decide your own request.' }, { action: 'retire', disabledReason: null }] });
+    mount({ ...PROFILE, actions: [{ action: 'approve', disabledReason: 'A different approver must decide your own request.' }, { action: 'retire', disabledReason: null }] });
     const eligibility = await screen.findByTestId('approval-eligibility');
     expect(eligibility.textContent).toContain('Approve is not available to you: A different approver must decide your own request.');
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Retire' })).toBeTruthy();
   });
 
-  it('a workspace-only review shows its summary and leads to the review workspace', async () => {
+  it('period revision: shows the reconciliation equation in place and refuses approval to the submitter', async () => {
+    actAs('production_accountant', 'preparer');
+    mount({ ...PERIOD, canDecide: false, decisionBlockedReason: 'A different approver must decide your own request.' });
+    const form = await screen.findByTestId('inline-period-review');
+    expect(within(form).getByText('Unaccounted')).toBeTruthy();
+    expect(within(form).getByTestId('approve-gate').textContent).toContain('You submitted this revision');
+    expect(within(form).getByTestId('wf-approve').hasAttribute('disabled')).toBe(true);
+    expect(within(form).getByTestId('wf-reject').hasAttribute('disabled')).toBe(true);
+    expect(screen.getByTestId('approval-eligibility').textContent).toContain('You cannot decide this record: A different approver must decide your own request.');
+    expect(posts()).toHaveLength(0);
+  });
+
+  it('period revision: an independent approver approves in place with an optional comment', async () => {
+    actAs('production_accountant', 'approver');
     mount(PERIOD);
-    expect(await screen.findByText('This review is decided in its workspace, where its evidence and gates are checked.')).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Open review workspace' }).getAttribute('href')).toBe('/plans/plan-1/periods/per-1');
-    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
+    fireEvent.click(await screen.findByTestId('wf-approve'));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByTestId('approve-summary').textContent).toMatch(/Unaccounted\s*10\.00\s*t/);
+    fireEvent.change(within(dialog).getByTestId('wf-approve-comment'), { target: { value: 'Checked against the shift log' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve revision' }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].url.pathname).toMatch(/\/production-periods\/p1\/approve$/);
+    expect(posts()[0].body).toEqual({ revision: 2, submittedHash: 'b'.repeat(64), comment: 'Checked against the shift log' });
+    expect(await screen.findByText('Revision approved')).toBeTruthy();
+  });
+
+  it('restatement posting: finance sets the posting date and treatment in place and returns to the inbox', async () => {
+    actAs('finance_approver', 'finance-1');
+    mount(POSTING);
+    const form = await screen.findByTestId('inline-restatement-posting');
+    expect(within(form).getByText(/Restates approved revision 1/)).toBeTruthy();
+    fireEvent.change(within(form).getByTestId('posting-date'), { target: { value: '2026-11-03' } });
+    fireEvent.change(within(form).getByTestId('posting-treatment'), { target: { value: 'estimate_change' } });
+    fireEvent.click(within(form).getByTestId('posting-save'));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].url.pathname).toMatch(/\/production-periods\/p1\/revisions\/2\/posting$/);
+    expect(posts()[0].body).toEqual({ postingDate: '2026-11-03', treatment: 'estimate_change' });
+    expect(await screen.findByText('Inbox page')).toBeTruthy();
+    expect(await screen.findByText('Posting saved')).toBeTruthy();
+  });
+
+  it('change proposal: an approver accepts it in place with a reason', async () => {
+    actAs('production_accountant', 'approver');
+    mount(PROPOSAL);
+    const form = await screen.findByTestId('inline-change-proposal');
+    fireEvent.click(within(form).getByTestId('proposal-accept'));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.change(within(dialog).getByLabelText(/^Reason/), { target: { value: 'Late stop coding confirmed' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Accept change' }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].url.pathname).toMatch(/\/period-change-proposals\/cp-1\/accept$/);
+    expect(posts()[0].body).toEqual({ reason: 'Late stop coding confirmed' });
+    expect(await screen.findByText('Change accepted: a new draft revision is open')).toBeTruthy();
   });
 
   it('a record decided elsewhere says it is no longer pending, with the way back', async () => {

@@ -1,4 +1,5 @@
 import { ApprovalInboxService } from './approvals/approval-inbox.service';
+import { ApprovalChangesService } from './approvals/changes/approval-changes.service';
 import { ApprovalInboxV2Controller } from './approvals/approval-inbox-v2.controller';
 import { EquipmentReadinessV2Controller } from './equipment-setup/equipment-readiness-v2.controller';
 import { EQUIPMENT_READINESS_SERVICES } from './equipment-setup/readiness-providers';
@@ -331,6 +332,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
   ],
   providers: [
     ApprovalInboxService,
+    ApprovalChangesService,
     ...EQUIPMENT_READINESS_SERVICES,
     ProductionEventsV2Service,
     ProductionEventHistoryService,

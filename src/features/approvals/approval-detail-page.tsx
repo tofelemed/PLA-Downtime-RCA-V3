@@ -1,41 +1,68 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { removeDecidedApproval } from '@/api/v2/queries/approval-inbox-cache';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import type { ApprovalAction, ApprovalItem } from '@/api/v2/types/approvals';
+import type { ApprovalItem } from '@/api/v2/types/approvals';
 import { Button } from '@/components/ui/button';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { useToast } from '@/hooks/use-toast';
-import { DECIDED_LABELS } from './approval-command';
-import { ApprovalDetailActions } from './approval-detail-actions';
 import { ApprovalDetailSummary } from './approval-detail-summary';
 import { ApprovalEligibility } from './approval-eligibility';
 import { ApprovalRecordDetails } from './approval-record-details';
+import { ApprovalChangesPanel } from './changes/approval-changes-panel';
+import { InlineDecision } from './inline/inline-decision';
 import { useApprovalItem } from './use-approval-item';
 import { useApprovalRecord } from './use-approval-record';
 
 const INBOX = { to: '/approvals', label: 'Pending Approvals' };
 
-function ApprovalDetail({ item }: { item: ApprovalItem }) {
+/** After a server-confirmed decision: the row leaves every cached inbox page, a toast says what happened. */
+function useDecided(item: ApprovalItem) {
   const navigate = useNavigate();
+  const client = useQueryClient();
+  const tenantId = useV2TenantId();
   const { toast } = useToast();
-  const record = useApprovalRecord(item, true);
-  const decided = (action: ApprovalAction) => {
-    toast({ title: DECIDED_LABELS[action], description: `${item.kindLabel}: ${item.title}` });
+  return async (label: string) => {
+    if (tenantId) await removeDecidedApproval(client, tenantId, item);
+    toast({ title: label, description: `${item.kindLabel}: ${item.title}` });
     navigate(INBOX.to);
   };
+}
+
+function ApprovalDetail({ item }: { item: ApprovalItem }) {
+  const record = useApprovalRecord(item, true);
+  const decided = useDecided(item);
   return (
     <Page>
-      <PageHeader title={item.title} description={`${item.kindLabel} waiting for your decision`} back={INBOX} actions={<ApprovalDetailActions item={item} onDecided={decided} />} />
+      <PageHeader
+        title={item.title}
+        description={`${item.kindLabel} waiting for your decision`}
+        back={INBOX}
+        actions={
+          <Button size="sm" variant="outline" asChild>
+            <Link to={item.reviewHref}>Open in workspace</Link>
+          </Button>
+        }
+      />
       <div className="space-y-6" data-testid="approval-detail">
-        <Section title="What needs approval">
-          <ApprovalDetailSummary item={item} />
+        <Section title="What needs your approval" description="Field by field against the approved version it replaces, or its full content when there is none.">
+          <ApprovalChangesPanel item={item} />
         </Section>
         <Section title="Your decision">
-          <ApprovalEligibility item={item} />
+          <div className="space-y-4">
+            <ApprovalEligibility item={item} />
+            <InlineDecision item={item} onDecided={(label) => void decided(label)} />
+          </div>
         </Section>
-        <Section title="Record content" description="The record as it is now, including its effective dates and evidence. Open the full workspace for history and related records.">
-          {record.supported ? <ApprovalRecordDetails record={record} /> : <p className="text-sm text-muted-foreground">This review’s evidence and checks are in its workspace.</p>}
+        <Section title="Request">
+          <ApprovalDetailSummary item={item} />
         </Section>
+        {record.supported && (
+          <Section title="Record content" description="The record as it is now, including its effective dates and evidence." collapsible defaultOpen={false}>
+            <ApprovalRecordDetails record={record} />
+          </Section>
+        )}
       </div>
     </Page>
   );
@@ -59,7 +86,7 @@ function ApprovalDetailScreen({ kind, id }: { kind: string; id: string }) {
   return <ApprovalDetail item={item.data} />;
 }
 
-/** `/approvals/:kind/:id`: one pending record, what it asks, who may decide, and the decision itself. */
+/** `/approvals/:kind/:id`: one pending record, exactly what changes, who may decide, and the decision itself. */
 export function ApprovalDetailPage() {
   const tenantId = useV2TenantId();
   const { kind = '', id = '' } = useParams();

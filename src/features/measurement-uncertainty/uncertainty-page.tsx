@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useUncertaintyBudgets } from '@/api/v2/queries/uncertainty-budgets';
 import { useUnits } from '@/api/v2/queries/units';
@@ -22,7 +23,9 @@ function UnitBudgets({ unitId, timezone }: { unitId: string; timezone: string })
       {items.length === 0 && <p className="text-sm text-muted-foreground">No uncertainty budget for this unit yet; its reconciliation tolerance stays at zero until one is approved and adopted.</p>}
       <div className="space-y-3" data-testid="budget-list">
         {items.map((budget) => (
-          <BudgetCard key={budget.id} budget={budget} timezone={timezone} />
+          <div key={budget.id} id={`uncertainty-budget-${budget.id}`} className="scroll-mt-24" data-highlight-label="the uncertainty budget">
+            <BudgetCard budget={budget} timezone={timezone} />
+          </div>
         ))}
       </div>
     </DataState>
@@ -32,7 +35,9 @@ function UnitBudgets({ unitId, timezone }: { unitId: string; timezone: string })
 function UncertaintyScreen() {
   const units = useUnits();
   const unitOptions = flattenPages(units.data?.pages).map((unit) => ({ value: unit.id, label: unit.name }));
-  const [unitId, setUnitId] = useState('');
+  const [params] = useSearchParams();
+  // a deep link (`?unitId=` from the approvals inbox) opens that unit's budgets
+  const [unitId, setUnitId] = useState(params.get('unitId') ?? '');
   const [drafting, setDrafting] = useState(false);
   const { timezone } = usePlantTimezone();
   const { canWriteUncertaintyBudgets } = useCapabilities();

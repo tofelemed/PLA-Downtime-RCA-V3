@@ -94,6 +94,7 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
           columns={columnsOf(names, { timezone, canDecide: canApproveDispositions, correctLink, rows })}
           rows={rows}
           getRowKey={(d) => d.id}
+          getRowAnchor={(d) => `disposition-${d.id}`}
           status={{ isLoading: list.isLoading, isError: list.isError, error: list.error }}
           empty={{ text: 'No dispositions recorded for this period.' }}
           density="compact"

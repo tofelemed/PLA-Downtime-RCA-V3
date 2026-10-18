@@ -8,8 +8,10 @@ import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
 import { approvalCommand, type ApprovalDecision } from '@/features/approvals/approval-command';
 
-export function useApprovalInbox(kind?: string) {
-  const inbox = usePagedQuery<ApprovalItem>({ resource: 'close', path: '/approval-inbox', query: { kind }, key: { filters: { kind: 'approval-inbox', workflow: kind } }, refetchInterval: 60_000 });
+/** `decidable`: only records the caller may decide (filtered on the server, so pages stay complete). */
+export function useApprovalInbox(kind?: string, decidable = false) {
+  const only = decidable ? 'true' : undefined;
+  const inbox = usePagedQuery<ApprovalItem>({ resource: 'close', path: '/approval-inbox', query: { kind, decidable: only }, key: { filters: { kind: 'approval-inbox', workflow: kind, decidable: only } }, refetchInterval: 60_000 });
   const { pageIndex, first } = inbox.pager;
   const empty = inbox.rows.length === 0;
   useEffect(() => { if (pageIndex > 0 && empty) first(); }, [pageIndex, empty, first]);

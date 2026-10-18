@@ -93,6 +93,7 @@ export function TransitionStandardsTab() {
           columns={columnsOf(refs)}
           rows={rows}
           getRowKey={(s) => s.id}
+          getRowAnchor={(s) => `transition-standard-${s.id}`}
           status={{ isLoading: standards.isLoading, isError: standards.isError, error: standards.error, onRetry: () => void standards.refetch() }}
           empty={{ title: 'No transition standards', text: 'Every grade change of this unit counts as loss, flagged “no transition standard”.' }}
         />

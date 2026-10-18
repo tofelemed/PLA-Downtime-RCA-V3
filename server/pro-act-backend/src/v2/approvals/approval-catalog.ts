@@ -17,6 +17,15 @@ export type ApprovalAction =
   | 'reject'
   | 'return'
   | 'activate';
+export const APPROVAL_TARGET_FACTS = [
+  'periodId',
+  'planId',
+  'revision',
+  'monthKey',
+  'eventId',
+  'profileId',
+] as const;
+export type ApprovalTargetFact = (typeof APPROVAL_TARGET_FACTS)[number];
 export interface ApprovalDefinition {
   kind: string;
   label: string;
@@ -35,6 +44,12 @@ export interface ApprovalDefinition {
   commandId?: string;
   actions?: ApprovalAction[];
   supersede?: boolean;
+  /** facts of the record the inline decision forms need (SQL per fact), e.g. the period of a revision */
+  target?: Partial<Record<ApprovalTargetFact, string>>;
+  /** this step has no separation-of-duties rule: the requester may decide it too */
+  ownMayDecide?: boolean;
+  /** why a requester may not decide this step (default: a different approver decides) */
+  ownReason?: string;
   joins?: Array<{
     entity: EntityTarget<ObjectLiteral>;
     alias: string;
@@ -55,7 +70,8 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     title: "r.operatingMode || ' profile'",
     summary:
       "concat('Product ', r.productId, ' · ', r.quantityUom, ' / ', r.rateTimebase)",
-    href: "'/planning/profiles/' || r.id",
+    href: "'/planning/profiles/' || r.id || '#profile-version'",
+    target: { profileId: 'r.id' },
     resource: 'profiles',
   },
   {
@@ -66,7 +82,8 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     joins: [PROFILE_JOIN],
     title: "r.rateKind || ' rate'",
     summary: "concat(r.rate, ' / ', r.timebase)",
-    href: "'/planning/profiles/' || r.profileId",
+    href: "'/planning/profiles/' || r.profileId || '#rate-' || r.id",
+    target: { profileId: 'r.profileId' },
     resource: 'rates',
   },
   {
@@ -78,7 +95,8 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     roles: FINANCE_APPROVERS,
     title: "r.basis || ' valuation rate'",
     summary: "concat(r.value, ' ', r.currency, ' / ', r.perUom)",
-    href: "CASE WHEN r.profileId IS NOT NULL THEN '/planning/profiles/' || r.profileId ELSE '/planning?tab=profiles' END",
+    href: "CASE WHEN r.profileId IS NOT NULL THEN '/planning/profiles/' || r.profileId || '#valuation-rate-' || r.id ELSE '/planning?tab=profiles' END",
+    target: { profileId: 'r.profileId' },
     resource: 'valuation-rates',
   },
   {
@@ -88,7 +106,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "'Grade transition'",
     summary: "concat(r.referenceSeconds, ' seconds · ', r.operatingMode)",
-    href: "'/planning?tab=transitions'",
+    href: "'/planning?tab=transitions#transition-standard-' || r.id",
     resource: 'transition-standards',
   },
   {
@@ -98,7 +116,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: 'r.name',
     summary: "concat(r.code, ' · capacity share ', r.capacityShare)",
-    href: "'/planning?tab=streams'",
+    href: "'/planning?tab=streams#unit-stream-' || r.id",
     resource: 'unit-streams',
   },
   {
@@ -109,7 +127,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     secondUnit: 'r.toUnitId',
     title: "r.routeRole || ' route'",
     summary: "concat('To unit ', r.toUnitId, ' · yield ', r.yieldFactor)",
-    href: "'/master-data/plant-flow'",
+    href: "'/master-data/plant-flow#flow-route-' || r.id",
     resource: 'flow-routes',
   },
   {
@@ -119,7 +137,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "r.mode || ' impact rule'",
     summary: "concat('Asset ', r.assetId, ' · fraction ', r.fraction)",
-    href: "'/master-data/unit-impact-rules'",
+    href: "'/master-data/unit-impact-rules#unit-impact-rule-' || r.id",
     resource: 'unit-impact-rules',
   },
   {
@@ -139,7 +157,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     roles: FINANCE_APPROVERS,
     title: "r.status || ' demand'",
     summary: "concat('Product ', r.productId)",
-    href: "'/finance?tab=demand'",
+    href: "'/finance?tab=demand#demand-status-' || r.id",
     resource: 'demand-statuses',
     supersede: true,
   },

@@ -84,7 +84,7 @@ function PairActions({ pair }: { pair: StopReconciliationView }) {
 function PairRow({ pair, eventId, canDecide }: PairProps) {
   const isKept = pair.kept?.id === eventId;
   return (
-    <li className="space-y-1 rounded border p-2" data-testid="duplicate-pair" data-state={pair.state}>
+    <li id={`stop-merge-${pair.id}`} className="scroll-mt-24 space-y-1 rounded border p-2" data-testid="duplicate-pair" data-state={pair.state}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{PAIR_STATE_LABELS[pair.state]}</Badge>

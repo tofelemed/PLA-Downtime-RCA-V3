@@ -79,6 +79,7 @@ export function RateTable({ profile, timezone }: RateTableProps) {
           columns={columnsOf(profile, timezone)}
           rows={items}
           getRowKey={(r) => r.id}
+          getRowAnchor={(r) => `rate-${r.id}`}
           status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
           empty={{ text: 'No rate versions yet. Plans need approved planning and sustained rates.' }}
         />

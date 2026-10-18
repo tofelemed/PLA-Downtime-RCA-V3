@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/approval-inbox/{kind}/{id}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What exactly needs approval: each field of the pending record against its approved / effective predecessor (or its full content without one). Read-only; same 404 / 400 as the record read. */
+        get: operations["ApprovalInboxV2Controller_changes_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/equipment-setup/readiness": {
         parameters: {
             query?: never;
@@ -7211,6 +7228,29 @@ export interface components {
             action: "approve" | "retire" | "reject" | "return" | "activate";
             disabledReason: string | null;
         };
+        ApprovalChangeFieldView: {
+            key: string;
+            label: string;
+            /** @description Value of the approved / effective predecessor (null without one) */
+            before: string | null;
+            /** @description Pending value */
+            after: string | null;
+            unit: string | null;
+            currency: string | null;
+            /** @enum {string} */
+            format: "text" | "number" | "quantity" | "money" | "instant" | "date" | "boolean" | "duration";
+            /** @description Money values of one figure in several currencies share a group */
+            group: string | null;
+            changed: boolean;
+        };
+        ApprovalTargetView: {
+            periodId: string | null;
+            planId: string | null;
+            revision: number | null;
+            monthKey: string | null;
+            eventId: string | null;
+            profileId: string | null;
+        };
         ApprovalItemView: {
             id: string;
             kind: string;
@@ -7231,12 +7271,30 @@ export interface components {
             rowVersion: number;
             supersede: boolean;
             actions: components["schemas"]["ApprovalActionView"][];
+            /** @description Whether the caller may decide this record (role, scope and the requester rule); the decision command still decides */
+            canDecide: boolean;
+            decisionBlockedReason: string | null;
+            /** @description The one-line change of the row (first changed field); null where the change is read on the approval page only */
+            headline: components["schemas"]["ApprovalChangeFieldView"] | null;
+            target: components["schemas"]["ApprovalTargetView"];
         };
         ApprovalInboxView: {
             items: components["schemas"]["ApprovalItemView"][];
             nextCursor: string | null;
             asOf: string;
             scope: Record<string, never>;
+        };
+        ApprovalChangesView: {
+            kind: string;
+            id: string;
+            /**
+             * @description diff: against the approved / effective predecessor; full: no predecessor, the pending content; compare: two records side by side
+             * @enum {string}
+             */
+            mode: "diff" | "full" | "compare";
+            beforeLabel: string | null;
+            afterLabel: string;
+            fields: components["schemas"]["ApprovalChangeFieldView"][];
         };
         ReadinessCheckView: {
             id: string;
@@ -10478,6 +10536,8 @@ export interface operations {
                 limit?: number;
                 /** @description Exact workflow kind returned by an inbox row */
                 kind?: string;
+                /** @description Only records the caller may decide (the requester rule applied; the decision command still decides) */
+                decidable?: "true" | "false";
             };
             header?: never;
             path?: never;
@@ -10513,6 +10573,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalItemView"];
+                };
+            };
+        };
+    };
+    ApprovalInboxV2Controller_changes_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalChangesView"];
                 };
             };
         };

@@ -86,7 +86,7 @@ export function RestatementPanel({ view }: { view: ReconciliationView }) {
   const data = query.data;
   if (!data) return null;
   return (
-    <section className="space-y-2 rounded-md border p-3" data-testid="restatement-panel">
+    <section id="restatement" className="scroll-mt-24 space-y-2 rounded-md border p-3" data-highlight-label="the restatement posting" data-testid="restatement-panel">
       <h3 className="font-medium">
         Restatement of approved revision {data.supersededRevision}
         {data.afterClose ? ' — correction after month close' : ''}

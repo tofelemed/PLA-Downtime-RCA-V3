@@ -9,6 +9,7 @@ export interface DataTableGridProps<T> {
   columns: ReadonlyArray<DataTableColumn<T>>;
   rows: readonly T[];
   getRowKey: (row: T) => string;
+  getRowAnchor?: (row: T) => string | undefined;
   density: DataTableDensity;
   stickyHeader: boolean;
   maxHeight?: number | string;
@@ -34,14 +35,14 @@ function GridHeader<T>({ columns, density, sticky }: { columns: ReadonlyArray<Da
 }
 
 function GridRows<T>(props: DataTableGridProps<T>) {
-  const { columns, rows, getRowKey, density, onRowClick, rowsHaveLink, caption } = props;
+  const { columns, rows, getRowKey, getRowAnchor, density, onRowClick, rowsHaveLink, caption } = props;
   return (
     <>
       {rows.map((row, index) => {
         const activation = rowActivationProps(onRowClick && (() => onRowClick(row)), rowsHaveLink);
         const hint = rowHintOf(row, props);
         return (
-          <TableRow key={getRowKey(row)} {...activation}>
+          <TableRow key={getRowKey(row)} {...activation} id={getRowAnchor?.(row)} className={cn(getRowAnchor && 'scroll-mt-24', activation.className)}>
             {columns.map((column, columnIndex) => (
               <TableCell key={column.id} className={cellClass(column, density)}>
                 {columnIndex === 0 && rowLabelHint(hint)}

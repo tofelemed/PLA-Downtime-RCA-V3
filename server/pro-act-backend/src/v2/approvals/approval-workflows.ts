@@ -33,8 +33,16 @@ const VERSION_JOIN = {
   alias: 'v',
   on: 'v.id = p.selectedPlanVersionId AND v.tenantId = r.tenantId',
 };
-const PERIOD_HREF =
-  "CASE WHEN v.planId IS NOT NULL THEN '/plans/' || v.planId || '/periods/' || r.periodId ELSE '/my-queue' END";
+/** The period workspace section of a record (`/plans/:planId/periods/:periodId/<section>#<anchor>`). */
+const periodHref = (section: string, anchor: string) =>
+  `CASE WHEN v.planId IS NOT NULL THEN '/plans/' || v.planId || '/periods/' || r.periodId || '${section}#' || ${anchor} ELSE '/my-queue' END`;
+const PERIOD_TARGET = { periodId: 'r.periodId', planId: 'v.planId' };
+const REVISION_TARGET = { ...PERIOD_TARGET, revision: 'r.revision' };
+/** The period of a disposition's production start on its unit (dispositions are listed per period). */
+const DISPOSITION_PERIOD = (column: string) =>
+  `(SELECT ${column} FROM production_periods dp JOIN plan_versions dv ON dv.id = dp.selected_plan_version_id WHERE dp.tenant_id = r.tenantId AND dp.unit_id = r.unitId AND dp.utc_start <= r.productionStart AND dp.utc_end > r.productionStart ORDER BY dp.utc_start LIMIT 1)`;
+const monthHref = (step: string) =>
+  `'/month-close?month=' || r.monthKey || '#close-step-${step}'`;
 export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
   {
     kind: 'plan',
@@ -53,7 +61,8 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     title: 'h.name',
     summary: "concat(r.basis, ' · ', r.validFrom, ' – ', r.validTo)",
     state: 'r.approvalState',
-    href: "'/planning/plans/' || r.planId",
+    href: "'/planning/plans/' || r.planId || '#plan-version-' || r.version",
+    target: { planId: 'r.planId' },
     resource: 'production-plans',
     commandId: 'r.planId',
     actions: ['approve', 'return'],
@@ -82,7 +91,7 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     title: "'Measurement source priority'",
     summary: 'r.body::text',
     state: "'proposed'",
-    href: "'/connectivity/source-authority'",
+    href: "'/connectivity/source-authority' || CASE WHEN r.unitId IS NOT NULL THEN '?unitId=' || r.unitId ELSE '' END || '#source-authority-version-' || r.id",
     resource: 'source-authority/versions',
     actions: ['approve', 'reject'],
   },
@@ -94,7 +103,7 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     pending: "r.state = 'draft'",
     title: "r.sourceSystem || ' status rules'",
     summary: 'r.statuses::text',
-    href: "'/connectivity/source-status'",
+    href: "'/connectivity/source-status#status-mapping-' || r.id",
   },
   {
     kind: 'adjustment',
@@ -107,7 +116,8 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "r.kind || ' adjustment'",
     summary: "concat(r.quantity, ' ', r.uom, ' · ', r.reason)",
-    href: PERIOD_HREF,
+    href: periodHref('/actuals', "'adjustment-' || r.id"),
+    target: PERIOD_TARGET,
     joins: [PERIOD_JOIN, VERSION_JOIN],
     resource: 'actuals/adjustments',
     actions: ['approve', 'reject'],
@@ -123,7 +133,11 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "r.lotCode || ' · ' || r.dispositionClass",
     summary: "concat(r.quantity, ' ', r.uom, ' · ', r.reason)",
-    href: "'/planning'",
+    href: `COALESCE(${DISPOSITION_PERIOD("'/plans/' || dv.plan_id || '/periods/' || dp.id || '/actuals#disposition-' || r.id")}, '/planning')`,
+    target: {
+      periodId: DISPOSITION_PERIOD('dp.id::text'),
+      planId: DISPOSITION_PERIOD('dv.plan_id::text'),
+    },
     resource: 'lot-dispositions',
     actions: ['approve', 'reject'],
   },
@@ -138,7 +152,7 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "r.boundary || ' budget'",
     summary: "concat(r.calibrationRef, ' · ', r.notes)",
-    href: "'/measurement-uncertainty'",
+    href: "'/measurement-uncertainty?unitId=' || r.unitId || '#uncertainty-budget-' || r.id",
     resource: 'uncertainty-budgets',
     actions: ['approve', 'reject'],
   },
@@ -168,7 +182,8 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     version: 'r.revision',
     title: "concat(p.localDate, ' · ', p.shiftName)",
     summary: "concat('Revision ', r.revision, ' · ', r.staleReason)",
-    href: PERIOD_HREF,
+    href: periodHref('/review', "'period-review'"),
+    target: REVISION_TARGET,
     joins: [PERIOD_JOIN, VERSION_JOIN],
   },
   {
@@ -185,7 +200,9 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     title: "concat(p.localDate, ' · restatement ', r.revision)",
     summary:
       "'Set the posting date and treatment after reviewing the approved restatement delta'",
-    href: PERIOD_HREF,
+    href: periodHref('/review', "'restatement'"),
+    target: REVISION_TARGET,
+    ownMayDecide: true,
     joins: [PERIOD_JOIN, VERSION_JOIN],
   },
   {
@@ -196,8 +213,10 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     pending: "r.state = 'open'",
     unit: 'r.unitId',
     title: "'Approved-period change'",
+    author: "(r.detail->'manual'->>'proposedBy')::uuid",
     summary: 'r.trigger',
-    href: PERIOD_HREF,
+    href: periodHref('/history', "'change-proposal-' || r.id"),
+    target: PERIOD_TARGET,
     joins: [PERIOD_JOIN, VERSION_JOIN],
   },
   {
@@ -211,7 +230,7 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     author: 'r.closureRequestedBy',
     title: 'r.title',
     summary: 'r.closureNote',
-    href: "'/rca/cases/' || r.id",
+    href: "'/rca/' || r.id || '#rca-workflow'",
   },
   {
     kind: 'month-materiality',
@@ -230,7 +249,10 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     author: 'r.quantitiesClosedBy',
     title: "r.monthKey || ' materiality review'",
     summary: "'Review the materiality findings before finance sign-off'",
-    href: "'/month-close?month=' || r.monthKey",
+    href: monthHref('materiality-review'),
+    target: { monthKey: 'r.monthKey' },
+    ownReason:
+      'You closed the quantities; the materiality review needs someone else.',
   },
   {
     kind: 'month-finance',
@@ -242,7 +264,10 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     author: 'r.quantitiesClosedBy',
     title: "r.monthKey || ' finance sign-off'",
     summary: "'Review quantity close and finance prerequisites'",
-    href: "'/month-close?month=' || r.monthKey",
+    href: monthHref('finance-sign-off'),
+    target: { monthKey: 'r.monthKey' },
+    ownReason:
+      'You closed the quantities; finance sign-off needs someone else.',
   },
   {
     kind: 'month-lock',
@@ -253,7 +278,9 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     author: 'r.financeSignedOffBy',
     title: "r.monthKey || ' lock'",
     summary: "'Finance signed off; review prerequisites and lock the month'",
-    href: "'/month-close?month=' || r.monthKey",
+    href: monthHref('lock'),
+    target: { monthKey: 'r.monthKey' },
+    ownMayDecide: true,
   },
   {
     kind: 'stop-merge',
@@ -264,6 +291,7 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "'Suggested duplicate stop'",
     summary: 'r.suggestionReason',
-    href: "'/events/' || r.keptEventId",
+    href: "'/events/' || r.keptEventId || '?tab=related#stop-merge-' || r.id",
+    target: { eventId: 'r.keptEventId' },
   },
 ];

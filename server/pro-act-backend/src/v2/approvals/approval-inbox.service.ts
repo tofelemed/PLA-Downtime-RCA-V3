@@ -13,10 +13,12 @@ import {
 import { VERSION_APPROVALS } from './approval-catalog';
 import { WORKFLOW_APPROVALS } from './approval-workflows';
 import {
+  ApprovalChangesView,
   ApprovalInboxQueryDto,
   ApprovalInboxView,
   ApprovalItemView,
 } from './approval-inbox-v2.dto';
+import { ApprovalChangesService } from './changes/approval-changes.service';
 import {
   cursorBinding,
   decodeApprovalCursor,
@@ -29,7 +31,10 @@ export const APPROVAL_DEFINITIONS = [
 ];
 @Injectable()
 export class ApprovalInboxService {
-  constructor(@InjectEntityManager() private readonly manager: EntityManager) {}
+  constructor(
+    @InjectEntityManager() private readonly manager: EntityManager,
+    private readonly changes: ApprovalChangesService,
+  ) {}
   async list(
     context: RequestContext,
     query: ApprovalInboxQueryDto,
@@ -40,7 +45,10 @@ export class ApprovalInboxService {
       !APPROVAL_DEFINITIONS.some((item) => item.kind === query.kind)
     )
       throw new BadRequestException('Unknown approval kind');
-    const binding = cursorBinding(context, query.kind);
+    const binding = cursorBinding(
+      context,
+      query.decidable === 'true' ? `${query.kind ?? ''}|decidable` : query.kind,
+    );
     const cursor = decodeApprovalCursor(query.cursor, binding);
     const definitions = APPROVAL_DEFINITIONS.filter(
       (item) => !query.kind || item.kind === query.kind,
@@ -55,11 +63,58 @@ export class ApprovalInboxService {
         ).map((row) => toApprovalItem(context, definition, row)),
       ),
     );
-    return approvalPage(pages.flat(), {
+    const page = approvalPage(pages.flat(), {
       limit: query.limit,
       binding,
       tenantId,
     });
+    return { ...page, items: await this.withHeadlines(tenantId, page.items) };
+  }
+
+  /** One batch per kind on the page (only the rows shown), never one read per row. */
+  private async withHeadlines(
+    tenantId: string,
+    items: ApprovalItemView[],
+  ): Promise<ApprovalItemView[]> {
+    const kinds = [...new Set(items.map((item) => item.kind))];
+    const headlines = await Promise.all(
+      kinds.map(async (kind) => {
+        const ids = items
+          .filter((item) => item.kind === kind)
+          .map((item) => item.id);
+        return [
+          kind,
+          await this.changes.headlinesOf(tenantId, kind, ids),
+        ] as const;
+      }),
+    );
+    const byKind = new Map(headlines);
+    return items.map((item) => ({
+      ...item,
+      headline: byKind.get(item.kind)?.get(item.id) ?? null,
+    }));
+  }
+
+  /**
+   * "Exactly the value needing approval" of one pending record: its fields against the approved /
+   * effective predecessor, or its full content without one. Same 404 / 400 as `get`.
+   */
+  async changesOf(
+    context: RequestContext,
+    kind: string,
+    id: string,
+  ): Promise<ApprovalChangesView> {
+    const item = await this.get(context, kind, id);
+    const sets = await this.changes.changesOf(requireTenantId(context), kind, [
+      id,
+    ]);
+    const set = sets.get(id) ?? {
+      mode: 'full',
+      beforeLabel: null,
+      afterLabel: 'Pending',
+      fields: [],
+    };
+    return { kind: item.kind, id: item.id, ...set };
   }
 
   /**
@@ -83,7 +138,10 @@ export class ApprovalInboxService {
     if (!row) {
       throw new NotFoundException('This record is not pending your approval');
     }
-    return toApprovalItem(context, definition, row);
+    const [item] = await this.withHeadlines(requireTenantId(context), [
+      toApprovalItem(context, definition, row),
+    ]);
+    return item;
   }
 }
 function approvalPage(

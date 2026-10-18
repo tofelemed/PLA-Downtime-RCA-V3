@@ -44,7 +44,7 @@ export function WorkflowPanel() {
   const { rca, readOnly, basePath } = useCaseWorkspace();
   const readiness = useRcaReadiness(rca.id);
   return (
-    <Section title="Workflow" description="Investigation → monitoring of the actions → closure approval. SuperAdmin may approve their own investigation; other approvers must be independent.">
+    <Section id="rca-workflow" title="Workflow" description="Investigation → monitoring of the actions → closure approval. SuperAdmin may approve their own investigation; other approvers must be independent.">
       <DataState state={dataStateOf(readiness)} error={readiness.error} onRetry={() => readiness.refetch()}>
         {readiness.data && (
           <div className="space-y-4" data-testid="workflow-panel">

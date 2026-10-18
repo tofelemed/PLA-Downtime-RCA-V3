@@ -50,7 +50,7 @@ export function ProfileDetail({ profile, refs, onEdit }: ProfileDetailProps) {
   const tz = refs.timezone;
   return (
     <div className="space-y-6" data-testid="profile-detail" data-profile-id={profile.id}>
-      <Section title="Profile version">
+      <Section id="profile-version" title="Profile version">
         <div className="space-y-3">
           <Facts profile={profile} tz={tz} />
           <LegacyValues profile={profile} />

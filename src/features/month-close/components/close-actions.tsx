@@ -22,19 +22,32 @@ function stepsOf(view: MonthCloseView, caps: ReturnType<typeof useCapabilities>)
   };
 }
 
+/** Keeps only the steps an embedding page offers (the approval page shows the one step waiting). */
+function onlySteps(steps: ReturnType<typeof stepsOf>, only?: readonly MonthCloseStep[]) {
+  if (!only) return steps;
+  return {
+    ...steps,
+    close: steps.close && only.includes('close-quantities'),
+    review: steps.review && only.includes('materiality-review'),
+    signOff: steps.signOff && only.includes('finance-sign-off'),
+    lock: steps.lock && only.includes('lock'),
+    reopen: steps.reopen && only.includes('reopen'),
+  };
+}
+
 /** The month close steps of the signed-in user, each behind a confirmation; refusals are shown in words. */
-export function CloseActions({ view }: { view: MonthCloseView }) {
+export function CloseActions({ view, only }: { view: MonthCloseView; only?: readonly MonthCloseStep[] }) {
   const caps = useCapabilities();
   const userId = useCurrentUserId();
   const command = useMonthCloseStep();
-  const steps = stepsOf(view, caps);
+  const steps = onlySteps(stepsOf(view, caps), only);
   const run = (step: MonthCloseStep) => (text: string) => command.submit({ month: view.monthKey, step, text });
   const signedQuantities = !caps.isSuperAdmin && userId !== null && view.signOffs.quantitiesClosedBy?.id === userId;
   const busy = command.isPending;
   const month = monthLabelOf(view.monthKey, view.calendar, useCalendarPreference().digits);
   const problem = command.error ? <FriendlyErrorAlert error={command.error} /> : null;
   return (
-    <div className="space-y-2" data-testid="close-actions">
+    <div id="close-actions" className="scroll-mt-24 space-y-2" data-testid="close-actions">
       <div className="flex flex-wrap gap-2">
         {steps.close && (
           <StepConfirm trigger="Close quantities…" testId="step-close-quantities" disabled={busy || !view.prerequisites.met} title={`Close the quantities of ${month}?`} description="You confirm every period of the month is approved. Finance signs off next; nobody can revise the month's periods until it is reopened." confirmLabel="Close quantities" onConfirm={run('close-quantities')}>

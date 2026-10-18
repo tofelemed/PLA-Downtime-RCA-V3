@@ -68,6 +68,7 @@ export function AdjustmentsSection({ planId, periodId }: AdjustmentsSectionProps
           columns={columnsOf({ products, users, productOf: productOfSlice(detail) }, canApproveAdjustments)}
           rows={detail?.adjustments ?? []}
           getRowKey={(a) => a.id}
+          getRowAnchor={(a) => `adjustment-${a.id}`}
           status={{ isLoading: period.isLoading, isError: period.isError, error: period.error }}
           empty={{ text: 'No adjustments for this period.' }}
           density="compact"

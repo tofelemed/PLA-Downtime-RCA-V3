@@ -56,7 +56,7 @@ function Decision({ version, timezone }: { version: SourceAuthorityVersionView; 
 /** One source authority version: scope, state, interval, ranked sources, who drafted and decided it. */
 export function VersionCard({ version, timezone }: { version: SourceAuthorityVersionView; timezone: string }) {
   return (
-    <article className="space-y-2 rounded-md border p-3 text-sm" data-testid="authority-version" data-state={version.state} data-in-force={version.inForce}>
+    <article id={`source-authority-version-${version.id}`} className="scroll-mt-24 space-y-2 rounded-md border p-3 text-sm" data-testid="authority-version" data-state={version.state} data-in-force={version.inForce}>
       <header className="flex flex-wrap items-center gap-2">
         <h3 className="font-medium">Version {version.version}</h3>
         <Badge variant="secondary" data-testid="authority-scope-badge">

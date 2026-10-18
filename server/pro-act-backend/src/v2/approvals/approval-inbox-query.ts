@@ -4,7 +4,11 @@ import { scopedQuery } from '../../common/query/scoped-query';
 import { rolesForLegacyRole } from '../../auth/roles/role-model';
 import { Unit } from '../../unit/unit.entity';
 import { User } from '../../users/user.entity';
-import { ApprovalDefinition } from './approval-catalog';
+import {
+  APPROVAL_TARGET_FACTS,
+  ApprovalDefinition,
+  ApprovalTargetFact,
+} from './approval-catalog';
 import { ApprovalCursor } from './approval-cursor';
 import {
   ApprovalInboxQueryDto,
@@ -26,7 +30,23 @@ interface InboxRow {
   commandId: string;
   version: number | null;
   rowVersion: number;
+  targetPeriodId: string | null;
+  targetPlanId: string | null;
+  targetRevision: number | null;
+  targetMonthKey: string | null;
+  targetEventId: string | null;
+  targetProfileId: string | null;
 }
+const targetAlias = (fact: ApprovalTargetFact) =>
+  `target${fact.charAt(0).toUpperCase()}${fact.slice(1)}`;
+const TARGET_CAST: Readonly<Record<ApprovalTargetFact, string>> = {
+  periodId: 'text',
+  planId: 'text',
+  revision: 'int',
+  monthKey: 'text',
+  eventId: 'text',
+  profileId: 'text',
+};
 type InboxQuery = SelectQueryBuilder<ObjectLiteral>;
 function selectRow(qb: InboxQuery, definition: ApprovalDefinition): void {
   const author = definition.author ?? 'r.createdBy';
@@ -50,6 +70,10 @@ function selectRow(qb: InboxQuery, definition: ApprovalDefinition): void {
     `${definition.commandId ?? 'r.id'} AS "commandId"`,
     `${definition.version ?? (definition.actions?.length ? 'r.version' : 'NULL::int')} AS "version"`,
     'r.rowVersion AS "rowVersion"',
+    ...APPROVAL_TARGET_FACTS.map(
+      (fact) =>
+        `(${definition.target?.[fact] ?? 'NULL'})::${TARGET_CAST[fact]} AS "${targetAlias(fact)}"`,
+    ),
   ]);
 }
 function workflowScope(
@@ -77,12 +101,25 @@ function workflowScope(
     { materialityRoles: roles.length ? roles : ['__none__'] },
   );
 }
+/** Mirrors `decision`: a requester's own record stays only where a decision is still open to them. */
+function decidableOnly(
+  qb: InboxQuery,
+  context: RequestContext,
+  definition: ApprovalDefinition,
+): void {
+  if (context.isSuperAdmin || definition.ownMayDecide) return;
+  if (definition.actions?.includes('retire')) return;
+  qb.andWhere(
+    `(${definition.author ?? 'r.createdBy'}) IS DISTINCT FROM :inboxUserId::uuid`,
+    { inboxUserId: context.userId },
+  );
+}
 export async function queryInboxRows(
   manager: EntityManager,
   context: RequestContext,
   definition: ApprovalDefinition,
   page: {
-    query: Pick<ApprovalInboxQueryDto, 'limit'>;
+    query: Pick<ApprovalInboxQueryDto, 'limit' | 'decidable'>;
     cursor: ApprovalCursor | null;
     /** one pending record (the approval detail), still under the caller's role and scope */
     recordId?: string;
@@ -112,6 +149,7 @@ export async function queryInboxRows(
       scope.parameters,
     );
   workflowScope(qb, context, definition);
+  if (page.query.decidable === 'true') decidableOnly(qb, context, definition);
   if (page.recordId)
     qb.andWhere('r.id = :recordId', { recordId: page.recordId });
   selectRow(qb, definition);
@@ -131,12 +169,37 @@ export async function queryInboxRows(
     .limit(page.query.limit + 1)
     .getRawMany<InboxRow>();
 }
+const OWN_REQUEST = 'A different approver must decide your own request.';
+function decision(
+  definition: ApprovalDefinition,
+  own: boolean,
+  actions: ApprovalItemView['actions'],
+): Pick<ApprovalItemView, 'canDecide' | 'decisionBlockedReason'> {
+  if (actions.length > 0) {
+    const open = actions.some((action) => !action.disabledReason);
+    return {
+      canDecide: open,
+      decisionBlockedReason: open ? null : (actions[0].disabledReason ?? null),
+    };
+  }
+  const blocked = own && !definition.ownMayDecide;
+  return {
+    canDecide: !blocked,
+    decisionBlockedReason: blocked
+      ? (definition.ownReason ?? OWN_REQUEST)
+      : null,
+  };
+}
 export function toApprovalItem(
   context: RequestContext,
   definition: ApprovalDefinition,
   row: InboxRow,
 ): ApprovalItemView {
   const own = !context.isSuperAdmin && row.authorId === context.userId;
+  const actions = (definition.actions ?? []).map((action) => ({
+    action,
+    disabledReason: own && action !== 'retire' ? OWN_REQUEST : null,
+  }));
   return {
     id: row.id,
     kind: definition.kind,
@@ -156,12 +219,16 @@ export function toApprovalItem(
     version: row.version,
     rowVersion: row.rowVersion,
     supersede: definition.supersede === true,
-    actions: (definition.actions ?? []).map((action) => ({
-      action,
-      disabledReason:
-        own && action !== 'retire'
-          ? 'A different approver must decide your own request.'
-          : null,
-    })),
+    actions,
+    ...decision(definition, own, actions),
+    headline: null,
+    target: {
+      periodId: row.targetPeriodId,
+      planId: row.targetPlanId,
+      revision: row.targetRevision,
+      monthKey: row.targetMonthKey,
+      eventId: row.targetEventId,
+      profileId: row.targetProfileId,
+    },
   };
 }

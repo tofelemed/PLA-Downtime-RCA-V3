@@ -8,7 +8,7 @@ import { removeDecidedApproval } from './approval-inbox-cache';
 
 type Pages = InfiniteData<ListResponse<ApprovalItem>, string | null>;
 const key = (tenant = 'plant-a', workflow?: string) => v2Keys.list(tenant, 'close', { filters: { kind: 'approval-inbox', workflow } });
-const row = (id: string, kind = 'profile'): ApprovalItem => ({ id, kind, kindLabel: kind, title: id, summary: '', state: 'draft', createdAt: '2026-10-17T00:00:00Z', unitId: null, unitName: null, authorId: null, authorName: null, requiredRoles: [], reviewHref: '/planning', resource: 'profiles', commandId: id, version: 1, rowVersion: 1, supersede: false, actions: [] });
+const row = (id: string, kind = 'profile'): ApprovalItem => ({ id, kind, kindLabel: kind, title: id, summary: '', state: 'draft', createdAt: '2026-10-17T00:00:00Z', unitId: null, unitName: null, authorId: null, authorName: null, requiredRoles: [], reviewHref: '/planning', resource: 'profiles', commandId: id, version: 1, rowVersion: 1, supersede: false, actions: [], canDecide: true, decisionBlockedReason: null, headline: null, target: { periodId: null, planId: null, revision: null, monthKey: null, eventId: null, profileId: null } });
 const pages = (...groups: ApprovalItem[][]): Pages => ({ pages: groups.map((items, index) => ({ items, nextCursor: index < groups.length - 1 ? 'next' : null, asOf: 'now', scope: { tenantId: 'plant-a' } })), pageParams: groups.map((_, index) => index ? 'next' : null) });
 const ids = (value: Pages | undefined) => value?.pages.flatMap((page) => page.items.map((item) => `${item.kind}:${item.id}`));
 

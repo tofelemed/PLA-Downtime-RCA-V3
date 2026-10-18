@@ -1,4 +1,5 @@
 import { ApprovalInboxService } from './approvals/approval-inbox.service';
+import { ApprovalChangesService } from './approvals/changes/approval-changes.service';
 import { EQUIPMENT_READINESS_SERVICES } from './equipment-setup/readiness-providers';
 import { RcaCaseModule } from '../rca-case/rca-case.module';
 import { RcaKnowledgeSharedService } from '../rca-knowledge-base/knowledge-shared.service';
@@ -533,6 +534,7 @@ function withReadinessStubs(
   return [
     ...EQUIPMENT_READINESS_SERVICES,
     ApprovalInboxService,
+    ApprovalChangesService,
   ].reduce<TestingModuleBuilder>(
     (next, service) => next.overrideProvider(service).useValue({}),
     builder,
