@@ -15,6 +15,9 @@ import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { ValuationRateForm } from './valuation-rate-form';
 import { VersionActions } from './version-actions';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 
 export interface ValuationRateTableProps {
   profile: ProfileView;
@@ -59,9 +62,11 @@ function columnsOf(timezone: string): DataTableColumn<ValuationRateView>[] {
 /** Margin / standard-cost versions of the profile: basis, value, currency, validity and approval (20 per page). */
 export function ValuationRateTable({ profile, timezone }: ValuationRateTableProps) {
   const { canMaintainValuation } = useCapabilities();
-  const rates = useValuationRates(profile.id);
+  const anchor = useAnchorFocus('valuation-rate-');
+  const rates = useValuationRates(profile.id, anchor.focus);
   const [adding, setAdding] = useState(false);
   const items = flattenPages(rates.data?.pages);
+  useSeekAnchor(anchor, infiniteListState(rates));
   const add = !adding && canMaintainValuation && (
     <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
@@ -72,6 +77,7 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
     <Section title="Valuation rates" actions={add || undefined}>
       <div className="space-y-3" data-testid="valuation-rate-table">
         <LegacyCost profile={profile} />
+        <FocusedListNotice anchor={anchor} what="valuation rates" />
         {adding && <ValuationRateForm profileId={profile.id} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Valuation rate versions"

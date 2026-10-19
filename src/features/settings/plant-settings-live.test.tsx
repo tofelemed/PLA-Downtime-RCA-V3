@@ -30,6 +30,8 @@ const plant = (calendarSystem: string, digits: string): PlantView => ({
   weekStart: 'saturday',
   isActive: true,
   canDelete: false,
+  canEdit: false,
+  rowVersion: 1,
 });
 
 function Screen() {

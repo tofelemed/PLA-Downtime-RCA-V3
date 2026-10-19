@@ -20,6 +20,7 @@ import {
   LotDispositionState,
 } from '../../quality-dispositions/entities/lot-disposition.entity';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import { DECIMAL } from '../profiles/profile-v2.dto';
 
 /** Body of POST /lot-dispositions: a lot disposition or recovery movement to approve (SME E3). */
@@ -137,6 +138,9 @@ export class LotDispositionCreateDto {
 
 /** GET /lot-dispositions: overlap of the production interval with [from, to), newest first. */
 export class LotDispositionListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

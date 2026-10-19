@@ -105,3 +105,45 @@ export class PlantDisplaySettingsV2Dto {
   @IsIn(WEEK_STARTS)
   weekStart?: WeekStart;
 }
+
+const NOT_BLANK = /\S/;
+
+/**
+ * `PATCH /v2/organizations/{id}` (If-Match row version). The code is immutable after creation (history,
+ * exports and integrations reference it): it is not declared here, so sending it answers 422 VALIDATION_FAILED.
+ */
+export class UpdateOrganizationV2Dto {
+  @ApiPropertyOptional({ maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @Matches(NOT_BLANK, { message: 'name must not be blank' })
+  @MaxLength(255)
+  name?: string;
+
+  @ApiPropertyOptional({
+    maxLength: 2000,
+    nullable: true,
+    description: 'Empty or null clears it',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string | null;
+}
+
+/**
+ * `PATCH /v2/tenants/{id}` (If-Match row version): name, description and — only while the plant has no
+ * production events, signal samples or calculated periods — its time zone (409 TIMEZONE_LOCKED otherwise).
+ * Code and organization are immutable (not declared: 422 VALIDATION_FAILED).
+ */
+export class UpdatePlantV2Dto extends UpdateOrganizationV2Dto {
+  @ApiPropertyOptional({
+    maxLength: 64,
+    description: 'IANA timezone of the plant, e.g. Asia/Tehran',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timezone?: string;
+}

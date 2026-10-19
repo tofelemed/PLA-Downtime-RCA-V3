@@ -10,6 +10,7 @@ import { EntityIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
+import { HierarchyEditLink } from './hierarchy-edit-link';
 import { HierarchyNode } from './hierarchy-node';
 import { HierarchySearchResults } from './hierarchy-search';
 import { PlantNode } from './plant-node';
@@ -25,6 +26,7 @@ function OrganizationNode({ organization, children }: { organization: Organizati
       expandable
       expanded={expanded}
       onToggle={() => setExpanded((open) => !open)}
+      actions={<HierarchyEditLink kind="organization" id={organization.id} name={organization.name} canEdit={organization.canEdit} />}
     >
       {children}
     </HierarchyNode>

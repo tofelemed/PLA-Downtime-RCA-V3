@@ -42,6 +42,8 @@ export interface DemandStatusFilter {
   state?: VersionState;
   cursor?: string;
   limit: number;
+  /** deep link: the first page starts at this status version */
+  focus?: string;
 }
 
 export interface DemandStatusTransition {
@@ -110,6 +112,7 @@ export class DemandStatusesService {
       direction: 'ASC',
       cursor: query.cursor,
       limit: query.limit,
+      focus: query.focus,
     });
   }
 

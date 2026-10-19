@@ -42,6 +42,8 @@ const UserForm = lazyNamedWithPreload(() => import('@/features/users/user-form-p
 const AdminPanel = lazyNamedWithPreload(() => import('@/features/admin/admin-page'), 'AdminPage');
 const OrganizationNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationNewPage');
 const PlantNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'PlantNewPage');
+const OrganizationEdit = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationEditPage');
+const PlantEdit = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'PlantEditPage');
 const AttributeForm = lazyNamedWithPreload(() => import('@/features/admin/attributes/attribute-form-page'), 'AttributeFormPage');
 const Tasks = lazyNamedWithPreload(() => import('@/features/tasks/tasks-page'), 'TasksPage');
 const TaskForm = lazyNamedWithPreload(() => import('@/features/tasks/task-form-page'), 'TaskFormPage');
@@ -95,6 +97,8 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/admin', element: <AdminPanel />, preload: AdminPanel.preload },
   { path: '/admin/organizations/new', element: <OrganizationNew />, preload: OrganizationNew.preload },
   { path: '/admin/plants/new', element: <PlantNew />, preload: PlantNew.preload },
+  { path: '/admin/organizations/:organizationId/edit', element: <OrganizationEdit />, preload: OrganizationEdit.preload },
+  { path: '/admin/plants/:plantId/edit', element: <PlantEdit />, preload: PlantEdit.preload },
   { path: '/admin/attributes/new', element: <AttributeForm />, preload: AttributeForm.preload },
   { path: '/admin/attributes/:attributeId', element: <AttributeForm />, preload: AttributeForm.preload },
   { path: '/tasks', element: <Tasks />, preload: Tasks.preload },

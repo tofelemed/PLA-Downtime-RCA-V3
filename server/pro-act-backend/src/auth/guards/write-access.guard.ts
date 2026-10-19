@@ -20,7 +20,8 @@ const MUTATING_METHODS: ReadonlySet<string> = new Set([
   'PATCH',
   'DELETE',
 ]);
-const READ_ONLY_ROLES: ReadonlySet<string> = new Set(['viewer']);
+/** Roles that only read (§13.2): a caller holding nothing else cannot change data. */
+export const READ_ONLY_ROLES: ReadonlySet<string> = new Set(['viewer']);
 
 /**
  * Global guard (last in the chain): callers whose roles in the acting tenant are only read-only

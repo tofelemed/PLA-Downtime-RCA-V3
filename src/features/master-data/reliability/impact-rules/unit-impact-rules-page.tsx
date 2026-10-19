@@ -16,6 +16,9 @@ import { MasterDataLayout } from '../../components/master-data-layout';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleForm } from './impact-rule-form';
 import { IMPACT_MODE_LABELS } from './impact-rule-form-model';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 
 /** 50 → "50 %", 12.5 → "12.5 %" in the plant's digits. */
 const shareText = (value: number, percent: (v: number, digits?: number) => string) =>
@@ -59,7 +62,10 @@ function columnsOf({ refs, assetLabel, percent, seconds }: ColumnInput): DataTab
 export function UnitImpactRulesPage() {
   const { canWriteUnitImpactRules, canApproveProfiles } = useCapabilities();
   const refs = usePlanningRefs();
-  const rules = useUnitImpactRules();
+  const anchor = useAnchorFocus('unit-impact-rule-');
+  const rules = useUnitImpactRules(anchor.focus);
+  const rows = flattenPages(rules.data?.pages);
+  useSeekAnchor(anchor, infiniteListState(rules));
   const { labelOf } = useAssetLookup();
   const { percent, number } = useNumberFormat();
   const [adding, setAdding] = useState(false);
@@ -76,11 +82,12 @@ export function UnitImpactRulesPage() {
             Add rule
           </Button>
         )}
+        <FocusedListNotice anchor={anchor} what="rules" />
         {adding && <ImpactRuleForm unitOptions={refs.unitOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Unit impact rules"
           columns={columnsOf({ refs, assetLabel: labelOf, percent: (f) => shareText(Number(f) * 100, percent), seconds: (v) => number(v) })}
-          rows={flattenPages(rules.data?.pages)}
+          rows={rows}
           getRowKey={(r) => r.id}
           getRowAnchor={(r) => `unit-impact-rule-${r.id}`}
           status={{ isLoading: rules.isLoading, isError: rules.isError, error: rules.error, onRetry: () => void rules.refetch() }}

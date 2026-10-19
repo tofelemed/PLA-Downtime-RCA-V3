@@ -14,6 +14,7 @@ import {
   VersionState,
 } from '../../domain/profiles/profile.types';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import {
   DECIMAL,
   EffectiveDto,
@@ -61,6 +62,9 @@ export class UnitStreamCreateDto extends EffectiveDto {
 }
 
 export class UnitStreamListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

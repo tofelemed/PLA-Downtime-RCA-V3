@@ -5,6 +5,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  VersionColumn,
 } from 'typeorm';
 import {
   CalendarSystem,
@@ -107,4 +108,8 @@ export class Tenant {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
+
+  /** optimistic concurrency of admin edits (`If-Match` on `PATCH /v2/...`) */
+  @VersionColumn({ name: 'row_version', default: 1 })
+  rowVersion: number;
 }

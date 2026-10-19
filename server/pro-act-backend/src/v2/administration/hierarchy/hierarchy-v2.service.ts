@@ -75,6 +75,7 @@ export class HierarchyV2Service {
       toOrganizationView(org, {
         canAddPlants: context.isSuperAdmin || isOrgAdminOf(context, org.id),
         canDelete: context.isSuperAdmin,
+        canEdit: context.isSuperAdmin || isOrgAdminOf(context, org.id),
       }),
     );
     return listResponse(items, page.nextCursor, {
@@ -124,6 +125,7 @@ export class HierarchyV2Service {
     return toOrganizationView(saved, {
       canAddPlants: true,
       canDelete: context.isSuperAdmin,
+      canEdit: true,
     });
   }
 
@@ -226,11 +228,11 @@ export class HierarchyV2Service {
       plants.map((plant) => plant.organizationId),
     );
     return plants.map((plant) =>
-      toPlantView(
-        plant,
-        names.get(plant.organizationId) ?? null,
-        context.isSuperAdmin,
-      ),
+      toPlantView(plant, names.get(plant.organizationId) ?? null, {
+        canDelete: context.isSuperAdmin,
+        canEdit:
+          context.isSuperAdmin || isOrgAdminOf(context, plant.organizationId),
+      }),
     );
   }
 

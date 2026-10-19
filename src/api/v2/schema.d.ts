@@ -5557,14 +5557,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** One organization you may see (ETag = row version; 404 otherwise) */
+        get: operations["OrganizationsV2Controller_get_v2"];
         put?: never;
         post?: never;
         /** Delete an organization without plants (409 ORGANIZATION_HAS_PLANTS) */
         delete: operations["OrganizationsV2Controller_remove_v2"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename an organization or change its description (If-Match)
+         * @description Super administrators, or the organization’s administrator (403 ORGANIZATION_NOT_ALLOWED). The code cannot change: sending `code` (or any undeclared field) answers 422 VALIDATION_FAILED. 428 REVISION_REQUIRED without If-Match, 412 STALE_REVISION when it changed since it was read.
+         */
+        patch: operations["OrganizationsV2Controller_update_v2"];
         trace?: never;
     };
     "/api/v2/tenants": {
@@ -5598,7 +5603,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One plant you may see (404 otherwise) */
+        /**
+         * One plant you may see (ETag = row version; 404 otherwise)
+         * @description For callers who may edit it: `timezoneEditable` (false once the plant has production events, signal samples or calculated periods) and `timezoneLockedReason`.
+         */
         get: operations["PlantsV2Controller_get_v2"];
         put?: never;
         post?: never;
@@ -5609,7 +5617,11 @@ export interface paths {
         delete: operations["PlantsV2Controller_remove_v2"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename a plant, change its description or time zone (If-Match)
+         * @description Super administrators, or the administrator of the plant’s organization (403 ORGANIZATION_NOT_ALLOWED). Code and organization cannot change: sending them (or any undeclared field) answers 422 VALIDATION_FAILED. The time zone changes only while the plant has no production events, signal samples or calculated periods (409 TIMEZONE_LOCKED with the counts in `details`); 422 INVALID_TIMEZONE. The default site follows the new time zone and name. 428 REVISION_REQUIRED, 412 STALE_REVISION.
+         */
+        patch: operations["PlantsV2Controller_update_v2"];
         trace?: never;
     };
     "/api/v2/tenants/{id}/display-settings": {
@@ -9872,11 +9884,23 @@ export interface components {
             /** @description The value as text; empty clears it */
             value: string;
         };
+        UpdateOrganizationV2Dto: {
+            name?: string;
+            /** @description Empty or null clears it */
+            description?: Record<string, never> | null;
+        };
         CreateOrganizationV2Dto: {
             /** @description Short unique code (letters, digits, - _ .) */
             code: string;
             name: string;
             description?: string;
+        };
+        UpdatePlantV2Dto: {
+            name?: string;
+            /** @description Empty or null clears it */
+            description?: Record<string, never> | null;
+            /** @description IANA timezone of the plant, e.g. Asia/Tehran */
+            timezone?: string;
         };
         CreatePlantV2Dto: {
             /** @description Short unique code (letters, digits, - _ .) */
@@ -13300,6 +13324,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 rateKind?: "nameplate" | "demonstrated" | "sustained" | "planning" | "budget" | "forecast";
                 state?: "draft" | "approved" | "retired";
             };
@@ -13421,6 +13447,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 profileId?: string;
                 impactCodeId?: string;
                 basis?: "contribution_margin" | "standard_cost" | "cost_per_hour" | "variable_cost" | "salvage_value" | "disposal_cost" | "downgrade_price_difference" | "rework_cost" | "rework_yield";
@@ -13540,6 +13568,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 unitId?: string;
                 fromProductId?: string;
                 toProductId?: string;
@@ -14273,6 +14303,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 unitId?: string;
                 productId?: string;
                 lotCode?: string;
@@ -14565,6 +14597,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 unitId?: string;
                 state?: "draft" | "approved" | "retired";
             };
@@ -14757,6 +14791,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 /** @description Routes from or to this unit */
                 unitId?: string;
                 state?: "draft" | "approved" | "retired";
@@ -14875,6 +14911,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 unitId?: string;
                 assetId?: string;
                 state?: "draft" | "approved" | "retired";
@@ -15685,6 +15723,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
             };
             header?: never;
             path: {
@@ -16216,6 +16256,8 @@ export interface operations {
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list */
+                focus?: string;
                 productId?: string;
                 state?: "draft" | "approved" | "retired";
             };
@@ -19003,6 +19045,25 @@ export interface operations {
             };
         };
     };
+    OrganizationsV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     OrganizationsV2Controller_remove_v2: {
         parameters: {
             query?: never;
@@ -19015,6 +19076,31 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrganizationsV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationV2Dto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -19103,6 +19189,31 @@ export interface operations {
         requestBody?: never;
         responses: {
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlantsV2Controller_update_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePlantV2Dto"];
+            };
+        };
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

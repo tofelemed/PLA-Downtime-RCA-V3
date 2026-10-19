@@ -62,8 +62,9 @@ export function useApprovalActions(periodId: string | null) {
   return usePeriodRead<ListResponse<ApprovalActionView>>(periodId, 'approval-actions', `/production-periods/${periodId}/approval-actions`, { limit: 100 });
 }
 
-export function useChangeProposals(periodId: string | null) {
-  return usePeriodRead<ListResponse<ChangeProposalView>>(periodId, 'change-proposals', `/production-periods/${periodId}/change-proposals`, { limit: 20 });
+/** Newest first; `focus` = a proposal on a later page (deep link): the page starts at it (server keyset seek). */
+export function useChangeProposals(periodId: string | null, focus?: string) {
+  return usePeriodRead<ListResponse<ChangeProposalView>>(periodId, `change-proposals:${focus ?? ''}`, `/production-periods/${periodId}/change-proposals`, { limit: 20, focus });
 }
 
 /** Ledger waterfall of the periods (server bars with start / end that close to actual). */

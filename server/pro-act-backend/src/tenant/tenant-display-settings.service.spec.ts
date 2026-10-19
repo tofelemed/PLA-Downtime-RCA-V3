@@ -38,6 +38,7 @@ function tenantRow(id: string): Tenant {
     weekStart: 'monday',
     createdAt: new Date(0),
     updatedAt: new Date(0),
+    rowVersion: 1,
   };
 }
 

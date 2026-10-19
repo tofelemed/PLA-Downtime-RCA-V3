@@ -28,6 +28,7 @@ import {
 } from '../../domain/profiles/profile.types';
 import { MAX_IMPORT_ROWS } from '../../domain/profiles/rate-import-rows';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import { DECIMAL, EffectiveDto } from './profile-v2.dto';
 
 const DECIMAL_MESSAGE = 'must be a decimal string ≥ 0 with at most 8 decimals';
@@ -53,6 +54,9 @@ export class RateCreateDto extends EffectiveDto {
 }
 
 export class RateListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ enum: RATE_KINDS })
   @IsOptional()
   @IsIn(RATE_KINDS)
@@ -111,6 +115,9 @@ export class ValuationRateCreateDto extends EffectiveDto {
 }
 
 export class ValuationRateListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

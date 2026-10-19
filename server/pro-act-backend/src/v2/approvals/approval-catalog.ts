@@ -46,6 +46,11 @@ export interface ApprovalDefinition {
   supersede?: boolean;
   /** facts of the record the inline decision forms need (SQL per fact), e.g. the period of a revision */
   target?: Partial<Record<ApprovalTargetFact, string>>;
+  /**
+   * SQL of the person this decision must be independent of (separation of duties) when it is not the
+   * row's `author`, e.g. the proposer of the correction behind a restatement; null = no conflict
+   */
+  requester?: string;
   /** this step has no separation-of-duties rule: the requester may decide it too */
   ownMayDecide?: boolean;
   /** why a requester may not decide this step (default: a different approver decides) */
@@ -106,7 +111,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: "'Grade transition'",
     summary: "concat(r.referenceSeconds, ' seconds · ', r.operatingMode)",
-    href: "'/planning?tab=transitions#transition-standard-' || r.id",
+    href: "'/planning?tab=transitions&unitId=' || r.unitId || '#transition-standard-' || r.id",
     resource: 'transition-standards',
   },
   {
@@ -116,7 +121,7 @@ export const VERSION_APPROVALS: ApprovalDefinition[] = [
     unit: 'r.unitId',
     title: 'r.name',
     summary: "concat(r.code, ' · capacity share ', r.capacityShare)",
-    href: "'/planning?tab=streams#unit-stream-' || r.id",
+    href: "'/planning?tab=streams&unitId=' || r.unitId || '#unit-stream-' || r.id",
     resource: 'unit-streams',
   },
   {

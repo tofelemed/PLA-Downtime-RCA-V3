@@ -26,4 +26,6 @@ export const ADMINISTRATION_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
     title: 'This plant cannot be deleted',
     text: 'It still has units or users, or it is the plant you are working in.',
   },
+  // no text: the server's sentence names what already depends on the zone (events, samples, periods)
+  TIMEZONE_LOCKED: { title: 'The time zone can no longer change' },
 };

@@ -254,6 +254,32 @@ describe('production profiles and rates (plan 2.2, v2 API)', () => {
     expect(itemsOf<RateBody>(listed).map((r) => r.version)).toEqual([1, 2]);
   });
 
+  it('focus=<id> opens the keyset page containing one rate version (approval deep links)', async () => {
+    const base = `profiles/${profileA1.id}/rates?rateKind=sustained&limit=1`;
+    const all = itemsOf<RateBody>(
+      await env.get(`profiles/${profileA1.id}/rates?rateKind=sustained`),
+    );
+    const second = all[1];
+    const focused = await env.get(`${base}&focus=${second.id}`).expect(200);
+    expect(itemsOf<RateBody>(focused).map((r) => r.id)).toEqual([second.id]);
+    // version 2 is the last sustained version: nothing after it
+    expect(
+      (focused.body as { nextCursor: string | null }).nextCursor,
+    ).toBeNull();
+    // a row outside the filters (another kind) or unknown: the first page
+    const first = await env.get(`${base}&focus=${randomUUID()}`).expect(200);
+    expect(itemsOf<RateBody>(first).map((r) => r.id)).toEqual([all[0].id]);
+    // the cursor wins over focus on the following pages
+    const next = (first.body as { nextCursor: string }).nextCursor;
+    const page2 = await env
+      .get(`${base}&focus=${all[0].id}&cursor=${encodeURIComponent(next)}`)
+      .expect(200);
+    expect(itemsOf<RateBody>(page2).map((r) => r.id)).toEqual([second.id]);
+    // v2 answers class-validator failures with 422 VALIDATION_FAILED (api-exception.filter)
+    const invalid = await env.get(`${base}&focus=not-a-uuid`).expect(422);
+    expect((invalid.body as ApiError).code).toBe('VALIDATION_FAILED');
+  });
+
   it('resolves to no_profile without an approved profile and refuses foreign references', async () => {
     const none = await env
       .get(

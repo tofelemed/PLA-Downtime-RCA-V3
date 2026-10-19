@@ -47,6 +47,7 @@ export class LotDispositionsV2Service {
       direction: 'DESC',
       cursor: query.cursor,
       limit: query.limit,
+      focus: query.focus,
     });
     return listResponse(page.items.map(toLotDispositionView), page.nextCursor, {
       tenantId: requireTenantId(context),

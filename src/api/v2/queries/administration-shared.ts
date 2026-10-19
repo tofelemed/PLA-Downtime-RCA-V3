@@ -11,7 +11,7 @@ import { useV2TenantId } from './use-v2-tenant';
 export async function adminCall<T>(
   method: V2Method,
   path: string,
-  options: { query?: QueryParams; body?: unknown; idempotencyKey?: string; signal?: AbortSignal } = {},
+  options: { query?: QueryParams; body?: unknown; idempotencyKey?: string; ifMatch?: string; signal?: AbortSignal } = {},
 ): Promise<T> {
   const response = await v2Request<T>({ method, path, ...options });
   return response.data;

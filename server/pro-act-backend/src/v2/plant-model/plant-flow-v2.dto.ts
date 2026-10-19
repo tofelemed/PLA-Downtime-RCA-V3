@@ -23,6 +23,7 @@ import {
   FlowRouteRole,
 } from '../../plant-model/entities/plant-flow-route.entity';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import { LEDGERS, Ledger } from '../pla-reports/pla-reports.dto';
 import {
   DECIMAL,
@@ -127,6 +128,9 @@ export class FlowRouteCreateDto extends EffectiveDto {
 }
 
 export class FlowRouteListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({
     format: 'uuid',
     description: 'Routes from or to this unit',

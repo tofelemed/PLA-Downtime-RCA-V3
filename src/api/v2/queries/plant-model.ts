@@ -10,12 +10,12 @@ export type StreamRunCreateBody = BodyOf<'/api/v2/stream-runs', 'post'>;
 export type StreamRunPatchBody = BodyOf<'/api/v2/stream-runs/{id}', 'patch'>;
 
 /** Stream versions of a unit (SME E6); approve / retire go through `useVersionTransition`. */
-export function useUnitStreams(unitId: string) {
+export function useUnitStreams(unitId: string, focus?: string) {
   return useV2InfiniteList<UnitStreamView>({
     resource: 'profiles',
     path: '/unit-streams',
-    query: { unitId, limit: 200 },
-    key: { scope: { unitIds: [unitId] }, filters: { kind: 'unit-streams', unitId } },
+    query: { unitId, limit: 200, focus },
+    key: { scope: { unitIds: [unitId] }, filters: { kind: 'unit-streams', unitId, focus } },
     enabled: unitId !== '',
   });
 }
@@ -56,12 +56,12 @@ export type FlowRouteCreateBody = BodyOf<'/api/v2/flow-routes', 'post'>;
 export type BufferLevelCreateBody = BodyOf<'/api/v2/buffer-levels', 'post'>;
 
 /** Every route version of the plant's material-flow map the caller may read (SME E2). */
-export function useFlowRoutes() {
+export function useFlowRoutes(focus?: string) {
   return useV2InfiniteList<FlowRouteView>({
     resource: 'profiles',
     path: '/flow-routes',
-    query: { limit: 200 },
-    key: { filters: { kind: 'flow-routes' } },
+    query: { limit: 200, focus },
+    key: { filters: { kind: 'flow-routes', focus } },
   });
 }
 

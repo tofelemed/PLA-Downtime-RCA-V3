@@ -33,34 +33,34 @@ export function useProfiles(filters: ProfileFilters) {
 }
 
 /** Rate versions of one profile, every kind (the table groups them by kind). */
-export function useProfileRates(profileId: string | null) {
+export function useProfileRates(profileId: string | null, focus?: string) {
   return useV2InfiniteList<RateView>({
     resource: 'profiles',
     path: `/profiles/${profileId ?? '-'}/rates`,
-    query: { limit: 500 },
-    key: { filters: { kind: 'rates', profileId } },
+    query: { limit: 500, focus },
+    key: { filters: { kind: 'rates', profileId, focus } },
     enabled: profileId !== null,
   });
 }
 
 /** Valuation rate versions owned by one profile (margin / standard cost per quantity). */
-export function useValuationRates(profileId: string | null) {
+export function useValuationRates(profileId: string | null, focus?: string) {
   return useV2InfiniteList<ValuationRateView>({
     resource: 'profiles',
     path: '/valuation-rates',
-    query: { profileId: profileId ?? undefined, limit: 500 },
-    key: { filters: { kind: 'valuation-rates', profileId } },
+    query: { profileId: profileId ?? undefined, limit: 500, focus },
+    key: { filters: { kind: 'valuation-rates', profileId, focus } },
     enabled: profileId !== null,
   });
 }
 
 /** The grade-transition matrix of one unit (every version; the table shows state and validity). */
-export function useTransitionStandards(unitId: string) {
+export function useTransitionStandards(unitId: string, focus?: string) {
   return useV2InfiniteList<TransitionStandardView>({
     resource: 'profiles',
     path: '/transition-standards',
-    query: { unitId, limit: 200 },
-    key: { scope: { unitIds: [unitId] }, filters: { kind: 'transition-standards', unitId } },
+    query: { unitId, limit: 200, focus },
+    key: { scope: { unitIds: [unitId] }, filters: { kind: 'transition-standards', unitId, focus } },
     enabled: unitId !== '',
   });
 }

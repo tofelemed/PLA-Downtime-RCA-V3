@@ -17,6 +17,7 @@ import {
   RestatementPosting,
 } from './entities/restatement-posting.entity';
 import { figuresOf } from './restatement-figures';
+import { assertPostingIndependent } from './posting-independence';
 import {
   latestRevision,
   lockPeriod,
@@ -44,7 +45,8 @@ export interface PostingDecision {
  * Restatements of approved periods (SME R5, phase R-D): the delta of a revision against the approved
  * revision it supersedes (old vs new totals, actuals and lines, both from the reviewed content), and
  * finance's posting decision — a financial posting date and treatment kept apart from the operational
- * effective date (the period's date). The original approved revision stays as it was.
+ * effective date (the period's date), never by the proposer of the correction behind it. The original
+ * approved revision stays as it was.
  */
 @Injectable()
 export class RestatementService {
@@ -80,6 +82,7 @@ export class RestatementService {
       );
       await lockPeriod(manager, period.id);
       const current = await this.restatementOf(manager, period, revisionNumber);
+      await assertPostingIndependent(manager, context, current.revision);
       const values = {
         operationalEffectiveDate: period.localDate,
         postingDate: decision.postingDate,

@@ -22,6 +22,7 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { listResponse, ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
@@ -30,6 +31,7 @@ import {
 } from './stop-events-v2.dto';
 import { StopReconciliationV2View } from './stop-events-v2.view';
 import { StopReconciliationsV2Service } from './stop-reconciliations-v2.service';
+import { STOP_DECISION_ROLES } from './stop-event-roles';
 
 const IDEMPOTENCY_HEADER = { name: 'Idempotency-Key', required: true };
 
@@ -63,6 +65,7 @@ export class StopReconciliationsV2Controller {
 
   @Post(':id/accept')
   @Idempotent()
+  @Roles(...STOP_DECISION_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Merge a suggested duplicate',
@@ -82,6 +85,7 @@ export class StopReconciliationsV2Controller {
 
   @Post(':id/reject')
   @Idempotent()
+  @Roles(...STOP_DECISION_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Reject a suggested duplicate (two different stops)',
@@ -99,6 +103,7 @@ export class StopReconciliationsV2Controller {
 
   @Post(':id/undo')
   @Idempotent()
+  @Roles(...STOP_DECISION_ROLES)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Undo a duplicate merge',

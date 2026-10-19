@@ -1,30 +1,29 @@
 import { useId, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useCreateOrganization, useCreatePlant, useOrganizations } from '@/api/v2/queries/administration-config';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { StatusIcon } from '@/lib/icons';
 import { FormField } from '../shared/form-field';
 import { PageGate } from '../shared/page-gate';
 import { useCommandFeedback } from '../shared/use-command-feedback';
+import { HierarchyEditForm } from './hierarchy-edit-form';
+import { HierarchyFields, type HierarchyFieldErrors, type HierarchyFieldValues } from './hierarchy-fields';
+import { HIERARCHY_FIELD_VOCABULARY } from './hierarchy-field-vocabulary';
 
 const BACK = { to: '/admin?tab=plants', label: 'Admin panel' };
 const CODE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 
-interface Values {
-  code: string;
-  name: string;
-  description: string;
+type Kind = 'organization' | 'plant';
+
+interface Values extends HierarchyFieldValues {
   organizationId: string;
-  timezone: string;
 }
 
-function validate(values: Values, plant: boolean): Partial<Record<keyof Values, string>> {
-  const errors: Partial<Record<keyof Values, string>> = {};
+function validate(values: Values, plant: boolean): HierarchyFieldErrors {
+  const errors: HierarchyFieldErrors = {};
   if (!CODE.test(values.code)) errors.code = 'Use letters, digits, “-”, “_” or “.”, starting with a letter or digit.';
   if (!values.name.trim()) errors.name = 'Enter a name.';
   if (plant && !values.organizationId) errors.organizationId = 'Choose the organization.';
@@ -32,12 +31,8 @@ function validate(values: Values, plant: boolean): Partial<Record<keyof Values, 
   return errors;
 }
 
-/** IANA zones the browser knows (`Intl.supportedValuesOf`, ES2022; the lib target here is older). */
-const supportedValuesOf = (Intl as unknown as { supportedValuesOf?: (key: 'timeZone') => string[] }).supportedValuesOf;
-const ZONES: readonly string[] = supportedValuesOf ? supportedValuesOf('timeZone') : ['UTC'];
-
 /** `/admin/organizations/new` and `/admin/plants/new` (was the "Create" dialog of the Admin panel). */
-export function HierarchyFormPage({ kind }: { kind: 'organization' | 'plant' }) {
+export function HierarchyFormPage({ kind }: { kind: Kind }) {
   const { canUseAdminPanel, isSuperAdmin, roles } = useCapabilities();
   const allowed = canUseAdminPanel && (isSuperAdmin || (kind === 'plant' && roles.includes('OrgAdmin')));
   return (
@@ -47,18 +42,18 @@ export function HierarchyFormPage({ kind }: { kind: 'organization' | 'plant' }) 
   );
 }
 
-function HierarchyForm({ kind }: { kind: 'organization' | 'plant' }) {
+function HierarchyForm({ kind }: { kind: Kind }) {
   const plant = kind === 'plant';
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const ids = { code: useId(), name: useId(), description: useId(), org: useId(), zone: useId() };
+  const orgId = useId();
   const [values, setValues] = useState<Values>({ code: '', name: '', description: '', organizationId: params.get('organizationId') ?? '', timezone: '' });
-  const [errors, setErrors] = useState<Partial<Record<keyof Values, string>>>({});
+  const [errors, setErrors] = useState<HierarchyFieldErrors>({});
   const organizations = useOrganizations();
   const writable = useMemo(() => (organizations.data?.items ?? []).filter((org) => org.canAddPlants), [organizations.data]);
   const createOrg = useCreateOrganization();
   const createPlant = useCreatePlant();
-  const feedback = useCommandFeedback();
+  const feedback = useCommandFeedback(HIERARCHY_FIELD_VOCABULARY);
   const busy = createOrg.isPending || createPlant.isPending;
   const set = (patch: Partial<Values>) => setValues((current) => ({ ...current, ...patch }));
   const submit = async (event: FormEvent) => {
@@ -81,30 +76,14 @@ function HierarchyForm({ kind }: { kind: 'organization' | 'plant' }) {
       <Section title="Details">
         <form onSubmit={submit} className="grid max-w-2xl gap-4 sm:grid-cols-2" noValidate>
           {plant && (
-            <FormField htmlFor={ids.org} label="Organization" error={errors.organizationId} required>
+            <FormField htmlFor={orgId} label="Organization" error={errors.organizationId} required>
               <Select value={values.organizationId} onValueChange={(organizationId) => set({ organizationId })}>
-                <SelectTrigger id={ids.org}><SelectValue placeholder="Choose the organization" /></SelectTrigger>
+                <SelectTrigger id={orgId}><SelectValue placeholder="Choose the organization" /></SelectTrigger>
                 <SelectContent>{writable.map((org) => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}</SelectContent>
               </Select>
             </FormField>
           )}
-          <FormField htmlFor={ids.code} label="Code" hint="Short and unique, e.g. HDPE-1." error={errors.code} required>
-            <Input id={ids.code} value={values.code} onChange={(e) => set({ code: e.target.value })} />
-          </FormField>
-          <FormField htmlFor={ids.name} label="Name" error={errors.name} required>
-            <Input id={ids.name} value={values.name} onChange={(e) => set({ name: e.target.value })} />
-          </FormField>
-          {plant && (
-            <FormField htmlFor={ids.zone} label="Time zone" hint="Times of this plant are shown in this zone." error={errors.timezone} required>
-              <Input id={ids.zone} list={`${ids.zone}-zones`} value={values.timezone} placeholder="e.g. Asia/Tehran" onChange={(e) => set({ timezone: e.target.value })} />
-              <datalist id={`${ids.zone}-zones`}>{ZONES.map((zone) => <option key={zone} value={zone} />)}</datalist>
-            </FormField>
-          )}
-          <div className="sm:col-span-2">
-            <FormField htmlFor={ids.description} label="Description">
-              <Textarea id={ids.description} rows={3} value={values.description} onChange={(e) => set({ description: e.target.value })} />
-            </FormField>
-          </div>
+          <HierarchyFields values={values} errors={errors} set={set} plant={plant} />
           <div className="flex gap-2 sm:col-span-2">
             <Button type="submit" disabled={busy} aria-busy={busy || undefined}>
               {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
@@ -122,3 +101,15 @@ function HierarchyForm({ kind }: { kind: 'organization' | 'plant' }) {
 export const OrganizationNewPage = () => <HierarchyFormPage kind="organization" />;
 /** Route element of `/admin/plants/new`. */
 export const PlantNewPage = () => <HierarchyFormPage kind="plant" />;
+
+/** Route element of `/admin/organizations/:organizationId/edit`. */
+export function OrganizationEditPage() {
+  const { organizationId = '' } = useParams();
+  return <HierarchyEditForm kind="organization" id={organizationId} />;
+}
+
+/** Route element of `/admin/plants/:plantId/edit`. */
+export function PlantEditPage() {
+  const { plantId = '' } = useParams();
+  return <HierarchyEditForm kind="plant" id={plantId} />;
+}

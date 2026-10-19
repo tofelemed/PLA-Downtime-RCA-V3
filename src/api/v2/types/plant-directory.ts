@@ -6,6 +6,8 @@ export interface DirectoryOrganization {
   id: string;
   code: string;
   name: string;
+  /** whether the caller may edit it in the Admin panel (server flag of `GET /v2/organizations`) */
+  canEdit?: boolean;
 }
 
 export interface DirectoryPlant {
@@ -17,6 +19,8 @@ export interface DirectoryPlant {
   calendarSystem?: string;
   digits?: string;
   weekStart?: string;
+  /** whether the caller may edit it in the Admin panel (server flag of `GET /v2/tenants`) */
+  canEdit?: boolean;
 }
 
 export interface DirectoryUnit {

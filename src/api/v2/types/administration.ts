@@ -233,6 +233,10 @@ export interface OrganizationView {
   isActive: boolean;
   canAddPlants: boolean;
   canDelete: boolean;
+  /** whether the caller may edit name and description (super administrators; its organization administrator) */
+  canEdit: boolean;
+  /** row version: `If-Match` of `PATCH /v2/organizations/:id` */
+  rowVersion: number;
 }
 
 /** `GET /v2/tenants` item: a plant. */
@@ -250,6 +254,29 @@ export interface PlantView {
   weekStart: string;
   isActive: boolean;
   canDelete: boolean;
+  /** whether the caller may edit name, description and time zone */
+  canEdit: boolean;
+  /** row version: `If-Match` of `PATCH /v2/tenants/:id` */
+  rowVersion: number;
+}
+
+/** `GET /v2/tenants/:id`: a plant plus whether its time zone may still change. */
+export interface PlantDetailView extends PlantView {
+  /** false once the plant has production events, signal samples or calculated periods (or for non-editors) */
+  timezoneEditable: boolean;
+  /** the server's plain-language reason when locked by data, else null */
+  timezoneLockedReason: string | null;
+}
+
+/** `PATCH /v2/organizations/:id` body (the code is immutable and not accepted). */
+export interface UpdateOrganizationInput {
+  name?: string;
+  description?: string | null;
+}
+
+/** `PATCH /v2/tenants/:id` body (code and organization are immutable and not accepted). */
+export interface UpdatePlantInput extends UpdateOrganizationInput {
+  timezone?: string;
 }
 
 export interface CreateOrganizationInput {

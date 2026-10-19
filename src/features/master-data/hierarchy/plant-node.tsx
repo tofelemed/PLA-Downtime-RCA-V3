@@ -5,6 +5,7 @@ import { useV2InfiniteList, flattenPages } from '@/api/v2/queries/use-v2-list';
 import { EntityIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import type { MasterUnitView } from '../api/master-data-types';
+import { HierarchyEditLink } from './hierarchy-edit-link';
 import { HierarchyNode } from './hierarchy-node';
 import { UnitNode } from './unit-node';
 
@@ -60,16 +61,22 @@ export interface PlantNodeProps {
  */
 export function PlantNode({ organization, plant, acting, level, canWrite, onSwitch }: PlantNodeProps) {
   const [expanded, setExpanded] = useState(acting);
-  const actions = acting ? (
+  const primary = acting ? (
     canWrite ? (
       <Button size="sm" variant="ghost" asChild>
         <Link to="/master-data/units/new" aria-label={`Add unit to ${plant.name}`}>Add unit</Link>
       </Button>
-    ) : undefined
+    ) : null
   ) : (
     <Button size="sm" variant="ghost" onClick={() => onSwitch(organization, plant)}>
       Switch to this plant
     </Button>
+  );
+  const actions = (
+    <>
+      <HierarchyEditLink kind="plant" id={plant.id} name={plant.name} canEdit={plant.canEdit} />
+      {primary}
+    </>
   );
   return (
     <HierarchyNode

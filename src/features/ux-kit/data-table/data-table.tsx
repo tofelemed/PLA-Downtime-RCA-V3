@@ -1,6 +1,7 @@
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { cn } from '@/lib/utils';
+import { AnchorPageSync } from './anchor-page-sync';
 import { DataTableGrid } from './data-table-grid';
 import { ListPager } from './data-table-pager';
 import { RefreshBar } from './data-table-states';
@@ -9,10 +10,10 @@ import type { PagerModel } from './pager-model';
 import { useClientPager } from './use-client-pager';
 import { VirtualDataTable } from './virtual-data-table';
 
-function usePagedRows<T>(rows: readonly T[], pager: DataTableProps<T>['pager']): { rows: readonly T[]; pager: PagerModel | null } {
+function usePagedRows<T>(rows: readonly T[], pager: DataTableProps<T>['pager']): { rows: readonly T[]; pager: PagerModel | null; client: boolean } {
   const client = useClientPager(rows);
-  if (pager === undefined || pager === 'client') return client;
-  return { rows, pager: pager === 'none' ? null : pager };
+  if (pager === undefined || pager === 'client') return { ...client, client: true };
+  return { rows, pager: pager === 'none' ? null : pager, client: false };
 }
 
 function DataTableBody<T>(props: DataTableProps<T> & { visibleRows: readonly T[] }) {
@@ -41,6 +42,7 @@ function DataTableBody<T>(props: DataTableProps<T> & { visibleRows: readonly T[]
  * - In-memory rows: pass them all; the table pages them (`pager` defaults to `'client'`).
  * - Server keyset lists: `const { rows, pager, status } = usePagedQuery<T>(…)` and pass all three.
  * - Short fixed lists: `pager="none"`; long in-memory lists without paging: `pager="none"` + `virtualize`.
+ * - Deep links: with `getRowAnchor`, a client-paged table opens the page holding the row named by the URL hash.
  *
  * @example
  * <DataTable caption="Production events" columns={columns} rows={rows} getRowKey={(e) => e.id}
@@ -55,6 +57,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   }
   return (
     <div className={cn('space-y-3', className)}>
+      <AnchorPageSync rows={props.rows} getRowAnchor={props.getRowAnchor} pager={paged.client ? paged.pager : null} />
       <div className="relative rounded-md border">
         {status?.isRefreshing && !status.isLoading && <RefreshBar />}
         <DataTableBody {...props} visibleRows={paged.rows} />

@@ -48,6 +48,7 @@ export class UnitStreamsV2Service {
       direction: 'ASC',
       cursor: query.cursor,
       limit: query.limit,
+      focus: query.focus,
     });
     return listResponse(page.items.map(toUnitStreamView), page.nextCursor, {
       tenantId: requireTenantId(context),

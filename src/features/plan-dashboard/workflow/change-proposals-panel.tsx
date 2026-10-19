@@ -18,6 +18,9 @@ import { ProposalCodingChanges } from './proposal-coding-changes';
 import { ProposalValues } from './proposal-values';
 import { ReasonConfirm } from './reason-confirm';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { pageListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 
 export interface ChangeProposalsPanelProps {
   view: ReconciliationView;
@@ -90,7 +93,8 @@ export function ChangeProposalCard({ p, timezone, decide }: { p: ChangeProposalV
 export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelProps) {
   const { canApproveRevisions, canProposeCorrections, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
-  const proposals = useChangeProposals(view.periodId);
+  const anchor = useAnchorFocus('change-proposal-');
+  const proposals = useChangeProposals(view.periodId, anchor.focus);
   const decision = useProposalDecision();
   const proposal = useProposeCorrection();
   const { problem, track } = useCommandProblem();
@@ -100,9 +104,11 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
     track(proposal.submit({ period: periodRefOf(view), approvedRevision: view.publishedRevision ?? 0, ...draft }));
   const canPropose = canProposeCorrections && view.publishedRevision !== null && view.revision.lifecycle === 'approved' && !view.openProposalId;
   const items = proposals.data?.items ?? [];
+  useSeekAnchor(anchor, pageListState(proposals));
   return (
     <Section title="Change proposals" headingLevel={3}>
       <div className="space-y-2 text-sm" data-testid="change-proposals">
+        <FocusedListNotice anchor={anchor} what="proposals" />
         {items.length === 0 && <p className="text-muted-foreground">No proposals: the approved figures match the current inputs.</p>}
         {items.map((p) => (
           <ChangeProposalCard key={p.id} p={p} timezone={timezone} decide={canApproveRevisions && (isSuperAdmin || p.manual?.proposedBy !== userId) ? decide : null} />

@@ -12,6 +12,10 @@ export interface OrganizationV2View {
   canAddPlants: boolean;
   /** whether the caller may delete it (super administrators; never while it has plants) */
   canDelete: boolean;
+  /** whether the caller may edit its name and description (super administrators; its organization administrator) */
+  canEdit: boolean;
+  /** optimistic concurrency revision: send it back as `If-Match` on `PATCH` (also the `ETag`) */
+  rowVersion: number;
 }
 
 /** `GET /v2/tenants` item: a plant of the caller's reach. */
@@ -31,11 +35,28 @@ export interface PlantV2View {
   isActive: boolean;
   /** whether the caller may delete it (super administrators) */
   canDelete: boolean;
+  /** whether the caller may edit name, description and time zone (super administrators; its organization administrator) */
+  canEdit: boolean;
+  /** optimistic concurrency revision: send it back as `If-Match` on `PATCH` (also the `ETag`) */
+  rowVersion: number;
+}
+
+/** `GET /v2/tenants/{id}` and `PATCH` responses: whether the time zone may still change, and why not. */
+export interface PlantDetailV2View extends PlantV2View {
+  /** false once the plant has production events, signal samples or calculated periods */
+  timezoneEditable: boolean;
+  /** plain-language reason when `timezoneEditable` is false, else null */
+  timezoneLockedReason: string | null;
+}
+
+export interface HierarchyFlags {
+  canDelete: boolean;
+  canEdit: boolean;
 }
 
 export function toOrganizationView(
   organization: Organization,
-  flags: { canAddPlants: boolean; canDelete: boolean },
+  flags: HierarchyFlags & { canAddPlants: boolean },
 ): OrganizationV2View {
   return {
     id: organization.id,
@@ -43,6 +64,7 @@ export function toOrganizationView(
     name: organization.name,
     description: organization.description ?? null,
     isActive: organization.isActive,
+    rowVersion: organization.rowVersion,
     ...flags,
   };
 }
@@ -50,7 +72,7 @@ export function toOrganizationView(
 export function toPlantView(
   plant: Tenant,
   organizationName: string | null,
-  canDelete: boolean,
+  flags: HierarchyFlags,
 ): PlantV2View {
   return {
     id: plant.id,
@@ -64,6 +86,7 @@ export function toPlantView(
     digits: plant.digits,
     weekStart: plant.weekStart,
     isActive: plant.isActive,
-    canDelete,
+    rowVersion: plant.rowVersion,
+    ...flags,
   };
 }

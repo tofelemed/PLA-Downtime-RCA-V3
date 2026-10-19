@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { ChangeProposalView, ReconciliationView } from '@/api/v2/types/reconciliation';
 import { actAs } from '@/test/acting-user';
@@ -55,10 +56,12 @@ describe('change proposals panel: manual correction (SME R4)', () => {
   let calls: Call[];
   let proposals: ChangeProposalView[];
 
-  const renderPanel = (view: ReconciliationView = VIEW) =>
+  const renderPanel = (view: ReconciliationView = VIEW, entry = '/') =>
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-        <ChangeProposalsPanel view={view} timezone="Asia/Tehran" />
+        <MemoryRouter initialEntries={[entry]}>
+          <ChangeProposalsPanel view={view} timezone="Asia/Tehran" />
+        </MemoryRouter>
       </QueryClientProvider>,
     );
 
@@ -80,6 +83,27 @@ describe('change proposals panel: manual correction (SME R4)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     actAs('SuperAdmin', 'user-1');
+  });
+
+  it('a deep link to a proposal beyond the first 20 asks the server for the page starting at it', async () => {
+    actAs('production_accountant', 'accountant-2');
+    const older = { ...MANUAL, id: 'cp-old', state: 'accepted' as const };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const call = { method: 'GET', url: new URL(url), body: null };
+        calls.push(call);
+        const focused = call.url.searchParams.get('focus') === 'cp-old';
+        return json(200, focused ? { items: [older], nextCursor: null } : { items: [MANUAL], nextCursor: 'next-page' });
+      }),
+    );
+    renderPanel(VIEW, '/plans/plan-1/periods/per-1/history#change-proposal-cp-old');
+    expect(await screen.findByTestId('focused-list-notice')).toBeTruthy();
+    await waitFor(() => expect(document.getElementById('change-proposal-cp-old')).not.toBeNull());
+    expect(calls.some((call) => call.url.searchParams.get('focus') === 'cp-old')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Show all from the start' }));
+    await waitFor(() => expect(document.getElementById('change-proposal-cp-1')).not.toBeNull());
+    expect(screen.queryByTestId('focused-list-notice')).toBeNull();
   });
 
   it('production accounting proposes a correction with reason and evidence', async () => {

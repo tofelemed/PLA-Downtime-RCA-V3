@@ -36,7 +36,8 @@ function Decide({ view, proposal, onDecided }: { view: ReconciliationView; propo
 /** An approved period's change proposal on the approval page: before / after, then accept or dismiss with a reason. */
 export function ChangeProposalDecision({ item, onDecided }: InlineFormProps) {
   const reconciliation = useReconciliation(item.target.periodId);
-  const proposals = useChangeProposals(item.target.periodId);
+  // the page that starts at this proposal (server keyset seek), however many newer ones the period has
+  const proposals = useChangeProposals(item.target.periodId, item.id);
   const proposal = proposals.data?.items.find((p) => p.id === item.id);
   const view = reconciliation.data;
   return (

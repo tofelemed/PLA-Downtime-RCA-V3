@@ -9,6 +9,12 @@ export interface KeysetOptions {
   direction: SortDirection;
   cursor?: string;
   limit: number;
+  /**
+   * id of a row to open (deep link): on the first page (no cursor) the page starts at that row — a keyset
+   * seek to its stored sort key — so it is the page containing the row; `nextCursor` continues after it. A
+   * row outside the query's filters or scope is ignored (the first page is returned).
+   */
+  focus?: string;
 }
 
 /** The stored sort value of the page's last row at full (microsecond) precision, as text. */
@@ -29,6 +35,30 @@ async function exactSortValue<T extends ObjectLiteral>(
   return rows[0]?.value ?? null;
 }
 
+/** Starts the page at the focus row: `(column, id) >= (its stored key)` in the sort direction. */
+async function seekFocus<T extends ObjectLiteral>(
+  qb: SelectQueryBuilder<T>,
+  seek: {
+    sortKey: string;
+    alias: string;
+    direction: SortDirection;
+    focus: string;
+  },
+): Promise<void> {
+  const id = `"${seek.alias}"."id"`;
+  const row = await qb
+    .clone()
+    .andWhere(`${id} = :keysetFocusId`, { keysetFocusId: seek.focus })
+    .select(`${seek.sortKey}::text`, 'value')
+    .getRawOne<{ value: string | null }>();
+  if (!row?.value) return;
+  const op = seek.direction === 'ASC' ? '>=' : '<=';
+  qb.andWhere(
+    `(${seek.sortKey}, ${id}) ${op} (CAST(:keysetFocusAt AS timestamptz), :keysetFocusId)`,
+    { keysetFocusAt: row.value, keysetFocusId: seek.focus },
+  );
+}
+
 /**
  * One keyset page (CONVENTIONS §4) over a timestamp sort column: applies the cursor as a row comparison
  * `(column, id) < (cursor)`, orders by the raw `(column, id)` in one direction — so a
@@ -47,6 +77,9 @@ export async function keysetPage<T extends ObjectLiteral & { id: string }>(
     )?.databaseName;
   if (!column) throw new Error(`keysetPage: unknown property ${property}`);
   const sortKey = `"${alias}"."${column}"`;
+  if (!options.cursor && options.focus) {
+    await seekFocus(qb, { sortKey, alias, direction, focus: options.focus });
+  }
   if (options.cursor) {
     const { sortValue, id } = CursorCodec.decode(options.cursor);
     if (typeof sortValue !== 'string') throw invalidCursor();

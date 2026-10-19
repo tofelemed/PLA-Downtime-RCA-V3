@@ -25,6 +25,7 @@ import { CustomAttributesV2Controller } from './custom-attributes/custom-attribu
 import { CustomAttributeValuesV2Controller } from './custom-attributes/custom-attribute-values-v2.controller';
 import { CustomAttributeValuesV2Service } from './custom-attributes/custom-attribute-values-v2.service';
 import { CustomAttributesV2Service } from './custom-attributes/custom-attributes-v2.service';
+import { HierarchyEditV2Service } from './hierarchy/hierarchy-edit-v2.service';
 import { HierarchyV2Service } from './hierarchy/hierarchy-v2.service';
 import { OrganizationsV2Controller } from './hierarchy/organizations-v2.controller';
 import { PlantsV2Controller } from './hierarchy/plants-v2.controller';
@@ -56,6 +57,7 @@ export const ADMINISTRATION_V2_PROVIDERS = [
   CustomAttributesV2Service,
   CustomAttributeValuesV2Service,
   HierarchyV2Service,
+  HierarchyEditV2Service,
   BrandingV2Service,
 ];
 

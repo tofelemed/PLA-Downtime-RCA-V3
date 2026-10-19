@@ -35,6 +35,7 @@ import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
   ReconciliationQueryDto,
   WorkflowListQueryDto,
+  ChangeProposalListQueryDto,
 } from './reconciliation-v2.dto';
 import {
   ApprovalActionV2View,
@@ -106,7 +107,7 @@ export class ReconciliationV2Service {
   async proposals(
     context: RequestContext,
     periodId: string,
-    query: WorkflowListQueryDto,
+    query: ChangeProposalListQueryDto,
   ): Promise<ListResponse<ChangeProposalV2View>> {
     const manager = this.periods.manager;
     const period = await periodInScope(manager, context, periodId);
@@ -120,6 +121,7 @@ export class ReconciliationV2Service {
       direction: 'DESC',
       cursor: query.cursor,
       limit: query.limit,
+      focus: query.focus,
     });
     return listResponse(
       page.items.map(toProposalView),

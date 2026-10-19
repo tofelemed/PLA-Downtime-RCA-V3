@@ -11,7 +11,7 @@ import { useDecidedWhen } from './use-decided-when';
 /**
  * Finance's posting decision of an approved restatement on the approval page: the operational date the
  * figures describe, then the workspace's posting date + treatment form (finance approvers; the delta is in
- * "What changes" above).
+ * "What changes" above). The proposer of the correction behind the restatement sees why they cannot decide.
  */
 export function RestatementPostingDecision({ item, onDecided }: InlineFormProps) {
   const { canDecidePosting } = useCapabilities();
@@ -20,6 +20,7 @@ export function RestatementPostingDecision({ item, onDecided }: InlineFormProps)
   const data = query.data;
   useDecidedWhen(data ? data.posting === null : undefined, 'Posting saved', onDecided);
   if (!canDecidePosting) return <p className="text-sm">Restatement postings are decided by a finance approver.</p>;
+  if (!item.canDecide) return <p className="text-sm" data-testid="inline-restatement-posting-blocked">{item.decisionBlockedReason}</p>;
   return (
     <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
       {data && (

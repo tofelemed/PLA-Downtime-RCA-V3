@@ -17,6 +17,10 @@ import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
 import { hoursOfSeconds } from '../model/transition-standard-form';
 import { TransitionStandardForm } from './transition-standard-form';
 import { VersionActions } from './version-actions';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
+import { useSearchParams } from 'react-router-dom';
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[] {
   return [
@@ -64,10 +68,14 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
 export function TransitionStandardsTab() {
   const { canWriteProfiles } = useCapabilities();
   const refs = usePlanningRefs();
-  const [unitId, setUnitId] = useState('');
+  const [searchParams] = useSearchParams();
+  // a deep link names the unit of the linked row (`?unitId=…#…`)
+  const [unitId, setUnitId] = useState(() => searchParams.get('unitId') ?? '');
   const [adding, setAdding] = useState(false);
-  const standards = useTransitionStandards(unitId);
+  const anchor = useAnchorFocus('transition-standard-');
+  const standards = useTransitionStandards(unitId, anchor.focus);
   const rows = flattenPages(standards.data?.pages);
+  useSeekAnchor(anchor, infiniteListState(standards));
   return (
     <div className="space-y-4" data-testid="transition-standards-tab">
       <div className="flex flex-wrap items-end gap-3">
@@ -87,6 +95,7 @@ export function TransitionStandardsTab() {
         </div>
       </div>
       {adding && unitId && <TransitionStandardForm unitId={unitId} productOptions={refs.productOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
+      <FocusedListNotice anchor={anchor} what="transition standards" />
       {unitId ? (
         <DataTable
           caption="Grade-transition standards"

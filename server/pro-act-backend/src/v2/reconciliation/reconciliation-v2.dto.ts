@@ -26,6 +26,7 @@ import {
   ManualKind,
 } from '../../domain/reconciliation/reconciliation.types';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import {
   BRIDGE_CATEGORIES,
   EVIDENCE_TYPES,
@@ -366,4 +367,10 @@ export class WorkflowListQueryDto extends ListQueryDto {
   @IsOptional()
   @IsIn(['-createdAt'])
   sort?: string = undefined;
+}
+
+/** Change proposals of a period; `focus` opens the page of one proposal (approval deep links). */
+export class ChangeProposalListQueryDto extends WorkflowListQueryDto {
+  @FocusParam()
+  focus?: string;
 }

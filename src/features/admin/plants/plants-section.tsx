@@ -24,6 +24,18 @@ function DeleteButton({ name, kind, onConfirm }: { name: string; kind: 'organiza
   );
 }
 
+function EditLink({ kind, id, name }: { kind: 'organization' | 'plant'; id: string; name: string }) {
+  const path = kind === 'plant' ? `/admin/plants/${encodeURIComponent(id)}/edit` : `/admin/organizations/${encodeURIComponent(id)}/edit`;
+  return (
+    <Button asChild variant="ghost" size="sm">
+      <Link to={path} aria-label={`Edit ${kind} ${name}`}>
+        <ActionIcon.edit aria-hidden="true" />
+        Edit
+      </Link>
+    </Button>
+  );
+}
+
 function useOrganizationColumns(): ReadonlyArray<DataTableColumn<OrganizationView>> {
   const remove = useDeleteOrganization();
   const feedback = useCommandFeedback();
@@ -36,6 +48,7 @@ function useOrganizationColumns(): ReadonlyArray<DataTableColumn<OrganizationVie
       headerLabel: 'Actions',
       cell: (org) => (
         <div className="flex justify-end gap-1">
+          {org.canEdit && <EditLink kind="organization" id={org.id} name={org.name} />}
           {org.canAddPlants && (
             <Button asChild variant="ghost" size="sm">
               <Link to={`/admin/plants/new?organizationId=${encodeURIComponent(org.id)}`}>Add plant</Link>
@@ -59,10 +72,15 @@ function usePlantColumns(): ReadonlyArray<DataTableColumn<PlantView>> {
     { id: 'calendar', header: 'Calendar', cell: (plant) => labelOf(CALENDAR_SYSTEM_LABELS, plant.calendarSystem), nowrap: true },
     { id: 'week', header: 'Week starts', cell: (plant) => (plant.weekStart === 'saturday' ? 'Saturday' : 'Monday'), nowrap: true },
     {
-      id: 'delete',
-      header: <span className="sr-only">Delete</span>,
-      headerLabel: 'Delete',
-      cell: (plant) => plant.canDelete && <DeleteButton name={plant.name} kind="plant" onConfirm={() => feedback(() => remove.submit(plant.id), 'Plant deleted')} />,
+      id: 'actions',
+      header: <span className="sr-only">Actions</span>,
+      headerLabel: 'Actions',
+      cell: (plant) => (
+        <div className="flex justify-end gap-1">
+          {plant.canEdit && <EditLink kind="plant" id={plant.id} name={plant.name} />}
+          {plant.canDelete && <DeleteButton name={plant.name} kind="plant" onConfirm={() => feedback(() => remove.submit(plant.id), 'Plant deleted')} />}
+        </div>
+      ),
     },
   ];
 }

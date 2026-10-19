@@ -90,6 +90,7 @@ export class ProfilesV2Service {
       direction: 'ASC',
       cursor: query.cursor,
       limit: query.limit,
+      focus: query.focus,
     });
     return listResponse(page.items.map(toRateView), page.nextCursor, {
       ...scope(context),
@@ -127,6 +128,7 @@ export class ProfilesV2Service {
       direction: 'ASC',
       cursor: query.cursor,
       limit: query.limit,
+      focus: query.focus,
     });
     return listResponse(
       page.items.map(toValuationRateView),

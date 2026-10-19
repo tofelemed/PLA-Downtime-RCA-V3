@@ -7,12 +7,12 @@ import { useV2InfiniteList } from './use-v2-list';
 export type UnitImpactRuleCreateBody = BodyOf<'/api/v2/unit-impact-rules', 'post'>;
 
 /** Every unit impact rule version the caller may read (plan 1.10); approve / retire via `useVersionTransition`. */
-export function useUnitImpactRules() {
+export function useUnitImpactRules(focus?: string) {
   return useV2InfiniteList<UnitImpactRuleView>({
     resource: 'profiles',
     path: '/unit-impact-rules',
-    query: { limit: 200 },
-    key: { filters: { kind: 'unit-impact-rules' } },
+    query: { limit: 200, focus },
+    key: { filters: { kind: 'unit-impact-rules', focus } },
   });
 }
 

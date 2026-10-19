@@ -14,6 +14,9 @@ import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
 import { canCorrect, SUPERSEDES_PARAM } from '../model/disposition-form';
 import { DispositionActions } from './disposition-actions';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { pageListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 
 function correctionPath(path: string, search: string, id: string): string {
   const params = new URLSearchParams(search);
@@ -73,11 +76,13 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
   const { canWriteDispositions, canApproveDispositions } = useCapabilities();
   const period = useProductionPeriod(periodId);
   const detail = period.data?.data;
-  const list = useLotDispositions(detail ? { unitId: detail.unitId, from: detail.utcStart, to: detail.utcEnd } : null);
+  const anchor = useAnchorFocus('disposition-');
+  const list = useLotDispositions(detail ? { unitId: detail.unitId, from: detail.utcStart, to: detail.utcEnd, focus: anchor.focus } : null);
   const names = { products: useProductNames(), users: useUserNames() };
   const newPath = `/plans/${planId}/periods/${periodId}/dispositions/new`;
   const correctLink = canWriteDispositions ? (id: string) => correctionPath(newPath, search, id) : null;
   const rows = list.data?.items ?? [];
+  useSeekAnchor(anchor, pageListState(list));
   const record = canWriteDispositions && (
     <Button asChild size="sm" variant="outline" data-testid="disposition-record">
       <Link to={`${newPath}${search}`}>
@@ -89,6 +94,7 @@ export function DispositionsSection({ planId, periodId, timezone }: Dispositions
   return (
     <Section title="Product dispositions" headingLevel={3} actions={record || undefined} description="Lab and quality decisions on the lots made in this period; they count once a Quality / Lab approver approves them.">
       <div data-testid="dispositions">
+        <FocusedListNotice anchor={anchor} what="dispositions" />
         {list.isSuccess && list.data.items.length === 0 ? <DataState state="empty" detail="No dispositions recorded for this period." /> : <DataTable
           caption="Product dispositions"
           columns={columnsOf(names, { timezone, canDecide: canApproveDispositions, correctLink, rows })}

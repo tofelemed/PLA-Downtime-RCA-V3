@@ -1,3 +1,4 @@
+import { ifMatchOf } from '../etag-cache';
 import type { ListResponse } from '../types/envelopes';
 import type {
   AttributeDefinitionInput,
@@ -7,7 +8,10 @@ import type {
   CreateOrganizationInput,
   CreatePlantInput,
   OrganizationView,
+  PlantDetailView,
   PlantView,
+  UpdateOrganizationInput,
+  UpdatePlantInput,
 } from '../types/administration';
 import { adminCall, compactQuery, useAdminCommand, useAdminRead, useAdminRecord } from './administration-shared';
 import { usePagedQuery } from './use-paged-query';
@@ -58,7 +62,27 @@ export function usePlantsPage(organizationId?: string) {
 export const usePlantOptions = (enabled = true) =>
   useAdminRead<ListResponse<PlantView>>('admin-config', '/tenants', { limit: 500 }, enabled);
 
-export const usePlant = (id: string | null | undefined) => useAdminRecord<PlantView>('admin-config', id, `/tenants/${id ?? ''}`, 'plant');
+/** One plant with its time zone lock (`timezoneEditable`, `timezoneLockedReason`). */
+export const usePlant = (id: string | null | undefined) =>
+  useAdminRecord<PlantDetailView>('admin-config', id, `/tenants/${id ?? ''}`, 'plant-detail');
+
+/** One organization within reach (edit page). */
+export const useOrganization = (id: string | null | undefined) =>
+  useAdminRecord<OrganizationView>('admin-config', id, `/organizations/${id ?? ''}`, 'organization');
+
+/** Name / description of an organization under the row version the editor read (412 when it changed). */
+export function useUpdateOrganization() {
+  return useAdminCommand<{ id: string; rowVersion: number; body: UpdateOrganizationInput }, OrganizationView>(CONFIG, ({ id, rowVersion, body }) =>
+    adminCall('PATCH', `/organizations/${id}`, { body, ifMatch: ifMatchOf(rowVersion) }),
+  );
+}
+
+/** Name, description and (while unlocked) time zone of a plant under the row version read (412 / 409 TIMEZONE_LOCKED). */
+export function useUpdatePlant() {
+  return useAdminCommand<{ id: string; rowVersion: number; body: UpdatePlantInput }, PlantDetailView>(CONFIG, ({ id, rowVersion, body }) =>
+    adminCall('PATCH', `/tenants/${id}`, { body, ifMatch: ifMatchOf(rowVersion) }),
+  );
+}
 
 export function useCreateOrganization() {
   return useAdminCommand<CreateOrganizationInput, OrganizationView>(CONFIG, (body, idempotencyKey) =>

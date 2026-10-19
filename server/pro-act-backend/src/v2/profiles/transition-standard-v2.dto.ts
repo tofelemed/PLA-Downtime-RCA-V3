@@ -15,6 +15,7 @@ import {
   VersionState,
 } from '../../domain/profiles/profile.types';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import { DECIMAL, EffectiveDto } from './profile-v2.dto';
 
 const DECIMAL_MESSAGE = 'must be a decimal string ≥ 0 with at most 8 decimals';
@@ -120,6 +121,9 @@ export class TransitionStandardCreateDto extends EffectiveDto {
 }
 
 export class TransitionStandardListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

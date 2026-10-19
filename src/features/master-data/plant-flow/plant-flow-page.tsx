@@ -13,6 +13,9 @@ import { MasterDataLayout } from '../components/master-data-layout';
 import { BufferLevelForm } from './buffer-level-form';
 import { FlowRoutesSection } from './flow-routes-section';
 import { routeKeyOf } from './plant-flow-form-model';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 
 function levelColumns(refs: PlanningRefs): DataTableColumn<BufferLevelView>[] {
   return [
@@ -31,7 +34,9 @@ function levelColumns(refs: PlanningRefs): DataTableColumn<BufferLevelView>[] {
 export function PlantFlowPage() {
   const { canWriteProfiles, canWritePeriods } = useCapabilities();
   const refs = usePlanningRefs();
-  const routes = useFlowRoutes();
+  const anchor = useAnchorFocus('flow-route-');
+  const routes = useFlowRoutes(anchor.focus);
+  useSeekAnchor(anchor, infiniteListState(routes));
   const levels = useBufferLevels();
   const bufferOptions = useMemo(
     () =>
@@ -47,6 +52,7 @@ export function PlantFlowPage() {
       description="Which unit feeds which and the buffers between them: a stop upstream uses the buffer's cover before it costs the unit downstream."
     >
       <Section title="Routes">
+        <FocusedListNotice anchor={anchor} what="routes" />
         <FlowRoutesSection refs={refs} routes={routes} canWrite={canWriteProfiles} />
       </Section>
       <Section title="Buffer levels" description="A level read within 24 h before an upstream stop replaces the configured usable inventory.">

@@ -40,6 +40,8 @@ const plant = (digits: string): PlantView => ({
   weekStart: 'saturday',
   isActive: true,
   canDelete: false,
+  canEdit: false,
+  rowVersion: 1,
 });
 
 const pager: PagerModel = {

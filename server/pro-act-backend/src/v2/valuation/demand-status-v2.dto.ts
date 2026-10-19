@@ -16,6 +16,7 @@ import {
   DemandStatusValue,
 } from '../../valuation/entities/demand-status.entity';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import { EffectiveDto } from '../profiles/profile-v2.dto';
 
 /** Body of POST /demand-statuses (SME V3): a draft sold-out status of a product over a validity. */
@@ -43,6 +44,9 @@ export class DemandStatusCreateDto extends EffectiveDto {
 }
 
 export class DemandStatusListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

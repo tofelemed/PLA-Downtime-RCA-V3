@@ -6475,6 +6475,16 @@
             }
           },
           {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "rateKind",
             "required": false,
             "in": "query",
@@ -6728,6 +6738,16 @@
             "in": "query",
             "description": "Window end, ISO 8601 (exclusive)",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -6998,6 +7018,16 @@
             "in": "query",
             "description": "Window end, ISO 8601 (exclusive)",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -8545,6 +8575,16 @@
             }
           },
           {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "unitId",
             "required": false,
             "in": "query",
@@ -9174,6 +9214,16 @@
             }
           },
           {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "unitId",
             "required": false,
             "in": "query",
@@ -9580,6 +9630,16 @@
             }
           },
           {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "unitId",
             "required": false,
             "in": "query",
@@ -9819,6 +9879,16 @@
             "in": "query",
             "description": "Window end, ISO 8601 (exclusive)",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -11585,6 +11655,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -12865,6 +12945,16 @@
             "in": "query",
             "description": "Window end, ISO 8601 (exclusive)",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "focus",
+            "required": false,
+            "in": "query",
+            "description": "Id of a row to open: the first page starts at that row (keyset seek to its sort key); ignored with cursor or when the row is not in the filtered list",
+            "schema": {
+              "format": "uuid",
               "type": "string"
             }
           },
@@ -19080,6 +19170,79 @@
       }
     },
     "/api/v2/organizations/{id}": {
+      "get": {
+        "operationId": "OrganizationsV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One organization you may see (ETag = row version; 404 otherwise)",
+        "tags": [
+          "v2 · Organizations"
+        ]
+      },
+      "patch": {
+        "description": "Super administrators, or the organization’s administrator (403 ORGANIZATION_NOT_ALLOWED). The code cannot change: sending `code` (or any undeclared field) answers 422 VALIDATION_FAILED. 428 REVISION_REQUIRED without If-Match, 412 STALE_REVISION when it changed since it was read.",
+        "operationId": "OrganizationsV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrganizationV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename an organization or change its description (If-Match)",
+        "tags": [
+          "v2 · Organizations"
+        ]
+      },
       "delete": {
         "operationId": "OrganizationsV2Controller_remove_v2",
         "parameters": [
@@ -19217,6 +19380,7 @@
     },
     "/api/v2/tenants/{id}": {
       "get": {
+        "description": "For callers who may edit it: `timezoneEditable` (false once the plant has production events, signal samples or calculated periods) and `timezoneLockedReason`.",
         "operationId": "PlantsV2Controller_get_v2",
         "parameters": [
           {
@@ -19238,7 +19402,53 @@
             "bearer": []
           }
         ],
-        "summary": "One plant you may see (404 otherwise)",
+        "summary": "One plant you may see (ETag = row version; 404 otherwise)",
+        "tags": [
+          "v2 · Plants"
+        ]
+      },
+      "patch": {
+        "description": "Super administrators, or the administrator of the plant’s organization (403 ORGANIZATION_NOT_ALLOWED). Code and organization cannot change: sending them (or any undeclared field) answers 422 VALIDATION_FAILED. The time zone changes only while the plant has no production events, signal samples or calculated periods (409 TIMEZONE_LOCKED with the counts in `details`); 422 INVALID_TIMEZONE. The default site follows the new time zone and name. 428 REVISION_REQUIRED, 412 STALE_REVISION.",
+        "operationId": "PlantsV2Controller_update_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePlantV2Dto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a plant, change its description or time zone (If-Match)",
         "tags": [
           "v2 · Plants"
         ]
@@ -30893,6 +31103,21 @@
           "value"
         ]
       },
+      "UpdateOrganizationV2Dto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true,
+            "description": "Empty or null clears it"
+          }
+        }
+      },
       "CreateOrganizationV2Dto": {
         "type": "object",
         "properties": {
@@ -30914,6 +31139,26 @@
           "code",
           "name"
         ]
+      },
+      "UpdatePlantV2Dto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "object",
+            "maxLength": 2000,
+            "nullable": true,
+            "description": "Empty or null clears it"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "IANA timezone of the plant, e.g. Asia/Tehran"
+          }
+        }
       },
       "CreatePlantV2Dto": {
         "type": "object",

@@ -17,6 +17,10 @@ import { percentOfShare } from '../model/stream-form';
 import { VersionActions } from '../profiles/version-actions';
 import { StreamRunsPanel } from './stream-runs-panel';
 import { UnitStreamForm } from './unit-stream-form';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
+import { useSearchParams } from 'react-router-dom';
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<UnitStreamView>[] {
   return [
@@ -46,10 +50,14 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<UnitStreamView>[] {
 export function UnitStreamsTab() {
   const { canWriteProfiles, canWritePeriods } = useCapabilities();
   const refs = usePlanningRefs();
-  const [unitId, setUnitId] = useState('');
+  const [searchParams] = useSearchParams();
+  // a deep link names the unit of the linked row (`?unitId=…#…`)
+  const [unitId, setUnitId] = useState(() => searchParams.get('unitId') ?? '');
   const [adding, setAdding] = useState(false);
-  const streams = useUnitStreams(unitId);
+  const anchor = useAnchorFocus('unit-stream-');
+  const streams = useUnitStreams(unitId, anchor.focus);
   const rows = flattenPages(streams.data?.pages);
+  useSeekAnchor(anchor, infiniteListState(streams));
   const streamOptions = useMemo(
     () => [...new Set(rows.filter((s) => s.state === 'approved').map((s) => s.code))].map((code) => ({ value: code, label: code })),
     [rows],
@@ -75,6 +83,7 @@ export function UnitStreamsTab() {
       {adding && unitId && <UnitStreamForm unitId={unitId} timezone={refs.timezone} onDone={() => setAdding(false)} />}
       {unitId ? (
         <>
+          <FocusedListNotice anchor={anchor} what="streams" />
           <DataTable
             caption="Unit streams"
             columns={columnsOf(refs)}

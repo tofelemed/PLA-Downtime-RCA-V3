@@ -13,6 +13,9 @@ import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { DemandActions } from './demand-actions';
 import { DemandStatusForm } from './demand-status-form';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 
 function AddDemandStatus() {
   const { timezone } = usePlantDates();
@@ -44,7 +47,9 @@ function AddDemandStatus() {
 export function DemandStatusesTab() {
   const { canMaintainValuation } = useCapabilities();
   const dates = usePlantDates();
-  const statuses = useDemandStatuses({});
+  const anchor = useAnchorFocus('demand-status-');
+  const statuses = useDemandStatuses({ focus: anchor.focus });
+  useSeekAnchor(anchor, infiniteListState(statuses.query));
   const products = useProducts();
   const productName = (id: string) => products.data?.pages.flatMap((p) => p.items).find((p) => p.id === id)?.name ?? '—';
   const columns: Array<DataTableColumn<DemandStatusView>> = [
@@ -61,6 +66,7 @@ export function DemandStatusesTab() {
         <ReadOnlyHint />
         {canMaintainValuation && <AddDemandStatus />}
       </div>
+      <FocusedListNotice anchor={anchor} what="demand statuses" />
       <DataTable
         caption="Demand statuses"
         columns={columns}

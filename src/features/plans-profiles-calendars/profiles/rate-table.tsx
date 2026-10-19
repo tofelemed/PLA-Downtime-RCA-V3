@@ -6,7 +6,10 @@ import { RATE_KINDS, type ProfileView, type RateView } from '@/api/v2/types/prof
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, RATE_KIND_LABELS } from '@/features/ux-kit/labels';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
+import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
@@ -58,12 +61,15 @@ function columnsOf(profile: ProfileView, timezone: string): DataTableColumn<Rate
 /**
  * Effective-dated rate versions of a profile (20 per page): kind × version with the server's per-second
  * conversion; add a draft, approve (overlaps refused by the server with the conflicting version), retire.
+ * A deep link (`#rate-<id>`) opens the page holding the version, sought on the server when not loaded.
  */
 export function RateTable({ profile, timezone }: RateTableProps) {
   const { canWriteProfiles } = useCapabilities();
-  const rates = useProfileRates(profile.id);
+  const anchor = useAnchorFocus('rate-');
+  const rates = useProfileRates(profile.id, anchor.focus);
   const [adding, setAdding] = useState(false);
   const items = byKind(flattenPages(rates.data?.pages));
+  useSeekAnchor(anchor, infiniteListState(rates));
   const add = !adding && canWriteProfiles && (
     <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="rate-add">
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
@@ -73,6 +79,7 @@ export function RateTable({ profile, timezone }: RateTableProps) {
   return (
     <Section title="Rates" actions={add || undefined}>
       <div className="space-y-3" data-testid="rate-table">
+        <FocusedListNotice anchor={anchor} what="rate versions" />
         {adding && <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Rate versions"

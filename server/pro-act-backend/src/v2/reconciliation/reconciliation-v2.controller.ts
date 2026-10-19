@@ -41,6 +41,7 @@ import {
   ReviseRevisionDto,
   SubmitRevisionDto,
   WorkflowListQueryDto,
+  ChangeProposalListQueryDto,
 } from './reconciliation-v2.dto';
 import { ReconciliationV2Service } from './reconciliation-v2.service';
 import {
@@ -283,7 +284,7 @@ export class ReconciliationV2Controller {
   proposals(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Query() query: WorkflowListQueryDto,
+    @Query() query: ChangeProposalListQueryDto,
   ): Promise<ListResponse<ChangeProposalV2View>> {
     return this.reads.proposals(ctx, id, query);
   }

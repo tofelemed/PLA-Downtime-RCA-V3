@@ -21,6 +21,7 @@ import {
   UnitImpactMode,
 } from '../../domain/reliability/unit-impact';
 import { ListQueryDto } from '../common/list-query.dto';
+import { FocusParam } from '../common/focus-param';
 import { DECIMAL, EffectiveDto } from '../profiles/profile-v2.dto';
 
 /** Body of POST /unit-impact-rules: a draft rule of one asset of a unit (plan 1.10, SME Q5 + D9). */
@@ -92,6 +93,9 @@ export class UnitImpactRuleCreateDto extends EffectiveDto {
 }
 
 export class UnitImpactRuleListQueryDto extends ListQueryDto {
+  @FocusParam()
+  focus?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

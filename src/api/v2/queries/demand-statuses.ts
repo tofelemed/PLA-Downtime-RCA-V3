@@ -11,6 +11,8 @@ export type DemandStatusCreateBody = BodyOf<'/api/v2/demand-statuses', 'post'>;
 export interface DemandStatusFilters {
   productId?: string;
   state?: VersionState;
+  /** deep link to a version on a later page: the first page starts at it (server keyset seek) */
+  focus?: string;
 }
 
 /** Demand status versions of the tenant (SME V3), filtered on the server, keyset on effectiveFrom. */

@@ -26,6 +26,7 @@ interface InboxRow {
   unitName: string | null;
   authorId: string | null;
   authorName: string | null;
+  requesterId: string | null;
   href: string;
   commandId: string;
   version: number | null;
@@ -48,6 +49,9 @@ const TARGET_CAST: Readonly<Record<ApprovalTargetFact, string>> = {
   profileId: 'text',
 };
 type InboxQuery = SelectQueryBuilder<ObjectLiteral>;
+/** Whom the decision must be independent of: the requester rule of the step, else the record's author. */
+const requesterOf = (definition: ApprovalDefinition) =>
+  definition.requester ?? definition.author ?? 'r.createdBy';
 function selectRow(qb: InboxQuery, definition: ApprovalDefinition): void {
   const author = definition.author ?? 'r.createdBy';
   qb.leftJoin(
@@ -66,6 +70,7 @@ function selectRow(qb: InboxQuery, definition: ApprovalDefinition): void {
     'u.name AS "unitName"',
     `${author} AS "authorId"`,
     'a.name AS "authorName"',
+    `${requesterOf(definition)} AS "requesterId"`,
     `${definition.href} AS "href"`,
     `${definition.commandId ?? 'r.id'} AS "commandId"`,
     `${definition.version ?? (definition.actions?.length ? 'r.version' : 'NULL::int')} AS "version"`,
@@ -110,7 +115,7 @@ function decidableOnly(
   if (context.isSuperAdmin || definition.ownMayDecide) return;
   if (definition.actions?.includes('retire')) return;
   qb.andWhere(
-    `(${definition.author ?? 'r.createdBy'}) IS DISTINCT FROM :inboxUserId::uuid`,
+    `(${requesterOf(definition)}) IS DISTINCT FROM :inboxUserId::uuid`,
     { inboxUserId: context.userId },
   );
 }
@@ -195,7 +200,7 @@ export function toApprovalItem(
   definition: ApprovalDefinition,
   row: InboxRow,
 ): ApprovalItemView {
-  const own = !context.isSuperAdmin && row.authorId === context.userId;
+  const own = !context.isSuperAdmin && row.requesterId === context.userId;
   const actions = (definition.actions ?? []).map((action) => ({
     action,
     disabledReason: own && action !== 'retire' ? OWN_REQUEST : null,

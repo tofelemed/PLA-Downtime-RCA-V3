@@ -21,6 +21,8 @@ import { DISPOSITION_APPROVERS } from '../quality-dispositions/disposition-roles
 import { BUDGET_APPROVERS } from '../uncertainty/uncertainty-roles';
 import { SOURCE_AUTHORITY_APPROVERS } from '../source-authority/source-authority-roles';
 import { FINANCE_APPROVERS } from '../valuation/valuation-roles';
+import { STOP_DECISION_ROLES } from '../stop-events/stop-event-roles';
+import { POSTING_PROPOSER_REASON } from '../../reconciliation/posting-independence';
 import { ApprovalDefinition } from './approval-catalog';
 
 const PERIOD_JOIN = {
@@ -41,6 +43,9 @@ const REVISION_TARGET = { ...PERIOD_TARGET, revision: 'r.revision' };
 /** The period of a disposition's production start on its unit (dispositions are listed per period). */
 const DISPOSITION_PERIOD = (column: string) =>
   `(SELECT ${column} FROM production_periods dp JOIN plan_versions dv ON dv.id = dp.selected_plan_version_id WHERE dp.tenant_id = r.tenantId AND dp.unit_id = r.unitId AND dp.utc_start <= r.productionStart AND dp.utc_end > r.productionStart ORDER BY dp.utc_start LIMIT 1)`;
+/** The proposer of the manual change proposal whose acceptance opened the revision (null otherwise). */
+const CORRECTION_PROPOSER =
+  "(SELECT (cp.detail->'manual'->>'proposedBy')::uuid FROM period_change_proposals cp WHERE cp.tenant_id = r.tenantId AND cp.created_revision_id = r.id ORDER BY cp.created_at LIMIT 1)";
 const monthHref = (step: string) =>
   `'/month-close?month=' || r.monthKey || '#close-step-${step}'`;
 export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
@@ -202,7 +207,8 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
       "'Set the posting date and treatment after reviewing the approved restatement delta'",
     href: periodHref('/review', "'restatement'"),
     target: REVISION_TARGET,
-    ownMayDecide: true,
+    requester: CORRECTION_PROPOSER,
+    ownReason: POSTING_PROPOSER_REASON,
     joins: [PERIOD_JOIN, VERSION_JOIN],
   },
   {
@@ -286,7 +292,7 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     kind: 'stop-merge',
     label: 'Duplicate stop review',
     entity: StopReconciliation,
-    roles: ['manager_approver', 'production_engineer'],
+    roles: STOP_DECISION_ROLES,
     pending: "r.state = 'suggested'",
     unit: 'r.unitId',
     title: "'Suggested duplicate stop'",

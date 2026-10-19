@@ -200,6 +200,15 @@ describe('approval detail page', () => {
     expect(await screen.findByText('Posting saved')).toBeTruthy();
   });
 
+  it('restatement posting: the proposer of the correction behind it sees why and gets no form', async () => {
+    actAs('finance_approver', 'finance-1');
+    const reason = 'This restatement comes from your change proposal; a different finance approver must set its posting date and treatment.';
+    mount({ ...POSTING, canDecide: false, decisionBlockedReason: reason });
+    expect((await screen.findByTestId('inline-restatement-posting-blocked')).textContent).toBe(reason);
+    expect(screen.queryByTestId('posting-save')).toBeNull();
+    expect(screen.getByTestId('approval-eligibility').getAttribute('data-can-decide')).toBe('false');
+  });
+
   it('change proposal: an approver accepts it in place with a reason', async () => {
     actAs('production_accountant', 'approver');
     mount(PROPOSAL);
@@ -209,6 +218,7 @@ describe('approval detail page', () => {
     fireEvent.change(within(dialog).getByLabelText(/^Reason/), { target: { value: 'Late stop coding confirmed' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Accept change' }));
     await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(calls.find((call) => call.url.pathname.endsWith('/change-proposals'))?.url.searchParams.get('focus')).toBe('cp-1');
     expect(posts()[0].url.pathname).toMatch(/\/period-change-proposals\/cp-1\/accept$/);
     expect(posts()[0].body).toEqual({ reason: 'Late stop coding confirmed' });
     expect(await screen.findByText('Change accepted: a new draft revision is open')).toBeTruthy();
