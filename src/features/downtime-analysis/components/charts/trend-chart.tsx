@@ -5,6 +5,9 @@ import type { ScheduleClass } from '../../model/downtime-filters';
 import { formatCount } from '../../model/kpi-display';
 import type { TrendRow } from '../../model/trend-rows';
 import { ChartFigure } from '@/features/ux-kit/chart-figure';
+import { CHART_TOOLTIP_STYLE, unbreakable } from '@/features/ux-kit/chart-text';
+import { plural } from '@/features/ux-kit/format/plural';
+import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 
 /** Same schedule-class colours as the stop timeline (shared unit-state tokens, UX_AUDIT C-7). */
 const COLORS: Record<ScheduleClass, string> = {
@@ -28,18 +31,19 @@ export function TrendChart({ rows, classes, unit }: TrendChartProps) {
   }));
   const { digits } = useCalendarPreference();
   const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'long', digits) : formatCount(String(value), digits));
-  const caption = `Stacked ${unit === 's' ? 'downtime' : 'stop counts'} for ${rows.length} periods, split by schedule class (${classes.join(', ')}).`;
+  const names = classes.map((scheduleClass) => labelOf(SCHEDULE_CLASS_LABELS, scheduleClass));
+  const caption = `Stacked ${unit === 's' ? 'downtime' : 'stop counts'} for ${plural(rows.length, 'period', 'periods')}, split by schedule class (${names.join(', ')}).`;
   return (
     <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="trend-chart">
       <ResponsiveContainer>
         <BarChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-          <YAxis tickFormatter={format} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} />
-          <Tooltip formatter={(value: unknown) => format(value)} />
+          <YAxis tickFormatter={(value: unknown) => unbreakable(format(value))} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} width={unit === 's' ? 80 : 48} />
+          <Tooltip formatter={(value: unknown) => format(value)} {...CHART_TOOLTIP_STYLE} />
           <Legend />
           {classes.map((scheduleClass) => (
-            <Bar key={scheduleClass} dataKey={scheduleClass} stackId="class" fill={COLORS[scheduleClass]} />
+            <Bar key={scheduleClass} dataKey={scheduleClass} name={labelOf(SCHEDULE_CLASS_LABELS, scheduleClass)} stackId="class" fill={COLORS[scheduleClass]} />
           ))}
         </BarChart>
       </ResponsiveContainer>

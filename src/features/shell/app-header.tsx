@@ -63,7 +63,7 @@ export function AppHeader({ branding, navigation }: AppHeaderProps) {
         <PlantSelector />
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-        <LiveIndicator className="hidden md:flex" />
+        <LiveIndicator className="hidden lg:flex" />
         <DisplayCurrencyToggle />
         <NotificationBell />
         <UserBadge />

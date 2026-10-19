@@ -54,6 +54,8 @@ export interface GroupTerms {
   /** distinct `oee_policy` versions behind the rows */
   policies: number;
   reasons: string[];
+  /** unknown state seconds taken out of the terms (owner decision 2026-10-19); absent = none */
+  unknownExcluded?: Dec | null;
 }
 
 export interface KpiAggregate {
@@ -96,6 +98,16 @@ function finish(
   return { ...base, value, quality: 'ok', reason: null };
 }
 
+function noKnownTime(
+  kind: AggregateKind,
+  group: GroupTerms,
+  numerator: Dec,
+  denominator: Dec,
+): boolean {
+  if (!group.unknownExcluded?.gt(0)) return false;
+  return kind === 'ratio' ? denominator.isZero() : numerator.isZero();
+}
+
 /**
  * AN03 / T31: a group's KPI from its summed numerators and denominators — never an average of
  * percentages. No complete row → null with the stored reasons; a zero denominator → null with the
@@ -124,6 +136,9 @@ export function combine(metric: KpiMetric, group: GroupTerms): KpiAggregate {
     return none('incompatible_policies');
   const { numerator, denominator } = group;
   if (numerator === null || denominator === null) return none('input_missing');
+  // every scheduled second was unknown state: no known time, never 0 % availability or a zero MTBF
+  if (noKnownTime(kind, group, numerator, denominator))
+    return none('no_known_time');
   if (denominator.isZero())
     return none(ZERO_REASON[metric] ?? 'no_scheduled_time');
   const value = numerator

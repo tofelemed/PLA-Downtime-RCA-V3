@@ -1,23 +1,26 @@
-import { DateRangeInput, datesFromRange, rangeFromDates, type InstantRange } from '@/features/ux-kit/date-inputs';
+import { DateRangeInput, rangeFromDates, datesFromRange, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { plantDaysOf, rangeOfPlantDays } from '../model/window-range';
 
 export interface PlantDaysInputProps {
   label: string;
   value: { from: string; to: string };
   timeZone: string;
-  /** receives the window of the chosen days, each starting at the shown window's production day start */
+  /** `HH:mm`: the plant's production-day start (`useProductionDayStart`) */
+  dayStart: string;
+  /** receives the window of the chosen production days, each from `dayStart` to the next day's `dayStart` */
   onChange: (range: { from: string; to: string }) => void;
 }
 
 /**
- * Inclusive plant days typed in the plant date format (QA PLA M1): a production-day window (06:00–06:00)
- * shows 17 → 17 for one day, and choosing 17 → 17 keeps the 06:00–06:00 day rather than midnight–midnight.
+ * Inclusive production days typed in the plant date format (QA PLA M1, Reports N1; owner decision 2026-10-19
+ * "Production-day boundaries"): the fields show the window's days (the production days it touches when it is not whole days), and choosing
+ * 17 → 17 gives the 06:00–06:00 production day — never midnight, never the current clock time of a rolling window.
  */
-export function PlantDaysInput({ label, value, timeZone, onChange }: PlantDaysInputProps) {
-  const days = plantDaysOf(value, timeZone);
-  const shown = rangeFromDates(days, timeZone);
+export function PlantDaysInput({ label, value, timeZone, dayStart, onChange }: PlantDaysInputProps) {
+  const { start, end } = plantDaysOf(value, timeZone, dayStart);
+  const shown = rangeFromDates({ start, end }, timeZone);
   const choose = (range: InstantRange) => {
-    const next = rangeOfPlantDays(datesFromRange(range, timeZone), days.boundary, timeZone);
+    const next = rangeOfPlantDays(datesFromRange(range, timeZone), dayStart, timeZone);
     if (next.from && next.to) onChange({ from: next.from, to: next.to });
   };
   return <DateRangeInput label={label} value={shown} timeZone={timeZone} onChange={choose} textEntry />;

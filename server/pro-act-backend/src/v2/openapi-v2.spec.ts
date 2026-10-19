@@ -146,6 +146,7 @@ import { ExportRequestsService } from '../exports/export-requests.service';
 import { DemandStatusesService } from '../valuation/demand-statuses.service';
 import { FxRatesService } from '../valuation/fx-rates.service';
 import { ValuationPoliciesService } from '../valuation/valuation-policies.service';
+import { FinanceTextCorrectionsService } from '../valuation/finance-text-corrections.service';
 import { ValuationModule } from '../valuation/valuation.module';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { FeatureFlagsService } from '../feature-flags/feature-flags.service';
@@ -443,9 +444,15 @@ class ExportsModuleStub {}
   providers: [
     { provide: FxRatesService, useValue: {} },
     { provide: ValuationPoliciesService, useValue: {} },
+    { provide: FinanceTextCorrectionsService, useValue: {} },
     { provide: DemandStatusesService, useValue: {} },
   ],
-  exports: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
+  exports: [
+    FxRatesService,
+    ValuationPoliciesService,
+    DemandStatusesService,
+    FinanceTextCorrectionsService,
+  ],
 })
 class ValuationModuleStub {}
 

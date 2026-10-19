@@ -1,3 +1,5 @@
+import { humanize } from '@/features/ux-kit/labels';
+
 /** Plain words for the plan preview's warnings (backend `domain/plans/period-generator.ts`). */
 export const PLAN_WARNING_LABELS: Readonly<Record<string, string>> = {
   missing_profile: 'No approved profile for this unit and product',
@@ -19,3 +21,11 @@ export const PERIOD_EXCLUSION_LABELS: Readonly<Record<string, string>> = {
   no_demand: 'No demand',
   holiday: 'Holiday',
 };
+
+/**
+ * A profile's operating mode in words: the stored value is free text keyed by the rate imports
+ * (`normal`, `reduced_rate`), shown in sentence case ("Normal", "Reduced rate").
+ */
+export function operatingModeLabel(mode: string): string {
+  return humanize(mode.trim()) || mode;
+}

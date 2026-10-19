@@ -10,12 +10,13 @@ import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import type { CalendarScope } from '../hooks/use-calendar-editor';
 import { usePlanningRefs } from '../hooks/use-planning-refs';
+import { calendarVersionPath } from '../model/calendar-paths';
 import { CalendarVersionList } from './calendar-version-list';
 import { CrewRotationEditor } from './crew-rotation-editor';
 
 /**
  * Calendars: versions of the site calendar or of a unit override (a row opens the editor at
- * `/planning/calendars/:versionId/edit`), a new version at `/planning/calendars/new`, and the crews.
+ * `/planning/calendars/:versionId[/edit]`), a new version at `/planning/calendars/new`, and the crews.
  */
 export function CalendarsTab() {
   const { canWriteCalendars } = useCapabilities();
@@ -49,7 +50,7 @@ export function CalendarsTab() {
         <CalendarVersionList
           versions={items}
           status={{ isLoading: versions.isLoading, isError: versions.isError, error: versions.error, onRetry: () => void versions.refetch() }}
-          onOpen={(v) => navigate(`/planning/calendars/${v.id}/edit`)}
+          onOpen={(v) => navigate(calendarVersionPath(v, canWriteCalendars))}
         />
         {versions.hasNextPage && (
           <Button size="sm" variant="ghost" onClick={() => void versions.fetchNextPage()} disabled={versions.isFetchingNextPage}>

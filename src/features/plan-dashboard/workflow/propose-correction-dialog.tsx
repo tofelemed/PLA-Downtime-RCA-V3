@@ -17,6 +17,8 @@ export interface CorrectionDraft {
 export interface ProposeCorrectionDialogProps {
   /** resolves when the proposal was created (closes the dialog); rejects to keep it open */
   onPropose: (draft: CorrectionDraft) => Promise<unknown>;
+  /** the month state and role specific explanation (`correctionDialogText`) */
+  description: string;
 }
 
 const EVIDENCE_OPTIONS = (Object.keys(EVIDENCE_LABELS) as EvidenceType[]).map((value) => ({ value, label: EVIDENCE_LABELS[value] }));
@@ -25,7 +27,7 @@ const EVIDENCE_OPTIONS = (Object.keys(EVIDENCE_LABELS) as EvidenceType[]).map((v
  * SME R4: a manual change proposal of an approved period whose month is closing or locked — what is wrong,
  * the record it rests on and its reference. Someone else with approval rights accepts or dismisses it.
  */
-export function ProposeCorrectionDialog({ onPropose }: ProposeCorrectionDialogProps) {
+export function ProposeCorrectionDialog({ onPropose, description }: ProposeCorrectionDialogProps) {
   const [reason, setReason] = useState('');
   const [evidenceType, setEvidenceType] = useState<EvidenceType | ''>('');
   const [evidenceRef, setEvidenceRef] = useState('');
@@ -46,7 +48,7 @@ export function ProposeCorrectionDialog({ onPropose }: ProposeCorrectionDialogPr
         </Button>
       }
       title="Propose a correction of the approved period"
-      description="For a period of a closing or locked month. An approver accepts or dismisses it (SuperAdmin may decide their own proposal); an accepted correction opens a new revision and its restatement."
+      description={description}
       confirmLabel="Propose correction"
       confirmDisabled={!ready}
       onConfirm={submit}

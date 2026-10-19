@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Link } from 'react-router-dom';
 import { useRcaLinks, useRcaOutcome } from '@/api/v2/queries/rca-cases';
 import type { ApprovedImpactView, RcaLinkView } from '@/api/v2/types/rca';
@@ -45,8 +46,10 @@ function TriggerText({ link, others }: { link: RcaLinkView; others: number }) {
 /** The approved historical loss of the case as the server reports it: quantities, then the display currency. */
 function ApprovedLossText({ impact }: { impact: ApprovedImpactView }) {
   const { currency } = useDisplayCurrency();
+  // QA re-test N1: quantities only without the money capability (the server leaves the values out too)
+  const { canViewMoney } = useCapabilities();
   if (impact.lines === 0) return <span data-testid="case-approved-loss">No approved loss yet</span>;
-  const money = entriesInCurrency(impact.values, (row) => row.currency, currency);
+  const money = canViewMoney ? entriesInCurrency(impact.values ?? [], (row) => row.currency, currency) : [];
   return (
     <span data-testid="case-approved-loss">
       Approved loss{' '}

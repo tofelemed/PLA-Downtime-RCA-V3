@@ -43,6 +43,7 @@ import { WriteAccessGuard } from './auth/guards/write-access.guard';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { RequestContextMiddleware } from './common/context/request-context.middleware';
 import { IdempotencyInterceptor } from './common/idempotency/idempotency.interceptor';
+import { MoneyRedactionInterceptor } from './auth/money/money-redaction.interceptor';
 import { IdempotencyModule } from './common/idempotency/idempotency.module';
 import { RetentionModule } from './common/retention/retention.module';
 import * as dotenv from 'dotenv';
@@ -107,6 +108,8 @@ registerPgTypeParsers();
     { provide: APP_GUARD, useClass: WriteAccessGuard },
     { provide: APP_GUARD, useClass: TenantBindingGuard },
     { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+    // QA re-test 2026-10-19: money is withheld on the server for callers without the money capability
+    { provide: APP_INTERCEPTOR, useClass: MoneyRedactionInterceptor },
     // Plan 3.11: per-connection tenant binding for row-level security (on unless DB_RLS_TENANT_BINDING=false)
     TenantSessionBinding,
   ],

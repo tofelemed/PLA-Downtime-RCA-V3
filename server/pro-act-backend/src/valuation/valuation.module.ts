@@ -6,6 +6,7 @@ import { DemandStatus } from './entities/demand-status.entity';
 import { FxRate } from './entities/fx-rate.entity';
 import { LossLineValuation } from './entities/loss-line-valuation.entity';
 import { PeriodValuationTotal } from './entities/period-valuation-total.entity';
+import { FinanceTextCorrectionsService } from './finance-text-corrections.service';
 import { FxRatesService } from './fx-rates.service';
 import { ValuationPoliciesService } from './valuation-policies.service';
 
@@ -24,7 +25,17 @@ import { ValuationPoliciesService } from './valuation-policies.service';
       AccountingPolicy,
     ]),
   ],
-  providers: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
-  exports: [FxRatesService, ValuationPoliciesService, DemandStatusesService],
+  providers: [
+    FxRatesService,
+    ValuationPoliciesService,
+    DemandStatusesService,
+    FinanceTextCorrectionsService,
+  ],
+  exports: [
+    FxRatesService,
+    ValuationPoliciesService,
+    DemandStatusesService,
+    FinanceTextCorrectionsService,
+  ],
 })
 export class ValuationModule {}

@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useNavigate } from 'react-router-dom';
 import { useCodeRoots } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
@@ -10,13 +11,14 @@ export interface CodeFlatTableProps {
   includeRetired: boolean;
 }
 
-function columnsOf(library: CodeLibraryPath): Array<DataTableColumn<CodeDetailView>> {
+/** The cost per hour is money: its column is left out without the money capability (QA re-test). */
+function columnsOf(library: CodeLibraryPath, money: boolean): Array<DataTableColumn<CodeDetailView>> {
   const fields = LIBRARIES[library].fields;
   return [
     { id: 'code', header: 'Code', nowrap: true, cell: (code) => <span className="font-mono" data-testid="code-row" data-code={code.code}>{code.code}</span> },
     { id: 'name', header: 'Name', cell: (code) => code.name },
     ...(fields.includes('category') ? [{ id: 'category', header: 'Category', cell: (code: CodeDetailView) => code.category ?? '—' }] : []),
-    ...(fields.includes('costPerHour')
+    ...(fields.includes('costPerHour') && money
       ? [{ id: 'cost', header: 'Cost per hour', align: 'right' as const, nowrap: true, cell: (code: CodeDetailView) => code.costPerHour ?? '—' }]
       : []),
     { id: 'status', header: 'Status', cell: (code) => <CodeStatusBadge active={code.active} /> },
@@ -26,11 +28,12 @@ function columnsOf(library: CodeLibraryPath): Array<DataTableColumn<CodeDetailVi
 /** A library without hierarchy (impact, OEE codes) as a table, 20 codes per page, sorted by code. */
 export function CodeFlatTable({ library, includeRetired }: CodeFlatTableProps) {
   const navigate = useNavigate();
+  const { canViewMoney } = useCapabilities();
   const codes = useCodeRoots(library, false, includeRetired);
   return (
     <DataTable
       caption={LIBRARIES[library].label}
-      columns={columnsOf(library)}
+      columns={columnsOf(library, canViewMoney)}
       rows={codes.rows}
       getRowKey={(code) => code.id}
       pager={codes.pager}

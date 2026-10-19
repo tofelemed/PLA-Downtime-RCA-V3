@@ -1,6 +1,7 @@
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { formatDate, formatDateTime, formatTime, useCalendarPreference } from '@/lib/dates';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 import type { TrendPoint } from './historian-model';
 import { ChartFigure } from '@/features/ux-kit/chart-figure';
 
@@ -28,7 +29,7 @@ export function TrendChart({ series, timezone, multiDay }: TrendChartProps) {
   const value = (raw: unknown) => (typeof raw === 'number' ? number(raw, 4) : String(raw));
   const tick = (value: number) => (multiDay ? formatDate : formatTime)(new Date(value).toISOString(), options);
   const label = (value: unknown) => (typeof value === 'number' ? formatDateTime(new Date(value).toISOString(), options) : '');
-  const caption = `Step trend of the stored samples of ${series.length} signals (${series.map((entry) => entry.name).join(', ')}) on the plant clock.`;
+  const caption = `Step trend of the stored samples of ${plural(series.length, 'signal', 'signals', number)} (${series.map((entry) => entry.name).join(', ')}) on the plant clock.`;
   return (
     <ChartFigure caption={caption} chartClassName="h-80 w-full" testId="historian-trend-chart">
       <ResponsiveContainer>

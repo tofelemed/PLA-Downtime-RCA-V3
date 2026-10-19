@@ -43,7 +43,11 @@ async function loadPdfKit(): Promise<PdfKitConstructor> {
   return candidate as PdfKitConstructor;
 }
 
-const LINE_BOX = 12;
+/**
+ * A text box holds exactly one line (QA re-test N4: a box of two lines let a long cell wrap over the next
+ * row); the layout wraps cells itself, and anything still too long is cut with an ellipsis.
+ */
+const oneLineBox = (size: number) => Math.ceil(size * 1.5);
 
 class PdfKitSurface implements PdfSurface {
   private pending: Promise<void> = Promise.resolve();
@@ -83,7 +87,7 @@ class PdfKitSurface implements PdfSurface {
       .fillColor(style.color)
       .text(this.fonts.unicode ? text : latinOnly(text), x, y, {
         width: style.width,
-        height: LINE_BOX + style.size,
+        height: oneLineBox(style.size),
         align: style.align,
         lineBreak: false,
         ellipsis: true,

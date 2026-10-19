@@ -2,7 +2,7 @@ import { analysisHref } from '@/features/analysis-navigation/analysis-pages';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { preloadRoute } from '@/app/routes';
-import type { NavigationItem } from '@/features/auth/navigation-items';
+import { sidebarNameOf, type NavigationItem } from '@/features/auth/navigation-items';
 import { cn } from '@/lib/utils';
 
 export interface SidebarLinkProps {
@@ -48,7 +48,7 @@ export function SidebarLink({ item, collapsed, active, onNavigate }: SidebarLink
       )}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden />
-      {!collapsed && <span className="line-clamp-2 min-w-0 break-words leading-snug">{item.label ?? item.name}</span>}
+      {!collapsed && <span className="line-clamp-2 min-w-0 break-words leading-snug">{sidebarNameOf(item)}</span>}
     </NavLink>
   );
   if (!collapsed) return link;

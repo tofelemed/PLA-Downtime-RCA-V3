@@ -4,6 +4,13 @@ import { aggregateKindOf, GroupTerms } from '../../domain/kpi/aggregate';
 import { KpiLevel, KpiMetric } from '../../domain/kpi/kpi.types';
 import { weekKeySql } from '../../domain/calendar/week-start';
 import { ReportScope } from './report-scope';
+import {
+  PERIOD_UNKNOWN,
+  UNKNOWN_DENOMINATOR,
+  UNKNOWN_EXCLUDED,
+  UNKNOWN_NUMERATOR,
+  unknownTimeTerms,
+} from './unknown-time-sql';
 
 /**
  * Periods of the report (start in [from, to), tenant and units) with the run each one shows: the latest
@@ -111,6 +118,7 @@ interface TermsRow {
   provisional_rows: number;
   policies: number;
   reasons: string[] | null;
+  unknown_excluded: string | null;
 }
 
 export type GroupedTerms = Map<string | null, Map<KpiMetric, GroupTerms>>;
@@ -125,6 +133,7 @@ function toTerms(row: TermsRow): GroupTerms {
     provisionalRows: row.provisional_rows,
     policies: row.policies,
     reasons: row.reasons ?? [],
+    unknownExcluded: toDec(row.unknown_excluded),
   };
 }
 
@@ -158,6 +167,11 @@ export interface KpiGroupSpec {
   groupSql: string;
   metrics: readonly KpiMetric[];
   level: KpiLevel;
+  /**
+   * Owner decision 2026-10-19 "Unknown time is never available time" (period level only): the period's
+   * unknown state seconds are taken out of these metrics' terms (`UNKNOWN_TIME_TERMS`). Absent = stored terms.
+   */
+  excludeUnknownTime?: boolean;
 }
 
 /**
@@ -171,17 +185,22 @@ export async function kpiGroups(
 ): Promise<GroupedTerms> {
   const amounts = spec.metrics.filter((m) => aggregateKindOf(m) === 'amount');
   const join = spec.level === 'period' ? 'LEFT JOIN' : 'JOIN';
+  const unknown = unknownTimeTerms(
+    spec.excludeUnknownTime === true && spec.level === 'period',
+  );
   const rows: TermsRow[] = await manager.query(
     `${SHOWN}
      SELECT ${spec.groupSql} AS "group_key", m."metric", count(*)::int AS "rows",
             count(*) FILTER (WHERE ${COMPLETE})::int AS "complete",
-            (sum(k."numerator") FILTER (WHERE ${COMPLETE}))::text AS "numerator",
-            (sum(k."denominator") FILTER (WHERE ${COMPLETE}))::text AS "denominator",
+            (sum(${UNKNOWN_NUMERATOR}) FILTER (WHERE ${COMPLETE}))::text AS "numerator",
+            (sum(${UNKNOWN_DENOMINATOR}) FILTER (WHERE ${COMPLETE}))::text AS "denominator",
+            (sum(${UNKNOWN_EXCLUDED}) FILTER (WHERE ${COMPLETE}))::text AS "unknown_excluded",
             min(k."value")::text AS "min_value",
             count(*) FILTER (WHERE k."quality" = 'provisional')::int AS "provisional_rows",
             count(DISTINCT k."policy_id")::int AS "policies",
             array_remove(array_agg(DISTINCT k."reason") FILTER (WHERE k."value" IS NULL), NULL) AS "reasons"
-       FROM shown s CROSS JOIN unnest($6::kpi_metric[]) AS m("metric")
+       FROM shown s LEFT JOIN LATERAL ${PERIOD_UNKNOWN} ON true
+       CROSS JOIN unnest($6::kpi_metric[]) AS m("metric")
        ${join} "kpi_results" k ON k."run_id" = s."run_id" AND k."tenant_id" = $1 AND k."metric" = m."metric"
                                AND k."scope"->>'level' = $7
       GROUP BY 1, 2 ORDER BY 1, 2`,
@@ -192,6 +211,8 @@ export async function kpiGroups(
       amounts,
       OEE_FAMILY,
       RECONCILED_FAMILY,
+      unknown.numerator,
+      unknown.denominator,
     ],
   );
   const grouped: GroupedTerms = new Map();

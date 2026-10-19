@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useCreateRateImport } from '@/api/v2/queries/profile-commands';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { RefusalNotice } from '../components/refusal-notice';
@@ -22,6 +23,7 @@ const KINDS = [
 const LIST = '/planning?tab=profiles';
 const HEADER = 'unitCode,productCode,operatingMode,rate,timebase,effectiveFrom,effectiveTo';
 type ImportKind = 'budget' | 'forecast' | 'mpc';
+const START = { kind: 'forecast', externalId: '', csv: '' };
 
 /**
  * `/planning/profiles/import`: budget / forecast / MPC rates from a CSV file. The file is sent as text;
@@ -35,6 +37,7 @@ export function RateImportPage() {
   const [fileRef, setFileRef] = useState<string | undefined>(undefined);
   const [importId, setImportId] = useState<string | null>(null);
   const create = useCreateRateImport();
+  useUnsavedChangesGuard(hasUnsavedChanges({ kind, externalId, csv }, START, [create.isPending, importId !== null]));
   const reasonId = useId();
   const blocked = importBlockedReason({ externalId, csv });
   const fieldError = (key: string) => refusalOf(create.error)?.fieldErrors[key];

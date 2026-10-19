@@ -18,6 +18,7 @@ import { insertCase } from './rca-case-writer';
 import { RcaCaseSummaryV2View, toRcaCaseSummary } from './rca-case.view';
 import { findCase, invalidBody, RcaScope, scopeOf } from './rca-scope';
 import { assertCaseNotClosed } from './case-closed';
+import { publicEvidence } from './evidence-basis-text';
 
 export interface RcaLinkV2View {
   id: string;
@@ -52,7 +53,7 @@ export const toLinkView = (link: RcaCaseLink): RcaLinkV2View => ({
   linkedBy: link.linkedBy,
   linkedAt: link.linkedAt.toISOString(),
   reason: link.reason,
-  evidence: link.evidence,
+  evidence: publicEvidence(link.evidence),
 });
 
 /**

@@ -66,17 +66,17 @@ describe('G-4: the event list shows the shared RCA chip', () => {
   it('links a linked event to its investigation instead of a plain state badge', () => {
     cell(eventOf('downtime', 'linked', 'c1'));
     expect(screen.getByTestId('event-rca-chip')).toHaveAttribute('href', '/rca/c1');
-    expect(screen.getByTestId('event-rca-chip')).toHaveTextContent('RCA linked');
+    expect(screen.getByTestId('event-rca-chip')).toHaveTextContent('Investigation linked');
     expect(screen.queryByLabelText(/RCA state:/)).toBeNull();
   });
 
   it('shows nothing for an event without RCA and a plain chip when the view has no investigation id', () => {
     const { unmount } = cell(eventOf('downtime', 'none', null));
     expect(screen.queryByTestId('event-rca-chip')).toBeNull();
-    expect(screen.queryByText('No RCA')).toBeNull();
+    expect(screen.queryByText('No investigation')).toBeNull();
     unmount();
     cell(eventOf('downtime', 'completed', null));
     expect(screen.getByTestId('event-rca-chip').tagName).not.toBe('A');
-    expect(screen.getByTestId('event-rca-chip')).toHaveTextContent('RCA completed');
+    expect(screen.getByTestId('event-rca-chip')).toHaveTextContent('Investigation completed');
   });
 });

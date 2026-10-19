@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { EVALUATION_LABELS } from './standby-metrics-model';
+import { standbyEmptyText } from './standby-empty-text';
 
 interface ColumnInput {
   format: ReliabilityFormat;
@@ -75,7 +76,7 @@ export function StandbyRegistrationsTable({ format, canWrite }: { format: Reliab
         pager={page.pager}
         getRowKey={(r) => r.id}
         status={page.status}
-        empty={{ title: 'No standby equipment', text: 'Register spare pumps or standby compressors to measure failures on demand.' }}
+        empty={{ title: 'No standby equipment', text: standbyEmptyText(canWrite) }}
       />
       <RetireStandbyDialog row={retiring} assetLabel={labelOf} onClose={() => setRetiring(null)} />
     </>

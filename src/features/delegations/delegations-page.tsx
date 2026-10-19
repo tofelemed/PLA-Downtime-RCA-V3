@@ -16,6 +16,7 @@ import { SectionPage } from '@/features/admin/shared/section-page';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { DelegationForm } from './delegation-form';
+import { delegationsDescription } from './delegations-description';
 
 const SCOPE_LABELS: Readonly<Record<RoleDelegationView['scopeKind'], string>> = { tenant: 'Whole plant', site: 'One site', unit: 'One unit' };
 
@@ -78,7 +79,7 @@ function columns(timezone: string, mayRevoke: (d: RoleDelegationView) => boolean
 }
 
 function DelegationsScreen({ embedded }: { embedded: boolean }) {
-  const { canAdministerTenant, canDelegateApprovals } = useCapabilities();
+  const { canAdministerTenant, canDelegateApprovals, isSuperAdmin } = useCapabilities();
   const userId = useCurrentUserId();
   const { timezone } = usePlantTimezone();
   const [state, setState] = useState<'in_force' | 'all'>('in_force');
@@ -90,8 +91,8 @@ function DelegationsScreen({ embedded }: { embedded: boolean }) {
     <>
       <div className="space-y-4" data-testid="delegations">
         <SectionPage embedded={embedded}
-          title="Delegations"
-          description="Hand an approval role to a delegate for an absence (at most 90 days). The delegate approves like the role holder; ordinary users must remain independent; SuperAdmin may complete every stage personally."
+          title="Approval delegations"
+          description={delegationsDescription(isSuperAdmin)}
           actions={
             canDelegateApprovals && userId ? (
               <Button size="sm" data-testid="delegation-new" onClick={() => setAdding((v) => !v)}>

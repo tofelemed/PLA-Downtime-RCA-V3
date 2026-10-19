@@ -67,16 +67,31 @@ export function reasonOf(
   return labels.reasonCodes[reasonCodeId] ?? null;
 }
 
-/** `MECH-GEARBOX · Gearbox failure`, else the line's comment, else null. */
+/** The word printed for a stop-caused line whose stop has no reason yet (glossary "Not coded"). */
+export const NOT_CODED = 'Not coded';
+
+/** A line caused by a stop that carries no reason code (QA re-test N9: its reason cell was empty). */
+export function isUncoded(line: {
+  reasonCodeId: string | null;
+  causeEventId?: string | null;
+}): boolean {
+  return Boolean(line.causeEventId) && !line.reasonCodeId;
+}
+
+/** `MECH-GEARBOX · Gearbox failure`, else the line's comment, else "Not coded" for an uncoded stop, else null. */
 export function reasonText(
   labels: ExportLabels | null,
-  line: { reasonCodeId: string | null; reason?: string | null },
+  line: {
+    reasonCodeId: string | null;
+    reason?: string | null;
+    causeEventId?: string | null;
+  },
 ): string | null {
   const reason = reasonOf(labels, line.reasonCodeId);
   const coded = reason ? `${reason.code} · ${reason.name}` : null;
   const comment = line.reason ?? null;
   if (coded && comment) return `${coded} — ${comment}`;
-  return coded ?? comment;
+  return coded ?? comment ?? (isUncoded(line) ? NOT_CODED : null);
 }
 
 const OFFSET = /GMT([+-]\d{2}:\d{2})?/;

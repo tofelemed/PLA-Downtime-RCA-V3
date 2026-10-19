@@ -16,7 +16,7 @@ const { WorkflowBar } = await import('./workflow/workflow-bar');
 const { ReviewCorrection } = await import('./workflow/review-correction');
 const { PeriodGrid } = await import('./components/period-grid');
 const { derivationFlagLabel, effectiveDiffers, shareAsPercent } = await import('./model/candidate-derivation');
-const { allowsDirectRevision, monthLockKind } = await import('./model/month-lock');
+const { allowsDirectRevision, correctionDialogText, monthLockKind, proposalPathOpen } = await import('./model/month-lock');
 
 const DERIVATION: CandidateDerivationView = {
   basis: 'planning_rate', ledger: 'plan', segmentStart: '2026-10-08T06:00:00.000Z', segmentEnd: '2026-10-08T07:30:00.000Z', durationSeconds: 5400,
@@ -102,6 +102,16 @@ describe('candidate derivation and month lock (UX D-2, D-7)', () => {
     locked.unmount();
     wrap(<WorkflowBar view={{ ...APPROVED, monthClose: close('open', 'direct') }} shown="current" onShowCurrent={() => undefined} />);
     expect(screen.getByTestId('wf-revise')).toBeInTheDocument();
+  });
+
+  it('QA re-test: the correction dialog text follows the month state and the role', () => {
+    expect(correctionDialogText(close('locked', 'proposal'), false)).toMatch(/^The month is locked/);
+    expect(correctionDialogText(close('quantities_closed', 'none'), false)).toMatch(/^The month is closing/);
+    expect(correctionDialogText(close('locked', 'proposal'), false)).not.toContain('SuperAdmin');
+    expect(correctionDialogText(close('locked', 'proposal'), true)).toContain('As SuperAdmin you may also decide your own proposal.');
+    expect(proposalPathOpen({ monthClose: close('open', 'direct') })).toBe(false);
+    expect(proposalPathOpen({ monthClose: close('locked', 'proposal') })).toBe(true);
+    expect(proposalPathOpen({})).toBe(true);
   });
 
   it('Review & close offers "Propose a correction…" in a locked month and explains the pause in a closing one', async () => {

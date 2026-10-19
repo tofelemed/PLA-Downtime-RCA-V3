@@ -76,7 +76,7 @@ describe('month-close contracts retained during section restructuring', () => {
     // a row without its plan (an older server) says so and leads to Plans, never to an invented period link
     expect(within(pending).getAllByTestId('no-plan')[0]).toHaveTextContent('No approved plan covers this period');
     expect(screen.getByText(/First 50 of 70 shown/)).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Open my queue' })).toHaveAttribute('href', '/my-queue');
+    expect(screen.getByRole('link', { name: 'Open My work' })).toHaveAttribute('href', '/my-queue');
     await userEvent.click(screen.getByRole('tab', { name: 'Days' }));
     const days = screen.getByTestId('uncertified-days');
     expect(days.querySelectorAll('tbody tr')).toHaveLength(50); expect(days.querySelector('a')).toBeNull();

@@ -28,7 +28,8 @@ export interface RcaRecommendationItem {
   dueDate: string | null;
   status: string | null;
   /** decimal string, no currency */
-  estimatedCost: string | null;
+  /** absent for a caller without the money capability (operators, QA re-test 2026-10-19) */
+  estimatedCost?: string | null;
   /** read-only (item 5): the case's actions implementing this recommendation; never sent back */
   actions?: RcaRecommendationActionRef[];
 }
@@ -210,7 +211,8 @@ export interface ApprovedImpactView {
   quantities: Array<{ kind: string; uom: string | null; quantity: string }>;
   /** SME V8: valuation view of `values` (the policy default); absent on packages frozen before it (contribution margin) */
   view?: 'contribution_margin' | 'standard_cost' | 'economic_impact';
-  values: ApprovedImpactValueView[];
+  /** absent for a caller without the money capability (operators, QA re-test 2026-10-19) */
+  values?: ApprovedImpactValueView[];
   basis: string;
 }
 
@@ -341,10 +343,13 @@ export interface RcaActionView {
   /** the verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED) */
   verificationWindowLocked: boolean;
   baseline: RcaActionBaseline | null;
+  /** QA L11: the RCA policy version of the baseline's thresholds (frozen with them, else in force when computed); absent in older responses */
+  baselinePolicyVersion?: number | null;
   postAction: RcaPostAction | null;
   verificationStatus: 'not_planned' | 'pending' | 'due' | 'evaluated';
   verdict: RcaEffectivenessVerdict | null;
-  claimedAvoidedLoss: { amount: string; currency: string | null } | null;
+  /** absent for a caller without the money capability (operators, QA re-test 2026-10-19) */
+  claimedAvoidedLoss?: { amount: string; currency: string | null } | null;
   /** F-9: why, who and when, while the action is cancelled (null otherwise or when no reason was given) */
   cancelReason: string | null;
   cancelledBy: string | null;
@@ -371,7 +376,8 @@ export interface RcaActionTaskView {
 export interface RcaOutcomeView {
   rcaId: string;
   approvedHistoricalLoss: ApprovedImpactView;
-  claimedAvoided: Array<{ currency: string; amount: string; actions: number }>;
+  /** absent for a caller without the money capability (operators, QA re-test 2026-10-19) */
+  claimedAvoided?: Array<{ currency: string; amount: string; actions: number }>;
   realized: Array<RealizedView & { actionId: string; title: string; verdict: RcaEffectivenessVerdict | null }>;
   note: string;
 }

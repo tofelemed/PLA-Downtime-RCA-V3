@@ -48,7 +48,7 @@
       "kind": "state",
       "operation": "observe",
       "messageId": "Extruder1:gw-01-2026-10-11T05:00:00Z:1843",
-      "sourceObjectId": "proact/v1/HDPE/Polymer/Line1/Extruder1/state",
+      "sourceObjectId": "proact/v1/HDPE/Polymer/Line1/Extruder1/state@2026-10-11T06:07:14.187Z",
       "sourceRevision": "1843",
       "observedAt": "2026-10-11T06:07:14.187Z",
       "values": {

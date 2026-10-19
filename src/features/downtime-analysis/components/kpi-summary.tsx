@@ -1,13 +1,14 @@
-import { useState } from 'react';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useCalendarPreference } from '@/lib/dates';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
+import { useControllableView } from '../hooks/use-controllable-view';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
 import { ControllableSwitch } from './controllable-switch';
+import { DataCoverageNote } from './data-coverage-note';
 import { ReportCard } from './report-card';
 
 const QUALITY_LABELS: Readonly<Record<string, string>> = {
@@ -25,7 +26,7 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
  */
 export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundleResult; compact?: boolean }) {
   const summary = bundle.data?.data.summary;
-  const [controllable, setControllable] = useState(false);
+  const [controllable, setControllable] = useControllableView();
   const headline = new Set(['downtime_total', 'stop_count', 'scheduled_availability', 'coded_downtime_ratio']);
   const shown = compact ? SUMMARY_TILES.filter((tile) => headline.has(tile.metric)) : SUMMARY_TILES;
   const tiles = controllable ? [...shown, CONTROLLABLE_TILE] : shown;
@@ -38,12 +39,7 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
       showMeta={false}
       actions={<ControllableSwitch checked={controllable} onChange={setControllable} />}
     >
-      <ClassNote scheduleClass={bundle.data?.data.scheduleClass ?? null} />
-      {hasUnknownTime(summary) && (
-        <Alert className="mb-2" data-testid="unknown-lower-bound">
-          <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
-        </Alert>
-      )}
+      <SummaryNotes bundle={bundle} />
       <dl className={compact ? 'grid grid-cols-2 gap-3 lg:grid-cols-4' : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5'}>
         {tiles.map((tile) => (
           <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
@@ -53,6 +49,22 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
         <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">{SUMMARY_TILES.filter((tile) => !headline.has(tile.metric)).map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}</dl>
       </details>}
     </ReportCard>
+  );
+}
+
+/** What the figures stand on: class filter, state data coverage and no-plan periods, unclassed stop time. */
+function SummaryNotes({ bundle }: { bundle: DowntimeBundleResult }) {
+  const data = bundle.data?.data;
+  return (
+    <>
+      <ClassNote scheduleClass={data?.scheduleClass ?? null} />
+      <DataCoverageNote coverage={data?.dataCoverage} />
+      {hasUnknownTime(data?.summary) && (
+        <Alert className="mb-2" data-testid="unknown-lower-bound">
+          <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
+        </Alert>
+      )}
+    </>
   );
 }
 

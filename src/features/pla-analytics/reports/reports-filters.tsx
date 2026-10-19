@@ -3,11 +3,13 @@ import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-se
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { CHOSEN_DATES, type AnalyticsScope } from '../model/analytics-scope';
 import { PlantDaysInput } from '../components/plant-days-input';
-import { revisionSelectionLabel } from '../model/links';
 import { SELECT_CLASS } from '../components/analytics-filters';
+import { REVISION_OPTIONS } from './revision-options';
 
 export interface ReportsFiltersProps {
   scope: AnalyticsScope;
+  /** `HH:mm`: the plant's production-day start */
+  dayStart: string;
   onChange: (patch: Partial<AnalyticsScope>) => void;
 }
 
@@ -16,7 +18,7 @@ export interface ReportsFiltersProps {
  * start on (not when rows were created; Persian or Gregorian per the plant setting), and the revision
  * selector — approved only, or approved else the latest draft (provisional).
  */
-export function ReportsFilters({ scope, onChange }: ReportsFiltersProps) {
+export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProps) {
   const env = useEventHubEnv();
   const setDates = (range: { from: string; to: string }) => onChange({ ...range, windowLabel: CHOSEN_DATES });
   return (
@@ -29,7 +31,7 @@ export function ReportsFilters({ scope, onChange }: ReportsFiltersProps) {
         onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
         commitOnClose
       />
-      <PlantDaysInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={env.timezone} onChange={setDates} />
+      <PlantDaysInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={env.timezone} dayStart={dayStart} onChange={setDates} />
       <div className="space-y-1">
         <Label htmlFor="report-revision">Revisions</Label>
         <select
@@ -39,8 +41,8 @@ export function ReportsFilters({ scope, onChange }: ReportsFiltersProps) {
           value={scope.approvedOnly ? 'approved' : 'shown'}
           onChange={(e) => onChange({ approvedOnly: e.target.value === 'approved' })}
         >
-          <option value="shown">{revisionSelectionLabel(false)}</option>
-          <option value="approved">{revisionSelectionLabel(true)}</option>
+          <option value="approved">{REVISION_OPTIONS.approved}</option>
+          <option value="shown">{REVISION_OPTIONS.shown}</option>
         </select>
       </div>
     </div>

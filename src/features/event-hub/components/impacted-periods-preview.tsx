@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { usePeriodSummaries } from '@/api/v2/queries/period-overview';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
+import type { PeriodSummaryView } from '@/api/v2/types/period-overview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -8,9 +9,14 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { GRID_WORKFLOW_LABELS, GRID_WORKFLOW_TONES, labelOf } from '@/features/ux-kit/labels';
 import { toneOf } from '@/features/ux-kit/status-tone';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
-import { formatOperationalDate, formatTime, useCalendarPreference } from '@/lib/dates';
+import { formatTime, useCalendarPreference } from '@/lib/dates';
+import { NoPlanLink } from '@/features/month-close/components/no-plan-notice';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { periodLabel } from '../model/period-label';
 import { PeriodLink } from './period-link';
+
+/** Owner decision 2026-10-19: a period without a plan and without accounting reads "No approved plan covers this period". */
+const withoutPlan = (period: PeriodSummaryView) => period.planId === null && period.workflowState === 'none';
 
 export interface ImpactedPeriodsPreviewProps {
   unitId: string;
@@ -45,13 +51,17 @@ export function ImpactedPeriodsPreview({ unitId, from, to }: ImpactedPeriodsPrev
         <ul className="space-y-1">
           {periods.map((period) => (
             <li key={period.periodId} className="flex flex-wrap items-center gap-2 text-xs" data-testid="impacted-period">
-              <PeriodLink periodId={period.periodId} planId={period.planId}>
-                {formatOperationalDate(period.localDate, preference)} {period.shiftName ?? ''}
+              <PeriodLink periodId={period.periodId} planId={period.planId} approved={period.workflowState === 'approved'}>
+                {periodLabel(period.localDate, period.shiftName, preference)}
               </PeriodLink>
               {time(period.utcStart)} – {time(period.utcEnd)}
-              <StatusBadge tone={toneOf(GRID_WORKFLOW_TONES, period.workflowState)} data-testid="impacted-period-workflow" data-state={period.workflowState}>
-                {labelOf(GRID_WORKFLOW_LABELS, period.workflowState)}
-              </StatusBadge>
+              {withoutPlan(period) ? (
+                <NoPlanLink />
+              ) : (
+                <StatusBadge tone={toneOf(GRID_WORKFLOW_TONES, period.workflowState)} data-testid="impacted-period-workflow" data-state={period.workflowState}>
+                  {labelOf(GRID_WORKFLOW_LABELS, period.workflowState)}
+                </StatusBadge>
+              )}
               {period.isExcluded && <Badge variant="secondary">Excluded</Badge>}
             </li>
           ))}

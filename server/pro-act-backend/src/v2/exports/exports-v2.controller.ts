@@ -1,3 +1,4 @@
+import { MoneyOnly } from '../../auth/money/money.decorators';
 import { ReadOnlyAllowed } from '../../auth/decorators/read-only-allowed.decorator';
 import {
   Body,
@@ -75,6 +76,8 @@ export class ExportsV2Controller {
   ) {}
 
   @ReadOnlyAllowed()
+  // QA re-test 2026-10-19: both reports carry value columns (403 MONEY_NOT_VISIBLE for operators)
+  @MoneyOnly()
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @Idempotent()
@@ -171,6 +174,7 @@ export class ExportsV2Controller {
     return toExportView(await this.requests.cancel(ctx, id));
   }
 
+  @MoneyOnly()
   @Get(':id/download')
   @ApiProduces('text/csv', 'application/pdf')
   @ApiOperation({

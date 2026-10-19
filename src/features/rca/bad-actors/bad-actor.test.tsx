@@ -18,7 +18,7 @@ const json = (status: number, body: unknown) => new Response(JSON.stringify(body
 
 const REPORT: BadActorReportView = {
   month: '2027-03', calendar: 'gregorian', from: '2027-01-01T00:00:00.000Z', to: '2027-04-01T00:00:00.000Z', windowDays: 90, groupBy: 'asset', rankBy: 'quantity', limit: 5,
-  view: 'economic_impact', currency: 'USD', uom: 't', valuationStatus: 'approved', approvedPeriods: 3, periods: 3, basis: 'approved plan lines',
+  view: 'economic_impact', currency: 'USD', uom: 't', valuationStatus: 'approved', approvedPeriods: 3, periods: 3, uncoveredPeriods: 0, basis: 'approved plan lines',
   items: [
     {
       rank: 1, key: 'a1', assetId: 'a1', assetCode: 'EXT-1', assetName: 'Extruder', unitId: 'u1', failureMode: null, stops: 10, downtimeSeconds: '9000',
@@ -85,12 +85,14 @@ describe('CA8 bad-actor review', () => {
     expect(request?.searchParams.get('month')).toBe('2027-03');
     expect(request?.searchParams.get('currency')).toBe('USD');
     expect(screen.getAllByTestId('bad-actor-asset').map((cell) => cell.dataset.key)).toEqual(['a1', 'p1']);
+    expect(screen.getAllByTestId('bad-actor-asset')[1].getAttribute('href')).toContain('assets=p1');
+    expect(screen.getByTestId('bad-actor-window').textContent).toContain('(plant dates, both included)');
     const values = screen.getAllByTestId('bad-actor-value');
     expect(values[0].textContent).toMatch(/provisional exchange rate/);
     expect(values[1].textContent).toContain('Not valued');
     expect(screen.getAllByTestId('bad-actor-trigger').map((cell) => cell.dataset.state)).toEqual(['over_threshold', 'fired']);
     expect(screen.getByTestId('event-rca-chip').getAttribute('href')).toBe('/rca/c9');
-    expect(screen.getByTestId('event-rca-chip').textContent).toContain('RCA linked');
+    expect(screen.getByTestId('event-rca-chip').textContent).toContain('Investigation linked');
     fireEvent.change(screen.getByLabelText('Rank by'), { target: { value: 'stops' } });
     await waitFor(() => expect(urls.some((url) => url.searchParams.get('rankBy') === 'stops')).toBe(true));
   });

@@ -17,13 +17,14 @@ export interface CodeHeaderActionsProps {
 
 /** Header actions of a code page: valuation link (impact codes), new sub-code, retire. */
 export function CodeHeaderActions({ library, code }: CodeHeaderActionsProps) {
-  const { canWriteCodes } = useCapabilities();
+  const { canWriteCodes, canViewMoney } = useCapabilities();
   const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const canAddChild = canWriteCodes && code.active && LIBRARIES[library].hierarchical && canHaveChildren(code);
   return (
     <>
-      {library === 'impact-codes' && <ValuationLink impactCodeId={code.id} costPerHour={code.costPerHour ?? null} />}
+      {/* QA re-test: valuation rates and the cost per hour are money (403 / left out for operators) */}
+      {library === 'impact-codes' && canViewMoney && <ValuationLink impactCodeId={code.id} costPerHour={code.costPerHour ?? null} />}
       {canAddChild && (
         <Button variant="outline" onClick={() => setCreating(true)} data-testid="code-new-child">
           <ActionIcon.add aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageGate } from '@/features/admin/shared/page-gate';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -12,12 +12,13 @@ const Delegations = lazy(() => import('@/features/delegations/delegations-page')
 
 /** One workspace for membership, effective permissions and temporary approval-role access. */
 export function UserManagementPage() {
-  const { canAdministerTenant, canDelegateApprovals } = useCapabilities();
+  const { canUseUserManagement, canDelegateApprovals } = useCapabilities();
   const [params, setParams] = useSearchParams();
-  const tabs = [
-    ...(canAdministerTenant ? [{ value: 'users', label: 'Users' }, { value: 'permissions', label: 'Permissions' }] : []),
-    ...(canDelegateApprovals ? [{ value: 'delegations', label: 'Delegations' }] : []),
-  ];
+  // QA re-test 2026-10-19: an approval-role holder who is not an administrator has only their delegations
+  if (!canUseUserManagement && canDelegateApprovals) return <Navigate replace to="/delegations" />;
+  const tabs = canUseUserManagement
+    ? [{ value: 'users', label: 'Users' }, { value: 'permissions', label: 'Permissions' }, { value: 'delegations', label: 'Delegations' }]
+    : [];
   const active = tabs.find((t) => t.value === params.get('tab'))?.value ?? tabs[0]?.value ?? 'users';
   const select = (tab: string) => setParams((current) => {
     const next = new URLSearchParams(current);

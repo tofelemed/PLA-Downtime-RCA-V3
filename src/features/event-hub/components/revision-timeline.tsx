@@ -1,6 +1,8 @@
 import type { EventRevisionView, ProductionEventHistoryView } from '@/api/v2/types/events';
 import {
   actorText,
+  humanize,
+  SERVICE_LABELS,
   labelOf,
   OEE_COMPONENT_LABELS,
   REVISION_KIND_LABELS,
@@ -11,13 +13,25 @@ import { usePlantFormat } from '../hooks/use-plant-format';
 import { revisionNoteText } from '../model/revision-notes';
 import { useEventHubEnv } from '../use-event-hub-env';
 
+/** A system revision of a named service (data repair, split / merge, …): QA L18. */
+function systemWork(revision: EventRevisionView): string | null {
+  if (revision.kind !== 'system' || revision.actorKind === 'user' || !revision.actorSource) return null;
+  const label = revision.actorSource in SERVICE_LABELS ? SERVICE_LABELS[revision.actorSource] : humanize(revision.actorSource);
+  return label ? label.charAt(0).toUpperCase() + label.slice(1) : null;
+}
+
+/** "Data repair by the system", never "System change by System (data repair)". */
+const kindText = (revision: EventRevisionView) => systemWork(revision) ?? labelOf(REVISION_KIND_LABELS, revision.kind);
+
 /** Revisions (who changed what, why) and coding history, newest first (DT11 audit trail). */
 export function RevisionTimeline({ history, sourceName }: { history: ProductionEventHistoryView; sourceName?: string | null }) {
   const env = useEventHubEnv();
   const users = useUserNames([...history.revisions.map((r) => r.actorId), ...history.coding.map((c) => c.authorId)]);
   const { dateTime } = usePlantFormat();
   const actorOf = (revision: EventRevisionView) =>
-    actorText({ kind: revision.actorKind, id: revision.actorId, source: revision.actorSource ?? (revision.actorKind === 'connector' ? sourceName : null) }, users.nameOf);
+    systemWork(revision)
+      ? 'the system'
+      : actorText({ kind: revision.actorKind, id: revision.actorId, source: revision.actorSource ?? (revision.actorKind === 'connector' ? sourceName : null) }, users.nameOf);
   const revisions = [...history.revisions].sort((a, b) => b.revision - a.revision);
   const coding = [...history.coding].sort((a, b) => b.revision - a.revision);
   return (
@@ -27,7 +41,7 @@ export function RevisionTimeline({ history, sourceName }: { history: ProductionE
         <ol className="space-y-1 border-l pl-3" data-testid="revision-timeline">
           {revisions.map((revision) => (
             <li key={revision.id} className="text-xs">
-              <span className="font-medium">Revision {revision.revision}</span> · {labelOf(REVISION_KIND_LABELS, revision.kind)} by <span data-testid="revision-actor">{actorOf(revision)}</span> ·{' '}
+              <span className="font-medium">Revision {revision.revision}</span> · {kindText(revision)} by <span data-testid="revision-actor">{actorOf(revision)}</span> ·{' '}
               {dateTime(revision.createdAt)}
               {revision.changeReason && <span className="block text-muted-foreground" data-testid="revision-note">{revisionNoteText(revision.changeReason)}</span>}
             </li>

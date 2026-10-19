@@ -3,6 +3,8 @@ import { useValuationPolicies, useValuationPolicy } from '@/api/v2/queries/valua
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { selfApprovalNote } from '@/features/ux-kit/format/self-approval-note';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { inForceBasis } from '../model/policy-form';
 import { PolicyForm } from './policy-form';
 
@@ -14,6 +16,7 @@ const BACK = { to: '/finance?tab=policies', label: 'Valuation policy' };
  */
 export function PolicyNewPage() {
   const navigate = useNavigate();
+  const { isSuperAdmin } = useCapabilities();
   const [params] = useSearchParams();
   const fromId = params.get('from');
   const source = useValuationPolicy(fromId);
@@ -23,7 +26,7 @@ export function PolicyNewPage() {
   const waiting = fromId !== null ? !source.data : policies.query.isLoading;
   return (
     <Page>
-      <PageHeader title={title} back={BACK} description="Approve the new version before it values losses. SuperAdmin may approve their own version." />
+      <PageHeader title={title} back={BACK} description={`Approve the new version before it values losses.${selfApprovalNote(isSuperAdmin, 'version')}`} />
       {waiting ? (
         <DataState state={fromId !== null ? dataStateOf(source) : 'loading'} error={source.error} onRetry={() => void source.refetch()} />
       ) : (

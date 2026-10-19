@@ -7,9 +7,13 @@ import {
 } from '../../common/context/request-context';
 import { badActorTrigger } from '../../domain/rca/bad-actor';
 import { isCriticalAsset, parseRcaPolicy } from '../../domain/rca/rca-policy';
-import { DefaultBasis } from '../../domain/valuation/valuation.types';
+import {
+  DefaultBasis,
+  ValuationViewSource,
+} from '../../domain/valuation/valuation.types';
 import { AccountingPoliciesService } from '../../periods/accounting-policies.service';
 import { ProductionPeriod } from '../../periods/entities/production-period.entity';
+import { singleView } from '../../rca-case/approved-snapshot-view';
 import { defaultValuationBasis } from '../../valuation/valuation-policy.store';
 import { AnalyticsResponse } from '../common/response';
 import {
@@ -26,6 +30,8 @@ import {
   firings,
   modeSeconds,
   reviewWindow,
+  frozenViewsOfScope,
+  uncoveredPeriodCount,
 } from './bad-actor-sql';
 import { BadActorReportQueryDto } from './bad-actor-v2.dto';
 import { reportEnvelope } from './kpi-reports-v2.view';
@@ -58,26 +64,38 @@ export interface BadActorReportView {
   groupBy: string;
   rankBy: string;
   limit: number;
-  /** SME V8: valuation view of the value column (the policy's default basis) */
+  /**
+   * SME V8: valuation view of the value column — the view frozen when the window's periods were approved;
+   * the policy's default view only when none froze one or they froze different ones (`viewSource`)
+   */
   view: DefaultBasis;
+  /** where `view` comes from (additive) */
+  viewSource: ValuationViewSource;
   currency: string;
   /** unit of measure the quantity ranking compares in (the one with the most approved loss) */
   uom: string | null;
   valuationStatus: 'approved' | 'provisional';
   approvedPeriods: number;
   periods: number;
+  /**
+   * QA re-test N7: of the periods not approved, those no approved plan covers ("No approved plan covers
+   * this period"); they are not waiting for approval (additive)
+   */
+  uncoveredPeriods: number;
   basis: string;
   items: BadActorItemView[];
 }
 
+/** How the review is built, in words shown under the table (QA re-test: sentence case, no rule codes). */
 const BASIS =
-  'approved plan lines of approved periods starting in the window, attributed to their cause event’s asset ' +
-  '(and failure mode); stops = unplanned stops and failure work orders starting in the window; trigger = ' +
-  'the CA8 cumulative same-mode downtime rule of the asset’s RCA policy';
+  'Lost quantity and value: approved plan loss lines of approved periods starting in the window, ' +
+  'attributed to the asset (and failure mode) of their cause stop. Stops: unplanned stops and failure ' +
+  'work orders starting in the window. Trigger: the cumulative same-mode downtime rule of the asset’s ' +
+  'RCA policy';
 
 /**
  * CA8 monthly bad-actor review (SME 14 Oct 2026): the top assets or asset failure modes of a rolling
- * window by approved lost quantity, approved value (policy default view) or stop count, with the
+ * window by approved lost quantity, approved value (the view the periods were approved in) or stop count, with the
  * cumulative bad-actor trigger state per asset. Tenant and units from identity; read-only.
  */
 @Injectable()
@@ -115,16 +133,18 @@ export class BadActorReportV2Service {
       to: window.to.toISOString(),
       unitIds: query.unitIds,
     });
+    const frozen = singleView(await frozenViewsOfScope(manager, scope));
     const request = {
       group: query.groupBy ?? 'asset',
       rank: query.rankBy ?? 'quantity',
       limit: query.limit ?? 5,
-      view: await defaultValuationBasis(manager, tenantId),
+      view: frozen ?? (await defaultValuationBasis(manager, tenantId)),
       currency: query.currency ?? 'USD',
     };
     const { figures, uom } = await badActorFigures(manager, scope, request);
     const items = await this.items(manager, scope, figures);
     const stats = await periodStats(manager, scope);
+    const uncoveredPeriods = await uncoveredPeriodCount(manager, scope);
     const data: BadActorReportView = {
       month: query.month,
       calendar: window.calendar,
@@ -135,11 +155,13 @@ export class BadActorReportV2Service {
       rankBy: request.rank,
       limit: request.limit,
       view: request.view,
+      viewSource: frozen ? 'approved_snapshot' : 'policy_default',
       currency: request.currency,
       uom,
       valuationStatus: valuationStatusOf(stats),
       approvedPeriods: stats.approved,
       periods: stats.periods,
+      uncoveredPeriods,
       basis: BASIS,
       items,
     };

@@ -80,9 +80,16 @@ describe('QA M4: exports', () => {
   });
 
   it('the actions CSV uses labels, names and the plant day', () => {
-    const [header, line] = actionsCsv(CASE, [ACTION], NAMES, 'Asia/Tehran').split('\n');
+    const [header, line] = actionsCsv(CASE, [ACTION], NAMES, { timeZone: 'Asia/Tehran', money: true }).split('\n');
     expect(header).toBe('"Title","Type","Status","Owner","Due date (Asia/Tehran)","Recommendation","Completed (UTC)","Verification","Claimed avoided loss","Currency","Cancel reason"');
     expect(line).toBe('"Add a lube-oil check","Procedure change","Done","name:leila","2026-10-20","Revise inspection","2026-10-18T10:00:00Z","Not enough evidence yet","4200","USD",""');
+  });
+
+  it('QA re-test N1: without the money capability the actions CSV has no claim columns', () => {
+    const [header, line] = actionsCsv(CASE, [ACTION], NAMES, { timeZone: 'Asia/Tehran', money: false }).split('\n');
+    expect(header).toBe('"Title","Type","Status","Owner","Due date (Asia/Tehran)","Recommendation","Completed (UTC)","Verification","Cancel reason"');
+    expect(line).not.toContain('4200');
+    expect(line).not.toContain('USD');
   });
 
   it('the evidence CSV uses display labels, observed time, asset and file count', () => {

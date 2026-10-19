@@ -13,6 +13,7 @@ import type { LossTreeGroupBy, LossTreeMetricParam, TrendGroup } from '@/api/v2/
 import { HOUR_MS, rollingWindow } from '@/api/v2/queries/time-window';
 import { DEFAULT_PRESET } from '@/features/downtime-analysis/model/downtime-filters';
 import { relativeWindowOf } from '@/features/event-hub/model/relative-window';
+import { snapToProductionDays } from './window-range';
 
 /** Five views (UI guidelines §2: at most 5 tabs); the former eight are sections inside them. */
 export const PLA_TABS = ['waterfall', 'losses', 'trends', 'reconciliation', 'oee'] as const;
@@ -71,12 +72,40 @@ const oneOf = <T extends string>(values: readonly T[], value: string | null, fal
 
 /** The label of a window picked by its dates (deep links without a rolling key read the same). */
 export const CHOSEN_DATES = 'Chosen dates';
+/** URL value of a window picked by its dates (QA Reports N1: the URL carries machine values, not label text). */
+export const CHOSEN_DATES_KEY = 'dates';
+
+/** `window=` of the URL: the rolling key (`7d`), `dates`, or — for a label of another page — the label itself. */
+export function windowParamOf(windowLabel: string): string {
+  if (windowLabel === CHOSEN_DATES) return CHOSEN_DATES_KEY;
+  return relativeWindowOf(windowLabel)?.key ?? windowLabel;
+}
+
+/** The label of a URL `window=` value; links written before the keys carried the label text, read the same. */
+function windowLabelOf(name: string | null): string {
+  if (name === null || name === CHOSEN_DATES_KEY) return CHOSEN_DATES;
+  return relativeWindowOf(name)?.label ?? name;
+}
 
 const isInstant = (value: string | null): value is string => value !== null && !Number.isNaN(Date.parse(value));
 
 /** Page-level defaults: management reports show approved figures unless the user chooses otherwise (SME R12). */
 export interface ScopeDefaults {
   approvedByDefault?: boolean;
+  /**
+   * Reports (DECISIONS 2026-10-19 "Production-day boundaries"): a rolling window covers whole production
+   * days, the last `n` that ended by its end, so a report never starts or ends at the current clock time.
+   */
+  productionDays?: { timeZone: string; dayStart: string };
+}
+
+const DAY_HOURS = 24;
+
+/** A rolling window as whole production days (Reports), else unchanged. */
+function snapped(range: { from: string; to: string }, hours: number, defaults: ScopeDefaults): { from: string; to: string } {
+  const days = defaults.productionDays;
+  if (!days) return range;
+  return snapToProductionDays(range.to, Math.max(1, Math.round(hours / DAY_HOURS)), days.timeZone, days.dayStart) ?? range;
 }
 
 /** `approved=1` / `approved=0` in the URL, else the page default. */
@@ -91,21 +120,24 @@ function approvedOf(params: URLSearchParams, defaults: ScopeDefaults): boolean {
  * The window of the URL: explicit bounds, else a rolling key of the Downtime / Event Hub links
  * (`window=24h`, or its label) resolved at `now`, else the last 7 days ending `now`.
  */
-function windowOf(params: URLSearchParams, now: number): Pick<AnalyticsScope, 'from' | 'to' | 'windowLabel'> {
+function windowOf(params: URLSearchParams, now: number, defaults: ScopeDefaults): Pick<AnalyticsScope, 'from' | 'to' | 'windowLabel'> {
   const from = params.get('from');
   const to = params.get('to');
   const name = params.get('window');
   const rolling = relativeWindowOf(name);
-  if (isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to)) return { from, to, windowLabel: rolling?.label ?? name ?? CHOSEN_DATES };
+  if (isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to)) {
+    const bounds = rolling ? snapped({ from, to }, rolling.hours, defaults) : { from, to };
+    return { ...bounds, windowLabel: windowLabelOf(name) };
+  }
   const preset = rolling ?? DEFAULT_PRESET;
-  return { ...presetWindowOf(preset.hours, now), windowLabel: preset.label };
+  return { ...snapped(presetWindowOf(preset.hours, now), preset.hours, defaults), windowLabel: preset.label };
 }
 
 /** Scope from the URL; a missing or broken window falls back to the last 7 days ending `now`. */
 export function parseScope(params: URLSearchParams, now: number, defaults: ScopeDefaults = {}): AnalyticsScope {
   return {
     unitIds: (params.get('units') ?? '').split(',').filter(Boolean).sort(),
-    ...windowOf(params, now),
+    ...windowOf(params, now, defaults),
     approvedOnly: approvedOf(params, defaults),
     ledger: oneOf(['plan', 'capacity'] as const, params.get('ledger'), 'plan'),
     policy: oneOf(['operational', 'reconciled'] as const, params.get('policy'), 'operational'),
@@ -147,7 +179,7 @@ export const SCOPE_PARAMS: ReadonlySet<string> = new Set(['from', 'to', 'window'
 
 /** URL form of the scope (defaults left out, so equal scopes give equal URLs). */
 export function scopeToParams(scope: AnalyticsScope, defaults: ScopeDefaults = {}): URLSearchParams {
-  const params = new URLSearchParams({ from: scope.from, to: scope.to, window: scope.windowLabel });
+  const params = new URLSearchParams({ from: scope.from, to: scope.to, window: windowParamOf(scope.windowLabel) });
   if (scope.unitIds.length > 0) params.set('units', [...scope.unitIds].sort().join(','));
   if (scope.approvedOnly !== (defaults.approvedByDefault ?? false)) params.set('approved', scope.approvedOnly ? '1' : '0');
   for (const [key, name] of Object.entries(PARAM) as Array<[keyof AnalyticsScope, string]>) {

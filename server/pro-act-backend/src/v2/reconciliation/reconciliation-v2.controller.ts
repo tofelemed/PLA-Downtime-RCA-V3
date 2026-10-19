@@ -1,3 +1,4 @@
+import { MoneyFields } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -276,6 +277,8 @@ export class ReconciliationV2Controller {
     return this.reads.reversible(ctx, id, query);
   }
 
+  // QA re-test 2026-10-19: a proposal's `before.values` are loss values per currency (left out for operators)
+  @MoneyFields('values')
   @Get(':id/change-proposals')
   @ApiOperation({
     summary:

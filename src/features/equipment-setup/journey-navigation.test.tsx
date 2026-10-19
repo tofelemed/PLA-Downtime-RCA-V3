@@ -60,13 +60,13 @@ describe('ordered equipment setup navigation', () => {
     show();
     fireEvent.click(screen.getByLabelText('Phase 2: Define production rules'));
     fireEvent.change(screen.getByLabelText('Existing production unit (optional)'), { target: { value: 'unit-a' } });
-    open('Codes and rules');
+    open('Codes & rules');
     expect(screen.getByRole('complementary')).toHaveTextContent('Define production rules');
     fireEvent.click(screen.getByRole('button', { name: 'Next setup step' }));
     expect(screen.getByTestId('location')).toHaveTextContent('/master-data/stop-policy?unitId=unit-a');
     fireEvent.click(screen.getByRole('link', { name: 'All setup steps' }));
     expect(screen.getByLabelText('Phase 2: Define production rules').closest('details')).toHaveAttribute('open');
-    expect(screen.getByRole('button', { name: 'Continue: Stop-engine and plan policy' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Continue: Stop and plan policy' })).toBeEnabled();
     const position = (id: string) => SETUP_STEPS.findIndex((step) => step.id === id);
     expect(position('codes')).toBeGreaterThan(position('products'));
     expect(position('codes')).toBeLessThan(position('stop-policy'));
@@ -107,7 +107,7 @@ describe('ordered equipment setup navigation', () => {
     expect(readJourney(journeyKey('tenant-a', 'user-1'))?.unitId).toBe('unit-a');
   });
   it('retains role boundaries and rejects malformed resume state', () => {
-    actAs('viewer'); show(); fireEvent.change(screen.getByLabelText('Existing production unit (optional)'), { target: { value: 'unit-a' } }); open('Codes and rules');
+    actAs('viewer'); show(); fireEvent.change(screen.getByLabelText('Existing production unit (optional)'), { target: { value: 'unit-a' } }); open('Codes & rules');
     expect(screen.getByTestId('location')).toHaveTextContent('/master-data/codes-rules');
     // A viewer cannot access unit administration even by navigating through the guide.
     fireEvent.click(screen.getByRole('link', { name: 'All setup steps' }));

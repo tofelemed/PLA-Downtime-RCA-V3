@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import type { RcaActionView } from '@/api/v2/types/rca';
 import { currencyDigits } from '@/features/display-currency/money-format';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
@@ -23,7 +24,9 @@ export function ActionOverdueBadge({ action }: { action: Pick<RcaActionView, 'du
 export function ActionMeta({ action }: { action: RcaActionView }) {
   const users = useUserNames([action.ownerId, action.verifierId].filter((id): id is string => Boolean(id)));
   const { day } = useRcaFormat();
-  const claim = action.claimedAvoidedLoss;
+  // QA re-test N1: the claim is money (the server leaves it out for operators as well)
+  const { canViewMoney } = useCapabilities();
+  const claim = canViewMoney ? action.claimedAvoidedLoss : null;
   return (
     <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-muted-foreground" data-testid="action-meta">
       <span>

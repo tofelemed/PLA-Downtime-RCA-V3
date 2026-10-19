@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AnalyticsScope } from './analytics-scope';
-import { breakdownModesFor, lossMetricsFor, scopeForMoneyAccess } from './money-access';
+import { PLA_PAGES } from '@/features/analysis-navigation/analysis-pages';
+import { breakdownModesFor, lossMetricsFor, plaPagesFor, scopeForMoneyAccess } from './money-access';
 
 describe('PLA without money (owner 19 Oct 2026: operators)', () => {
   it('offers only the lost quantity metric', () => {
@@ -18,5 +19,10 @@ describe('PLA without money (owner 19 Oct 2026: operators)', () => {
     const modes = [{ value: 'tree' }, { value: 'opportunities' }];
     expect(breakdownModesFor(modes, false)).toEqual([{ value: 'tree' }]);
     expect(breakdownModesFor(modes, true)).toEqual(modes);
+  });
+
+  it('QA re-test N1: the page tabs leave out Loss valuation without money', () => {
+    expect(plaPagesFor(PLA_PAGES, false).map((page) => page.key)).not.toContain('valuation');
+    expect(plaPagesFor(PLA_PAGES, true).map((page) => page.key)).toContain('valuation');
   });
 });

@@ -3,6 +3,11 @@ import { plus } from './support/accounting-world';
 import { ApiError } from './support/plan-world';
 import { addCodedRootCause } from './support/rca-causes';
 import {
+  expectBaselinePolicyVersion,
+  expectHistoryNamesItems,
+  expectSnapshotBasis,
+} from './support/rca-retest-round3';
+import {
   closedCaseWrites,
   expectRepairHistory,
   expectSweepSkips,
@@ -72,6 +77,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
         )
         .expect(200);
       expect((changed.body as CaseBody).evidence).toEqual([]);
+      await expectHistoryNamesItems(env, caseId);
       const stale = await env
         .patch(`rcas/${caseId}`, { title: 'x' }, `"${before.rowVersion}"`)
         .expect(412);
@@ -255,6 +261,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
         criteria: { requiredReduction: 0.5, minExposureHours: 720 },
       });
       actionId = body.id;
+      await expectBaselinePolicyVersion(env, caseId, actionId);
     });
 
     it('CA2: verification after the window gives a verdict; 15 days of run time is insufficient evidence', async () => {
@@ -287,19 +294,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
         realized: Array<{ verdict: string }>;
       };
       expect(outcome.approvedHistoricalLoss.lines).toBeGreaterThan(0);
-      const [frozen] = await env.rows<{ view: string }>(
-        `SELECT evidence -> 'approvedImpact' ->> 'view' AS view FROM rca_case_links
-          WHERE rca_id = $1 AND evidence -> 'approvedImpact' ->> 'view' IS NOT NULL ORDER BY linked_at LIMIT 1`,
-        [caseId],
-      );
-      // QA M3: one basis on Links & outcome — the view frozen in the linked evidence package, named
-      expect(outcome.approvedHistoricalLoss.view).toBe(frozen.view);
-      expect(outcome.approvedHistoricalLoss.basis).toMatch(
-        /^Approved plan lines .*linked evidence package/,
-      );
-      expect(outcome.approvedHistoricalLoss.basis).not.toMatch(
-        /SME|policy default/,
-      );
+      await expectSnapshotBasis(env, caseId, outcome.approvedHistoricalLoss);
       expect(outcome.claimedAvoided).toEqual([
         { currency: 'USD', amount: '1000', actions: 1 },
       ]);

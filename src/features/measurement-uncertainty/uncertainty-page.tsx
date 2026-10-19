@@ -47,7 +47,7 @@ function UncertaintyScreen() {
       <div className="space-y-6" data-testid="measurement-uncertainty">
         <PageHeader
           title="Measurement uncertainty"
-          description="Uncertainty budget per measurement boundary: meters, scales, inventory, conversion and timing. The server combines the standard uncertainties (root sum of squares, with correlations) and expands them by the coverage factor. An approved budget can justify the unit's absolute reconciliation tolerance, but only when someone adopts it; residuals are always published."
+          description="Uncertainty budget per measurement boundary: meters, scales, inventory, conversion and timing. The server combines the standard uncertainties (root sum of squares, with correlations) and expands them by the coverage factor. An approved budget can justify the unit's absolute reconciliation tolerance, but only when someone adopts it. Unaccounted figures are always published."
           actions={
             canWriteUncertaintyBudgets &&
             chosen && (

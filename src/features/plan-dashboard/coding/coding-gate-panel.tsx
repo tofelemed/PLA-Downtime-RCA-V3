@@ -51,7 +51,7 @@ function VerifyShiftButton({ view, gate }: { view: ReconciliationView; gate: Cod
   const { number } = useNumberFormat();
   const reasonId = useId();
   const unverified = gate.verification.unverified;
-  const blocked = verifyBlockedReason(gate);
+  const blocked = verifyBlockedReason(gate, number);
   const outcome = verify.data;
   return (
     <div className="space-y-1">

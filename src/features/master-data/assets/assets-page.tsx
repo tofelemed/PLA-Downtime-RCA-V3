@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { useUnitNames } from '@/features/ux-kit/labels';
@@ -38,6 +38,7 @@ function useColumns(): DataTableColumn<MasterAssetView>[] {
 
 /** `/master-data/assets`: the plant's assets, 20 per page; filter by unit, search, status. */
 export function AssetsPage() {
+  const navigate = useNavigate();
   const { filters, update } = useListFilters();
   const [params, setParams] = useSearchParams();
   const unitId = params.get('unitId') ?? '';
@@ -73,6 +74,8 @@ export function AssetsPage() {
           columns={columns}
           rows={assets.rows}
           getRowKey={(asset) => asset.id}
+          onRowClick={(asset) => navigate(`/master-data/assets/${asset.id}`)}
+          rowsHaveLink
           pager={assets.pager}
           status={assets.status}
           empty={{ title: 'No assets', text: filters.q || unitId ? 'No asset matches the filters.' : 'This plant has no assets with this status yet.' }}

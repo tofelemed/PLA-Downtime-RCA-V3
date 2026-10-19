@@ -128,8 +128,23 @@ describe('rule form (mirrors the API 422 fieldErrors)', () => {
       { field: 'definition.when', message: 'has 22 conditions' },
       { field: 'definition.when.all.9.op', message: 'unknown row' },
     ]);
-    expect(errors.rows).toEqual({ r2: ['Value: must be a number'], r3: ['Operator: is not allowed'], a1: ['Value: must be one of: planned'] });
-    expect(errors.general).toEqual(['when has 22 conditions', 'when.all.9.op unknown row']);
+    expect(errors.rows).toEqual({ r2: ['Enter a number.'], r3: ['Choose an operator that works with this field.'], a1: ['Choose one of the offered values.'] });
+    expect(errors.general).toEqual(['Conditions: has 22 conditions.', 'Conditions: unknown row.']);
+  });
+
+  it('turns schema-validator wording into plain instructions and keeps untouched rows quiet (QA N1)', () => {
+    const base = emptyDraft('coding_default');
+    base.all = [{ key: 'e1', field: '', op: '', value: '' }, { key: 'e2', field: 'source', op: '', value: '' }];
+    const raw = [
+      { field: 'definition.when.all.0.field', message: 'must be equal to one of the allowed values: physicalType, scheduleClass' },
+      { field: 'definition.when.all.1.op', message: 'must be equal to one of the allowed values: eq, neq, in, gt' },
+      { field: 'definition.when.all.1.value', message: 'must NOT have fewer than 1 characters' },
+    ];
+    const quiet = errorsByRow(base, raw);
+    expect(quiet.rows).toEqual({ e2: ['Choose an operator.', 'Enter a value.'] });
+    const all = errorsByRow(base, raw, { revealUntouched: true });
+    expect(all.rows.e1).toEqual(['Choose a field.']);
+    expect(JSON.stringify(all)).not.toMatch(/allowed values|physicalType|neq|characters/);
   });
 });
 

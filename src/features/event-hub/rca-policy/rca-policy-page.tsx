@@ -16,7 +16,7 @@ import { overrideText, ruleFacts, triggerText } from './rca-policy-text';
 import { effectiveFromText } from '@/features/ux-kit/format/built-in-default';
 
 const AUTO_LABELS: Readonly<Record<RcaPolicyVersion['autoCreate'], string>> = {
-  recommend: 'Recommend an RCA',
+  recommend: 'Recommend an investigation',
   create: 'Open an investigation',
 };
 
@@ -63,10 +63,17 @@ function RcaPolicyScreen() {
           {current.data && <CurrentPolicy policy={current.data} unitScoped={Boolean(unitId)} />}
         </DataState>
       </Section>
-      <Section title="New version" description="Takes effect immediately for new and running events; earlier recommendations stay as they were.">
-        {!canManageRcaPolicies && <ReadOnlyHint />}
-        {canManageRcaPolicies && current.data && <RcaPolicyForm key={`${unitId ?? 'plant'}:${current.data.id}`} current={current.data} unitId={unitId} />}
-      </Section>
+      {canManageRcaPolicies ? (
+        <Section title="New version" description="Takes effect immediately for new and running events; earlier recommendations stay as they were.">
+          {current.data && <RcaPolicyForm key={`${unitId ?? 'plant'}:${current.data.id}`} current={current.data} unitId={unitId} />}
+        </Section>
+      ) : (
+        // QA L7: roles that cannot change the settings get no "New version" section, only this note
+        <p className="text-sm text-muted-foreground" data-testid="rca-policy-read-only">
+          <ReadOnlyHint className="mr-2" />
+          Manager approvers change these settings; you can read them.
+        </p>
+      )}
       <Section title="Version history" collapsible defaultOpen={false}>
         <VersionHistory unitId={unitId} />
       </Section>

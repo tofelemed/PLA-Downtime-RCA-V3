@@ -41,6 +41,7 @@ const PAGE_FILES: Readonly<Record<string, string>> = {
   '/master-data': 'master-data/overview/master-data-overview-page.tsx',
   '/finance': 'finance/finance-page.tsx',
   '/users': 'users/user-management-page.tsx',
+  '/delegations': 'delegations/delegations-page.tsx',
   '/admin': 'admin/admin-page.tsx',
   '/audit': 'audit/audit-page.tsx',
 };

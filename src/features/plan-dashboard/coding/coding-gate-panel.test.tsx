@@ -33,6 +33,9 @@ const GATE: CodingGateView = {
   verification: { verified: 0, unverified: 3, failureDetailed: 1, validated: 0, unvalidated: 1 },
 };
 
+/** Every stop coded (re-test N8: the shift is verified only then). */
+const CODED: CodingGateView = { ...GATE, coded: 2, uncoded: 0, issues: [GATE.issues[1]] };
+
 const view = (gate: CodingGateView | undefined) =>
   ({ periodId: 'p1', unitId: 'u1', utcStart: '2026-10-15T06:00:00.000Z', utcEnd: '2026-10-15T14:00:00.000Z', codingGate: gate }) as unknown as ReconciliationView;
 
@@ -96,7 +99,7 @@ describe('coding gate panel (SME D12 / D13)', () => {
 
   it('E-7: verifying the shift asks first, stating how many stops wait; cancel sends nothing', async () => {
     actAs('production_engineer');
-    wrap(<CodingGatePanel view={view(GATE)} />);
+    wrap(<CodingGatePanel view={view(CODED)} />);
     fireEvent.click(screen.getByTestId('verify-shift'));
     expect(await screen.findByRole('alertdialog', { name: 'Verify 3 stops of this shift?' })).toBeInTheDocument();
     const review = screen.getByTestId('verify-shift-review-link');
@@ -110,9 +113,17 @@ describe('coding gate panel (SME D12 / D13)', () => {
     expect(bodies).toHaveLength(0);
   });
 
-  it('a production engineer verifies the shift and sees what was skipped', async () => {
+  it('re-test N8: with an uncoded stop the shift cannot be verified; the button says to code it first', () => {
     actAs('production_engineer');
     wrap(<CodingGatePanel view={view(GATE)} />);
+    const button = screen.getByTestId('verify-shift');
+    expect(button).toBeDisabled();
+    expect(document.getElementById(button.getAttribute('aria-describedby') ?? '')).toHaveTextContent('Code the stop first');
+  });
+
+  it('a production engineer verifies the shift and sees what was skipped', async () => {
+    actAs('production_engineer');
+    wrap(<CodingGatePanel view={view(CODED)} />);
     fireEvent.click(screen.getByTestId('verify-shift'));
     fireEvent.click(await screen.findByRole('button', { name: 'Verify 3 stops' }));
     await waitFor(() => expect(screen.getByTestId('verify-outcome').textContent).toContain('2 verified, 1 skipped'));

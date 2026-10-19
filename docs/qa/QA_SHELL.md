@@ -207,3 +207,186 @@ This follows DECISIONS 2026-10-07 D06 ("Engineer/Analyst → production engineer
 - **Notification read state:** Omid's "Uncoded stops waiting" was toggled to unread and back to read, so it is restored (1 unread, as before).
 - **Display currency:** the preference was switched to IRR and back to USD for Admin and Reza (per-user display preference; restored).
 - **Nothing else:** no approvals, plans, events, periods, users, settings, branding or hierarchy were changed.
+
+## Re-test 19 Oct
+
+Run: 19 Oct 2026, 14:50–15:15 Tehran, after commit dd04dd24 and its deploy. Same method as round 1: headless Playwright, UI login for all 14 accounts, axe, 1440×900 plus 768×1024 (omid, reza, sara).
+Evidence: `C:\Users\Admin\AppData\Local\Temp\claude\d--HMI-Project-Usama-ProAct\8340f887-b72f-4b11-b2f2-ae7460ebd8b3\scratchpad\qa\shell\r2\` (`shots\*.png`, `persona-<user>.json`, `admin.json`, `shell2.json`, `shell3-*.json`, `shell4.json`, `dash.json`, `r2probe2.json`, `r2probe3.json`). Paths below are relative to that folder.
+
+**Summary: FIXED 20 / PARTIAL 4 / OPEN 3 / NEW 4**
+
+Still clean across the sweep:
+- 0 console errors on product pages.
+- 0 failed requests, apart from deliberate bad ids (404) and `ERR_ABORTED` on navigation.
+- 0 serious or critical axe violations on ~30 pages.
+- No horizontal scroll at 768 px.
+- No "demo" text, no raw UUIDs and no snake_case words on screen.
+
+The plant roles are now one guide role per persona, checked read-only in `user_scopes`:
+
+| User | Plant role |
+|---|---|
+| arman | metrology_approver |
+| bahram | master_data_admin |
+| darya | finance_maintainer |
+| farid | reliability_engineer |
+| kamran | finance_approver |
+| leila | production_engineer |
+| maryam | manager_approver |
+| mina | integration_admin |
+| neda | quality_approver |
+| omid | operator |
+| reza | manager_approver |
+| sara | production_accountant |
+| shirin | production_engineer |
+| admin | SuperAdmin |
+
+### Menu, header badge and For you per persona (desktop)
+
+| User | Header badge | Menu (beyond the common set) | For you | Result |
+|---|---|---|---|---|
+| leila | Production engineer | — | Current stops 0, Stops to code | PASS |
+| omid | Operator; no USD/IRR toggle | Operator menu: Dashboard, Pending approvals, Event Hub, My work, Downtime, PLA (no Loss valuation or Period accounting), RCA Analysis, Tasks, Equipment setup guide, Master data | Current stops, Stops to code | PASS (W-OP still open) |
+| sara | Production accountant | User management | Periods due 0, Pending approvals 0 | PASS |
+| reza | Manager (approver) | User management, Admin panel, Audit log | Pending approvals 0 | PASS |
+| neda | Quality / Lab approver | User management | Pending approvals 0 | PASS |
+| farid | Reliability engineer | — | Recommended investigations, My overdue actions 0 | PASS |
+| mina | Integration administrator | — (Integration is SuperAdmin-only by the owner's rule) | none | PASS |
+| arman | Metrology / Instrumentation approver | User management | Pending approvals 0 | PASS |
+| darya | Finance (rates) | — | none | PASS |
+| kamran | Finance approver | User management | **Pending approvals 3** | PASS |
+| maryam | Manager (approver) | User management, Admin panel, Audit log | Pending approvals 0 | PASS |
+| bahram | Master data administrator | — | none | PASS |
+| shirin | Production engineer | — | Current stops, Stops to code | PASS |
+| admin | Super administrator | Integration (4 pages) + User management, Admin panel, Audit log | Pending approvals 3 | PASS |
+
+The common set is:
+- Overview: Dashboard, Pending approvals, Reports.
+- Production: Event Hub, Plans, profiles & calendars, My work, Month close, Measurement uncertainty.
+- Downtime analysis (5 pages).
+- PLA (7 pages).
+- Reliability: RCA Analysis, Bad actors, Knowledge base, Tasks.
+- Administration: Equipment setup guide, Master data, Finance.
+
+Route gates (13 URLs × 14 accounts) agree with the menu, as in round 1. Sara can still open `/connectivity/source-authority` (review rights). Denied pages and allowed pages now use the same h1, for example "Admin panel" in both cases.
+
+### Round-1 findings: status
+
+| # | Round-1 finding | Status | Evidence (round 2) |
+|---|---|---|---|
+| 1 | High: implicit `production_engineer` for Kamran, Sara, Neda, Arman, Darya, Bahram and Mina | FIXED | `user_scopes` holds one guide role each (table above). My work › Periods: "Nothing waiting for you" for all of them. The For-you rows have no "Stops to code" for non-coders. |
+| 2 | Header badge shows the legacy role ("Analyst"/"Engineer") | FIXED | The badge is the plant role for all 14 (table above). `persona-*.json` header. |
+| 3 | Users list shows the legacy role | PARTIAL | The Users tab now has a **Plant roles** column (`a-users-tab0.png`). The **Permissions** tab list still has a "Role" column with Analyst/Engineer/Manager (`a-users-tab1.png`). The user page subtitle still reads "Analyst · HDPE plant", next to a required legacy "Role*" select (`x-user-kamran.png`). Its Access table is correct (Finance approver only). |
+| 4 | Permissions › Module permissions wrong (Sara: Connectivity, Audit, Settings) | FIXED | "What Sara reaches in this plant" is now built from the menu: Overview … Administration (… User management); "This is the menu of Production accountant". Evidence: `x-permissions-sara.png`. |
+| 5 | Pending approvals tile only for `manager_approver` | FIXED | Kamran: "Pending approvals 3". Admin: 3. Sara, Neda, Arman, Reza, Maryam: 0. Evidence: `p-kamran-dashboard.png`. |
+| 6 | Reports: provisional vs approved mixed messages; coverage 43 % vs 86 % | PARTIAL | Fixed parts: the page badge now reads "Approved"; the coverage line says "only approved periods are counted (38 % of periods approved)", while the Dashboard says "88 % of periods calculated" (different, now labelled measures); the Exports tab explains "Some periods of these dates are not approved yet…". Still open: with the default 7-day window, the OEE and Reconciliation cards still carry a "Provisional" badge under "Approved revisions only", and the Revisions select still offers "Approved revision, else the open draft (provisional)" on an approved-only page. Evidence: `a-reports-tab0.png`, `a-reports-tab1.png`. See also N1. |
+| 7 | `/approvals/nonsense/123` shows a validation error, no h1 | FIXED | h1/title "Approval not found", "This address does not name an approval workflow…", "Back to Pending approvals". Evidence: `a-404-_approvals_nonsense_123.png`. |
+| 8 | Breadcrumb "Admin Panel › Admin panel › Edit Marun" | FIXED | "Admin panel › Edit Marun" and "Admin panel › Edit HDPE plant". Cancel returns to `/admin?tab=plants`. Evidence: `a-edit-organizations.png`. |
+| 9 | Menu labels vs h1 capitalisation (Admin Panel/Admin panel, …) | FIXED | The menu, h1, title and denied page all match in sentence case: Pending approvals, Month close, Equipment setup guide, Master data, User management, Admin panel, Audit log. |
+| 10 | Login: label "USER ID", h1 is the brand | FIXED | Label "Email", h1 "Sign in", title "Sign in · Traverse Forge". Evidence: `r2-login.png`. |
+| 11 | Header at 768 px truncates the plant to "HDPE p…" | FIXED | At 768 px only the "TF" mark shows, and "Marun › HDPE plant" is readable. Evidence: `r2-sara-768-header.png`. |
+| 12 | Notification text "1 stop(s)" | FIXED | "HDPE Extruder 1 · 2026-10-17: 1 stop waiting for a reason". |
+| 13 | Kamran's bell has no approval-waiting item | OPEN | Kamran's bell still holds only the two uncoded-stop reminders, and nothing for his 3 restatement postings (`p-kamran-bell.png`). See also N2. |
+| 14 | "Reliability" is both a downtime page and a section | FIXED | The downtime page is now "Reliability (MTBF/MTTR)". Evidence: `shell4.json` expanded. |
+| 15 | W-OP: operator sees Pending approvals (always empty) and the Equipment setup guide | OPEN | Omid's menu still has Pending approvals and Equipment setup guide (`/equipment-setup` opens). |
+| 16 | 404 h1 is the bare "404" | FIXED | h1 "Page not found"; 404 is a tag. |
+| 17 | Not-found state offers "Reload"/"Retry" | FIXED | "Not found · It may have been deleted or moved." with "Back to Tasks", "Back to Audit log" and "Back to Admin panel". The titles are "Task", "Audit entry" and "Edit plant". |
+| 18 | Denied vs allowed h1 differ in case | FIXED | `persona-omid.json` gates: "Your roles in this plant do not include Admin panel." |
+| 19 | Dashboard duplicated headings (Downtime/Downtime, RCA/RCA) | FIXED | Cards are now "Downtime totals" and "Investigations and actions". |
+| 20 | Dashboard Last 24 h: banner "67 % of periods calculated" while every tile says "Not available · No calculated periods / No slices" | OPEN | The behaviour is unchanged. Each tile still shows "—", "Not available" and a reason that alternates between "No slices" and "No calculated periods". Evidence: `dash.json`, `r2-reza-dash-24h.png`. |
+| 21 | Pending approvals: lower-case state and role; Workflow filter not in the URL | PARTIAL | The list now shows "Awaiting posting" / "Finance approver", and the filter is kept as `?kind=finance-posting`. On the detail page, the Request section still says State "awaiting posting" and Approval roles "finance approver". Evidence: `s-kamran-approval-detail.png`. |
+| 22 | Approval detail form: disabled Save with no reason; lower-case treatment options; raw "Loss line · availability" | PARTIAL | A reason now shows: "Choose the posting date first." The detail also adds a "Loss value (default valuation view) 2,180.00 → 2,250.00 USD" row. Still open: the treatment options are "a correction / a change in estimate / another adjustment / no posting", and the field labels are "Loss line · availability". Nothing was decided. |
+| 23 | My work › Periods "Prepare and submit" for approvers | FIXED | Every persona sees "Nothing waiting for you". The 18 Oct periods have no approved plan and are excluded. |
+| 24 | Exports disabled with a terse hint; CSV `requested_by` uuid; `timezone,UTC` | FIXED | There is an explicit hint (row 6). The CSV now adds `requested_by_name,Leila` and `plant_timezone,Asia/Tehran`, keeping the id lines for traceability. Evidence: `r2probe3.json`, `dl\traverse-forge-period_summary-2026-10-17.csv`. |
+| 25 | Loss value quantities "46.00t" | FIXED | "46.00 t", "5.00 t". |
+| 26 | Admin panel description lists hidden tabs for Reza; "colours" | FIXED | Reza sees "Plant settings." (only his tab). Branding says "colors". Evidence: `r2-reza-admin.png`. |
+| 27 | Audit: `CREATE Exports "unknown"`; "User" listed twice by record type | FIXED | "Created export · Loss lines PDF / Period summary CSV …". Record types are now "User session 550" and "User 13". Entries older than the fix still read "Created export" with no label. |
+
+### New findings
+
+| # | Page / route | Role | Result | Finding | Evidence | Severity | Suggested fix |
+|---|---|---|---|---|---|---|---|
+| N1 | Reports `/reports` (Period dates, Exports) | leila, admin | FAIL | **Choosing one approved day through the From/To fields cannot select the production day.**<br>• The default "Last 7 days" window is "now − 7 d → now", which the page reads as "production days 15:01–15:01".<br>• Typing 17 Oct → 17 Oct keeps that clock time: "2026-10-17 (production day 15:10–15:10)", `from=2026-10-17T11:40Z&to=2026-10-18T11:40Z`. This runs into 18 Oct, so the coverage drops to "33 % approved" and all four exports stay disabled with "Some periods of these dates are not approved yet".<br>• The real production day is 06:00–06:00 (periods start at 02:30Z). With that window typed into the URL, the page is fully approved, the "Provisional" badges disappear, and the CSV downloads.<br>• In round 1, exporting 17 Oct from the date fields worked, so this is a regression.<br>• The URL also carries the label text `window=Last+7+days` / `Chosen+dates`. | `shots/r2-reports-17oct-exports.png` vs `shots/r2-reports-17oct-0600.png`; `r2probe2.json`, `r2probe3.json` | Medium | `src/features/pla-analytics/components/plant-days-input.tsx` reuses `plantDaysOf(value).boundary`. A relative window ending "now" makes the boundary the current minute. Take the boundary from the plant's production-day start (first shift start) instead. Snap relative windows on Reports to whole production days, so they match the "Approved figures" page. |
+| N2 | Notification bell | sara, neda, arman, darya, kamran, mina, bahram, farid | WARN | **Stale reminders remain after the role change.** These users still carry the 18 Oct "Uncoded stops waiting" and "(escalated)" reminders, 2 unread for most, which link to `/events?…&coding=uncoded`. They no longer hold a stop-coding role; for example, Sara is a production accountant who now cannot edit stops. | `p-sara-bell.png`, `persona-*.json` bell | Low | One-off data fix: delete or close the work reminders whose recipient no longer holds the role (`apply-guide-roles.ts`). Generally, resolve a reminder when the recipient's role is revoked (`work-item-resolution-sql.ts`). |
+| N3 | User management › Permissions panel | admin | WARN | **Page names differ from the sidebar.** The panel lists "Downtime analysis", "Production loss analysis" and "PLA trends", while the sidebar shows "Downtime overview", "PLA overview" and "Trends", against the single page-name source. | `x-permissions-sara.png`, `shell4.json` expanded | Low | `module-permissions-panel.tsx`: use the same `label ?? name` as the sidebar |
+| N4 | Reports › OEE and downtime | admin | WARN | **The no-plan wording is not used on Reports.** The 18 and 19 Oct rows repeat "Not available: no calculated periods" in all 4 cells. The re-test brief says periods without an approved plan read "No approved plan covers this period". | `a-reports-tab0.png` | Low | Use the no-plan reason for these dates. Show the reason once per row, not once per cell. |
+
+### Use cases re-verified
+
+- **Login and session:** login (correct, wrong and empty), session expiry, sign out and Back, and a deep link through login (`/audit?view=work-summary`).
+- **Header:**
+  - plant selector.
+  - Live indicator.
+  - USD/IRR: 7,650.00 USD ↔ 4,590,000,000 IRR; persists across reload; restored to USD for Admin and Reza.
+  - Operator: no money toggle, and no USD/IRR on the Dashboard or Event Hub.
+- **Bell:** count, All/Unread filter, and mark unread → read on Omid (restored to 1 unread).
+- **Navigation:** sidebar collapsed and expanded, the drawer at 768 px for Omid and Reza (closes on navigate), and route gates for 14 accounts.
+- **Breadcrumbs and errors:** breadcrumbs, 404, and the bad deep links for approvals, tasks, audit and plant edit.
+- **Dashboard:** every persona; tile links; window kept in the URL and across reload.
+- **Approvals:** the Pending approvals inbox for all 14, and Kamran's approval detail opened and reloaded (**not decided**).
+- **My work:** all tabs.
+- **Reports:** 4 tabs and IRR; the 17 Oct export CSV downloaded as Leila.
+- **Admin panel:** 5 tabs; organization and plant edit opened and cancelled; Reza sees the Plant settings tab only.
+- **User management:** Users (Plant roles), Permissions (Sara), Delegations, and the Kamran user page (read only).
+- **Audit log:** entries, search in the URL, entry detail with reload, and Work summary.
+- **Tasks:** list, and the new-task validation ("Enter a title.") and Cancel.
+
+### Data created or changed (round 2)
+
+- **Export jobs:** Leila's 17 Oct period summary CSV (export jobs are read-only, which the brief allows).
+- **Audit log entries:** sign-ins and sign-outs, access-denied route checks, and the export.
+- **Notification read state:** Omid's notification read state toggled and restored (1 unread).
+- **Display currency:** Reza's and Admin's display currency switched to IRR and back to USD (verified USD active afterwards).
+- **Nothing else:** nothing was approved, decided, saved or edited.
+
+## Round 3 re-test (19 Oct 2026)
+
+Run: 19 Oct 2026, about 17:20–17:40 Tehran, against the containers rebuilt at 17:18 (working tree on top of dd04dd24). Headless Playwright, UI login, every mutating request aborted in the browser (only login and notification reads went through). All 14 accounts at 1440 px; Omid, Reza and Admin also at 768 px; axe on the user page, approval detail and delegations. API checks were made from the signed-in browser with each persona's own token (Omid, Reza, Kamran).
+Evidence: `C:\Users\Admin\AppData\Local\Temp\claude\d--HMI-Project-Usama-ProAct\8340f887-b72f-4b11-b2f2-ae7460ebd8b3\scratchpad\qa\r3-shellmd\` (`shots\*.png`, `menus.json`, `money-omid-*.json`, `op-*.json`, `cap-kamran.json`, `replay-omid.json`, `replay-reza.json`, `shell.json`, `users-admin-1440.json`, `words-*.json`).
+
+**Summary: the round-3 money, roles and shell fixes are live. 0 High, 0 Medium, 8 Low still open.**
+
+Clean across the sweep: 0 console errors, 0 failed requests, 0 serious or critical axe violations, no horizontal scroll at 768 px, no raw ids or snake_case keys on screen, menu name = h1 = page title on every page visited.
+
+### Verified fixed
+
+- **Operator sees no money (Omid, 1440 and 768 px).**
+  - PLA tab bar has no Loss valuation; `/pla-analytics/valuation` opens the standard "No access" page.
+  - Dashboard: no "OEE and downtime report" link (Reza has it).
+  - Downtime: no "Lost value" toggle on Causes & Pareto and no "Export period summary" on Overview or Trends (Reza has both).
+  - RCA case: header reads "Approved loss 28.00 t" (Reza: "28.00 t / 4,200.00 USD"); actions show no "claimed …" and recommendations no "Est. cost"; Outcome shows quantities only, no "Value basis" or "Claimed avoided loss" figures.
+  - No USD/IRR toggle in the header; Reports, Period accounting and Finance are "No access".
+- **Operator API (Omid's token).**
+  - 403 `MONEY_NOT_VISIBLE` ("Your roles in this plant do not include loss values") on `GET /v2/reports/loss-value`, `loss-tree?metric=margin`, `bad-actors?rankBy=value`, `fx-rates`, `valuation-policies`, `valuation-rates`, `demand-statuses` and `exports/:id/download`.
+  - The same GETs that return money to Kamran and Reza come back without it for Omid: `rcas/:id/actions` (no `claimedAvoidedLoss`), `rcas/:id/outcome` and `rcas/:id/links` (no value rows), `production-events/:id/attributed-losses` (no `values`, no `valuationView`), `bad-actors?rankBy=quantity` (no `value` objects), `production-events` (no `cost`).
+  - Kamran (finance approver) and Reza (manager approver) get 200 with the money fields on every one of these routes.
+- **User page shows plant roles (Admin).** Subtitle "Finance approver · HDPE plant" (Kamran) and "Operator · HDPE plant" (Omid). The legacy role is a "Sign-in type" select with the fallback help text ("Counts as a plant role only while the user holds none in the home plant…"). Users and Permissions lists show "Plant roles". For approval-role holders who are not administrators, `/users` now opens Approval delegations.
+- **Permissions panel uses sidebar names (round 2 N3).** Sara: "Downtime overview · Stops & timeline …", "PLA overview · Loss breakdown · Trends …", "… Approval delegations".
+- **Menus per persona (round 1 #15, round 2 observations).**
+  - User management: Admin only. `/users` and `/permissions` are "No access" for every other persona.
+  - Approval delegations: Sara, Reza, Neda, Arman, Kamran and Maryam (not Leila, Shirin, Farid, Omid, Mina, Darya or Bahram). Admin's `/delegations` goes to User management › Delegations.
+  - Pending approvals: listed for every decider, including Omid (duplicate-stop merges); not listed, and "No access" by URL, for Mina, Darya and Bahram.
+  - Equipment setup guide: gone from Omid's menu and "No access" by URL; listed for everyone else.
+  - Integration pages (Connectivity, Source status rules, Source priority, Enhanced historian): Admin only in the menu.
+  - Admin panel and Audit log: Reza and Maryam (by decision), Admin.
+- **Header at 768 px (round 1 #11).** All 14 show "TF | Marun | HDPE plant" with nothing clipped; as decided, the name and role are not shown in the header below 1024 px.
+- **Approval detail (round 2 #21, #22).** Kamran's restatement posting: State "Awaiting posting", Approval roles "Finance approver", treatment options "Correction / Change in estimate / Other adjustment / No posting", and a change-set row "Availability loss line · Reduced extrusion rate". Nothing was decided.
+- **Reports (round 2 N1, N4, round 1 #6).** The default window is whole production days ("2026-10-12 – 2026-10-18 (production days 06:00–06:00)", `from=…T02:30Z`). Days without a plan read "No approved plan covers this period · Open Plans" once per row. Revisions offers "Approved revisions only / Include open drafts (provisional figures)".
+- **Stale reminders (round 2 N2).** No bell count for Sara, Neda, Arman, Darya, Kamran, Mina, Bahram or Farid. Omid (1) and Shirin (2) still hold coding reminders, which match their roles.
+
+### Still open
+
+| # | Page / route | Persona | What's wrong | Expected | Severity |
+|---|---|---|---|---|---|
+| R3-1 | Pending approvals › restatement posting (`/approvals/finance-posting/…`) | Kamran | The first change-set row reads just "Availability loss line" (14.00 t → 0.00 t); the second reads "Availability loss line · Reduced extrusion rate". The line without a reason has no label after the dot. | "Availability loss line · Not coded" (or the reason it had), so both rows follow the same pattern. | Low |
+| R3-2 | Dashboard, Last 24 h (round 1 #20) | Reza | The banner says "67 % of periods calculated" while the Availability tile still says "No calculated periods". OEE, Performance, Quality and Reconciled PLA OEE now correctly say "No approved plan covers these periods". | Availability uses the same no-plan reason as the other tiles. | Low |
+| R3-3 | RCA case `/rca/…` Overview | Omid | Free text still carries money and course wording for an operator: the team charter says "(approved availability loss 28 t, USD 4,200, …)"; the problem statement starts "Training extruder stopped…"; the residual risk says "(guide: 600 comparable hours)". These are typed case texts, not redacted fields. | Correct the case texts (data), or accept that free text is outside the money rule and record it in DECISIONS. | Low |
+| R3-4 | RCA case `/rca/…` Overview and Links & outcome | Omid | Text that only makes sense with money is still shown to the operator: "SuperAdmin may approve their own investigation; other approvers must be independent." (not SuperAdmin), "…valued in the contribution margin view…" and "Claimed avoided loss (owners), approved historical loss (ledger) and realized difference … are separate figures". | Show the SuperAdmin sentence only to SuperAdmin (as on Finance and Source priority); drop the valuation sentences when money is hidden. | Low |
+| R3-5 | API, operator token | Omid | Money-related metadata is still returned: `bad-actors` keeps `data.currency: "USD"` and `viewSource`; `attributed-losses` keeps `valuationViewSource`; `GET /v2/exports` (list) answers 200 with every export job and `presentation.currency`. No amounts leak. | Leave out the currency and valuation-view metadata too, and list only the jobs an operator can download (or none, since download is 403). | Low |
+| R3-6 | User management, Users list and header | Admin | The SuperAdmin's display name is "HDPE-TRAIN administrator", so course wording ("TRAIN") shows in every audit, "Granted by" and approval row. | A plant-neutral name, for example "HDPE administrator" (data). | Low |
+| R3-7 | Notification bell | Kamran | Still no bell item for his 3 waiting restatement postings (round 1 #13). The decision entry says postings have no SLA, so no reminder is sent. | Open product decision (a posting SLA); not a defect in this build. | Low |
+| R3-8 | Sidebar "RCA Analysis" | all | The only menu label not in sentence case. | "RCA analysis" in the menu, h1 and page title. | Low |
+
+### Data created or changed (round 3)
+
+None. No form was submitted and nothing was approved, decided, saved or edited. Mutating requests were aborted in the browser. The rule-builder Save check in master data sent `POST /v2/rules`, and that request was aborted too. Audit entries for sign-ins and for the deliberate 403 money checks were written by the server.

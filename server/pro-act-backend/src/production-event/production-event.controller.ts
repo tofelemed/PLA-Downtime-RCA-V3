@@ -1,3 +1,4 @@
+import { MoneyFields } from '../auth/money/money.decorators';
 import {
   Controller,
   Get,
@@ -26,6 +27,8 @@ import { PagedResult } from '../common/dto/paged-result';
 @UseGuards(JwtAuthGuard)
 @TenantBound()
 @Controller('production-events')
+// QA re-test 2026-10-19: an event's recorded cost is money (left out for operators)
+@MoneyFields('cost')
 export class ProductionEventController {
   constructor(private readonly eventService: ProductionEventService) {}
 

@@ -130,7 +130,7 @@ async function ensureFx(ctx: TrainContext): Promise<void> {
     same.find((r) => r.state === 'draft') ??
     (await ctx
       .as('darya')
-      .post<FxRow>('/v2/fx-rates', { ...FX_RATE }, 'fx USD IRR training rate'));
+      .post<FxRow>('/v2/fx-rates', { ...FX_RATE }, 'fx USD IRR rate'));
   await approve(ctx, 'fx-rates', draft.id);
 }
 

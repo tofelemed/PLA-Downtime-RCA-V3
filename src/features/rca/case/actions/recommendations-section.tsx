@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { RcaRecommendationItem } from '@/api/v2/types/rca';
@@ -31,16 +32,18 @@ interface ColumnContext {
   day: (v: string | null) => string;
   readOnly: boolean;
   basePath: string;
+  /** the estimated cost is money: left out without the money capability (QA re-test) */
+  money: boolean;
 }
 
-function columns({ owner, day, readOnly, basePath }: ColumnContext): DataTableColumn<RcaRecommendationItem>[] {
+function columns({ owner, day, readOnly, basePath, money }: ColumnContext): DataTableColumn<RcaRecommendationItem>[] {
   const base: DataTableColumn<RcaRecommendationItem>[] = [
     { id: 'title', header: 'Recommendation', cell: (row) => <span className="font-medium">{row.title}</span> },
     { id: 'status', header: 'Status', cell: (row) => <StatusBadge tone={toneOf(RCA_RECOMMENDATION_STATUS_TONES, row.status ?? 'Open')}>{labelOf(RCA_RECOMMENDATION_STATUS_LABELS, row.status, 'Open')}</StatusBadge>, nowrap: true },
     { id: 'priority', header: 'Priority', cell: (row) => row.priority ?? '—', nowrap: true },
     { id: 'owner', header: 'Owner', cell: (row) => owner(row.ownerId) },
     { id: 'due', header: 'Due', cell: (row) => day(row.dueDate), nowrap: true },
-    { id: 'cost', header: 'Est. cost', cell: (row) => row.estimatedCost ?? '—', align: 'right', nowrap: true },
+    ...(money ? [{ id: 'cost', header: 'Est. cost', cell: (row: RcaRecommendationItem) => row.estimatedCost ?? '—', align: 'right' as const, nowrap: true }] : []),
     { id: 'actions', header: 'Actions', cell: (row) => <RecommendationActions recommendation={row} basePath={basePath} readOnly={readOnly} /> },
   ];
   return readOnly ? base : [...base, { id: 'task', header: 'Task', headerLabel: 'Task', cell: (row) => <CreateTaskButton recommendation={row} /> }];
@@ -61,7 +64,8 @@ export function RecommendationsSection() {
   const [filters, setFilters] = useState<Filters>({ text: '', status: '', priority: '' });
   const deferred = useDeferredValue(filters);
   const rows = useMemo(() => rca.recommendations.filter((row) => keep(row, deferred)), [rca.recommendations, deferred]);
-  const cols = useMemo(() => columns({ owner: users.nameOf, day, readOnly, basePath }), [users, day, readOnly, basePath]);
+  const { canViewMoney: money } = useCapabilities();
+  const cols = useMemo(() => columns({ owner: users.nameOf, day, readOnly, basePath, money }), [users, day, readOnly, basePath, money]);
   const closed = rca.recommendations.filter((row) => isRecommendationClosed(row.status)).length;
   const actions = readOnly ? null : (
     <>

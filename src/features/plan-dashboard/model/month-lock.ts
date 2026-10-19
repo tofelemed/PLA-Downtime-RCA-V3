@@ -15,3 +15,19 @@ export function monthLockKind(monthClose: MonthCloseStateView | undefined): Mont
 export function allowsDirectRevision(view: Pick<ReconciliationView, 'monthClose'>): boolean {
   return (view.monthClose?.correctionPath ?? 'direct') === 'direct';
 }
+
+/**
+ * The "Propose a correction" dialog text for the period's month and the user (QA re-test: never a closing /
+ * locked-month or SuperAdmin sentence shown to a production accountant on an open month).
+ */
+export function correctionDialogText(monthClose: MonthCloseStateView | undefined, isSuperAdmin: boolean): string {
+  const self = isSuperAdmin ? ' As SuperAdmin you may also decide your own proposal.' : '';
+  const kind = monthLockKind(monthClose);
+  const month = kind === 'locked' ? 'The month is locked: approved figures change only through a correction.' : kind === 'closing' ? 'The month is closing: approved figures change only through a correction.' : 'Describe what is wrong with the approved figures.';
+  return `${month} Another approver accepts or dismisses it; an accepted correction opens a new revision and its restatement.${self}`;
+}
+
+/** An open month's approved period is corrected with "Reopen for revision…", not a proposal (the server answers 409 MONTH_OPEN). */
+export function proposalPathOpen(view: Pick<ReconciliationView, 'monthClose'>): boolean {
+  return view.monthClose?.state !== 'open';
+}

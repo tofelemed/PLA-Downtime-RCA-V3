@@ -1,7 +1,9 @@
 import type { EquipmentReadinessQuery } from '@/api/v2/queries/equipment-readiness';
 import { DAY_MS } from '@/api/v2/queries/time-window';
 import type { ReadinessCheckView, ReadinessStatus } from '@/api/v2/types/equipment-readiness';
-import { datesFromRange, rangeFromDates, type InstantRange } from '@/features/ux-kit/date-inputs';
+import { rangeFromDates, type InstantRange } from '@/features/ux-kit/date-inputs';
+import { productionDayWindow } from '@/features/ux-kit/production-day-window';
+import { addCalendarDays, utcToPlantLocal } from '@/lib/dates';
 import type { SetupJourney } from './journey-storage';
 
 export interface ReadinessFilters { productId: string; operatingMode: string; range: InstantRange }
@@ -17,16 +19,19 @@ export function validReadinessRange(range: InstantRange): boolean {
   return span > 0 && span <= 31 * DAY_MS;
 }
 /**
- * The default readiness window: the last whole plant day, as the inclusive day picker shows it
- * (QA L14: "To (inclusive)", the instant range is `[start of the day, start of the next day)`).
+ * The default readiness window: the last whole production day, as the inclusive day picker shows it
+ * (QA L14: "To (inclusive)"). The picker holds calendar dates; `productionDayWindow` turns them into
+ * production days when the query is sent (QA re-test N2).
  */
-export function lastPlantDay(timezone: string, now: number = Date.now()): InstantRange {
-  const yesterday = new Date(now - DAY_MS).toISOString();
-  const day = datesFromRange({ from: yesterday, to: new Date(Date.parse(yesterday) + 1).toISOString() }, timezone);
-  return rangeFromDates(day, timezone);
+export function lastPlantDay(timezone: string, now: number = Date.now(), dayStart = '00:00'): InstantRange {
+  const local = utcToPlantLocal(new Date(now).toISOString(), timezone);
+  const today = local.slice(11, 16) >= dayStart ? local.slice(0, 10) : addCalendarDays(local.slice(0, 10), -1);
+  const day = addCalendarDays(today, -1);
+  return rangeFromDates({ start: day, end: day }, timezone);
 }
-export function readinessQuery(journey: SetupJourney, filters: ReadinessFilters): EquipmentReadinessQuery | null {
-  const { from, to } = filters.range;
-  if (!from || !to || !validReadinessRange(filters.range)) return null;
+export function readinessQuery(journey: SetupJourney, filters: ReadinessFilters, day: { start: string; timezone: string }): EquipmentReadinessQuery | null {
+  if (!validReadinessRange(filters.range)) return null;
+  const { from, to } = productionDayWindow(filters.range, day.start, day.timezone);
+  if (!from || !to) return null;
   return { unitId: journey.unitId, productId: filters.productId || undefined, operatingMode: filters.operatingMode, from, to, connectionId: journey.connectionId || undefined, planId: journey.planId || undefined, periodId: journey.periodId || undefined };
 }

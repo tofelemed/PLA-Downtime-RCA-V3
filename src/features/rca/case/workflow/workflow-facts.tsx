@@ -4,6 +4,7 @@ import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_VERDICT_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { useRcaFormat } from '../../use-rca-format';
+import { RunHourPolicyNote } from './run-hour-policy-note';
 
 function Fact({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
   return (
@@ -45,6 +46,7 @@ export function WorkflowFacts({ rca, readiness }: { rca: RcaCaseView; readiness:
       {rca.residualRisk && (
         <Fact label="Residual risk">
           <span className="whitespace-pre-wrap">{rca.residualRisk}</span>
+          <RunHourPolicyNote rca={rca} />
         </Fact>
       )}
       {rca.closureNote && (

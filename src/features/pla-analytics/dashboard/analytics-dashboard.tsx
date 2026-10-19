@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
@@ -69,13 +70,15 @@ function DashboardScreen() {
   const [params, setParams] = useSearchParams();
   const key = presetKeyOf(params.get('window'));
   const scope = dashboardScope(key);
+  // QA re-test N2: the Reports page is closed to operators (menu gate `canViewAnalysis`), so is its link
+  const { canViewAnalysis } = useCapabilities();
   const choose = (next: string) => setParams(next === '7d' ? {} : { window: next }, { replace: true });
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="analytics-dashboard">
         <PageHeader title="Dashboard" description="Key figures of the selected plant." actions={<WindowSelect value={key} onChange={choose} />} meta={<DashboardStatus scope={scope} />} />
         <ForYouRow scope={scope} />
-        <Section title="OEE" actions={<Link className="text-sm underline" to={reportsHref(scope, 'production')}>OEE and downtime report</Link>}>
+        <Section title="OEE" actions={canViewAnalysis ? <Link className="text-sm underline" to={reportsHref(scope, 'production')} data-testid="dashboard-oee-report-link">OEE and downtime report</Link> : undefined}>
           <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
             <DashboardOee scope={scope} policy="operational" />
             <DashboardOee scope={scope} policy="reconciled" />

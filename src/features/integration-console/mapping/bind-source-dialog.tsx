@@ -13,6 +13,7 @@ import { NativeSelect } from '../components/native-select';
 import { sourceSystemOf } from '../model/mapping-form';
 import type { BindTarget } from '../model/exception-flow';
 import { ResolutionPreview } from './resolution-preview';
+import { codeNameLabel } from '@/features/ux-kit/format/code-name';
 
 export interface BindSourceDialogProps {
   connectionId: string;
@@ -36,7 +37,7 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
   const preview = useSourceMappingPreview();
   const create = useCreateSourceMapping();
   const unitList = flattenPages(units.data?.pages);
-  const options = unitList.map((unit) => ({ value: unit.id, label: `${unit.name} (${unit.code})` }));
+  const options = unitList.map((unit) => ({ value: unit.id, label: codeNameLabel(unit) }));
   const { nameOf } = useUnitNames();
   const close = () => {
     preview.reset();

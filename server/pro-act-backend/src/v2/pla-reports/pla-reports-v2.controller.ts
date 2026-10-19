@@ -1,5 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { assertMoneyVisible } from '../../auth/money/money-access';
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { AnalyticsResponse } from '../common/response';
@@ -7,8 +8,13 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { WaterfallV2View } from '../period-overview/waterfall.view';
 import { ReportWindowQueryDto } from '../reports/kpi-reports-v2.dto';
 import { ActualsQualityView } from './actuals-quality';
+import {
+  LINES_WITHOUT_EVENT_LIMIT,
+  LinesWithoutEventView,
+} from './lines-without-event';
 import { LossTreeView } from './loss-tree-report';
 import {
+  LinesWithoutEventQueryDto,
   LossTreeQueryDto,
   ReconciliationStatusQueryDto,
   ReconciliationTrendQueryDto,
@@ -58,7 +64,22 @@ export class PlaReportsV2Controller {
     @Ctx() ctx: RequestContext,
     @Query() query: LossTreeQueryDto,
   ): Promise<AnalyticsResponse<LossTreeView>> {
+    // QA re-test 2026-10-19: a value metric is nothing but money (403 MONEY_NOT_VISIBLE for operators)
+    if ((query.metric ?? 'qty') !== 'qty') assertMoneyVisible(ctx);
     return this.reports.lossTree(ctx, query);
+  }
+
+  @Get('lines-without-event')
+  @ApiOperation({
+    summary:
+      'Loss lines that explain no event (manual lines and calculated lines without a cause), largest first, with reason, comment and evidence',
+    description: `${SCOPE_NOTE} Same lines as GET /reports/loss-tree (approved lines of an approved revision, else the shown run's lines); the ${LINES_WITHOUT_EVENT_LIMIT} largest are listed, total counts every one. Lets a drill-down whose loss has no event show the lines instead of an empty event list.`,
+  })
+  linesWithoutEvent(
+    @Ctx() ctx: RequestContext,
+    @Query() query: LinesWithoutEventQueryDto,
+  ): Promise<AnalyticsResponse<LinesWithoutEventView>> {
+    return this.reports.linesWithoutEvent(ctx, query);
   }
 
   @Get('reconciliation-trend')

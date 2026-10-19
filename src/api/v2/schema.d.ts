@@ -3132,7 +3132,7 @@ export interface paths {
         };
         /**
          * Plan-ledger loss lines whose cause is the event, per period revision: approved (published revision) and provisional (open revision run)
-         * @description Quantities per kind and unit of measure and the value of the tenant default valuation view per currency (amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are left out. At most 200 periods, earliest first (`truncated` when cut). 404 for an event outside the tenant or the caller scope.
+         * @description Quantities per kind and unit of measure and the value per currency in the valuation view frozen when the event’s periods were approved (the tenant default view when none froze one or they differ; `valuationViewSource`) (amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are left out. At most 200 periods, earliest first (`truncated` when cut). 404 for an event outside the tenant or the caller scope.
          */
         get: operations["EventAttributedLossesV2Controller_attributedLosses_v2"];
         put?: never;
@@ -3808,6 +3808,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/fx-rates/{id}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct the source text of an FX rate version
+         * @description Corrects descriptive text only (QA re-test N3): figures, validity, state and approval are unchanged, so nothing is revalued and an approved version stays approved; the change is in the audit log. Finance maintainers with a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); foreign ids are 404.
+         */
+        patch: operations["FinanceTextCorrectionsV2Controller_fxSource_v2"];
+        trace?: never;
+    };
+    "/api/v2/demand-statuses/{id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct the evidence text of a demand status version
+         * @description Corrects descriptive text only (QA re-test N3): figures, validity, state and approval are unchanged, so nothing is revalued and an approved version stays approved; the change is in the audit log. Finance maintainers with a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); foreign ids are 404.
+         */
+        patch: operations["FinanceTextCorrectionsV2Controller_demandEvidence_v2"];
+        trace?: never;
+    };
+    "/api/v2/valuation-policies/{id}/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct the notes or backdate reason of a valuation policy version
+         * @description Corrects descriptive text only (QA re-test N3): figures, validity, state and approval are unchanged, so nothing is revalued and an approved version stays approved; the change is in the audit log. Finance maintainers with a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); foreign ids are 404. 422 NOTHING_TO_CORRECT (empty body), NOT_BACKDATED (backdateReason on a version that was not backdated).
+         */
+        patch: operations["FinanceTextCorrectionsV2Controller_policyText_v2"];
+        trace?: never;
+    };
     "/api/v2/valuation-policies": {
         parameters: {
             query?: never;
@@ -3895,7 +3955,7 @@ export interface paths {
         };
         /**
          * Monthly bad-actor review: top assets or asset failure modes by approved loss, approved value or stops
-         * @description CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the policy default view, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only.
+         * @description CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the view frozen when the periods were approved, else the policy default view — `viewSource`, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. A month key whose year belongs to the other calendar (1405-07 on a Gregorian plant) is 422 MONTH_KEY_AMBIGUOUS.
          */
         get: operations["BadActorReportV2Controller_badActors_v2"];
         put?: never;
@@ -4291,7 +4351,7 @@ export interface paths {
         };
         /**
          * Field history of a case, newest first (append-only audit)
-         * @description Every command on the case, its actions, links, analysis tools and causes: who, when, the action, the changed top-level fields, small before / after values (status, owner, due date, root-cause length), the reason, and hashes of the row before and after. Keyset pages (cursor, limit); 404 outside your tenant and units.
+         * @description Every command on the case, its actions, links, analysis tools and causes: who, when, the action, the changed top-level fields, small before / after values (status, owner, due date, root-cause length), the reason, and hashes of the row before and after. Keyset pages (cursor, limit) with `totalCount`, the number of entries of the case; 404 outside your tenant and units.
          */
         get: operations["RcaHistoryV2Controller_list_v2"];
         put?: never;
@@ -5029,6 +5089,26 @@ export interface paths {
          * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Calculation-run loss lines (decisions of an open draft are in the waterfall); unvalued lines never count as 0.
          */
         get: operations["PlaReportsV2Controller_lossTree_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/lines-without-event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Loss lines that explain no event (manual lines and calculated lines without a cause), largest first, with reason, comment and evidence
+         * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Same lines as GET /reports/loss-tree (approved lines of an approved revision, else the shown run's lines); the 50 largest are listed, total counts every one. Lets a drill-down whose loss has no event show the lines instead of an empty event list.
+         */
+        get: operations["PlaReportsV2Controller_linesWithoutEvent_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9181,6 +9261,16 @@ export interface components {
             status: "demand_constrained" | "not_constrained";
             /** @description What substantiates it: unmet orders, inventory cover, ability to catch up, affected market */
             evidence: string;
+        };
+        FxSourceCorrectionDto: {
+            source: string;
+        };
+        DemandEvidenceCorrectionDto: {
+            evidence: string;
+        };
+        PolicyTextCorrectionDto: {
+            notes?: Record<string, never> | null;
+            backdateReason?: string;
         };
         ValuationPolicyCreateDto: {
             /**
@@ -16365,6 +16455,75 @@ export interface operations {
             };
         };
     };
+    FinanceTextCorrectionsV2Controller_fxSource_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FxSourceCorrectionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FinanceTextCorrectionsV2Controller_demandEvidence_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemandEvidenceCorrectionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    FinanceTextCorrectionsV2Controller_policyText_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolicyTextCorrectionDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ValuationPoliciesV2Controller_list_v2: {
         parameters: {
             query?: {
@@ -18098,6 +18257,34 @@ export interface operations {
                 ledger?: "plan" | "capacity";
                 /** @description Largest groups per unit / currency only (top opportunities); totals always cover every group */
                 limit?: number;
+                kinds?: ("schedule_exclusion" | "availability" | "performance" | "quality" | "transition_allowance" | "transition_excess" | "bridge" | "unaccounted_classified")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PlaReportsV2Controller_linesWithoutEvent_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+                ledger?: "plan" | "capacity";
                 kinds?: ("schedule_exclusion" | "availability" | "performance" | "quality" | "transition_allowance" | "transition_excess" | "bridge" | "unaccounted_classified")[];
             };
             header?: never;

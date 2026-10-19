@@ -15,6 +15,12 @@ export interface ExportNames {
   unit: (id: string | null) => string;
 }
 
+/** CSV options: the plant time zone, and whether the caller sees money (QA re-test: no money for operators). */
+export interface CsvOptions {
+  timeZone: string;
+  money: boolean;
+}
+
 const cell = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 const row = (values: unknown[]) => values.map(cell).join(',');
 
@@ -125,10 +131,11 @@ export function caseJson(rca: RcaCaseView, names: ExportNames, records: CaseExpo
  * Recommendations as CSV (title, description, priority, owner, due, status, estimated cost): the due day in
  * plant time with the zone in the header, and the stored instant as ISO / UTC (the export convention).
  */
-export function recommendationsCsv(rca: RcaCaseView, names: ExportNames, timeZone: string): string {
-  const header = row(['Title', 'Description', 'Priority', 'Owner', `Due date (${timeZone})`, 'Due (UTC)', 'Status', 'Estimated cost']);
+export function recommendationsCsv(rca: RcaCaseView, names: ExportNames, { timeZone, money }: CsvOptions): string {
+  const cost = (values: unknown[]) => (money ? values : []);
+  const header = row(['Title', 'Description', 'Priority', 'Owner', `Due date (${timeZone})`, 'Due (UTC)', 'Status', ...cost(['Estimated cost'])]);
   const lines = rca.recommendations.map((r) =>
-    row([r.title, r.description, r.priority, names.user(r.ownerId), plantDayOf(r.dueDate, timeZone), r.dueDate, labelOf(RCA_RECOMMENDATION_STATUS_LABELS, r.status, 'Open'), r.estimatedCost]),
+    row([r.title, r.description, r.priority, names.user(r.ownerId), plantDayOf(r.dueDate, timeZone), r.dueDate, labelOf(RCA_RECOMMENDATION_STATUS_LABELS, r.status, 'Open'), ...cost([r.estimatedCost])]),
   );
   return [header, ...lines].join('\n');
 }
@@ -168,9 +175,11 @@ export function evidenceCsv(rca: RcaCaseView, names: ExportNames, plantTime: (is
  * out, completion, verification in words (the verdict when one is recorded), claimed avoided loss and the
  * cancel reason — labels, never raw tokens or ids.
  */
-export function actionsCsv(rca: RcaCaseView, actions: readonly RcaActionView[], names: ExportNames, timeZone: string): string {
+export function actionsCsv(rca: RcaCaseView, actions: readonly RcaActionView[], names: ExportNames, { timeZone, money }: CsvOptions): string {
   const recommendation = (id: string | null) => (id ? (rca.recommendations.find((r) => r.id === id)?.title ?? '') : '');
-  const header = row(['Title', 'Type', 'Status', 'Owner', `Due date (${timeZone})`, 'Recommendation', 'Completed (UTC)', 'Verification', 'Claimed avoided loss', 'Currency', 'Cancel reason']);
+  // the claim columns are money: left out for a caller without the money capability
+  const claim = (values: unknown[]) => (money ? values : []);
+  const header = row(['Title', 'Type', 'Status', 'Owner', `Due date (${timeZone})`, 'Recommendation', 'Completed (UTC)', 'Verification', ...claim(['Claimed avoided loss', 'Currency']), 'Cancel reason']);
   const lines = actions.map((a) =>
     row([
       a.title,
@@ -181,8 +190,7 @@ export function actionsCsv(rca: RcaCaseView, actions: readonly RcaActionView[], 
       recommendation(a.recommendationId),
       a.completedAt,
       verificationLabel(a),
-      a.claimedAvoidedLoss?.amount,
-      a.claimedAvoidedLoss?.currency,
+      ...claim([a.claimedAvoidedLoss?.amount, a.claimedAvoidedLoss?.currency]),
       a.cancelReason,
     ]),
   );

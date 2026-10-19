@@ -15,6 +15,10 @@ import {
  * and always hand ISO values (`YYYY-MM-DD` dates, UTC instants) back to the caller.
  */
 export const INVALID_DATE_MESSAGE = 'Enter a valid date (YYYY/MM/DD)';
+/** QA PLA N8: a Gregorian field names its own format (`17/10/2026` is not read as a date). */
+export const INVALID_GREGORIAN_DATE_MESSAGE = 'Use YYYY-MM-DD, e.g. 2026-10-17';
+
+const invalidDate = (calendar: CalendarSystem) => (calendar === 'persian' ? INVALID_DATE_MESSAGE : INVALID_GREGORIAN_DATE_MESSAGE);
 export const RANGE_ORDER_MESSAGE = 'The end date must be on or after the start date';
 export const RANGE_ORDER_TIME_MESSAGE = 'The end must be after the start';
 
@@ -49,11 +53,11 @@ export function parseDateText(text: string, calendar: CalendarSystem): ParsedDat
   const trimmed = toLatinDigits(text.trim());
   if (trimmed === '') return { value: '', error: null };
   const match = TYPED_DATE.exec(trimmed);
-  if (!match) return { value: '', error: INVALID_DATE_MESSAGE };
+  if (!match) return { value: '', error: invalidDate(calendar) };
   const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
   const pad = (n: number) => String(n).padStart(2, '0');
   const iso = calendar === 'persian' ? jalaliToIsoDate(y, m, d) : `${match[1]}-${pad(m)}-${pad(d)}`;
-  if (!iso || !isoDateToJalali(iso)) return { value: '', error: INVALID_DATE_MESSAGE };
+  if (!iso || !isoDateToJalali(iso)) return { value: '', error: invalidDate(calendar) };
   return { value: iso, error: null };
 }
 

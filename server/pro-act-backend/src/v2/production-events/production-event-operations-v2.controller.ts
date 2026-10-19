@@ -1,3 +1,4 @@
+import { MoneyFields } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -50,6 +51,8 @@ const IF_MATCH_HEADER = {
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'production-events', version: '2' })
+// QA re-test 2026-10-19: an event's recorded cost is money (left out for operators)
+@MoneyFields('cost')
 export class ProductionEventOperationsV2Controller {
   constructor(
     private readonly operations: ProductionEventOperationsV2Service,

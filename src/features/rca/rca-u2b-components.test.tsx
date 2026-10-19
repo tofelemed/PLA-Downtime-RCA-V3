@@ -76,10 +76,10 @@ describe('RCA U2b components', () => {
   it('G-4: the event RCA chip links a case and names a recommendation', () => {
     const view = wrap(<EventRcaChip rcaState="completed" caseId="c9" />);
     expect(screen.getByTestId('event-rca-chip')).toHaveAttribute('href', '/rca/c9');
-    expect(screen.getByTestId('event-rca-chip').textContent).toContain('RCA completed');
+    expect(screen.getByTestId('event-rca-chip').textContent).toContain('Investigation completed');
     view.unmount();
     const second = wrap(<EventRcaChip rcaState="required" />);
-    expect(screen.getByTestId('event-rca-chip').textContent).toBe('RCA recommended');
+    expect(screen.getByTestId('event-rca-chip').textContent).toBe('Investigation recommended');
     second.unmount();
     const { container } = wrap(<EventRcaChip rcaState="none" />);
     expect(container.textContent).toBe('');

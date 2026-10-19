@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useRcaOutcome } from '@/api/v2/queries/rca-cases';
 import { currencyDigits } from '@/features/display-currency/money-format';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -17,6 +18,8 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
   const outcome = useRcaOutcome(rcaId);
   const { decimal } = useNumberFormat();
   const data = outcome.data;
+  // QA re-test N1: claimed avoided loss is money, not shown (nor sent by the server) without the capability
+  const { canViewMoney } = useCapabilities();
   return (
     <DataState state={dataStateOf(outcome)} error={outcome.error}>
       {data && (
@@ -25,20 +28,20 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
             <h3 className="text-sm font-medium">Approved historical loss</h3>
             <ApprovedImpact impact={data.approvedHistoricalLoss} />
           </section>
-          <section className="rounded border p-2" data-testid="outcome-claimed">
+          {canViewMoney && <section className="rounded border p-2" data-testid="outcome-claimed">
             <h3 className="text-sm font-medium">Claimed avoided loss</h3>
-            {data.claimedAvoided.length === 0 ? (
+            {(data.claimedAvoided ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">No claims.</p>
             ) : (
               <ul className="text-sm">
-                {data.claimedAvoided.map((claim) => (
+                {(data.claimedAvoided ?? []).map((claim) => (
                   <li key={claim.currency}>
                     <Quantity value={claim.amount} uom={claim.currency} fractionDigits={currencyDigits(claim.currency)} /> ({plural(claim.actions, 'action', 'actions')})
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </section>}
           <section className="rounded border p-2" data-testid="outcome-realized">
             <h3 className="text-sm font-medium">Realized difference</h3>
             {data.realized.length === 0 ? (

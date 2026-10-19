@@ -2,6 +2,7 @@ import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContai
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ChartFigure } from '@/features/ux-kit/chart-figure';
 import { plural } from '@/features/ux-kit/format/plural';
+import { SeriesValuesTable } from './series-values-table';
 
 export interface SeriesRow {
   label: string;
@@ -15,6 +16,8 @@ export interface SeriesChartProps {
   kind: 'line' | 'bar';
   /** values are ratios 0..1 shown as percentages on the axis */
   ratio?: boolean;
+  /** offer the drawn values as a table ("View values") under the chart */
+  valuesTable?: boolean;
 }
 
 const COLOURS = ['hsl(var(--chart-1))', 'hsl(var(--chart-5))', 'hsl(var(--chart-3))', 'hsl(var(--chart-2))'];
@@ -30,7 +33,7 @@ const TOOLTIP_STYLE = {
  * Time series of server values (lazy chunk, plan 3.6): each point is a server figure converted to a number
  * for drawing only; nothing is summed or averaged here.
  */
-export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
+export function SeriesChart({ rows, series, kind, ratio, valuesTable = false }: SeriesChartProps) {
   const points = rows.map((row) => ({
     label: row.label,
     ...Object.fromEntries(series.map((s) => [s.key, row.values[s.key] === null || row.values[s.key] === undefined ? null : Number(row.values[s.key])])),
@@ -41,7 +44,13 @@ export function SeriesChart({ rows, series, kind, ratio }: SeriesChartProps) {
   const Chart = kind === 'line' ? LineChart : BarChart;
   const caption = `${kind === 'line' ? 'Line' : 'Bar'} chart of ${series.map((s) => s.label).join(', ')} over ${plural(rows.length, 'period', 'periods')}.`;
   return (
-    <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="series-chart">
+    <ChartFigure
+      caption={caption}
+      chartClassName="h-64 w-full"
+      testId="series-chart"
+      tableLabel="View values"
+      table={valuesTable ? <SeriesValuesTable rows={rows} series={series} ratio={ratio} caption={`Values of the ${series.map((s) => s.label).join(', ')} chart`} /> : undefined}
+    >
       <ResponsiveContainer>
         <Chart data={points} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />

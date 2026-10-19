@@ -28,7 +28,8 @@ export class EventAttributedLossesV2Controller {
     summary:
       'Plan-ledger loss lines whose cause is the event, per period revision: approved (published revision) and provisional (open revision run)',
     description:
-      'Quantities per kind and unit of measure and the value of the tenant default valuation view per currency ' +
+      'Quantities per kind and unit of measure and the value per currency in the valuation view frozen when the ' +
+      'event’s periods were approved (the tenant default view when none froze one or they differ; `valuationViewSource`) ' +
       '(amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are ' +
       `left out. At most ${MAX_ATTRIBUTED_PERIODS} periods, earliest first (\`truncated\` when cut). 404 for an event ` +
       'outside the tenant or the caller scope.',

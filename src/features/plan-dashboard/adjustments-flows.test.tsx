@@ -54,6 +54,7 @@ describe('actuals adjustments in the period workspace', () => {
   });
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     actAs('SuperAdmin');
   });
 
@@ -98,5 +99,13 @@ describe('actuals adjustments in the period workspace', () => {
     const post = calls.find((c) => c.method === 'POST');
     expect(post?.url.pathname).toMatch(/\/v2\/actuals\/adjustments$/);
     expect(post?.body).toEqual({ sliceId: 's1', kind: 'good', quantity: '-5', basis: 'measured', reason: 'weighbridge recount', evidenceRef: 'WB-1' });
+  });
+
+  it('Cancel asks before leaving typed text, even an invalid quantity (P-5 re-test)', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    wrap(<AdjustmentForm period={PERIOD} timezone="UTC" backTo="/plans/x/periods/p1" onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/^Change/), { target: { value: 'qa test text' } });
+    fireEvent.click(screen.getByRole('link', { name: 'Cancel' }));
+    expect(confirm).toHaveBeenCalled();
   });
 });

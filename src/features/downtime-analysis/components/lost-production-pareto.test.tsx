@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import type { LossTreeGroupView, LossTreeView } from '@/api/v2/types/pla-analytics';
+import { DisplayCurrencyContext } from '@/features/display-currency/display-currency-context';
 import { LostProductionBody } from './lost-production-pareto';
 
 const group = (key: string, unit: string, amount: string | null, cumulativeShare: string | null): LossTreeGroupView => ({
@@ -13,12 +14,27 @@ const view = (groups: LossTreeGroupView[], units: string[]): LossTreeView => ({
 });
 
 describe('LostProductionBody (FE-08)', () => {
-  it('one table per currency; groups never mixed across currencies', () => {
+  it('QA N2: the value view shows the display currency only (USD by default), one table', () => {
     render(<LostProductionBody data={view([group('r1', 'IRR', '900', '0.9'), group('r2', 'IRR', '100', '1'), group('r1', 'USD', '30', '1')], ['IRR', 'USD'])} />);
-    const irr = screen.getByTestId('lost-production-table-IRR');
-    expect(within(irr).getAllByTestId('loss-group').map((cell) => cell.dataset.key)).toEqual(['r1', 'r2']);
+    expect(screen.queryByTestId('lost-production-table-IRR')).toBeNull();
     const usd = screen.getByTestId('lost-production-table-USD');
     expect(within(usd).getAllByTestId('loss-group').map((cell) => cell.dataset.amount)).toEqual(['30']);
+    expect(screen.queryByText('USD', { selector: 'p' })).toBeNull();
+  });
+
+  it('QA N2: follows the header toggle (IRR); without amounts in that currency every table is shown', () => {
+    const data = view([group('r1', 'IRR', '900', '0.9'), group('r2', 'IRR', '100', '1'), group('r1', 'USD', '30', '1')], ['IRR', 'USD']);
+    const { unmount } = render(
+      <DisplayCurrencyContext.Provider value={{ currency: 'IRR', setCurrency: () => undefined }}>
+        <LostProductionBody data={data} />
+      </DisplayCurrencyContext.Provider>,
+    );
+    const irr = screen.getByTestId('lost-production-table-IRR');
+    expect(within(irr).getAllByTestId('loss-group').map((cell) => cell.dataset.key)).toEqual(['r1', 'r2']);
+    expect(screen.queryByTestId('lost-production-table-USD')).toBeNull();
+    unmount();
+    render(<LostProductionBody data={view([group('r1', 'IRR', '900', '1')], ['IRR'])} />);
+    expect(screen.getByTestId('lost-production-table-IRR')).toBeInTheDocument();
   });
 
   it('a single unit shows no unit heading; an unvalued group keeps an empty amount, not 0', () => {

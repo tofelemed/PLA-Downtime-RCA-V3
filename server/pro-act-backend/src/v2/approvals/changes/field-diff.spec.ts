@@ -194,7 +194,7 @@ describe('approval change sets', () => {
     ).toBe(false);
     const line = sides.specs.find((spec) => spec.key === 'line:0');
     expect(line).toMatchObject({
-      label: 'Loss line · availability',
+      label: 'Availability loss line',
       labelRef: { ref: 'reason-code', id: 'rc-1' },
     });
   });

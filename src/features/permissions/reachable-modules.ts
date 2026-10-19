@@ -23,3 +23,4 @@ export function userRolesInPlant(user: Pick<UserView, 'role' | 'tenantId' | 'pla
 export function reachableModules(roles: readonly string[], flagsOn: Partial<Record<FeatureFlagKey, boolean>>): NavGroup[] {
   return groupNavigationItems(visibleNavigationItems(capabilitiesOf(roles), flagsOn));
 }
+

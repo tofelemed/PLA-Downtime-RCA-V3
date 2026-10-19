@@ -27,6 +27,13 @@ export interface MultiCheckSelectProps {
 
 const sameSelection = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((value) => b.includes(value));
 
+/** QA L19: the chosen names when one or two are chosen ("Shifts: A"), else the count. */
+function selectionSummary(current: readonly string[], options: readonly CheckOption[], number: (value: number) => string): string {
+  if (current.length === 0) return 'All';
+  if (current.length > 2) return `${number(current.length)} selected`;
+  return current.map((value) => options.find((option) => option.value === value)?.label ?? value).join(', ');
+}
+
 /** Multi-value filter (OR within one dimension, server-side); keyboard reachable checkboxes. */
 export function MultiCheckSelect({ label, options, selected, onChange, testId, commitOnClose = false }: MultiCheckSelectProps) {
   const { number } = useNumberFormat();
@@ -39,7 +46,7 @@ export function MultiCheckSelect({ label, options, selected, onChange, testId, c
     if (!sameSelection(draft, selected)) onChange([...draft]);
     setDraft(null);
   };
-  const summary = current.length === 0 ? 'All' : `${number(current.length)} selected`;
+  const summary = selectionSummary(current, options, number);
   return (
     <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>

@@ -18,7 +18,7 @@ export function OeeByDay({ scope }: { scope: AnalyticsScope }) {
   const query = useOeeReport(oeeQuery(scope, 'day', 'operational'), env.timezone);
   const data = query.data?.data;
   return (
-    <AnalyticsCard title={`${data?.label ?? 'OEE'} by plant date`} testId="report-oee" query={query} response={query.data} isEmpty={data?.groups.length === 0} emptyText="No periods start on these dates.">
+    <AnalyticsCard title={`${data?.label ?? 'OEE'} by plant date`} testId="report-oee" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data?.groups.length === 0} emptyText="No periods start on these dates.">
       {data && <OeeGroupTable report={data} groupTitle="Plant date" labelOf={(key) => formatOperationalDate(key, pref)} testId="report-oee-days" />}
     </AnalyticsCard>
   );
@@ -47,7 +47,7 @@ export function DowntimeReasonCard({ scope }: { scope: AnalyticsScope }) {
   const query = useDowntimeReport({ ...scopeBase(scope), groupBy: 'reason' }, env.timezone);
   const data = query.data?.data;
   return (
-    <AnalyticsCard title="Downtime by reason" testId="report-downtime" query={query} response={query.data} isEmpty={data?.groups.length === 0} emptyText="No downtime in these periods.">
+    <AnalyticsCard title="Downtime by reason" testId="report-downtime" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data?.groups.length === 0} emptyText="No downtime in these periods.">
       {data && <DataTable caption="Downtime by reason" columns={DOWNTIME_COLUMNS} rows={data.groups} getRowKey={(group) => group.key ?? '-'} density="compact" />}
     </AnalyticsCard>
   );

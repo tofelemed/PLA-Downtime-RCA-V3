@@ -83,6 +83,7 @@ describe('LossAttributionV2Service', () => {
 
   it('reads quantities with the unit restriction and the default view; no values query without lines', async () => {
     const { service, query } = serviceWith({ id: EVENT }, [
+      [],
       [{ basis: null }],
       [],
     ]);
@@ -90,15 +91,43 @@ describe('LossAttributionV2Service', () => {
     expect(result).toMatchObject({
       eventId: EVENT,
       valuationView: 'contribution_margin',
+      valuationViewSource: 'policy_default',
       items: [],
       truncated: false,
     });
-    expect(query).toHaveBeenCalledTimes(2);
-    const params = query.mock.calls[1][1];
+    expect(query).toHaveBeenCalledTimes(3);
+    const params = query.mock.calls[2][1];
     expect(params[0]).toBe(TENANT);
     expect(params[1]).toBe(EVENT);
     expect(params[3]).toEqual([UNIT]);
     expect(params[4]).toBe(201);
+  });
+
+  it('values in the view frozen when the event’s periods were approved, not the policy default now', async () => {
+    const { service, query } = serviceWith({ id: EVENT }, [
+      [{ view: 'economic_impact' }],
+      [],
+    ]);
+    const result = await service.attributedLosses(contextOf(), EVENT);
+    expect(result).toMatchObject({
+      valuationView: 'economic_impact',
+      valuationViewSource: 'approved_snapshot',
+    });
+    expect(query.mock.calls[0][1]).toEqual([TENANT, [EVENT]]);
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it('periods that froze different views fall back to the policy default', async () => {
+    const { service } = serviceWith({ id: EVENT }, [
+      [{ view: 'economic_impact' }, { view: 'standard_cost' }],
+      [{ basis: 'standard_cost' }],
+      [],
+    ]);
+    const result = await service.attributedLosses(contextOf(), EVENT);
+    expect(result).toMatchObject({
+      valuationView: 'standard_cost',
+      valuationViewSource: 'policy_default',
+    });
   });
 
   it('picker: from ≥ to is 422 INVALID_RANGE', async () => {

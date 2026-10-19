@@ -1,12 +1,12 @@
 import { PdfBlock, PdfDocumentModel, PdfPage } from './pdf-model';
 import { PdfSurface, PdfTextStyle } from './pdf-surface';
+import { CELL_PADDING, columnWidths, CONTENT_WIDTH, wrapRow } from './pdf-wrap';
 
 /** A4 landscape in points. */
 export const PAGE = { width: 842, height: 595, margin: 36 } as const;
 export const LINE_HEIGHT = 13;
 const BODY_TOP = 92;
 const FOOTER_Y = PAGE.height - PAGE.margin - 10;
-const CONTENT_WIDTH = PAGE.width - 2 * PAGE.margin;
 const FACT_LABEL_WIDTH = 150;
 
 /** Colours that keep at least 4.5:1 contrast on white. */
@@ -64,25 +64,26 @@ function drawTable(
   block: Extract<PdfBlock, { kind: 'table' }>,
   top: number,
 ): number {
-  const totalWidth = block.columns.reduce((sum, c) => sum + c.width, 0);
-  const widths = block.columns.map(
-    (c) => (c.width / totalWidth) * CONTENT_WIDTH,
-  );
-  const drawRow = (cells: readonly string[], y: number, bold: boolean) => {
+  const widths = columnWidths(block.columns);
+  /** Draws a row whose cells are already cut into lines; returns the lines it took. */
+  const drawRow = (cells: readonly string[][], y: number, bold: boolean) => {
     let x = PAGE.margin;
-    cells.forEach((cell, i) => {
-      const column = block.columns[i];
-      surface.text(
-        cell,
-        x,
-        y,
-        style({ bold, width: widths[i] - 4, align: column?.align ?? 'left' }),
+    cells.forEach((lines, i) => {
+      const align = block.columns[i]?.align ?? 'left';
+      lines.forEach((line, n) =>
+        surface.text(
+          line,
+          x,
+          y + n * LINE_HEIGHT,
+          style({ bold, width: widths[i] - CELL_PADDING, align }),
+        ),
       );
       x += widths[i];
     });
+    return Math.max(1, ...cells.map((lines) => lines.length));
   };
   drawRow(
-    block.columns.map((c) => c.label),
+    block.columns.map((c) => [c.label]),
     top,
     true,
   );
@@ -92,10 +93,11 @@ function drawTable(
     top + LINE_HEIGHT - 2,
     RULE,
   );
-  block.rows.forEach((row, index) =>
-    drawRow(row, top + (index + 1) * LINE_HEIGHT, false),
-  );
-  return top + (block.rows.length + 2) * LINE_HEIGHT;
+  let y = top + LINE_HEIGHT;
+  for (const row of block.rows) {
+    y += drawRow(wrapRow(row, block.columns), y, false) * LINE_HEIGHT;
+  }
+  return y + LINE_HEIGHT;
 }
 
 /** Draws one block at `top`; returns the top of the next block. */

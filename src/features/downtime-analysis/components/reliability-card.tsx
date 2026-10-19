@@ -6,6 +6,7 @@ import { DurationText } from '@/features/ux-kit/duration-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { reportBase, type DowntimeFilters } from '../model/downtime-filters';
 import { formatCount, reasonText, REPAIR_COLUMNS } from '../model/kpi-display';
+import { DataCoverageNote } from './data-coverage-note';
 import { ReportCard } from './report-card';
 
 /**
@@ -26,6 +27,7 @@ export function ReliabilityCard({ filters }: { filters: DowntimeFilters }) {
       isEmpty={rows.length === 0}
       note={query.data?.data.failureDefinition}
     >
+      <DataCoverageNote coverage={query.data?.data.dataCoverage} />
       <Table>
         <TableHeader>
           <TableRow>

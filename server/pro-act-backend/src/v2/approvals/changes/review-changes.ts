@@ -15,6 +15,7 @@ import {
   restatementDelta,
   ReviewedFigures,
 } from '../../../domain/reconciliation/restatement-delta';
+import { kindLabel } from '../../../exports/export-words';
 import { ChangeRow, ChangeSource, FieldSpec } from './change-types';
 
 const FIGURE_LABELS: Readonly<Record<string, string>> = {
@@ -71,7 +72,8 @@ export function deltaSides(delta: RestatementDelta): Sides {
   delta.lines.forEach((line, index) => {
     const spec: FieldSpec = {
       key: '',
-      label: `Loss line · ${line.kind}`,
+      // QA_SHELL #22: the loss category in words ("Availability loss line · Gearbox failure"), not the raw kind
+      label: `${kindLabel(line.kind) ?? 'Other'} loss line`,
       format: 'quantity',
       unit: line.uom ?? undefined,
       ...(line.reasonCodeId

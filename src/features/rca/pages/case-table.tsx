@@ -23,10 +23,10 @@ interface ColumnContext {
 }
 
 function TriggerCell({ row, dateTime }: { row: RcaCaseListItemView; dateTime: ColumnContext['dateTime'] }) {
-  if (!row.trigger) return <span className="text-muted-foreground">No event</span>;
+  if (!row.trigger) return <span className="text-muted-foreground">No linked stop</span>;
   return (
     <Link className="underline" to={`/events/${encodeURIComponent(row.trigger.eventId)}`} data-testid="case-trigger">
-      Event {dateTime(row.trigger.startTime)}
+      Stop {dateTime(row.trigger.startTime)}
     </Link>
   );
 }

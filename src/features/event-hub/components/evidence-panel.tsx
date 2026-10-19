@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { EventRelationView, EventRevisionView, ProductionEventHistoryView } from '@/api/v2/types/events';
+import { plural } from '@/features/ux-kit/format/plural';
 import { humanize } from '@/features/ux-kit/labels';
 import { factLabel, factText, type FactResolvers } from '../model/fact-display';
 import { useFactResolvers } from '../hooks/use-fact-resolvers';
@@ -18,8 +19,18 @@ function relationText(relation: EventRelationView, eventId: string): { text: str
   return { text: isFrom ? labels.self : labels.other, otherId };
 }
 
+/** A fact the source left empty (null, blank text, empty list or object): QA L12, not listed as "—". */
+function isEmptyFact(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  if (Array.isArray(value)) return value.length === 0;
+  return typeof value === 'object' && Object.keys(value).length === 0;
+}
+
 function Delivery({ revision, resolvers }: { revision: EventRevisionView; resolvers: FactResolvers }) {
-  const facts = Object.entries(revision.sourceFacts ?? {});
+  const all = Object.entries(revision.sourceFacts ?? {});
+  const facts = all.filter(([, value]) => !isEmptyFact(value));
+  const empty = all.length - facts.length;
   return (
     <li className="space-y-1 rounded border p-2 text-xs">
       <div className="font-medium">
@@ -33,6 +44,11 @@ function Delivery({ revision, resolvers }: { revision: EventRevisionView; resolv
           </div>
         ))}
       </dl>
+      {empty > 0 && (
+        <p className="text-muted-foreground" data-testid="evidence-empty-count">
+          {plural(empty, 'empty field', 'empty fields')} not shown (in the raw payload below).
+        </p>
+      )}
       <details>
         <summary className="cursor-pointer text-muted-foreground">Show raw payload (for support)</summary>
         <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(revision.sourceFacts, null, 2)}</pre>

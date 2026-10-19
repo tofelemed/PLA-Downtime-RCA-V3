@@ -4,11 +4,12 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { EditorProblem } from '../editor/editor-problem';
 import { useCommandProblem } from '../hooks/use-command-problem';
 import { periodRefOf } from '../hooks/use-draft-editor';
+import { correctionDialogText } from '../model/month-lock';
 import { ProposeCorrectionDialog, type CorrectionDraft } from './propose-correction-dialog';
 
 /** Locked month: the change proposal flow (the same as History & exports). */
 function LockedMonthCorrection({ view }: { view: ReconciliationView }) {
-  const { canProposeCorrections } = useCapabilities();
+  const { canProposeCorrections, isSuperAdmin } = useCapabilities();
   const proposal = useProposeCorrection();
   const { problem, track } = useCommandProblem();
   const propose = (draft: CorrectionDraft) => track(proposal.submit({ period: periodRefOf(view), approvedRevision: view.publishedRevision ?? 0, ...draft }));
@@ -17,7 +18,7 @@ function LockedMonthCorrection({ view }: { view: ReconciliationView }) {
     <div className="space-y-2 text-sm" data-testid="review-correction">
       <p>The month is locked: approved figures change only through a correction proposal that another approver accepts.</p>
       {view.openProposalId && <p className="text-muted-foreground">A proposal is already open — see History &amp; exports.</p>}
-      {canPropose && <ProposeCorrectionDialog onPropose={propose} />}
+      {canPropose && <ProposeCorrectionDialog onPropose={propose} description={correctionDialogText(view.monthClose, isSuperAdmin)} />}
       {!canProposeCorrections && <p className="text-muted-foreground">Production accounting or plant management can propose one.</p>}
       {problem && <EditorProblem problem={problem} />}
     </div>

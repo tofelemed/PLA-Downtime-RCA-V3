@@ -203,3 +203,196 @@ None by this audit's actions:
 - No approve, submit, reopen, certify, close, post, edit or code action was sent.
 - Every mutating request except exports was aborted in the browser. The one attempt, the plan "Create version" check, was aborted, so no plan version was created.
 - Two export jobs were created through `POST /v2/exports` (read-only artifacts, which the brief allows): CSV `5118e7da…` and PDF `1d993d46…` for Shift A revision 3, requested by Sara.
+
+## Re-test 19 Oct
+
+Run: 19 Oct 2026, about 14:15–15:15 Tehran, after commit `dd04dd24` and deploy. Same method as the first round:
+- Headless Playwright with its own browser per run, logged in through the UI.
+- Every mutating API call was aborted except login and `POST /v2/exports`. The safety net was hit 0 times.
+- Personas: Leila, Sara, Reza, Maryam, Neda, Omid, Kamran and admin, each now holding only their guide role.
+- Viewports: 1440×900, plus a 768×1024 pass (Sara, 11 pages).
+
+Evidence lives in the same folder (`…\scratchpad\qa\planning\`):
+- `shots\rt-*.png`: screenshots;
+- `results-retest.jsonl`: one capture per page;
+- `rt-*.txt`: raw script output;
+- `dl\`: the new exports `17d20be0…` (CSV) and `a6387cbc…` (PDF).
+
+**FIXED 18 / PARTIAL 4 / OPEN 10 / NEW 9**
+
+The figures still match:
+- Grid: A 224 / 189 / gap 35, B 223 / 1, C 209 / 15; Unaccounted 0 everywhere.
+- Review & close day panel: "Day total (approved shifts): 621.00 of 672.00 t" (35 + 1 + 15 = 51 lost).
+- Value: Shift A 5,250.00 USD and 3,150,000,000 IRR, B 150.00 USD and C 2,250.00 USD, so the day is 7,650 USD.
+- Coding gates: A 100 %, C 0 % with 1 uncoded, day 66.7 %.
+
+The pages are clean:
+- Across 188 captures (`results-retest.jsonl`) there are 0 console errors and 0 failed API requests.
+- There are no raw UUIDs, no snake_case words and no "demo" on screen.
+- No page scrolls horizontally at 768 px.
+- axe found serious or critical violations only on the `/period-accounting` redirect toast (P-14, still open).
+
+### Status of first-round findings
+
+| # | Finding (first round) | Status | Evidence (re-test) |
+|---|---|---|---|
+| P-0 (High) | My work and Month close point to 18/19 Oct periods that have no plan | FIXED | Month close (Overview, Periods and Days) now says "5 production days have no approved plan. Their periods are not counted above and need no approval until a plan covers them… · Open Plans", and lists 2026-10-18 … 2026-10-22 with 3 shifts each. The counts read 3 of 3 approved and 1 of 1 certified. My work › Periods for Sara and Leila: "Nothing waiting for you". `rt-mc-reza.txt`, shots/rt-reza-mc-*.png, rt-sara-myq-periods.png |
+| P-1 | Change proposal Before/After is a dump of internal fields | FIXED | The comparison is now grouped into Reconciliation (target, actual, gap, attributed, tolerance adjustment, Unaccounted), Plan ledger (calculated) and Capacity ledger (calculated). Each group has a caption, every figure has a unit, and "residual" no longer appears. C's newest proposal now shows "Loss value after (revision 4, approved, Contribution margin) 2,250.00 USD". See N3 for a leftover. `rt-sara-A.txt`, `rt-sara-C.txt` |
+| P-2 | Restatement panel shows quantities only, so a value-only change reads "no change" | FIXED | A: "Loss value (Economic impact … → Contribution margin) 5,040.00 USD · 5,250.00 USD · 210.00 USD". C: "Loss value (Contribution margin) 2,250.00 · 2,250.00 · 0.00 USD". shots/rt-sara-periodA-review.png |
+| P-3 | "Create new version" sent without a change reason; unit editable | FIXED | Save now shows "Say why this version changes the approved plan" on `changeReason` and nothing is sent. Unit and Scenario are locked: "A new version keeps the unit of the plan". `rt-validate-reza.txt`, `rt-dirty-*.txt` |
+| P-4 | Operator sees a "Review & close" link and a breadcrumb that lead to "No access" | FIXED | Omid's controls on the period page are only "Events", "2026-10-17 B", "Record disposition" and "Correct this disposition…": no workflow link and no planning breadcrumb. There is no money anywhere on his page. `rt-roles-omid.txt`, `rt-omid.txt` |
+| P-5 | No required markers and no unsaved-changes guard | PARTIAL | Required markers (`*` plus `required` / `aria-required`) are now on every form. The unsaved-changes guard works on New plan, Create new version, New profile version, New calendar version and Record/Correct disposition ("You have unsaved changes. Leave this page and discard them?", plus `beforeunload`). It is **missing on Import rates and Propose an actuals adjustment**: after typing, Cancel leaves without asking. `rt-dirty-reza.txt` |
+| P-7 | Month close hides the finance steps from Kamran | FIXED | Kamran sees "Finance sign-off…[disabled]" ("Plant management closes the quantities first (every period approved, the month ended).") and "Lock month…[disabled]" ("Finance signs off the month first…"). `rt-mc-kamran.txt` |
+| P-14 | Toast on the `/period-accounting` redirect fails axe | OPEN | Still: critical `button-name` (the toast close button `.right-2`), serious `aria-hidden-focus` (2) and serious `list` (`ol`). results-retest.jsonl `sara-period-accounting` |
+| Posting | A decided restatement posting is still editable | FIXED | Kamran and admin on A: "posted on 2026-10-19 as a correction · decided by Kamran on 2026-10-19 01:32 (+03:30 Asia/Tehran)… The posting decision is final. To change it, propose a correction of this period". No inputs are shown. C (undecided) keeps the form, with "Save posting…" disabled until a date is chosen. `rt-kamran-restate.txt` |
+| Case | Menu, h1 and title use different capitalisation | FIXED | The menu, h1, title, breadcrumb and no-access page now all read "Plans, profiles & calendars", "Month close", "Measurement uncertainty" and "My work" |
+| Period h1 | The period h1 does not name the shift; "Calculated2026" has no space | FIXED | The h1 and title read "HDPE Extruder 1 — 2026-10-17 · Shift A" (B, C likewise); "Calculated 2026-10-18 19:39" |
+| Op. mode | The profile list shows the raw value "normal" | OPEN | "HDPE Extruder 1 × HDPE grade A · normal"; the subtitle reads "Operating mode normal · version 1". shots/rt-leila-planning-profiles.png |
+| Actions col | Read-only users see an empty "Actions" column | OPEN | Leila still sees an Actions header with empty cells on both rate tables. shots/rt-leila-profile-detail.png |
+| Unit URL | The unit chosen on Transitions and Streams is not kept in the URL | FIXED | `?tab=transitions&unitId=…` and `?tab=streams&unitId=…` |
+| Record run | "Record run" is disabled with no reason | FIXED | "Add a stream first: a run says which stream ran the product." |
+| Calendar view | A published version opens on `/edit`; no Back; "Run preview" is disabled with no reason | PARTIAL | "Back to calendars" was added, and Run preview now gives a reason ("Choose “Preview” above first."). The URL is still `/planning/calendars/:id/edit` for a published, read-only version. shots/rt-leila-calendar-version.png |
+| Plan units | "Header target: 672.00" has no unit; the slice row shows Weight and Slice target "—" | OPEN | Unchanged. shots/rt-leila-plan-detail.png |
+| Profile gate | `/planning/profiles/new` renders the full form for Leila | FIXED | "Profile editing — No access…". Same for `/planning/calendars/new` ("Calendar editing — No access") |
+| Import form | "Import" is disabled with no reason; there is no Cancel | FIXED | "Choose a file and enter its document reference first." Cancel now goes to `?tab=profiles`. The missing dirty guard is counted under P-5 |
+| New calendar | Non-writers get the editor; there is no Cancel | FIXED | Leila is refused; Reza has Cancel, which goes to `?tab=calendars` |
+| Menu label | "Period accounting" is sentence case among Title Case items | FIXED | All items are sentence case (the entry is no longer in the PLA menu; the redirect still works) |
+| Figures of | "Approved revision only" is not in the URL | FIXED | `?view=approved`, kept after a reload |
+| Go to date | Dates outside the plan are accepted silently | OPEN | `?date=2026-09-01` shows "From plan start" and the same 3 rows, with no message |
+| Quality chip | A disposition-based quality line carries a "Not coded" chip | FIXED | A's quality line reads "No cause". C's "Not coded" is on the availability line from the uncoded 02:00 stop, which is correct |
+| Capacity labels | In the capacity view, the equation says "Target" and the heading says "Loss lines (plan ledger)" | OPEN | Unchanged with `ledger=capacity` (only the waterfall says "Capacity at sustained rate"). `rt-sara-A.txt` |
+| Verify reason | "Verify this shift's stops" is disabled with no reason | FIXED | On A (Leila, Reza, Maryam, admin): "Every coded stop of this shift is already verified." See N8 for C |
+| Day tone | The day coding warning is grey text, unlike the shift card | OPEN | It is still a `p.text-xs` plain line under the day panel |
+| Value note | Value does not mention the restatement | OPEN | The Value section shows only the frozen 5,250.00 USD. The 5,040 → 5,250 change is visible on Review & close (P-2) but not linked from Value. Low |
+| Propose wording | The "Propose a correction" dialog text does not match the user's role or the month state | OPEN | Still "For a period of a closing or locked month… (SuperAdmin may decide their own proposal)", shown to Sara on an open month |
+| CSV | `timezone,UTC`, `requested_by` is a uuid, and the reason is empty | PARTIAL | Added `requested_by_name,Sara`, `plant_timezone,Asia/Tehran` and a `plant_start` column. The availability row still has an empty `reason`, with only `reason_code_id`, so MECH-GEARBOX is not readable in the CSV. `dl/sara-A-…-17d20be0….csv` |
+| PDF | Raw states; no reason on the availability line | FIXED | States now read "Accepted" / "In force", and the Reason column shows "MECH-GEARBOX · Gearbox failure" and "SPEED-LOSS · Reduced extrusion…". See N4 |
+| Future month | Aban shows "Prerequisites need attention" with 0 of 0 | OPEN | Unchanged. It now also lists 30 no-plan days, which is useful |
+
+### New findings
+
+| # | Page / route | Role | Result | Finding | Evidence | Severity | Suggested fix |
+|---|---|---|---|---|---|---|---|
+| N1 | `/month-close` Overview (Mehr 1405) | Reza | WARN | The banner reads "Prerequisites need attention. Select a count to inspect its records." Under Close quantities it says "Resolve the blocking prerequisites shown above before closing the quantities." Yet every count is 0 (3 of 3 approved, 1 of 1 certified, 0 proposals). The no-plan days are explicitly not blocking, and the only real blocker is "Month ends 2026-10-23 06:00 — not ended yet" | `rt-mc-reza.txt`, shots/rt-reza-mc-overview.png | Medium | Derive the banner and the second reason from the actual blockers; say "Prerequisites met — waiting for the month to end" |
+| N2 | All guarded forms | Reza, Leila | WARN | The unsaved-changes guard is the browser's native `confirm()` dialog, not the app's AlertDialog, so it is unstyled and cannot be tested with the app's dialog patterns | `rt-dirty-*.txt` ("NATIVE DIALOG confirm") | Low | Use the shared AlertDialog for in-app navigation; keep `beforeunload` for tab close |
+| N3 | History › Change proposals | Sara, Maryam | WARN | In the Capacity ledger (calculated) block, "Actual (good)" shows "—" before and after, while the Plan ledger block shows 189.00 t / 209.00 t | `rt-sara-A.txt`, `rt-sara-C.txt` | Low | Fill the capacity actual from the snapshot, or drop the row |
+| N4 | Export PDF | Sara | WARN | In the Reason column, the availability reason "MECH-GEARBOX · Gearbox failure" wraps and overprints the performance row's "SPEED-LOSS · …", so both rows are unreadable there | `dl/sara-A-…-a6387cbc….pdf` | Low | Give the row height to the wrapped cell, or truncate with the full text below |
+| N5 | Grid vs period page | all | WARN | The grid h1 and title read "Extruder1 HD5502 — 17 Oct 2026 · period accounting". The period page's breadcrumb for the same grid reads "Extruder1 HD5502 — 17 Oct 2026 · periods". The period h1 names the unit ("HDPE Extruder 1 — 2026-10-17 · Shift A") and its date format differs from the plan-name date ("17 Oct 2026") | results-retest.jsonl `*-roles-grid`, `*-roles-pA` | Low | One label for the grid page in the breadcrumb |
+| N6 | `/month-close?section=periods` | Reza | WARN | The link reads "Open my queue for your recent assigned work"; the page is called "My work" everywhere else | `rt-mc-reza.txt` | Low | "Open My work" |
+| N7 | `/measurement-uncertainty` | all | WARN | The intro text ends "…residuals are always published"; the glossary term is Unaccounted (the first round removed "residual" elsewhere) | `rt-myq-sara.txt` | Low | "Unaccounted figures are always published" |
+| N8 | Review & close C | Reza | WARN | "Verify this shift's stops" is **enabled** on C, whose only stop is uncoded (coded stop time 0 %). It was not clicked, so whether the server refuses is unknown. On A the button is disabled with a reason | `rt-probe7` output | Low (Medium if the server accepts it) | Disable it with "Code the stop first" while stops are uncoded |
+| N9 | My work › Periods (empty) | Sara, Leila | WARN | The empty state draws the table header row ("To do · Period · Due · Status") above "Nothing waiting for you" | shots/rt-sara-myq-periods.png | Low | Render only the empty state |
+
+Also noted (not counted):
+- Reza, Maryam and admin now see "Start investigation" (the glossary term) on loss lines, but the RCA chip on the availability line still reads "RCA completed (open the investigation)".
+- C's undecided posting still offers lower-case treatments ("a correction", "another adjustment") in its form.
+
+### Role matrix (re-test)
+
+| Control | Seen by | Not seen by |
+|---|---|---|
+| Reopen for revision… | Sara, Reza, Maryam, admin | — |
+| Start investigation | Reza, Maryam, admin | — |
+| Propose a correction… | Sara, Reza, Maryam, admin | Leila, Neda, Kamran |
+| Propose adjustment | Leila, Sara, Reza, Maryam, admin | Neda, Kamran |
+| Record disposition | Leila, Sara, Reza, Maryam, Neda, Omid, admin | Kamran |
+| Finance sign-off… / Lock month… (disabled, with reasons) | Kamran | Sara (and Reza) |
+| Restatement posting | read-only for everyone once decided | — |
+
+Omid is refused on Plans, Period accounting, Month close and Measurement uncertainty. He gets Actuals & quality only, without money. His My work shows only RCA actions and Tasks.
+
+### Data created in the re-test
+
+None by this audit's actions:
+- No approve, submit, reopen, certify, close, post, verify, edit or code action was sent.
+- 0 mutating requests were blocked, because none was attempted.
+- Two read-only export jobs were created through `POST /v2/exports` (CSV `17d20be0…` and PDF `a6387cbc…` for Shift A, revision 3, requested by Sara), plus the same pair for Shift C.
+
+## Round 3 re-test (19 Oct 2026)
+
+Run 19 Oct 2026, about 16:50–17:25 Tehran, against the freshly rebuilt Docker stack (frontend :8070, API :4004).
+- **Method:** headless Chromium, logged in through the UI. Every non-GET API call was blocked except login, refresh and export jobs, and no write was attempted. Forms were only typed into, then left with "Stay on this page" or by closing the browser.
+- **Personas:** Sara, Reza, Leila, Kamran, Maryam, Shirin, Farid, Omid and admin.
+- **Viewports:** 1440×900, plus 768×1024 for Sara (18 pages).
+- **Evidence:** `…\scratchpad\qa\r3\` holds `p*.txt`, the `k1` and `o1` outputs, `*.png`, `results.jsonl` and `dl\`.
+
+**Figures unchanged:**
+- Grid: A 224 / 189 / 35, B 224 / 223 / 1, C 224 / 209 / 15, with Unaccounted 0.
+- Day panel: "621.00 of 672.00 t".
+- Value: A 5,250, B 150 and C 2,250 USD, so 7,650 USD for the day.
+- The same figures appear on PLA, Reports and the Dashboard (see QA_PLA_ANALYTICS).
+
+**Clean pages:**
+- No console errors and no failed requests, apart from the expected 404 on a decided approval's deep link (R3-6).
+- No raw IDs, snake_case words, "demo" or "training" on screen. Units have a space.
+- No horizontal scroll at 768 px.
+- axe found no serious or critical issues, except on the `/period-accounting` redirect (R3-5).
+
+### Verified fixed
+
+- **Plan:**
+  - The header reads "Header target: 672.00 t".
+  - The slice row shows Weight "Not used" and Slice target "Header target".
+- **Profiles:**
+  - The operating mode reads "Normal".
+  - Leila sees no Actions column.
+- **Calendars:** a published calendar opens at `/planning/calendars/:id` (read-only, with "Back to calendars").
+- **Go to date:** a date outside the plan says "2026-09-01 is outside this plan (2026-10-17 – 2026-10-18): showing it from the plan start."
+- **Period labels:**
+  - The h1 and title name the shift ("HDPE Extruder 1 — 2026-10-17 · Shift A/B/C").
+  - The grid h1 and the period back link both read "Extruder1 HD5502 — 17 Oct 2026 · period accounting".
+- **Restatement panel:**
+  - Decided postings are read-only. A reads "posted on 2026-10-19 as a correction · decided by Kamran…".
+  - Kamran sees "The posting decision is final…" and no inputs.
+  - On C (not decided), the treatments are sentence case. "Save posting…" stays disabled until a date is chosen.
+  - Value-only changes are shown: A 5,040.00 → 5,250.00 USD (+210.00), B 80.00 → 150.00 USD, C 2,250.00 → 2,250.00 USD.
+- **Value section:** it names the restatement: "Restated from approved revision 2: loss value was 5,040.00 USD, now 5,250.00 USD. See the restatement in Review & close".
+- **Change proposals:**
+  - Before/after is grouped into Reconciliation, Plan ledger and Capacity ledger, and every figure has a unit.
+  - The capacity "Actual (good)" now shows 189.00 t and 209.00 t (N3 fixed).
+  - The value before and after is shown, e.g. C "1,350,000,000 IRR · 2,250.00 USD".
+- **Correcting an approved period:** in the open month, History says "The month is open: correct this approved period with “Reopen for revision…” in Review & close". "Propose a correction" is no longer offered there.
+- **Month close (Mehr):**
+  - The banner reads "Prerequisites met — waiting for the month to end." and "Close quantities…" is disabled with "Month not ended yet." (N1 fixed).
+  - Aban reads "This month has not started yet." on the banner and on the button.
+  - The no-plan days 18–22 Oct are listed with "Open Plans".
+  - The link now reads "Open My work" (N6 fixed).
+  - Kamran's finance buttons are disabled and give their reasons.
+- **Day certification:** "Day certified" with A / B / C Approved. The day coding warning now looks like the shift card.
+- **Verify this shift's stops:**
+  - On C it is disabled with "Code the stop first: only stops with a reason or “investigation pending” are verified." (N8 fixed).
+  - On A it is disabled with "Every coded stop of this shift is already verified."
+- **Unsaved-changes guard** (N2 and the rest of P-5 fixed):
+  - Tested on New plan version, Import rates, Propose adjustment and Record disposition.
+  - An in-app link, the form's Cancel and browser Back (after in-app navigation) all ask through the app dialog: "Leave this page? … Stay on this page / Leave and discard".
+  - "Stay" keeps the URL and the typed text.
+  - Only reload and tab close use the native prompt.
+- **My work:**
+  - No 18–22 Oct (no-plan) period is listed for Sara, Leila, Reza, Maryam, Shirin, Farid or admin.
+  - The Periods tab shows only "Nothing waiting for you", without a table header (N9 fixed).
+  - The RCA actions Status filter works: each choice sends its own query (open and in progress, done, all) and changes the empty-state text.
+  - None of these personas owns an RCA action, so rows could not be checked.
+- **Measurement uncertainty:** "Unaccounted figures are always published" (N7 fixed).
+- **Operator (Omid):**
+  - The period page opens on Actuals & quality only; `/value`, `/review` and `/history` redirect there.
+  - No money is shown.
+
+### Remaining problems
+
+| # | Page | Persona | What is wrong | Expected | Severity |
+|---|---|---|---|---|---|
+| R3-1 | Period › Review & close, restatement posting (C, not decided) | Kamran (finance approver) | "Posting date" is the browser's native date picker (`input type=date`), so it shows the browser's locale format and calendar, not the plant format (YYYY-MM-DD). It is the only native date input left in planning, period accounting and month close | The plant date field used on Reports and PLA: text YYYY-MM-DD with "Use YYYY-MM-DD, e.g. 2026-10-17" | Medium |
+| R3-2 | Period › Review & close, stop coding card | all | "1 stops: 1 with a reason, 0 investigation pending, 0 uncoded" | "1 stop: …" (singular) | Low |
+| R3-3 | Approval inbox › change set; restatement panel | Reza | The "Availability loss line · <reason>" labels could not be checked live: no approval with changed loss lines is pending, and a decided item's link says "No longer pending". The restatement panel's own line rows (`restatement-panel.tsx`) still build "Loss line · ${kind} · reason …" and "… · ${kind} loss line" from the raw kind (`availability`). These rows do not show today because the Marun restatements change no lines | The same words as the inbox: "Availability loss line · Gearbox failure" | Low |
+| R3-4 | Export PDF (period loss lines, Reports loss lines) | Leila | Rows no longer overprint, but page breaks are poor. A period's heading and metadata sit at the bottom of one page while its table starts on the next ("(continued)"). Page 1 leaves half a page empty and pushes the next row to page 2 | Keep a period heading with at least its first rows; fill the page before breaking | Low |
+| R3-5 | `/period-accounting` redirect | Sara | axe still reports 1 serious issue: `list` on the Sonner `.toaster` (`ol`). The old critical `button-name` and `aria-hidden-focus` issues are gone | No serious axe issue | Low |
+| R3-6 | `/approvals/period-review/<decided revision>` | Reza | The page correctly reads "No longer pending", but the console logs a 404 error for `GET /api/v2/approval-inbox/…` | Handle "no longer pending" without a console error | Low |
+| R3-7 | History › Export approved loss lines (CSV) | Leila | The file name carries the raw export id (`traverse-forge-loss-lines-d9d6fdef-….csv`), while Reports exports use the date (`…-loss_lines-2026-10-17.csv`) | Plant, unit or period date in the file name | Low |
+
+Still open from earlier rounds (re-checked, but outside the round-3 scope):
+- "Run preview" on the read-only calendar still needs "Choose “Preview” above first".
+- Revision-history reasons contain the word "residual". This is text users typed, not product copy.
+
+### Data created in round 3
+
+None in the plant records. Two read-only export jobs were created through the UI for Shift C: loss lines CSV and PDF, requested by Leila. QA_PLA_ANALYTICS lists the Reports exports.

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import type { RestatementView } from '@/api/v2/types/restatement';
@@ -10,6 +11,7 @@ vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user'
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { RestatementPanel } = await import('./restatement/restatement-panel');
+const { RestatedValueNote } = await import('./restatement/restated-value-note');
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
@@ -64,6 +66,8 @@ describe('restatement delta and posting (SME R5)', () => {
     actAs('finance_approver', 'f1');
     wrap();
     fireEvent.change(await screen.findByTestId('posting-date'), { target: { value: '2026-11-03' } });
+    // QA re-test: the treatment choices are sentence case
+    expect([...screen.getByTestId('posting-treatment').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Correction', 'Change in estimate', 'Other adjustment', 'No posting']);
     fireEvent.click(screen.getByTestId('posting-save'));
     expect(posts).toHaveLength(0);
     fireEvent.click(await screen.findByRole('button', { name: 'Save posting' }));
@@ -113,5 +117,34 @@ describe('restatement delta and posting (SME R5)', () => {
     expect(rows[0].textContent).toContain('5,040.00 USD');
     expect(rows[0].textContent).toContain('5,250.00 USD');
     expect(rows[0].textContent).toContain('210.00 USD');
+  });
+
+  it('QA Value note: the Value section names a restated loss value and links to the restatement', async () => {
+    const restated: RestatementView = { ...DELTA, values: { oldView: 'contribution_margin', newView: 'contribution_margin', viewChanged: false, currencies: [{ currency: 'USD', old: '5040', new: '5250', delta: '210' }] } };
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, restated)));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <RestatedValueNote view={VIEW} reviewHref="/plans/pl/periods/p1/review" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const note = await screen.findByTestId('restated-value-note');
+    expect(note).toHaveTextContent('Restated from approved revision 1: loss value was 5,040.00 USD, now 5,250.00 USD.');
+    expect(screen.getByRole('link', { name: 'See the restatement in Review & close' })).toHaveAttribute('href', '/plans/pl/periods/p1/review#restatement');
+  });
+
+  it('QA Value note: nothing when the value did not change', async () => {
+    const same: RestatementView = { ...DELTA, values: { oldView: 'contribution_margin', newView: 'contribution_margin', viewChanged: false, currencies: [{ currency: 'USD', old: '2250', new: '2250', delta: '0' }] } };
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, same)));
+    const { container } = render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <RestatedValueNote view={VIEW} reviewHref="/r" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
+    expect(container.querySelector('[data-testid="restated-value-note"]')).toBeNull();
   });
 });

@@ -7,7 +7,7 @@ import { MasterDataLayout } from '../../components/master-data-layout';
 import { AssetSelect } from '../shared/asset-select';
 import { RowsImportPanel } from '../shared/rows-import-panel';
 import { useReliabilityFormat } from '../shared/use-reliability-format';
-import { WORK_ORDER_CSV_EXAMPLE, WORK_ORDER_CSV_HEADER, workOrderImportSummary, workOrderRowOf } from './work-order-import-model';
+import { WORK_ORDER_CSV_EXAMPLE, WORK_ORDER_CSV_COLUMNS, workOrderImportSummary, workOrderRowOf } from './work-order-import-model';
 import { WorkOrderTable } from './work-order-table';
 
 /** Filters in the URL (`?assetId=`, `?eventId=` from a stop's page), so Back and links keep them. */
@@ -51,7 +51,7 @@ export function WorkOrdersPage() {
         <Section title="Import the CMMS export" description="Rows upsert on work order + operation; a row without a stop is linked to the stop of its asset running at the operation start.">
           <RowsImportPanel
             id="work-orders"
-            header={WORK_ORDER_CSV_HEADER}
+            columns={WORK_ORDER_CSV_COLUMNS}
             example={WORK_ORDER_CSV_EXAMPLE}
             mapRow={workOrderRowOf}
             submit={importer.submit}

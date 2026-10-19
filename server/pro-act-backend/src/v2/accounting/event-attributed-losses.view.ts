@@ -1,4 +1,7 @@
-import { DefaultBasis } from '../../domain/valuation/valuation.types';
+import {
+  DefaultBasis,
+  ValuationViewSource,
+} from '../../domain/valuation/valuation.types';
 
 /** One reporting currency of the attributed value (status semantics of the RCA approved impact). */
 export interface AttributedValueV2View {
@@ -44,8 +47,13 @@ export interface AttributedPeriodV2View {
 
 export interface EventAttributedLossesV2View {
   eventId: string;
-  /** SME V8: the valuation view of `values` (the tenant policy's default basis) */
+  /**
+   * SME V8: the valuation view of `values` — the view frozen when the event's periods were approved; the
+   * tenant policy's default view when none froze one or they froze different ones
+   */
   valuationView: DefaultBasis;
+  /** where `valuationView` comes from (additive) */
+  valuationViewSource: ValuationViewSource;
   items: AttributedPeriodV2View[];
   /** more periods than the bound carried this event; the earliest ones are listed */
   truncated: boolean;

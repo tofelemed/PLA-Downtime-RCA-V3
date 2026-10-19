@@ -5,6 +5,7 @@ import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 import { StatusIcon } from '@/lib/icons';
 import { coverageText } from '../model/display';
+import { shownAsProvisional } from '../model/provisional';
 
 export interface SnapshotStatusProps {
   scopeLabel: string;
@@ -22,15 +23,6 @@ export interface SnapshotStatusProps {
 
 const isIncomplete = (response: SnapshotStatusProps['response']) =>
   response !== undefined && (response.coverage.ratio < 1 || response.dataQuality.missingCount > 0);
-
-/**
- * Approved-only figures are approved; what is missing is periods, said by the "incomplete" note. The
- * "Provisional" badge stays for the other causes (a provisional input with every period approved).
- */
-function provisionalOf(response: SnapshotStatusProps['response'], approvedOnly: boolean): boolean | undefined {
-  if (!response) return undefined;
-  return approvedOnly && response.coverage.ratio < 1 ? false : response.isProvisional;
-}
 
 /**
  * The page-wide status said once (UI guidelines §2): scope, plant timezone, approved / provisional,
@@ -51,7 +43,7 @@ export function SnapshotStatus(props: SnapshotStatusProps) {
         timezoneIsFallback={props.timezoneIsFallback}
         uom={props.uom}
         baseline={props.baseline}
-        isProvisional={provisionalOf(response, approvedOnly)}
+        isProvisional={shownAsProvisional(response, approvedOnly)}
         asOf={response?.asOf ?? null}
       />
       {isIncomplete(response) && (

@@ -1,3 +1,4 @@
+import { plural } from '@/features/ux-kit/format/plural';
 import { isTerminalJob, useBulkJob } from '@/api/v2/queries/event-commands';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
@@ -32,7 +33,7 @@ export function BulkJobProgress({ jobId }: { jobId: string }) {
                 <AlertDescription>
                   {failedChunks.map((chunk) => (
                     <p key={chunk.index} className="text-xs">
-                      Batch {number(chunk.index + 1)} ({number(chunk.size)} events): {batchError(chunk.errorCode)}
+                      Batch {number(chunk.index + 1)} ({plural(chunk.size, 'event', 'events', number)}): {batchError(chunk.errorCode)}
                     </p>
                   ))}
                 </AlertDescription>

@@ -1,3 +1,4 @@
+import { canViewMoney } from '../../auth/money/money-access';
 import { UnprocessableEntityException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import {
@@ -157,6 +158,7 @@ function recordOf(
   event: ProductionEvent,
   names: Names,
   timezone: string | null,
+  showCost: boolean,
 ): CsvValue[] {
   const start = new Date(event.startTime);
   const end = event.endTime ? new Date(event.endTime) : null;
@@ -184,7 +186,8 @@ function recordOf(
     event.description ?? null,
     toDecimalString(event.quantity),
     event.quantityUom ?? null,
-    toDecimalString(event.cost),
+    // QA re-test 2026-10-19: the cost column stays in place, empty for a caller without the money capability
+    showCost ? toDecimalString(event.cost) : null,
     ...labelCells(event, timezone),
   ];
 }
@@ -230,6 +233,7 @@ export async function exportEventsCsv(
     });
   }
   const timezone = await exportTimezoneOf(repo.manager, tenantId);
+  const showCost = canViewMoney(context);
   const parts = [CSV_BOM + csvRow(EXPORT_COLUMNS)];
   let last: ProductionEvent | undefined;
   for (let read = 0; read < EXPORT_MAX_ROWS; ) {
@@ -237,7 +241,7 @@ export async function exportEventsCsv(
     if (batch.length === 0) break;
     const names = await namesOf(repo, tenantId, batch);
     for (const event of batch)
-      parts.push(csvRow(recordOf(event, names, timezone)));
+      parts.push(csvRow(recordOf(event, names, timezone, showCost)));
     read += batch.length;
     last = batch[batch.length - 1];
     if (batch.length < BATCH) break;

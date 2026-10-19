@@ -107,3 +107,120 @@ Evidence (scripts, `results.jsonl` with 173 page captures, the `shots/` screensh
 ## Data created
 
 None. No investigation, link, dismissal, policy version, action, task or vote was saved. The definition edit was discarded through its confirmation dialog. In the role, policy, recommendation and evidence passes, a route guard aborted every API write. No write attempt was logged. Downloads were local only.
+
+## Re-test 19 Oct
+
+Agent: RCA · re-test after commit `dd04dd24` and deploy. Same method, with headless Chromium and a UI login per user (farid, maryam, omid, leila, sara). 137 new captures (`rt*` names in `results.jsonl`) at 1440×900, plus an 11-page pass at 768×1024. Scripts `rt1.mjs`, `rt2.mjs`, `rt3.mjs`, `rt4.mjs`, `rt5.mjs` and `rt7.mjs`, their outputs (`rt*.txt`), the `shots\rt*` screenshots and the exports (`dl-rt\`, `dl-omid\`) are in `C:\Users\Admin\AppData\Local\Temp\claude\d--HMI-Project-Usama-ProAct\8340f887-b72f-4b11-b2f2-ae7460ebd8b3\scratchpad\qa\rca\`. In every UI pass a route guard aborted all API writes, and none was attempted.
+
+**FIXED 16 / PARTIAL 5 / OPEN 3 / NEW 4**
+
+The 137 captures show 0 console errors, 0 failed requests, 0 axe serious/critical violations, no "demo" text, and no uuid or snake_case in page text. At 768 px no page scrolls horizontally (11 pages checked).
+
+### Closed investigation: read-only check (H1) and the server probe
+
+- **UI, Farid (reliability_engineer) and Maryam (manager_approver).** Every tab now shows "Closed investigation — reopen to change". Overview, Evidence (list and all 4 details), Analysis and all 9 tools, Recommendations & actions, Links & outcome, and History offer no enabled edit control:
+  - Definition: every field sits in a disabled fieldset, typing has no effect, and there is no Save/Discard bar.
+  - 5-Why, fishbone, FMEA, fault tree, barrier and change inputs are disabled.
+  - Action status selects are disabled.
+  - Evidence detail has no Edit/Delete; only file Download remains.
+  - The links form is hidden.
+  - What remains: Export, the search and filter inputs, the history pager, file Download, and the diagram zoom/fit controls.
+- **Reopen.** Only Maryam sees "Reopen the investigation". It stays disabled until a reason is typed, and was not used. Farid's Overview has no workflow control. Omid, Leila and Sara see only Export.
+- **Server probe (Farid, one request).** `GET /v2/rcas/f58df7af…` returned 200 with `ETag W/"22"`, status Closed and rowVersion 22. `PATCH` of the same case with `If-Match: W/"22"` and body `{title: <its own current title>}` returned **409** `{"code":"CASE_CLOSED","message":"The investigation is closed; reopen it to change it"}`. SQL afterwards: `rcas.row_version` is still 22, `updated_at` is still 2026-10-18 18:47:28Z, and no `audit_log` row is newer than 3 h. **No data changed.**
+
+### Previous findings
+
+| # | Status | Evidence (re-test) |
+|---|---|---|
+| H1 closed case editable | **FIXED** | See above. UI read-only for Farid and Maryam on every tab; server 409 CASE_CLOSED (rt1-farid.txt, rt1-maryam.txt, rt2.txt "DEFINITION ctrls", shots rt-farid-*, rt2-definition.png) |
+| M1 change after closure without audit | **FIXED** | History, newest entry: "Data repair · 2026-10-18 22:17 · System (data repair) · Changed: Recommendations · Reason: Data repair: the recommendations of this closed investigation were set to Completed or Cancelled…". 22:17 plant time = 18:47:28Z, the `updated_at` of the write. `audit_log` rev 22 `rca_case.repaired`, service `data_repair`. History now has 43 entries (rt2-history.txt, rt2-h-0.png) |
+| M2 "Verified" badge vs verdict | **FIXED** | The preventive action shows "Not enough evidence yet"; the corrective one shows "No verification planned". No "Verified" badge (rt2-actions-expanded.png) |
+| M3 two valuation views on Links | **PARTIAL** | Within the page it is now consistent: the package says "Value: Economic impact (at link time)" and the Outcome says "Economic impact … (the basis frozen in the linked evidence package)". The package basis still says "(the policy default, SME V8)", an internal reference. The same 4,200 USD is labelled "Value basis: Contribution margin" on the event page and "Value: contribution margin" on Bad actors (rt2-links-expanded.png, rt3-event-closedcase.png, rt2-ba.png) |
+| M4 exports incomplete | **FIXED** | The JSON now has `analyses` (6) and `history` (43). A new "Actions (CSV)" export exists. The CSVs use display labels ("Done", "Not enough evidence yet") and the evidence CSV has observed plant/UTC time, asset and files (dl-rt\). The actions CSV "Completed (UTC)" holds the date at plant midnight (2026-10-16T20:30Z = 17 Oct) |
+| M5 "Task" columns vs Task Management | **FIXED** | The evidence columns now read "Request · Requested from · Request due · Request status" (rt2-evidence.png) |
+| M7 residual risk quotes 720 h | **OPEN** | Overview still quotes "720 run-hour policy minimum" with no note that policy v2 now says 600 h. This is historical text kept as written; the page needs a note (rt2-overview.png) |
+| L1 non-glossary terms | **PARTIAL** | Fixed: the header reads "Triggered by: Stop from 2026-10-17 08:00", the button reads "Save investigation", Bad actors offers "Start investigation", and the event page has no "Create / link RCA". Still open: the list's Trigger column reads "Event 2026-10-17 08:00" (rt2.txt LIST) |
+| L1a "Event on …" in Recommended | **FIXED** | "Stop on HDPE Extruder 1" |
+| L2 legacy/Title Case statuses | **FIXED** | Status options: All statuses, Draft, In progress, Analysis, Monitoring, Closure review, Closed. "Published" is gone |
+| L3 Completed vs Done | **FIXED** | Recommendations, actions and evidence requests all say "Done". The repair History reason still says "Completed" (see N4) |
+| L4 no draft notice on other tabs | **FIXED (code)** | `PendingDraftNotice` was added to the workspace. It cannot be exercised on the closed case, which is now read-only |
+| L5 timeline raw entity | **FIXED** | "2026-10-17 08:00 · Stop · Gearbox failure · Linked stop"; items read "No evidence linked" |
+| L6 event diagram unconnected / attribution | **OPEN** | "No connections yet" and the "React Flow" attribution are still shown (also N2) |
+| L7 raw failure-mode key, trend date style | **FIXED** | Links show "MECH-GEARBOX Gearbox failure · Gearbox functional failure" and "Trend window 2026-10-17 07:00 – 2026-10-17 10:00". The KB shows "Failure mode: Gearbox functional failure" (rt5.txt) |
+| L8 History technical fields | **PARTIAL** | ID / Tenant ID / Investigator ids are gone, and the cause code shows its value ("ME-OIL-LIMITS — Lubricant condition limits…"). Still: 5 entries read only "Investigation details changed · Changed: Evidence", and the pager shows a total only on the last page ("1–20 · Page 1" … "41–43 of 43 · Page 3 of 3") |
+| L9 policy summary | **FIXED** | The summary shows "a verdict needs at least 95.0 % state-data coverage". Methods are labelled ("5-Why or Fishbone…"). Version 1 is "Built-in default (from the start)" |
+| L10 nav/h1 case | **PARTIAL** | menu = h1 = title for "Knowledge base" and "Bad actors" (sentence case). "RCA Analysis" is still Title Case in menu, h1 and title, and the case breadcrumb root is "Investigations" (rt3.txt) |
+| L11 action threshold without policy version | **PARTIAL** | Now says "Thresholds frozen from the RCA policy in force when the verification was planned", but does not name v1 |
+| L12 new-investigation validation and guard | **FIXED** | "Title* required", the hint "Enter a title to create the investigation." (aria-describedby), and Cancel when dirty asks "You have unsaved changes. Leave this page and discard them?" |
+| L13 Copy link | **FIXED** | When the clipboard is denied, a toast says "Could not copy the link · Your browser did not allow copying. Copy it from here: …". No pageerror |
+| L14 "Create / link RCA" on a completed event | **FIXED** | The event page shows only "RCA completed" and "Open the linked investigation" |
+| L15 `/rca/new` denial without h1 | **FIXED** | h1 and title are "New investigation", with "No access · Only reliability engineers and manager approvers open investigations." |
+| L16 My work → RCA actions has no status filter | **OPEN** | Still "No open RCA actions." and "All RCA actions". The filter exists only on `/rca` |
+
+### New findings
+
+| # | Page / route | Role | Result | Finding | Evidence | Severity | Suggested fix |
+|---|---|---|---|---|---|---|---|
+| N1 | Case header, Links & outcome, Actions, Export `/rca/:id*` | omid (operator) | FAIL | **Operators still see money in RCA**, contrary to DECISIONS 2026-10-19 "No money for operators". The approved-impact block is gated (it shows "Availability: 28.00 t" without a value), but these are not: <br>• the case header "Approved loss 28.00 t / 4,200.00 USD" on every tab <br>• the Outcome "Claimed avoided loss 4,200.00 USD (1 action)" <br>• the action meta "claimed 4,200.00 USD" <br>• Omid's JSON export (claimedAvoidedLoss 4200, approved values USD 4200 / IRR 2,520,000,000) <br>• the Actions CSV "Claimed avoided loss 4200 USD" | rt-role-omid.txt lines 62, 320, 504; rt4.txt; dl-omid\ | Medium | Gate with `canViewMoney` in `src/features/rca/case/case-trace.tsx` (ApprovedLossText), the claimed-avoided figure in the Outcome panel, `src/features/rca/actions/action-meta.tsx`, and `src/features/rca/model/case-export.ts` (drop value fields for operators) |
+| N2 | Event diagram `/rca/:id/analysis/event-diagram` | farid, maryam (closed) | WARN | The closed, read-only case still shows the edit instruction "No connections yet: use "Add connection", or drag from an event's bottom handle to another event." and React Flow's "toggle interactivity" control | rt1-farid.txt | Low | Hide the hint and interactivity control when `readOnly` |
+| N3 | Bad actors `/reliability/bad-actors` | farid, leila, sara | WARN | Internal references show in user text: "(CA8)" in the subtitle and "the CA8 cumulative same-mode downtime rule". The basis sentence starts lowercase ("…not included. approved plan lines of approved periods…") | rt2.txt BA | Low | Remove the spec ids and capitalise the basis (`src/features/rca/bad-actors/`) |
+| N4 | History repair entry | all | WARN | Title "Data repair" and the reason repeats it ("Reason: Data repair: …"). It says recommendations were "set to Completed or Cancelled" while the UI labels that state "Done" | rt2-history.txt | Low | Drop the "Data repair:" prefix from the reason; use the display label "Done" |
+
+### Use cases re-verified
+
+1. The closed case is read-only on every tab and tool for Farid and Maryam; Reopen appears only for Maryam (reason required, not used).
+2. Server refusal: one PATCH with the current If-Match returned 409 CASE_CLOSED, and SQL confirms no change.
+3. The data-repair History entry: System actor, plant time, reason, changed field.
+4. Exports: JSON (with analyses and history), and evidence, recommendations and actions CSVs. Copy link fallback.
+5. List, Recommended and Actions tabs; status options; policy summary and version history; KB list and detail; Bad actors.
+6. New investigation: required marker, hint and dirty-cancel guard (left without creating).
+7. Role pass for Omid, Leila and Sara: read-only workspace; Omid's denied pages have an h1; My RCA actions status filter.
+8. 768×1024 pass on 11 pages.
+
+### Data created (re-test)
+
+None. The UI passes aborted every write. One deliberate PATCH was refused with 409 by the server, and SQL confirmed the case is unchanged (row_version 22, updated_at 2026-10-18 18:47:28Z, no new audit row). Downloads were local only.
+
+## Round 3 re-test (19 Oct 2026)
+
+Run: 19 Oct 2026, about 17:05–17:45 Tehran, after the 17:18 redeploy of the round-3 fixes. Headless Chromium, UI login for farid, maryam, reza, leila, sara and omid, at 1440×900 (all tabs, all 9 analysis tools, the 4 evidence details, Bad actors, Knowledge base, the list and its tabs, New investigation) plus 768×1024 for farid and omid. A browser guard aborted every write; none was attempted. Captures are in `C:\Users\Admin\AppData\Local\Temp\claude\d--HMI-Project-Usama-ProAct\8340f887-b72f-4b11-b2f2-ae7460ebd8b3\scratchpad\qa\r3dr\` (`r1-*`, `r2-*`, `e1-*`, `e2.json`, `shots\`, `dl\`).
+
+Result on every page: **0 console errors, 0 failed requests, 0 axe serious/critical issues, no horizontal scroll at 768 px, no raw keys or uuids, no "demo" text.**
+
+### Closed investigation f58df7af… is read-only
+
+- **UI:** farid and maryam see "Closed investigation — reopen to change" on every tab. All definition fields, the 5-Why, fishbone and FMEA inputs and the action status selects are disabled (checked with `:disabled`, including inputs inside disabled fieldsets). Evidence has search only, Links hides the form ("reopen it to add a link"), and the event diagram shows zoom / fit only. Only maryam has "Reopen the investigation", and it stays disabled without a reason (not used). leila, sara and omid see Export only.
+- **Server, reza (manager approver), one request:** `GET` returned 200, `ETag W/"22"`, status Closed. `PATCH` with that If-Match and the case's own title returned **409 `CASE_CLOSED`** ("The investigation is closed; reopen it to change it"). A second `GET` still returned `W/"22"`. Nothing changed.
+
+### Verified fixed in round 3
+
+- **Operator money (N1):** omid's header reads "Approved loss 28.00 t" (no amount). The Outcome has no "Claimed avoided loss" figure, the action has no "claimed …", and there is no "Value basis" or "Est. cost". His JSON export has no amounts (only the field names "Claimed avoided loss / currency" in one history entry), and his Actions CSV has no claim columns. Bad actors is refused for him ("No access").
+- **M7:** the Overview adds "The actions' thresholds were frozen from RCA policy v1 (at least 720 run hours after an action). The current policy v2 asks for at least 600 run hours; it applies to new baselines."
+- **L1:** the list Trigger column reads "Stop 2026-10-17 08:00", and Recommended says "Stops where an RCA trigger fired…".
+- **L6 / N2:** the closed case's event diagram has no "Add connection" hint and no interactivity toggle.
+- **L8:** History reads "1–20 of 43 · Page 1 of 3" on the first page, and old entries say "Recommendations (which item changed was not recorded)".
+- **L11:** "Thresholds frozen from RCA policy v1 when the verification was planned."
+- **L16:** My work › RCA actions has a Status filter ("To do (open or in progress)").
+- **N3:** Bad actors has no "(CA8)" and its basis is a capitalised sentence ("Value basis: Contribution margin; 5 periods not included: No approved plan covers these periods.").
+- **N4:** the repair reason reads "Recommendations completed after the investigation closed: each recommendation was set to Done or Cancelled…", with no "Data repair:" prefix.
+- **Event page vs Outcome vs Bad actors** all say "Value basis: Contribution margin" for the 4,200.00 USD.
+- **Dialogs:** Dismiss recommendation (reason required, cancelled) and New investigation (h1, required title, Cancel goes back to `/rca`). omid gets "No access · Only reliability engineers and manager approvers open investigations."
+- **Exports** (JSON, Evidence CSV, Recommendations CSV, Actions CSV) downloaded for all 6 personas.
+
+### Remaining problems
+
+| # | Page | Persona | What's wrong | Expected | Severity |
+|---|---|---|---|---|---|
+| R3-1 | Overview › Definition; Analysis › Event diagram; Recommendations & actions | all | Course / test wording in the live investigation: Problem statement "**Training** extruder stopped from 08:00 to 09:00…"; event-diagram item "…oil temperature trend rising before the trip (**fictional**)"; action evidence "…within limits (**fictional**)". The residual-risk text also cites "(**guide**: 600 comparable hours)". The case is closed, so users cannot correct it. | A one-off text repair, like `rewrite-finance-texts.ts` for finance: plain production wording, no "training" / "fictional" / "guide". | Medium |
+| R3-2 | Links & outcome | farid, maryam, reza, leila, sara | The same 4,200.00 USD appears under two bases on one page: the evidence package "Value basis: Economic impact (lost sales + incremental costs) (at link time)", and the Outcome "Value basis: Contribution margin". This follows the decision (frozen packages keep their basis), but a reader cannot tell why the same amount has two bases. It also reads "USD: 4,200.00 USD", with the currency twice. | Explain the difference in one line under the package (for example "valued when linked; the outcome uses the view frozen at approval"), and drop the repeated currency. | Low (M3 carry-over) |
+| R3-3 | Overview (team charter) | omid | The typed charter text "…approved availability loss 28 t, USD 4,200…" shows money to the operator. It is free text, so the server rule cannot remove it. | Accept as free text, or keep amounts out of charter text. | Low |
+| R3-4 | Recommended tab | farid, maryam | The table heading reads "Open RCA recommendations" and the first column "Event", while the rows say "Stop on HDPE Extruder 1" and the tab says "Recommended investigations". | "Recommended investigations" / column "Stop". | Low |
+| R3-5 | Overview › Workflow | farid, leila, sara | "SuperAdmin may approve their own investigation; other approvers must be independent." is shown to every role. | Show the SuperAdmin sentence to SuperAdmin only, as on the approval pages. | Low |
+| R3-6 | History | all | Old-value words are lowercase and technical: "Status: none → Open", "Statement (characters): none → 79 characters". | "Status: — → Open", "Statement: added (79 characters)". | Low |
+| R3-7 | Exports | all | The investigation CSVs have no UTF-8 BOM, unlike the Event Hub and period-summary CSVs. Non-ASCII text (—, “ ”) will break in Excel once it appears. | The same BOM as the other CSV exports. | Low |
+| R3-8 | RCA trigger settings | all | "Minor: … (team ≥ 0)", a meaningless limit. "baseline counted from history…" on the action starts in lowercase. | Leave out "team ≥ 0"; use sentence case. | Low |
+| R3-9 | Menu / h1 | all | "RCA Analysis" is still Title Case (left to the navigation owner, per the decision). | "RCA analysis" if the owner agrees. | Low (owner) |
+
+### Data created in round 3
+
+None. The browser guard aborted every write, and none was attempted. The one deliberate server PATCH (reza) was refused with 409, and the ETag is still `W/"22"`. Downloads are local only.

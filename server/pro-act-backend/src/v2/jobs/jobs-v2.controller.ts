@@ -1,3 +1,4 @@
+import { MoneyFields } from '../../auth/money/money.decorators';
 import {
   Controller,
   Get,
@@ -17,6 +18,8 @@ import { ProductionEventOperationsV2Service } from '../production-events/product
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'jobs', version: '2' })
+// QA re-test 2026-10-19: event views in job results carry the recorded cost (money)
+@MoneyFields('cost')
 export class JobsV2Controller {
   constructor(
     private readonly operations: ProductionEventOperationsV2Service,

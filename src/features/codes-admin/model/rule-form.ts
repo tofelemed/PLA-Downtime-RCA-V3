@@ -7,7 +7,7 @@ import type {
   RuleScalar,
   RulesSchemaView,
 } from '@/api/v2/types/rules';
-import { humanize } from '@/features/ux-kit/labels/humanize';
+import { isPristineRow, plainGeneralMessage, plainPartMessage } from './rule-error-text';
 
 /** One condition as the builder edits it: pickers, and the value as typed text (lists comma-separated). */
 export interface ConditionRow {
@@ -110,16 +110,23 @@ export interface RowErrors {
   general: string[];
 }
 
-/** Names of the parts of a row the server names in its field paths. */
-const PART_LABELS: Readonly<Record<string, string>> = { field: 'Field', op: 'Operator', value: 'Value', set: 'Field to set', flag: 'Flag' };
-
 const PATH = /^definition\.(when\.(all|any)\.(\d+)|then\.(\d+))(?:\.(\w+))?/;
+
+export interface ErrorsByRowOptions {
+  /** show errors on rows nobody has touched yet (after a save was attempted); default false */
+  revealUntouched?: boolean;
+}
 
 /**
  * Places the API's 422 `fieldErrors` (`definition.when.all.0.op`, `definition.then.1.value`) on the
- * builder rows they name, so a live check and a refused save read the same.
+ * builder rows they name, in plain words (QA re-test N1: never the validator's allowed-value lists or
+ * internal keys). An untouched row stays quiet until a save is attempted.
  */
-export function errorsByRow(draft: RuleDraft, fieldErrors: ReadonlyArray<{ field: string; message: string }>): RowErrors {
+export function errorsByRow(
+  draft: RuleDraft,
+  fieldErrors: ReadonlyArray<{ field: string; message: string }>,
+  options: ErrorsByRowOptions = {},
+): RowErrors {
   const result: RowErrors = { rows: {}, general: [] };
   for (const error of fieldErrors) {
     const match = PATH.exec(error.field);
@@ -128,9 +135,14 @@ export function errorsByRow(draft: RuleDraft, fieldErrors: ReadonlyArray<{ field
         ? draft[match[2] as ConditionList][Number(match[3])]
         : draft.actions[Number(match[4])]
       : undefined;
-    const text = match?.[5] ? `${PART_LABELS[match[5]] ?? humanize(match[5])}: ${error.message}` : error.message;
-    if (row) result.rows[row.key] = [...(result.rows[row.key] ?? []), text];
-    else result.general.push(`${error.field.replace(/^definition\.?/, '') || 'definition'} ${error.message}`.trim());
+    if (!row) {
+      result.general.push(plainGeneralMessage(error.field, error.message));
+      continue;
+    }
+    if (!options.revealUntouched && isPristineRow({ field: row.field, op: 'op' in row ? row.op : '', value: row.value })) continue;
+    const text = plainPartMessage(match?.[5], error.message, { field: row.field, op: 'op' in row ? row.op : undefined, value: row.value });
+    const known = result.rows[row.key] ?? [];
+    if (!known.includes(text)) result.rows[row.key] = [...known, text];
   }
   return result;
 }

@@ -1,3 +1,4 @@
+import { MoneyOnly } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -40,6 +41,8 @@ import {
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'valuation-rates', version: '2' })
+// QA re-test 2026-10-19: finance records are money (403 MONEY_NOT_VISIBLE for operators)
+@MoneyOnly()
 export class ValuationRatesV2Controller {
   constructor(
     private readonly lists: ProfilesV2Service,

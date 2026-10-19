@@ -77,6 +77,9 @@ describe('cross-plan period list behind the reconciliation counts (UX D-6)', () 
     expect(urls[0].searchParams.get('sort')).toBe('-utcStart');
     expect(urls[0].searchParams.get('planId')).toBeNull();
     expect(screen.getByTestId('period-list-link')).toHaveAttribute('href', '/plans/plan-a/periods/p1');
+    // QA re-test N7: the shared no-plan wording, not a terse "no plan"
+    expect(screen.getByTestId('no-plan')).toHaveTextContent('No approved plan covers this period');
+    expect(screen.queryByText('no plan')).toBeNull();
     expect(screen.queryByText('No production periods in this state.')).toBeNull();
     fireEvent.click(screen.getByTestId('period-list-back'));
     await waitFor(() => expect(screen.getByTestId('location')).not.toHaveTextContent('periods='));

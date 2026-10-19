@@ -1,7 +1,9 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useState } from 'react';
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
 import type { LossTreeView } from '@/api/v2/types/pla-analytics';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { LossTable } from '@/features/pla-analytics/components/loss-table';
 import type { DowntimeFilters } from '../model/downtime-filters';
@@ -17,7 +19,10 @@ const METRIC_TEXT: Record<LostProductionMetric, string> = { qty: 'Lost quantity'
  */
 export function LostProductionPareto({ filters }: { filters: DowntimeFilters }) {
   const env = useEventHubEnv();
-  const [metric, setMetric] = useState<LostProductionMetric>('qty');
+  const [chosen, setMetric] = useState<LostProductionMetric>('qty');
+  // QA re-test N1: no money for operators — the Lost value view is not offered (the server refuses it too)
+  const { canViewMoney } = useCapabilities();
+  const metric: LostProductionMetric = canViewMoney ? chosen : 'qty';
   const query = useLossTree(lostProductionQuery(filters, metric), env.timezone);
   const data = query.data?.data;
   return (
@@ -29,7 +34,7 @@ export function LostProductionPareto({ filters }: { filters: DowntimeFilters }) 
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No availability losses in this scope."
       note="Availability losses of the plan ledger: approved lines where the period is approved, else its current calculation."
-      actions={
+      actions={canViewMoney &&
         <ToggleGroup type="single" size="sm" value={metric} onValueChange={(value) => value && setMetric(value as LostProductionMetric)} aria-label="Measure">
           {LOST_PRODUCTION_METRICS.map((m) => (
             <ToggleGroupItem key={m} value={m} data-testid={`lost-production-${m}`}>
@@ -44,13 +49,25 @@ export function LostProductionPareto({ filters }: { filters: DowntimeFilters }) 
   );
 }
 
+/**
+ * QA N2: a value view shows the table of the header's display currency only (USD by default); when the
+ * scope has no amount in that currency, every currency's table is shown. Quantities: one per unit of measure.
+ */
+function shownTotals(data: LossTreeView, currency: string): LossTreeView['totals'] {
+  if (data.metric === 'qty') return data.totals;
+  const inCurrency = data.totals.filter((total) => total.unit === currency);
+  return inCurrency.length > 0 ? inCurrency : data.totals;
+}
+
 /** One ranked table per unit of measure or currency (amounts in different units are never added). */
 export function LostProductionBody({ data }: { data: LossTreeView }) {
+  const { currency } = useDisplayCurrency();
+  const totals = shownTotals(data, currency);
   return (
     <div className="space-y-3">
-      {data.totals.map((total) => (
+      {totals.map((total) => (
         <div key={total.unit ?? '-'} className="space-y-1">
-          {data.totals.length > 1 && <p className="text-sm font-medium">{total.unit ?? 'Unknown unit'}</p>}
+          {totals.length > 1 && <p className="text-sm font-medium">{total.unit ?? 'Unknown unit'}</p>}
           <LossTable
             groups={data.groups.filter((g) => g.unit === total.unit)}
             total={total}

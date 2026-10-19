@@ -52,13 +52,13 @@ describe('RCA chip on loss lines (UX G-4)', () => {
   it('a candidate whose cause event has a linked investigation links to the case', () => {
     row({ ...CANDIDATE, causeEventRca: { state: 'linked', caseId: 'case-9' } });
     const chip = screen.getByTestId('event-rca-chip');
-    expect(chip).toHaveTextContent('RCA linked');
+    expect(chip).toHaveTextContent('Investigation linked');
     expect(chip).toHaveAttribute('href', '/rca/case-9');
   });
 
   it('shows "RCA recommended" for a required RCA and nothing for none or an unknown event', () => {
     const { unmount } = row({ ...CANDIDATE, causeEventRca: { state: 'required', caseId: null } });
-    expect(screen.getByTestId('event-rca-chip')).toHaveTextContent('RCA recommended');
+    expect(screen.getByTestId('event-rca-chip')).toHaveTextContent('Investigation recommended');
     unmount();
     const second = row({ ...CANDIDATE, causeEventRca: { state: 'none', caseId: null } });
     expect(screen.queryByTestId('event-rca-chip')).toBeNull();
@@ -78,7 +78,7 @@ describe('RCA chip on loss lines (UX G-4)', () => {
     wrap(<ManualLines view={view} draft={draft} setDraft={() => undefined} issues={new Map()} readOnly timezone="UTC" />);
     const chips = within(screen.getByTestId('manual-line-events')).getAllByTestId('event-rca-chip');
     expect(chips).toHaveLength(1);
-    expect(chips[0]).toHaveTextContent('RCA completed');
+    expect(chips[0]).toHaveTextContent('Investigation completed');
     expect(chips[0]).toHaveAttribute('href', '/rca/case-2');
   });
 });

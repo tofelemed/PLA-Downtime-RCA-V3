@@ -7,6 +7,7 @@ import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { PeriodGrid } from './components/period-grid';
 import { PlanSummary } from './components/plan-summary';
 import { usePlanContext } from './hooks/use-plan-context';
+import { periodGridTitle } from './model/period-title';
 
 const BACK = { to: '/planning?tab=plans', label: 'Plans' };
 
@@ -25,7 +26,7 @@ export function PlanDashboardPage() {
     const detail = state === 'error' ? 'This plan has no versioned plan yet. Create it under Plans, profiles & calendars to account its periods.' : undefined;
     return (
       <Page>
-        <PageHeader title="Period accounting" back={BACK} />
+        <PageHeader title={periodGridTitle(null)} back={BACK} />
         <DataState state={state} error={plan.error} detail={detail} />
       </Page>
     );
@@ -36,7 +37,7 @@ export function PlanDashboardPage() {
     <Page width="wide">
       <div className="space-y-6" data-testid="plan-dashboard-v2">
         <PageHeader
-          title={`${plan.data.name} · period accounting`}
+          title={periodGridTitle(plan.data.name)}
           back={BACK}
           meta={<ScopeHeader scopeLabel={unitName} timezone={zone.timezone} timezoneIsFallback={zone.source === 'utc-fallback'} baseline={`Plan version ${version.version} (${labelOf(VERSION_STATE_LABELS, version.approvalState).toLowerCase()})`} />}
         />

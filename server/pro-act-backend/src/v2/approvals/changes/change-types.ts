@@ -30,7 +30,7 @@ export interface FieldSpec {
   /** currency of a money value, read from the record */
   currency?: (row: ChangeRow) => string | null;
   ref?: NameRef;
-  /** a referenced record named after the label (`Loss line · availability · <reason name>`) */
+  /** a referenced record named after the label (`Availability loss line · <reason name>`) */
   labelRef?: { ref: NameRef; id: string };
   /** money values of one figure in several reporting currencies share a group (the client shows one) */
   group?: string;

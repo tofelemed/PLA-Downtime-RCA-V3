@@ -76,4 +76,38 @@ describe('KPI aggregation (AN03)', () => {
       reason: 'above_100_percent',
     });
   });
+
+  describe('unknown state time left out (owner decision 2026-10-19)', () => {
+    const terms = (
+      numerator: string,
+      denominator: string,
+      unknown: string,
+    ) => ({
+      ...groupTerms('scheduled_availability', [row(numerator, denominator)]),
+      unknownExcluded: new Dec(unknown),
+    });
+
+    it('a window whose every scheduled second is unknown has no value, never 0 %', () => {
+      expect(
+        combine('scheduled_availability', terms('0', '0', '86400')),
+      ).toMatchObject({ value: null, reason: 'no_known_time' });
+      expect(combine('mtbf', { ...terms('0', '1', '86400') })).toMatchObject({
+        value: null,
+        reason: 'no_known_time',
+      });
+    });
+
+    it('known time keeps its figure; without unknown time a zero denominator keeps its reason', () => {
+      // 17 Oct day + 18 Oct unknown: 22.5 h run over 24 h known → 93.75 %
+      expect(
+        combine(
+          'scheduled_availability',
+          terms('81000', '86400', '86400'),
+        ).value?.toFixed(),
+      ).toBe('0.9375');
+      expect(
+        combine('scheduled_availability', terms('0', '0', '0')),
+      ).toMatchObject({ reason: 'no_scheduled_time' });
+    });
+  });
 });

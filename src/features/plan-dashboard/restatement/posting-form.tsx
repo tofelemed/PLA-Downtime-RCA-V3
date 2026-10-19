@@ -7,7 +7,7 @@ import type { PostingTreatment, RestatementView } from '@/api/v2/types/restateme
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { POSTING_TREATMENT_LABELS } from '../model/restatement-labels';
+import { POSTING_TREATMENT_LABELS, POSTING_TREATMENT_OPTIONS } from '../model/restatement-labels';
 
 const TREATMENTS: PostingTreatment[] = ['correction', 'estimate_change', 'other_adjustment', 'no_posting'];
 const SELECT = 'h-9 rounded-md border border-input bg-background px-2';
@@ -30,7 +30,7 @@ export function PostingForm({ data }: { data: RestatementView }) {
         <select id={`${id}-treatment`} className={SELECT} value={treatment} onChange={(e) => setTreatment(e.target.value as PostingTreatment)} data-testid="posting-treatment">
           {TREATMENTS.map((t) => (
             <option key={t} value={t}>
-              {POSTING_TREATMENT_LABELS[t]}
+              {POSTING_TREATMENT_OPTIONS[t]}
             </option>
           ))}
         </select>

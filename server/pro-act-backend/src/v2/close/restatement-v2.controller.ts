@@ -1,3 +1,4 @@
+import { MoneyFields } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -78,6 +79,8 @@ export class PostingDecisionDto {
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'production-periods', version: '2' })
+// QA re-test 2026-10-19: `values` here are loss values per currency (left out for operators)
+@MoneyFields('values')
 export class RestatementV2Controller {
   constructor(private readonly restatements: RestatementService) {}
 

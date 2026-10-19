@@ -50,7 +50,7 @@ function sidebarLabel(page: { key: string; label: string }, overviewLabel: strin
  */
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: EntityIcon.dashboard, section: 'overview', capability: 'canViewOperations', description: 'Key figures of the selected plant' },
-  { name: 'Pending approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canViewOperations', description: 'Pending records for your approval roles in the selected plant' },
+  { name: 'Pending approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canReachApprovals', description: 'Pending records for your approval roles in the selected plant' },
   { name: 'Reports', href: '/reports', icon: EntityIcon.report, section: 'overview', capability: 'canViewAnalysis', description: 'OEE, loss, downtime and reconciliation reports' },
   { name: 'Event Hub', href: '/events', icon: EntityIcon.event, section: 'production', capability: 'canViewOperations', description: 'Stops and production events' },
   {
@@ -113,7 +113,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Source status rules', href: '/connectivity/source-status', icon: EntityIcon.rule, section: 'integration', capability: 'canReachIntegration', description: 'Which source statuses count as the released record, per source system' },
   { name: 'Source priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canReachIntegration', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
   { name: 'Enhanced historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canReachIntegration', description: 'Time series of plant signals' },
-  { name: 'Equipment setup guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachMasterData', description: 'Six phases from equipment records to the first approved period and analysis' },
+  { name: 'Equipment setup guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachSetupGuide', description: 'Six phases from equipment records to the first approved period and analysis' },
   { name: 'Master data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', activeAlso: ['/codes-admin'], description: 'Plant records, codes, rules and reliability data' },
   {
     name: 'Finance',
@@ -123,8 +123,10 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Valuation policy and exchange rates',
   },
-  { name: 'User management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canUseUserManagement', activeAlso: ['/permissions', '/delegations'], description: 'Users, permissions and approval delegations' },
-  // SME R1 / R6: administrators record delegations for anyone, approval-role holders for themselves
+  { name: 'User management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canUseUserManagement', activeAlso: ['/permissions'], description: 'Users, permissions and approval delegations' },
+  // SME R1 / R6: administrators record delegations for anyone (User management › Delegations), approval-role
+  // holders for themselves: QA re-test 2026-10-19, their own entry instead of "User management"
+  { name: 'Approval delegations', href: '/delegations', icon: EntityIcon.delegation, section: 'administration', capability: 'canReachDelegationsOnly', description: 'Hand your approval role to a colleague for an absence' },
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
   { name: 'Admin panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Plants, branding, custom attributes and plant settings' },
   { name: 'Audit log', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
@@ -139,6 +141,11 @@ export function pageNameOf(href: string, items: readonly NavigationItem[] = NAVI
   const item = items.find((candidate) => candidate.href === href);
   if (!item) throw new Error(`No menu page at ${href}`);
   return item.name;
+}
+
+/** The name the sidebar shows for an item ("Downtime overview", "Trends"); every list of menu pages uses it (QA_SHELL N3). */
+export function sidebarNameOf(item: Pick<NavigationItem, 'name' | 'label'>): string {
+  return item.label ?? item.name;
 }
 
 /** The items the user sees: capability held in the selected plant and, when flagged, the flag on. */

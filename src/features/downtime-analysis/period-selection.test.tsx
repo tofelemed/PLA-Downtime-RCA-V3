@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -78,7 +79,7 @@ describe('Controllable availability view (SME D15)', () => {
   const bundle = { data: response, isLoading: false, isError: false, isSuccess: true, refetch: () => undefined } as unknown as Parameters<typeof KpiSummary>[0]['bundle'];
 
   it('is hidden until switched on; the headline availability stays', () => {
-    render(<KpiSummary bundle={bundle} />);
+    render(<MemoryRouter><KpiSummary bundle={bundle} /></MemoryRouter>);
     expect(screen.getByTestId('kpi-scheduled_availability')).toHaveAttribute('data-value', '0.75');
     expect(screen.queryByTestId('kpi-controllable_availability')).toBeNull();
     fireEvent.click(screen.getByTestId('controllable-switch'));

@@ -10,6 +10,7 @@ import { PlantTime } from '@/features/ux-kit/plant-time';
 import { EditorProblem } from '../editor/editor-problem';
 import { useCommandProblem } from '../hooks/use-command-problem';
 import { periodRefOf } from '../hooks/use-draft-editor';
+import { correctionDialogText, proposalPathOpen } from '../model/month-lock';
 import { proposalTriggersText } from '../model/proposal-labels';
 import { EVIDENCE_LABELS } from '../model/line-evidence';
 import { ProposeCorrectionDialog, type CorrectionDraft } from './propose-correction-dialog';
@@ -84,7 +85,8 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
     track(decision.submit({ period: periodRefOf(view), proposalId: p.id, decision: d, reason }));
   const propose = (draft: CorrectionDraft) =>
     track(proposal.submit({ period: periodRefOf(view), approvedRevision: view.publishedRevision ?? 0, ...draft }));
-  const canPropose = canProposeCorrections && view.publishedRevision !== null && view.revision.lifecycle === 'approved' && !view.openProposalId;
+  const approvedNow = canProposeCorrections && view.publishedRevision !== null && view.revision.lifecycle === 'approved' && !view.openProposalId;
+  const canPropose = approvedNow && proposalPathOpen(view);
   const items = proposals.data?.items ?? [];
   useSeekAnchor(anchor, pageListState(proposals));
   return (
@@ -95,7 +97,10 @@ export function ChangeProposalsPanel({ view, timezone }: ChangeProposalsPanelPro
         {items.map((p) => (
           <ChangeProposalCard key={p.id} p={p} timezone={timezone} decide={canApproveRevisions && (isSuperAdmin || p.manual?.proposedBy !== userId) ? decide : null} />
         ))}
-        {canPropose && <ProposeCorrectionDialog onPropose={propose} />}
+        {canPropose && <ProposeCorrectionDialog onPropose={propose} description={correctionDialogText(view.monthClose, isSuperAdmin)} />}
+        {approvedNow && !canPropose && (
+          <p className="text-muted-foreground" data-testid="correction-direct">The month is open: correct this approved period with “Reopen for revision…” in Review &amp; close.</p>
+        )}
         {problem && <EditorProblem problem={problem} />}
       </div>
     </Section>

@@ -214,7 +214,7 @@ export const PLAN = {
   headerTarget: '672',
   shiftTarget: 224,
   shifts: 3,
-  changeReason: 'Daily plan of the training production day (guide lesson 7)',
+  changeReason: 'Daily plan of the production day',
   approvalReason:
     'Reviewed: three 8-hour shifts of 224 t at the approved 28 t/h planning rate, 672 t for the day',
 } as const;

@@ -1,3 +1,4 @@
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useState } from 'react';
 import { useRcaActions, useRcaAnalyses, useRcaCauses, useRcaLinks, useRcaOutcome } from '@/api/v2/queries/rca-cases';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,8 @@ export function CaseExportMenu() {
   const { toast } = useToast();
   const copyLink = useCopyCaseLink();
   const names = { user: users.nameOf, asset: assets.nameOf, unit: unitName };
+  // QA re-test N1: the server leaves money out of the records for operators; the CSVs drop the money columns too
+  const csv = { timeZone: timezone, money: useCapabilities().canViewMoney };
   const exportJson = async () => {
     if (!records) return;
     try {
@@ -66,12 +69,12 @@ export function CaseExportMenu() {
           {records ? 'Investigation (JSON)' : 'Investigation (JSON) · loading…'}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => downloadText(evidenceCsv(rca, names, dateTime), exportName(rca, 'evidence.csv'), 'text/csv')}>Evidence (CSV)</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => downloadText(recommendationsCsv(rca, names, timezone), exportName(rca, 'recommendations.csv'), 'text/csv')}>
+        <DropdownMenuItem onSelect={() => downloadText(recommendationsCsv(rca, names, csv), exportName(rca, 'recommendations.csv'), 'text/csv')}>
           Recommendations (CSV)
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!records}
-          onSelect={() => records && downloadText(actionsCsv(rca, records.actions, names, timezone), exportName(rca, 'actions.csv'), 'text/csv')}
+          onSelect={() => records && downloadText(actionsCsv(rca, records.actions, names, csv), exportName(rca, 'actions.csv'), 'text/csv')}
           data-testid="export-actions-csv"
         >
           {records ? 'Actions (CSV)' : 'Actions (CSV) · loading…'}

@@ -5,6 +5,7 @@ import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 import { formatCount, formatRatio } from '../../model/kpi-display';
 import { ChartFigure } from '@/features/ux-kit/chart-figure';
 import { plural } from '@/features/ux-kit/format/plural';
+import { CHART_TOOLTIP_STYLE, unbreakable } from '@/features/ux-kit/chart-text';
 
 export interface ParetoChartProps {
   groups: readonly DowntimeGroupView[];
@@ -44,9 +45,10 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
         <ComposedChart data={points} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
-          <YAxis yAxisId="value" tickFormatter={format} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} />
+          <YAxis yAxisId="value" tickFormatter={(value: unknown) => unbreakable(format(value))} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} width={unit === 's' ? 80 : 48} />
           <YAxis yAxisId="share" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => localizeNumber(`${v} %`, digits)} tick={{ fontSize: 11 }} />
           <Tooltip
+            {...CHART_TOOLTIP_STYLE}
             formatter={(value: unknown, name: string, item: { payload?: Point }) =>
               name === 'cumulative' ? formatRatio(item.payload?.group.cumulativeShare, 1, digits) : format(value)
             }

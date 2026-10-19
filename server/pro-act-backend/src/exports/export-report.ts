@@ -7,6 +7,8 @@ import {
   actualsQualityLabel,
   kindLabel,
   lineSourceLabel,
+  isUncoded,
+  NOT_CODED,
   plantIso,
   reasonOf,
   stateLabel,
@@ -225,15 +227,16 @@ function plantTimeCells(
 function lineLabelCells(
   labels: ExportLabels | null,
   line: { source: string; kind: string | null; state: string },
-  reasonCodeId: string | null,
+  cause: { reasonCodeId: string | null; causeEventId: string | null },
 ): CsvValue[] {
-  const reason = reasonOf(labels, reasonCodeId);
+  const reason = reasonOf(labels, cause.reasonCodeId);
+  const uncoded = isUncoded(cause) ? NOT_CODED : null;
   return [
     lineSourceLabel(line.source),
     kindLabel(line.kind),
     stateLabel(line.state),
     reason?.code ?? null,
-    reason?.name ?? null,
+    reason?.name ?? uncoded,
   ];
 }
 
@@ -297,7 +300,7 @@ function candidateRows(
     ...lineLabelCells(
       labels,
       { source: 'candidate', kind: c.kind, state: c.state },
-      c.reasonCodeId,
+      c,
     ),
   ]);
 }
@@ -331,7 +334,7 @@ function ownLineRows(
       ...lineLabelCells(
         labels,
         { source: l.action, kind: l.kind, state: 'in_force' },
-        l.reasonCodeId,
+        { reasonCodeId: l.reasonCodeId, causeEventId: null },
       ),
     ]);
 }

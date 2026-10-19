@@ -22,6 +22,10 @@ import {
 } from './action-rules';
 import { assertOwnerPatch } from './action-owner-access';
 import { linkedTasks } from './action-tasks';
+import {
+  baselinePolicyVersion,
+  policyVersionsAt,
+} from './baseline-policy-version';
 import { casePolicyVersion } from './case-policy';
 import { childAudit, recordRcaAudit } from './rca-audit';
 import { RcaActionV2View, toActionView } from './rca-action.view';
@@ -76,7 +80,7 @@ export class RcaActionsService {
     rcaId: string,
   ): Promise<RcaActionV2View[]> {
     const scope = scopeOf(context);
-    await findCase(this.dataSource.manager, scope, rcaId);
+    const rca = await findCase(this.dataSource.manager, scope, rcaId);
     const rows = await this.dataSource.getRepository(RcaAction).find({
       where: { tenantId: scope.tenantId, rcaId },
       order: { createdAt: 'ASC', id: 'ASC' },
@@ -87,8 +91,12 @@ export class RcaActionsService {
       scope.tenantId,
       rows.map((row) => row.id),
     );
+    const versions = await policyVersionsAt(this.dataSource.manager, rca, rows);
     const now = new Date();
-    return rows.map((row) => toActionView(row, now, tasks.get(row.id)));
+    return rows.map((row) => ({
+      ...toActionView(row, now, tasks.get(row.id)),
+      baselinePolicyVersion: baselinePolicyVersion(row, versions),
+    }));
   }
 
   async create(

@@ -30,6 +30,7 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
       testId="pla-reconciliation"
       query={query}
       response={query.data}
+      approvedOnly={scope.approvedOnly}
       isEmpty={data?.periods === 0}
       emptyText="No production periods in this scope."
       note={

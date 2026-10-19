@@ -23,7 +23,7 @@ function PendingPeriods({ view }: { view: MonthCloseView }) {
           pager="none" maxHeight="30rem" empty={{ title: 'Sample unavailable', text: 'The server reported pending periods without sample rows.' }} />
       </>}
       <DaysWithoutPlan view={view} />
-      <p className="text-sm"><Link to="/my-queue" className="underline underline-offset-2">Open my queue</Link> for your recent assigned work. It is not a complete list of this month's periods.</p>
+      <p className="text-sm"><Link to="/my-queue" className="underline underline-offset-2">Open My work</Link> for your recent assigned work. It is not a complete list of this month's periods.</p>
     </div>
   </Section>;
 }

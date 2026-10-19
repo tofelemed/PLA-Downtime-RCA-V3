@@ -1,11 +1,15 @@
 import type { PlanVersionView } from '@/api/v2/types/plans';
 import { BASIS_SHORT_LABELS, DISTRIBUTION_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
-/** Header targets use each slice's profile unit; only generated periods carry a frozen quantity UOM. */
-export function PlanVersionSummary({ version, timezone }: { version: PlanVersionView; timezone: string }) {
+/**
+ * Header targets use each slice's profile unit (`uom` when every slice's profile agrees, e.g. "672.00 t");
+ * only generated periods carry a frozen quantity UOM.
+ */
+export function PlanVersionSummary({ version, timezone, uom = null }: { version: PlanVersionView; timezone: string; uom?: string | null }) {
   const { decimal } = useNumberFormat();
   return (
     <div className="space-y-2 text-sm" data-testid="plan-summary">
@@ -14,8 +18,13 @@ export function PlanVersionSummary({ version, timezone }: { version: PlanVersion
         <span>{labelOf(BASIS_SHORT_LABELS, version.basis)} · {labelOf(DISTRIBUTION_LABELS, version.distribution)}</span>
       </p>
       <p>
-        Header target: <span className="font-medium tabular-nums">{decimal(version.headerTarget)}</span>
-        {version.headerTarget != null && <span className="text-muted-foreground"> (in the unit of each slice’s profile)</span>}
+        Header target:{' '}
+        {version.headerTarget != null && uom ? (
+          <span className="font-medium" data-testid="plan-header-target"><Quantity value={version.headerTarget} uom={uom} /></span>
+        ) : (
+          <span className="font-medium tabular-nums" data-testid="plan-header-target">{decimal(version.headerTarget)}</span>
+        )}
+        {version.headerTarget != null && !uom && <span className="text-muted-foreground"> (in the unit of each slice’s profile)</span>}
       </p>
       <p className="text-muted-foreground">
         <PlantTime iso={version.validFrom} tz={timezone} withDate /> → <PlantTime iso={version.validTo} tz={timezone} withDate />

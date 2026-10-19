@@ -1,4 +1,4 @@
-import type { DowntimeGroupView, KpiAggregateView } from '@/api/v2/types/reports';
+import type { DataCoverageView, DowntimeGroupView, KpiAggregateView } from '@/api/v2/types/reports';
 import { periodSelection, reportBase, SCHEDULE_CLASSES, type DowntimeFilters, type DowntimeMetric, type PeriodSelection, type ReportBase, type ScheduleClass } from './downtime-filters';
 
 /** One breakdown of `GET /reports/downtime-bundle` (backend `DowntimeBundleItemView`). */
@@ -19,6 +19,8 @@ export interface DowntimeBundleData {
   scheduleClass?: string | null;
   summary: KpiAggregateView[];
   views: DowntimeBundleItem[];
+  /** state data coverage and no-plan periods of the window (owner decision 2026-10-19) */
+  dataCoverage?: DataCoverageView;
   calculationRunIds: string[];
 }
 

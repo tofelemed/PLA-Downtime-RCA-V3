@@ -11,6 +11,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () => ({ timezone: 'Asia/Tehran', source: 'tenant', loading: false }) }));
 
 const { DelegationsPage } = await import('./delegations-page');
+const { delegationsDescription } = await import('./delegations-description');
 
 const DELEGATION: RoleDelegationView = {
   id: 'd1',
@@ -73,5 +74,12 @@ describe('delegations page (SME R1 / R6)', () => {
     await waitFor(() => expect(screen.getByText('Reza Deputy')).toBeTruthy());
     expect(screen.queryByTestId('delegation-revoke')).toBeNull();
     expect(screen.queryByTestId('delegation-new')).toBeNull();
+  });
+});
+
+describe('Approval delegations wording (QA re-test 2026-10-19)', () => {
+  it('tells only SuperAdmin that SuperAdmin may complete every stage', () => {
+    expect(delegationsDescription(false)).not.toMatch(/SuperAdmin/);
+    expect(delegationsDescription(true)).toMatch(/As SuperAdmin you may complete every stage personally/);
   });
 });

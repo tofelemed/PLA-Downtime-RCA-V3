@@ -12,8 +12,8 @@ const OPERATION_KIND_LABELS: Readonly<Record<OperationKind, string>> = {
   other: 'Other (not active repair)',
 };
 
-function columnsOf(format: ReliabilityFormat, assetLabel: (id: string | null) => string): DataTableColumn<WorkOrderOperationView>[] {
-  return [
+function columnsOf(format: ReliabilityFormat, assetLabel: (id: string | null) => string, withStop: boolean): DataTableColumn<WorkOrderOperationView>[] {
+  const columns: DataTableColumn<WorkOrderOperationView>[] = [
     { id: 'wo', header: 'Work order / operation', cell: (o) => `${o.workOrderId} / ${o.operationId}`, nowrap: true },
     { id: 'kind', header: 'Kind', cell: (o) => OPERATION_KIND_LABELS[o.kind] },
     { id: 'asset', header: 'Asset', cell: (o) => assetLabel(o.assetId) },
@@ -23,16 +23,20 @@ function columnsOf(format: ReliabilityFormat, assetLabel: (id: string | null) =>
     { id: 'stop', header: 'Stop', cell: (o) => (o.eventId ? <Link className="underline" to={`/events/${o.eventId}?tab=repair`}>Open the stop</Link> : 'Not linked') },
     { id: 'source', header: 'Source', cell: (o) => o.source },
   ];
+  return withStop ? columns : columns.filter((column) => column.id !== 'stop');
 }
 
-/** CMMS operations per stop or asset, as the server filters them (keyset pages of 20). */
-export function WorkOrderTable({ filters, format }: { filters: WorkOrderFilters; format: ReliabilityFormat }) {
+/**
+ * CMMS operations per stop or asset, as the server filters them (keyset pages of 20). `onStopPage`: shown on
+ * the stop's own page, so the "Open the stop" column (a link to the same page, QA L13) is left out.
+ */
+export function WorkOrderTable({ filters, format, onStopPage = false }: { filters: WorkOrderFilters; format: ReliabilityFormat; onStopPage?: boolean }) {
   const page = useWorkOrderOperationsPage(filters);
   const { labelOf } = useAssetLookup();
   return (
     <DataTable
       caption="Work-order operations"
-      columns={columnsOf(format, labelOf)}
+      columns={columnsOf(format, labelOf, !onStopPage)}
       rows={page.rows}
       pager={page.pager}
       getRowKey={(o) => o.id}

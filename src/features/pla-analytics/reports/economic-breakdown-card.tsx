@@ -22,6 +22,7 @@ export function EconomicBreakdownCard({ scope }: { scope: AnalyticsScope }) {
       testId="report-economic-breakdown"
       query={query}
       response={query.data}
+      approvedOnly={scope.approvedOnly}
       isEmpty={components.length === 0}
       emptyText="No economic value in these periods (the valuation policy may have no economic view)."
       note={`${revisionSelectionLabel(scope.approvedOnly)}. Values from before the breakdown are listed as not broken down.`}

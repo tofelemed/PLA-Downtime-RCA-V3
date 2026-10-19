@@ -1,19 +1,18 @@
 import { Checkbox } from '@/components/ui/checkbox';
-import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { Label } from '@/components/ui/label';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import {
-  presetWindow,
   SCHEDULE_FILTERS,
   TREND_GROUPS,
-  WINDOW_PRESETS,
   type DowntimeFilters,
   type ScheduleFilter,
   type TrendGroup,
 } from '../model/downtime-filters';
 import { PeriodSelectionFilters } from './period-selection-filters';
+import { ProductionDateRange } from './production-date-range';
+import { WindowPresetSelect } from './window-preset-select';
 
 export interface DowntimeFiltersBarProps {
   scope?: 'period' | 'output' | 'operational' | 'reliability';
@@ -33,10 +32,6 @@ const trendLabel = (value: string) => value.charAt(0).toUpperCase() + value.slic
  */
 export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTrend = true, showSchedule = true }: DowntimeFiltersBarProps) {
   const env = useEventHubEnv();
-  const choosePreset = (key: string) => {
-    const preset = WINDOW_PRESETS.find((entry) => entry.key === key);
-    if (preset) onChange({ ...presetWindow(preset.hours, Date.now()), windowLabel: preset.label, relativeWindow: preset.key });
-  };
   return (
     <div className="flex flex-wrap items-center gap-3" role="group" aria-label="Downtime filters" data-testid="downtime-filters">
       <MultiCheckSelect
@@ -48,22 +43,8 @@ export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTr
         commitOnClose
       />
       {scope === 'period' && <PeriodSelectionFilters filters={filters} onChange={onChange} />}
-      <DateRangeInput label="Period dates" value={{ from: filters.from, to: filters.to }} timeZone={env.timezone} onChange={(range) => {
-        if (range.from && range.to) onChange({ from: range.from, to: range.to, windowLabel: 'Chosen dates', relativeWindow: null });
-      }} />
-      <div className="flex items-center gap-2">
-        <Label htmlFor="downtime-window">Window</Label>
-        <select id="downtime-window" data-testid="downtime-window" className={SELECT} value="" onChange={(event) => choosePreset(event.target.value)}>
-          <option value="" disabled>
-            {filters.windowLabel}
-          </option>
-          {WINDOW_PRESETS.map((preset) => (
-            <option key={preset.key} value={preset.key}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ProductionDateRange from={filters.from} to={filters.to} timeZone={env.timezone} onChange={(range) => onChange({ ...range, windowLabel: 'Chosen dates', relativeWindow: null })} />
+      <WindowPresetSelect filters={filters} onChange={onChange} />
       {showSchedule && (scope === 'period' || scope === 'operational') && <div className="flex items-center gap-2">
         <Label htmlFor="downtime-class">Schedule class</Label>
         <select

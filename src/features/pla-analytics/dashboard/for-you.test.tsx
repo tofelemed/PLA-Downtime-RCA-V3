@@ -70,15 +70,17 @@ describe('dashboard "For you" row (UX audit §5.6)', () => {
     expect(pageCountText(0, false, format)).toBe('0');
   });
 
-  it('operator: current stops from the live-stops query, and a link to the uncoded stops of the window', async () => {
+  it('operator: current stops from the live-stops query, and the count of uncoded stops of the window (QA re-test)', async () => {
     actAs('operator');
     const calls = stubV2Fetch(reply);
     renderRow();
     expect(await screen.findByRole('link', { name: 'Current stops: 3+, open the list' })).toHaveAttribute('href', '/downtime?window=7d');
-    expect(screen.getByRole('link', { name: 'View stops to code' })).toHaveAttribute('href', '/events?kinds=downtime&coding=uncoded&window=7d');
-    const events = calls.find((call) => call.url.pathname.endsWith('/production-events'));
-    expect(events?.url.searchParams.get('isOpen')).toBe('true');
-    expect(calls.some((call) => call.url.searchParams.get('codingStates') !== null)).toBe(false);
+    expect(await screen.findByRole('link', { name: 'Stops to code: 3+, open the list' })).toHaveAttribute('href', '/events?kinds=downtime&coding=uncoded&window=7d');
+    const current = calls.find((call) => call.url.pathname.endsWith('/production-events') && call.url.searchParams.get('isOpen') === 'true');
+    expect(current?.url.searchParams.get('codingStates')).toBeNull();
+    const toCode = calls.find((call) => call.url.pathname.endsWith('/production-events') && call.url.searchParams.get('codingStates') === 'uncoded');
+    expect(toCode?.url.searchParams.get('physicalTypes')).toBe('downtime');
+    expect(toCode?.url.searchParams.get('from')).toBeTruthy();
   });
 
   it('accountant: periods due of My work', async () => {

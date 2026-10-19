@@ -22,3 +22,8 @@ export function periodTitle(parts: PeriodTitleParts, display: CalendarDisplayOpt
   const shift = parts.shiftName?.trim() ? ` · ${shiftLabel(parts.shiftName.trim())}` : '';
   return `${parts.unitName} — ${date}${shift}`;
 }
+
+/** The plan's period grid page name: its h1 and every link back to it use this one label (re-test N5). */
+export function periodGridTitle(planName: string | null | undefined): string {
+  return planName ? `${planName} · period accounting` : 'Period accounting';
+}

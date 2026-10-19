@@ -8,6 +8,7 @@ import { useMenuFlags } from '@/features/shell/use-menu-flags';
 import { roleListLabel } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { EntityIcon, StatusIcon } from '@/lib/icons';
+import { sidebarNameOf } from '@/features/auth/navigation-items';
 import { reachableModules, userRolesInPlant } from './reachable-modules';
 
 export interface ModulePermissionsPanelProps {
@@ -52,7 +53,7 @@ function ReachableModules({ user }: { user: UserView }) {
           {groups.map((group) => (
             <li key={group.section.key}>
               <p className="text-sm font-medium">{group.section.label}</p>
-              <p className="text-sm text-muted-foreground">{group.items.map((item) => item.name).join(' · ')}</p>
+              <p className="text-sm text-muted-foreground">{group.items.map(sidebarNameOf).join(' · ')}</p>
             </li>
           ))}
         </ul>

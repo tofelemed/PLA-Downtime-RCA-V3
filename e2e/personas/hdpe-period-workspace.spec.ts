@@ -65,7 +65,7 @@ test.describe('HDPE period workspace navigation and draft safety', () => {
     await expect(page.locator('#manualReasonText')).toHaveValue('Retained HDPE draft evidence');
 
     // The plan-grid back link is an SPA transition; the app-wide boundary retains the draft.
-    await page.getByRole('link', { name: /· periods$/ }).click();
+    await page.getByRole('link', { name: /· period accounting$/ }).click();
     await expect(page).toHaveURL(new RegExp(`/plans/${world.fixture.planId}$`));
     await expect(page.getByTestId('period-grid')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), 'mobile plan grid overflow').toBeLessThanOrEqual(1);

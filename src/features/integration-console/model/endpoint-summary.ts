@@ -5,7 +5,10 @@ const text = (value: unknown): string | null => (typeof value === 'string' && va
 const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
-/** One line of where a connection points (never a credential): PI URL or MQTT broker, user, client id. */
+/**
+ * One line of where a connection points (never a credential): PI URL or MQTT broker, user, and a client id
+ * only when the plant set its own (QA L24: the derived `proact-<connection id>` is an internal identifier).
+ */
 export function endpointSummary(connection: ConnectionView): string {
   const config = connection.endpointConfig;
   if (connection.sourceType === 'mqtt') {
@@ -13,7 +16,7 @@ export function endpointSummary(connection: ConnectionView): string {
     const tls = record(mqtt.tls);
     const parts = [text(mqtt.brokerUrl) ?? 'no broker', mqtt.protocolVersion === 4 ? 'MQTT 3.1.1' : 'MQTT 5'];
     if (text(mqtt.username)) parts.push(`user ${text(mqtt.username)}`);
-    if (connection.effectiveClientId) parts.push(`client id ${connection.effectiveClientId}`);
+    if (text(mqtt.clientId)) parts.push(`client id ${text(mqtt.clientId)}`);
     if (tls.mode === 'insecure') parts.push('TLS verification disabled');
     const topics = Array.isArray(mqtt.topics) ? mqtt.topics.length : 0;
     parts.push(plural(topics, 'topic filter', 'topic filters'));

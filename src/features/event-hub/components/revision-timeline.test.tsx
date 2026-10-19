@@ -49,7 +49,10 @@ describe('event history actors (owner finding 1)', () => {
       relations: [],
     };
     render(<RevisionTimeline history={history} sourceName="State engine" />);
-    expect(screen.getAllByTestId('revision-actor').map((n) => n.textContent)).toEqual(['System (data repair)', 'System (state engine)']);
+    expect(screen.getAllByTestId('revision-actor').map((n) => n.textContent)).toEqual(['the system', 'System (state engine)']);
+    // QA L18: the service names the change, never "System change by System (data repair)"
+    expect(document.body.textContent).toContain('Revision 2 · Data repair by the system');
+    expect(document.body.textContent).not.toContain('System change by System');
     expect(screen.getAllByTestId('coding-actor').map((n) => n.textContent)).toEqual(['System (state engine)']);
     expect(document.body.textContent).not.toMatch(/by System ·/);
   });

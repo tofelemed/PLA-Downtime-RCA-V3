@@ -21,6 +21,7 @@ import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
 import { useUnitParam } from '../hooks/use-unit-param';
+import { operatingModeLabel } from '../model/plan-labels';
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[] {
   return [
@@ -34,7 +35,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
       ),
     },
     { id: 'catalyst', header: 'Catalyst family', nowrap: true, cell: (s) => s.catalystFamily ?? <span className="text-muted-foreground">any</span> },
-    { id: 'mode', header: 'Operating mode', nowrap: true, cell: (s) => s.operatingMode ?? <span className="text-muted-foreground">any</span> },
+    { id: 'mode', header: 'Operating mode', nowrap: true, cell: (s) => s.operatingMode ? operatingModeLabel(s.operatingMode) : <span className="text-muted-foreground">any</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (s) => `Version ${s.version}` },
     { id: 'reference', header: 'Reference', align: 'right', nowrap: true, cell: (s) => <LocalizedNumber text={`${hoursOfSeconds(s.referenceSeconds)} h`} /> },
     {

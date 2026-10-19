@@ -38,7 +38,8 @@ const FxRateDetail = lazyNamedWithPreload(() => import('@/features/finance/fx/fx
 /** Administration on v2: users and their access, permissions, admin panel sections, tasks, audit log. */
 const Users = lazyNamedWithPreload(() => import('@/features/users/user-management-page'), 'UserManagementPage');
 const UserForm = lazyNamedWithPreload(() => import('@/features/users/user-form-page'), 'UserFormPage');
-/** SME R1 / R6: delegations of approval roles. */
+/** SME R1 / R6: delegations of approval roles (a tab of User management, or their own page). */
+const DelegationsRoute = lazyNamedWithPreload(() => import('@/features/users/delegations-route'), 'DelegationsRoute');
 const AdminPanel = lazyNamedWithPreload(() => import('@/features/admin/admin-page'), 'AdminPage');
 const OrganizationNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationNewPage');
 const PlantNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'PlantNewPage');
@@ -89,11 +90,12 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/finance/policies/new', element: <PolicyNew />, preload: PolicyNew.preload, requires: 'canMaintainValuation', gateTitle: 'New valuation policy version' },
   { path: '/finance/policies/:policyId', element: <PolicyDetail />, preload: PolicyDetail.preload },
   { path: '/finance/fx/:fxId', element: <FxRateDetail />, preload: FxRateDetail.preload },
-  { path: '/users', element: <Users />, preload: Users.preload },
+  // the page itself refuses or sends a delegation-only user to /delegations (QA re-test 2026-10-19)
+  { path: '/users', element: <Users />, preload: Users.preload, requires: 'canViewOperations' },
   { path: '/users/new', element: <UserForm />, preload: UserForm.preload },
   { path: '/users/:userId', element: <UserForm />, preload: UserForm.preload },
   { path: '/permissions', element: <UserManagementRedirect tab="permissions" /> },
-  { path: '/delegations', element: <UserManagementRedirect tab="delegations" /> },
+  { path: '/delegations', element: <DelegationsRoute />, preload: DelegationsRoute.preload, requires: 'canDelegateApprovals' },
   { path: '/admin', element: <AdminPanel />, preload: AdminPanel.preload },
   { path: '/admin/organizations/new', element: <OrganizationNew />, preload: OrganizationNew.preload },
   { path: '/admin/plants/new', element: <PlantNew />, preload: PlantNew.preload },

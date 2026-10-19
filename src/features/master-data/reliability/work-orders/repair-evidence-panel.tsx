@@ -42,7 +42,7 @@ export function RepairEvidencePanel({ eventId }: { eventId: string }) {
       <DataState state={dataStateOf(evidence)} error={evidence.error} onRetry={() => void evidence.refetch()}>
         {evidence.data && <EvidenceFacts evidence={evidence.data} format={format} />}
       </DataState>
-      <WorkOrderTable filters={{ eventId }} format={format} />
+      <WorkOrderTable filters={{ eventId }} format={format} onStopPage />
       {(canManageMasterData || canWriteWorkOrders) && <Link className="text-sm underline" to={`/master-data/work-orders?eventId=${eventId}`}>Open in work-order operations</Link>}
     </div>
   );

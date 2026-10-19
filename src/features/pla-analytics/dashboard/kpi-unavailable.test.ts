@@ -19,4 +19,9 @@ describe('unavailable KPI reasons', () => {
     expect(sharedUnavailableReason([kpi({}), kpi({ value: '0.5', reason: null })])).toBeNull();
     expect(sharedUnavailableReason([kpi({})])).toBeNull();
   });
+
+  it('a calculated period without product slices reads as having no approved plan (QA_SHELL #20)', () => {
+    expect(unavailableReason(kpi({ reason: 'no_slices' }))).toBe('No approved plan covers these periods');
+    expect(sharedUnavailableReason([kpi({ reason: 'no_slices' }), kpi({ metric: 'availability', reason: 'no_slices' })])).toBe('No approved plan covers these periods');
+  });
 });

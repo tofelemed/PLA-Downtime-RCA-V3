@@ -65,3 +65,7 @@ export function diagramText(diagram: RcaEventDiagram): string {
   const connections = diagram.edges.map((edge) => `Connection: ${label(edge.source)} → ${label(edge.target)}`);
   return [...events, ...connections].join('\n');
 }
+
+/** QA L6 / N2: the how-to-connect hint only where connecting is possible (not on a closed, read-only case). */
+export const noConnectionsText = (readOnly: boolean): string =>
+  readOnly ? 'No connections recorded.' : `No connections yet: use "Add connection", or drag from an event's bottom handle to another event.`;

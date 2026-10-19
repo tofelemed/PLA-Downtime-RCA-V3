@@ -13,6 +13,8 @@ import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
 import { AnalyticsFilters } from './components/analytics-filters';
 import { AnalyticsHeader } from './components/analytics-header';
 import { useAnalyticsScope } from './hooks/use-analytics-scope';
+import { useCapabilities } from '@/features/auth/use-capabilities';
+import { plaPagesFor } from './model/money-access';
 
 const PAGES = {
   overview: lazy(() => import('./tabs/waterfall-tab').then((module) => ({ default: module.WaterfallTab }))),
@@ -50,13 +52,14 @@ function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   const lossRecords = view === 'losses' && breakdown === 'loss-events';
   const quantifiedLosses = view === 'losses' && breakdown !== 'loss-events' && breakdown !== 'repeat-causes';
   const env = useEventHubEnv();
+  const { canViewMoney } = useCapabilities();
   const page = PLA_PAGES.find((entry) => entry.key === view) ?? PLA_PAGES[0];
   const Content = PAGES[view];
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="pla-analytics-v2" data-view={view}>
         <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} description={page.description} overview={view === 'overview'} />
-        <AnalysisPageNav label="Production loss analysis pages" pages={PLA_PAGES} />
+        <AnalysisPageNav label="Production loss analysis pages" pages={plaPagesFor(PLA_PAGES, canViewMoney)} />
         <AnalyticsFilters scope={scope} onChange={change} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />
         <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>
           <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>

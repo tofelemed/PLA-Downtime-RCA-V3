@@ -4,6 +4,9 @@ import { choiceProblem, instantProblem, type MappedRow } from '../shared/row-map
 import { plural } from '@/features/ux-kit/format/plural';
 
 export const WORK_ORDER_CSV_HEADER = 'workOrderId,operationId,kind,startedAt,endedAt,waitingSeconds,waitingReason,assetCode,eventId,description,source';
+/** The columns in plain words (help text of the import panel). */
+export const WORK_ORDER_CSV_COLUMNS =
+  'work order number, operation number, kind (diagnosis, repair, test or other), start and end time (ISO 8601 with offset), waiting time in seconds, waiting reason, asset code or stop, description and source system';
 export const WORK_ORDER_CSV_EXAMPLE =
   `${WORK_ORDER_CSV_HEADER}\n4000123,0020,repair,2026-10-01T10:00:00Z,2026-10-01T12:00:00Z,1800,Seal kit from store,P-101,,Replace seal,SAP PM`;
 

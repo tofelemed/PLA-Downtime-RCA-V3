@@ -3,8 +3,8 @@ import type { ApprovalItem } from '@/api/v2/types/approvals';
 import { Badge } from '@/components/ui/badge';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { approvalStateText } from './approval-state-cell';
 
-const words = (value: string) => value.replace(/_/g, ' ');
 
 function Row({ term, children }: { term: string; children: ReactNode }) {
   return (
@@ -18,6 +18,8 @@ function Row({ term, children }: { term: string; children: ReactNode }) {
 /** What is asked: the workflow, the record and its version, scope, who requested it and when, and the approval roles. */
 export function ApprovalDetailSummary({ item }: { item: ApprovalItem }) {
   const { timezone } = usePlantTimezone();
+  // QA_SHELL #21: the same sentence-case state and role names as the inbox list
+  const text = approvalStateText(item);
   return (
     <dl className="space-y-3" data-testid="approval-summary">
       <Row term="Workflow">{item.kindLabel}</Row>
@@ -26,14 +28,14 @@ export function ApprovalDetailSummary({ item }: { item: ApprovalItem }) {
         {item.version != null ? ` · version ${item.version}` : ''}
       </Row>
       <Row term="State">
-        <Badge variant="secondary">{words(item.state)}</Badge>
+        <Badge variant="secondary">{text.state}</Badge>
       </Row>
       <Row term="Unit">{item.unitName ?? 'Plant-wide'}</Row>
       <Row term="Requested by">{item.authorName ?? (item.authorId ? `User ${item.authorId}` : 'System / legacy record')}</Row>
       <Row term="Submitted">
         <PlantTime iso={item.createdAt} tz={timezone} withDate />
       </Row>
-      <Row term="Approval roles">{item.requiredRoles.map(words).join(' / ')}</Row>
+      <Row term="Approval roles">{text.roles}</Row>
       {item.summary && (
         <Row term="Summary">
           <span className="whitespace-pre-wrap">{item.summary}</span>

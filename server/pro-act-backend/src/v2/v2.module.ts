@@ -151,6 +151,7 @@ import { KpiReportsV2Service } from './reports/kpi-reports-v2.service';
 import { ValuationModule } from '../valuation/valuation.module';
 import { DemandStatusesV2Controller } from './valuation/demand-statuses-v2.controller';
 import { FxRatesV2Controller } from './valuation/fx-rates-v2.controller';
+import { FinanceTextCorrectionsV2Controller } from './valuation/finance-text-corrections-v2.controller';
 import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
 import { BadActorReportV2Controller } from './reports/bad-actor-v2.controller';
 import { BadActorReportV2Service } from './reports/bad-actor-v2.service';
@@ -308,6 +309,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     KpiReportsV2Controller,
     FxRatesV2Controller,
     DemandStatusesV2Controller,
+    FinanceTextCorrectionsV2Controller,
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
     BadActorReportV2Controller,

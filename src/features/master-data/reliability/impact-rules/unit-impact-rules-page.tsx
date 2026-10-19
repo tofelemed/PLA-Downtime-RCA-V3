@@ -90,6 +90,7 @@ export function UnitImpactRulesPage() {
           rows={rows}
           getRowKey={(r) => r.id}
           getRowAnchor={(r) => `unit-impact-rule-${r.id}`}
+          scrollable
           status={{ isLoading: rules.isLoading, isError: rules.isError, error: rules.error, onRetry: () => void rules.refetch() }}
           empty={{ title: 'No rules', text: 'Every equipment stop stops its unit unless a person records another impact on the stop.' }}
         />

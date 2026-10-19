@@ -164,6 +164,12 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     }
     expect(screen.getByTestId('figure-residual')).toHaveAttribute('data-value', '60');
     expect(screen.getByTestId('residual-state')).toHaveTextContent('Above tolerance');
+    expect(screen.queryByTestId('reconciliation-ledger-note')).toBeNull();
+  });
+
+  it('QA capacity view: the reconciliation says it stays on the plan ledger', () => {
+    wrap(<ReconciliationSummary view={VIEW} ledger="capacity" />);
+    expect(screen.getByTestId('reconciliation-ledger-note')).toHaveTextContent('always on the plan ledger');
   });
 
   describe('controls follow the period role sets (owner decision 2026-10-12)', () => {

@@ -3,7 +3,7 @@ import { useReconciliationQueue } from '@/api/v2/queries/period-sla';
 import { useProductionEvents } from '@/api/v2/queries/production-events';
 import { useRcaActionPage } from '@/api/v2/queries/rca-pickers';
 import type { ListResponse } from '@/api/v2/types/envelopes';
-import { currentStopsQuery, defaultFilters } from '@/features/event-hub/model/event-filters';
+import { currentStopsQuery, defaultFilters, toCodeFilters, toEventQuery } from '@/features/event-hub/model/event-filters';
 import { pendingApprovalsHref } from '@/features/approvals/approval-links';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -33,9 +33,20 @@ export function CurrentStopsTile({ scope }: { scope: AnalyticsScope }) {
   );
 }
 
-/** The event list has no total, so the tile opens the uncoded stops of the window instead of counting them. */
+/**
+ * The uncoded stops of the window (QA PLA re-test: the tile had no count): the Event Hub "To code" server
+ * query of the same units and window; the list has no total, so a full first page reads "20+".
+ */
 export function StopsToCodeTile({ scope }: { scope: AnalyticsScope }) {
-  return <ForYouTile testId="for-you-stopsToCode" title="Stops to code" note={`Uncoded stops · ${scope.windowLabel}`} to={stopsToCodeHref(scope)} linkLabel="View stops to code" />;
+  const env = useEventHubEnv();
+  const window = { from: scope.from, to: scope.to, label: scope.windowLabel };
+  const filters = toCodeFilters({ ...defaultFilters(window), from: scope.from, to: scope.to, unitIds: [...scope.unitIds] });
+  const query = useProductionEvents(toEventQuery(filters), env.timezone);
+  const count = usePageCount(query.data?.pages[0]);
+  return (
+    <ForYouTile testId="for-you-stopsToCode" title="Stops to code" note={`Uncoded stops · ${scope.windowLabel}`} to={stopsToCodeHref(scope)}
+      count={count} loading={query.isLoading} failed={query.isError} onRetry={() => void query.refetch()} />
+  );
 }
 
 /** Periods of "My work" (the reconciliation queue: to prepare, to review or escalated to you). */

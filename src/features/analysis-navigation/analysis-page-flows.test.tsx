@@ -24,6 +24,7 @@ const envelope = (data: unknown) => ({ data, asOf: TO, calculationRunId: null, p
 
 function reportData(url: URL): object {
   const base = { calculationRunIds: ['run-1'], groups: [], total: [], totals: [], summary: [], views: [], units: [] };
+  if (url.pathname.endsWith('/lines-without-event')) return { items: [], total: 0 };
   if (url.pathname.endsWith('/scope-waterfall')) return { ...base, ledger: 'plan', opening: '224', closing: '190', closes: true, uom: 't', bars: [], excluded: [] };
   if (url.pathname.endsWith('/loss-value')) return { ...base, total: { currencies: [] }, components: [] };
   if (url.pathname.endsWith('/reconciliation-status')) return { ...base, periods: 0, waitingForData: 0, rejectionEscalated: 0, overdueCount: 0, overdue: [], workflow: [], residual: [], ages: [], sla: { submitWithinHours: 1, approveWithinHours: 1 } };

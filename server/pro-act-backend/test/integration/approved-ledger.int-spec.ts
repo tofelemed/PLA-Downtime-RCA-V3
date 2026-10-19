@@ -91,6 +91,53 @@ describe('approved ledger lines feed the loss tree and RCA impact (VA-01b)', () 
     expect(tree.data.totals.map((t) => t.unit)).toEqual(['t']);
   });
 
+  it('QA PLA M3 re-test: the lines without an event list the manual line with its reason and evidence', async () => {
+    const window = `from=${encodeURIComponent(DAY1)}&to=${encodeURIComponent(NEXT_DAY)}`;
+    const body = (
+      await env
+        .get(
+          `reports/lines-without-event?unitIds=${env.world.unitA1}&${window}&kinds=availability`,
+        )
+        .expect(200)
+    ).body as {
+      data: {
+        total: number;
+        items: Array<{
+          origin: string;
+          quantity: string;
+          uom: string | null;
+          reasonCodeId: string | null;
+          reasonLabel: string | null;
+          evidenceType: string | null;
+          evidenceRef: string | null;
+          periodId: string;
+          planId: string | null;
+        }>;
+      };
+    };
+    expect(body.data.total).toBe(1);
+    const [line] = body.data.items;
+    expect(line).toMatchObject({
+      origin: 'approved',
+      quantity: '150',
+      uom: 't',
+      reasonCodeId: power,
+      evidenceType: 'log',
+      evidenceRef: 'shift log',
+    });
+    expect(line.reasonLabel).toMatch(/^POWER/);
+    expect(line.periodId).toBeTruthy();
+    expect(line.planId).toBeTruthy();
+    const none = (
+      await env
+        .get(
+          `reports/lines-without-event?unitIds=${env.world.unitA1}&${window}&kinds=performance`,
+        )
+        .expect(200)
+    ).body as { data: { total: number; items: unknown[] } };
+    expect(none.data).toMatchObject({ total: 0, items: [] });
+  });
+
   it('the RCA approved impact of the rejected stop is empty', async () => {
     const impact = await approvedImpact(
       env.app.get(DataSource).manager,

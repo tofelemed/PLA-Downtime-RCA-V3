@@ -4,12 +4,14 @@ import { entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { DEFAULT_BASIS_LABELS, labelOf, LOSS_KIND_LABELS } from '@/features/ux-kit/labels';
+import { labelOf, LOSS_KIND_LABELS } from '@/features/ux-kit/labels';
+import { valueBasisLabel } from '@/features/ux-kit/labels/value-basis';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
-import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { useCalendarPreference } from '@/lib/dates';
 import { AttributedValueText } from './attributed-value-text';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { periodLabel } from '../model/period-label';
 import { PeriodLink } from './period-link';
 
 /** Approved = the published revision's lines (success); provisional = an open revision's proposals (warning, §5.8). */
@@ -24,15 +26,14 @@ function PeriodStatus({ status }: { status: AttributedPeriodView['status'] }) {
 function AttributedPeriodRow({ item }: { item: AttributedPeriodView }) {
   const preference = useCalendarPreference();
   const { currency } = useDisplayCurrency();
-  const values = entriesInCurrency(item.values, (value) => value.currency, currency);
+  const values = entriesInCurrency(item.values ?? [], (value) => value.currency, currency);
   // owner 19 Oct 2026 (QA audit): no money for operators
   const { canViewMoney } = useCapabilities();
   return (
     <li className="space-y-1 border-b pb-2 text-sm last:border-b-0" data-testid="attributed-period" data-period-id={item.periodId}>
       <div className="flex flex-wrap items-center gap-2">
         <PeriodLink periodId={item.periodId} planId={item.planId} approved={item.status === 'approved'} testId="attributed-period-link">
-          {formatOperationalDate(item.localDate, preference)}
-          {item.shiftName ? ` · ${item.shiftName}` : ''}
+          {periodLabel(item.localDate, item.shiftName, preference)}
         </PeriodLink>
         <PeriodStatus status={item.status} />
         <span className="text-xs text-muted-foreground">revision {item.revision}</span>
@@ -68,6 +69,8 @@ function AttributedPeriodRow({ item }: { item: AttributedPeriodView }) {
 export function AttributedLossesCard({ eventId }: { eventId: string }) {
   const query = useEventAttributedLosses(eventId);
   const data = query.data;
+  // QA re-test N5 / N3: the value basis is money context, shown only with the money capability
+  const { canViewMoney } = useCapabilities();
   const state = dataStateOf(query, { isEmpty: data !== undefined && data.items.length === 0 });
   return (
     <div className="space-y-2" data-testid="attributed-losses">
@@ -79,9 +82,11 @@ export function AttributedLossesCard({ eventId }: { eventId: string }) {
                 <AttributedPeriodRow key={`${item.periodId}:${item.revisionId}`} item={item} />
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground" data-testid="attributed-valuation-view">
-              Value basis: {labelOf(DEFAULT_BASIS_LABELS, data.valuationView)}
-            </p>
+            {canViewMoney && data.valuationView && (
+              <p className="text-xs text-muted-foreground" data-testid="attributed-valuation-view">
+                {valueBasisLabel(data.valuationView)}
+              </p>
+            )}
             {data.truncated && (
               <p className="text-xs text-warning" data-testid="attributed-truncated">
                 Only the earliest periods are listed (server limit); this event touched more.

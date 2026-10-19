@@ -176,7 +176,7 @@ export const SOURCE_AUTHORITY = {
   notes:
     'MQTT tonne counter EXT1-Throughput at the extruder outlet is the authoritative output of Extruder1',
   approvalReason:
-    'One authoritative measurement at the agreed accounting boundary (guide lesson 9)',
+    'One authoritative measurement at the agreed accounting boundary',
 } as const;
 
 export const VALUATION_POLICY = {
@@ -191,10 +191,9 @@ export const VALUATION_POLICY = {
   manualLineHours: false,
   effectiveFrom: TIMES.octoberFrom,
   // a past instant is a commissioning backdate (owner, 18 Oct 2026): it needs a reason
-  backdateReason:
-    'Commissioning: the training plant is valued from October 2026 (guide lesson 21)',
+  backdateReason: 'Commissioning: the plant is valued from October 2026',
   notes:
-    'Contribution margin view by default; economic view charges lost contribution only while the product is sold out (guide lesson 21)',
+    'Contribution margin view by default; economic view charges lost contribution only while the product is sold out',
 } as const;
 
 export const FX_RATE = {
@@ -204,7 +203,7 @@ export const FX_RATE = {
   rate: '600000',
   effectiveFrom: TIMES.octoberFrom,
   source:
-    'Illustrative training rate of the Marun student guide (lesson 21): 600,000 IRR per USD, not a market exchange rate',
+    'Planning rate agreed by finance for October 2026: 600,000 IRR per USD, not a market exchange rate',
 } as const;
 
 export const DEMAND = {
@@ -213,5 +212,5 @@ export const DEMAND = {
   effectiveFrom: TIMES.octoberFrom,
   effectiveTo: TIMES.novemberFrom,
   evidence:
-    'Training assumption (guide lesson 21): unmet orders for HD5502 in October 2026, the grade is sold out, so unproduced tonnes are lost sales',
+    'Unmet orders for HD5502 in October 2026: the grade is sold out, so unproduced tonnes are lost sales',
 } as const;

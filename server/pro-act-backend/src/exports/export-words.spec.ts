@@ -25,6 +25,16 @@ describe('export words (QA audit 2026-10-19)', () => {
     expect(kindLabel(null)).toBeNull();
   });
 
+  it('QA re-test N9: a stop-caused line without a reason code reads "Not coded"', () => {
+    expect(
+      reasonText(LABELS, { reasonCodeId: null, causeEventId: 'event-1' }),
+    ).toBe('Not coded');
+    expect(
+      reasonText(LABELS, { reasonCodeId: 'rc-1', causeEventId: 'event-1' }),
+    ).toBe('MECH-GEARBOX · Gearbox failure');
+    expect(reasonText(LABELS, { reasonCodeId: null })).toBeNull();
+  });
+
   it('reason text: pinned code and name, the comment of a manual line, or both', () => {
     expect(reasonText(LABELS, { reasonCodeId: 'rc-1' })).toBe(
       'MECH-GEARBOX · Gearbox failure',

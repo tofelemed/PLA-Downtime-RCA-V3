@@ -38,7 +38,14 @@ describe('internal values stay off screen', () => {
     expect(groups.map((g) => g.title)).toEqual(['Reconciliation', 'Capacity ledger (calculated)']);
     expect(groups[0].rows.map((r) => r.label)).toEqual(['Target', 'Actual (good)', 'Gap', 'Attributed losses', 'Tolerance adjustment', 'Unaccounted']);
     expect(groups[0].rows[0]).toMatchObject({ unit: 't', before: '224', after: null });
-    expect(groups[1].rows.map((r) => r.label)).toEqual(['Capacity', 'Actual (good)', 'Availability loss', 'Performance loss', 'Quality loss', 'Unaccounted']);
+    // a figure recorded on neither side is left out, never "—" on both (re-test N3)
+    expect(groups[1].rows.map((r) => r.label)).toEqual(['Capacity', 'Actual (good)', 'Quality loss', 'Unaccounted']);
+  });
+
+  it('re-test N3: the capacity ledger Actual (good) is the server good output (its row has no plan actual)', () => {
+    const ledger = (good: string) => ({ sliceId: 's1', ledger: 'capacity', uom: 't', capacity: '240', good, actual: null, availability: '28', residual: '0' });
+    const [capacity] = proposalComparison({ ledgers: [ledger('189')] }, { ledgers: [ledger('209')] });
+    expect(capacity.rows.find((r) => r.label === 'Actual (good)')).toMatchObject({ unit: 't', before: '189', after: '209' });
   });
 
   it('several slices are named by position; the server values are never summed', () => {

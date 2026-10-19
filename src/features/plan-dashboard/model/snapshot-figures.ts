@@ -50,7 +50,8 @@ const LEDGER_FIGURES: Readonly<Record<string, ReadonlyArray<[string, string]>>> 
   ],
   capacity: [
     ['capacity', 'Capacity'],
-    ['actual', 'Actual (good)'],
+    // the capacity ledger has no plan target, so its server row carries the good output as `good`, not `actual` (re-test N3)
+    ['good', 'Actual (good)'],
     ['availability', 'Availability loss'],
     ['performance', 'Performance loss'],
     ['quality', 'Quality loss'],
@@ -76,7 +77,9 @@ function rowsOf(figures: ReadonlyArray<[string, string]>, before: Row[], after: 
     const a = after.find((row) => (text(row, 'sliceId') ?? '') === sliceId);
     const unit = text(a, 'uom') ?? text(b, 'uom');
     const suffix = slices.length > 1 ? ` · slice ${index + 1}` : '';
-    return figures.map(([key, label]) => ({ key: `${prefix}:${sliceId}:${key}`, label: `${label}${suffix}`, unit, before: text(b, key), after: text(a, key) }));
+    return figures
+      .map(([key, label]) => ({ key: `${prefix}:${sliceId}:${key}`, label: `${label}${suffix}`, unit, before: text(b, key), after: text(a, key) }))
+      .filter((row) => row.before !== null || row.after !== null);
   });
 }
 
@@ -102,5 +105,6 @@ export function proposalComparison(before: Row | null, after: Row | null): Compa
       rows: rowsOf(figures, ledgerRows(before, ledger), ledgerRows(after, ledger), ledger),
     })),
   ];
-  return groups.filter((group) => group.rows.some((row) => row.before !== null || row.after !== null));
+  // a figure the server recorded on neither side is left out, never shown as "—" on both (re-test N3)
+  return groups.filter((group) => group.rows.length > 0);
 }

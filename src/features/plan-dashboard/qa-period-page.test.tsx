@@ -13,7 +13,7 @@ import type { WorkflowActions } from './hooks/use-workflow-actions';
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
-const { periodTitle, shiftLabel } = await import('./model/period-title');
+const { periodGridTitle, periodTitle, shiftLabel } = await import('./model/period-title');
 const { verifyBlockedReason } = await import('./coding/verify-reason');
 const { CodingGatePanel } = await import('./coding/coding-gate-panel');
 const { StickyWorkflowBar } = await import('./workflow/sticky-workflow-bar');
@@ -76,15 +76,23 @@ describe('QA planning: period page wording, chips, reasons and operator links', 
     expect(shiftLabel('Night shift')).toBe('Night shift');
   });
 
+  it('re-test N5: the grid page has one label, used by its h1 and by the period page back link', () => {
+    expect(periodGridTitle('Extruder1 HD5502 — 17 Oct 2026')).toBe('Extruder1 HD5502 — 17 Oct 2026 · period accounting');
+    expect(periodGridTitle(undefined)).toBe('Period accounting');
+  });
+
   it('"Verify this shift\'s stops" says why it is disabled', () => {
-    expect(verifyBlockedReason(GATE)).toMatch(/Code the uncoded stops first/);
+    expect(verifyBlockedReason(GATE)).toMatch(/^Code the stop first/);
+    expect(verifyBlockedReason({ ...GATE, uncoded: 2 })).toMatch(/^Code the 2 uncoded stops first/);
     expect(verifyBlockedReason({ ...GATE, uncoded: 0 })).toBe('Every coded stop of this shift is already verified.');
-    expect(verifyBlockedReason({ ...GATE, verification: { ...GATE.verification, unverified: 2 } })).toBeNull();
+    expect(verifyBlockedReason({ ...GATE, uncoded: 0, verification: { ...GATE.verification, unverified: 2 } })).toBeNull();
+    // re-test N8: Shift C — its only stop is uncoded and counted as waiting; the button stays disabled
+    expect(verifyBlockedReason({ ...GATE, verification: { ...GATE.verification, unverified: 1 } })).toMatch(/^Code the stop first/);
     actAs('Manager');
     wrap(<CodingGatePanel view={{ ...VIEW, codingGate: GATE } as unknown as ReconciliationView} />);
     const button = screen.getByTestId('verify-shift');
     expect(button).toBeDisabled();
-    expect(document.getElementById(button.getAttribute('aria-describedby') ?? '')).toHaveTextContent(/Code the uncoded stops first/);
+    expect(document.getElementById(button.getAttribute('aria-describedby') ?? '')).toHaveTextContent(/Code the stop first/);
   });
 
   it('a quality line no stop caused shows no "Not coded" chip; a stop line still does', () => {

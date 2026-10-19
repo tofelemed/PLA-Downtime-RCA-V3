@@ -14,6 +14,7 @@ import { CodeMappingsTab } from './code-mappings-tab';
 import { CodeMoveForm } from './code-move-form';
 import { CodeStatusBadge } from './code-status-badge';
 import { CodeVersions } from './code-versions';
+import { sectionNameOf } from '@/features/master-data/components/master-data-sections';
 
 const TABS = ['details', 'mappings', 'versions'] as const;
 type CodeTab = (typeof TABS)[number];
@@ -64,7 +65,7 @@ function CodeTabs({ library, code }: { library: CodeLibraryPath; code: CodeDetai
 function CodePage({ library, codeId }: { library: CodeLibraryPath; codeId: string }) {
   const query = useCode(library, codeId);
   const code = query.data;
-  const back = { to: `/master-data/codes-rules?library=${library}`, label: LIBRARIES[library].label };
+  const back = { to: `/master-data/codes-rules?library=${library}`, label: sectionNameOf('/master-data/codes-rules') };
   if (!code) {
     return (
       <Page>
@@ -89,7 +90,7 @@ export function CodeDetailPage() {
   if (!isCodeLibrary(library) || !codeId) {
     return (
       <Page>
-        <PageHeader title="Code not found" back={{ to: '/master-data/codes-rules', label: 'Codes & rules' }} />
+        <PageHeader title="Code not found" back={{ to: '/master-data/codes-rules', label: sectionNameOf('/master-data/codes-rules') }} />
         <DataState state="empty" detail="This address does not name a code library." />
       </Page>
     );

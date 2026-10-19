@@ -1,3 +1,4 @@
+import { plural } from '@/features/ux-kit/format/plural';
 import { Link } from 'react-router-dom';
 import { useNewFailureMark } from '@/api/v2/queries/stop-events';
 import type { StopIncidentView } from '@/api/v2/types/stop-events';
@@ -55,7 +56,7 @@ export function IncidentSection({ incident, eventId, occurrenceId, canDecide }: 
   return (
     <div className="space-y-2" data-testid="stop-incident">
       <p className="text-sm">
-        {format.number(incident.stopCount)} stops of one unresolved incident (restarts within {format.duration(incident.windowSeconds)}): stopped{' '}
+        {plural(incident.stopCount, 'stop', 'stops', format.number)} of one unresolved incident (restarts within {format.duration(incident.windowSeconds)}): stopped{' '}
         {format.duration(incident.stoppedSeconds)}
         {incident.envelopeSeconds !== null && ` within ${format.duration(incident.envelopeSeconds)}`}. Counted once in MTBF; each stop keeps its own duration.
       </p>

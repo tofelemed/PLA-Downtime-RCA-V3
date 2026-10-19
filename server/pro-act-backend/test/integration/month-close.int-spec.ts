@@ -42,6 +42,7 @@ interface MonthCloseBody {
     uncoveredDays: Array<{ unitName: string | null; shifts: number }>;
     monthEnded: boolean;
     monthEndsAt: string;
+    monthStarted: boolean;
     openProposalCount: number;
   };
   materiality: {
@@ -171,6 +172,14 @@ describe('month close (SME R1 / R4)', () => {
       missingPeriodCount: 0,
       monthEnded: false,
       monthEndsAt: '2030-01-19T20:30:00.000Z',
+      monthStarted: true,
+    });
+    // Bahman 1408 starts after the test clock: a future month says it has not started
+    const future = (await env.get('month-closes/1408-11').expect(200))
+      .body as MonthCloseBody;
+    expect(future.prerequisites).toMatchObject({
+      monthStarted: false,
+      monthEnded: false,
     });
     const refused = await env
       .post('month-closes/1408-10/close-quantities', {}, env.approver)
@@ -195,6 +204,7 @@ describe('month close (SME R1 / R4)', () => {
     // owner decision 2026-10-19: the world's plan covers 1 Mar 2027 only — the other scheduled days wait for a plan
     const unplanned = await month();
     expect(unplanned.prerequisites).toMatchObject({
+      monthStarted: true,
       monthEnded: true,
       missingPeriodCount: 0,
       periods: 3,

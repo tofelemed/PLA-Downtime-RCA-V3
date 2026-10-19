@@ -8,10 +8,10 @@ import { useCommandFeedback } from '@/features/admin/shared/use-command-feedback
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { roleLabel } from '@/features/ux-kit/labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { StatusIcon } from '@/lib/icons';
 import { UserAccessSection } from './components/user-access-section';
+import { placeOf, plantRolesText } from './components/user-columns';
 import { UserDetailsForm } from './components/user-details-form';
 import { UserLifecycleActions } from './components/user-lifecycle-actions';
 import { UserStatusBadge } from './components/user-status-badge';
@@ -43,7 +43,7 @@ function NewUser() {
   };
   return (
     <Page>
-      <PageHeader title="Add user" back={BACK} description="The user signs in with this e-mail and password. Their role decides what they see." />
+      <PageHeader title="Add user" back={BACK} description="The user signs in with this e-mail and password. Their plant roles, given under Access, decide what they see." />
       <Section title="Details">
         <UserDetailsForm mode="create" initial={EMPTY_USER_FORM} choosePlant={choosePlant} submitLabel="Create user" onSubmit={submit} onCancel={() => navigate(BACK.to)} />
       </Section>
@@ -69,7 +69,7 @@ function EditUser({ id }: { id: string }) {
 function ReadOnlyNote({ user, fromOtherPlant }: { user: UserView; fromOtherPlant: boolean }) {
   if (user.manageable) return null;
   const text = fromOtherPlant
-    ? `Home plant: ${user.tenantName ?? 'another plant'}. You manage this user's access in this plant; their profile, role and status are changed in their home plant.`
+    ? `Home plant: ${user.tenantName ?? 'another plant'}. You manage this user's access in this plant; their profile, sign-in type and status are changed in their home plant.`
     : 'You can see this user but not change it: it has your rank or a higher one, or it belongs elsewhere.';
   return (
     <Alert>
@@ -93,7 +93,7 @@ function UserDetail({ user }: { user: UserView }) {
   };
   return (
     <Page>
-      <PageHeader title={user.name} back={BACK} description={`${roleLabel(user.role)} · ${user.tenantName ?? user.organizationName ?? 'All plants'}`} meta={<UserStatusBadge isActive={user.isActive} />} />
+      <PageHeader title={user.name} back={BACK} description={`${plantRolesText(user)} · ${placeOf(user)}`} meta={<UserStatusBadge isActive={user.isActive} />} />
       <ReadOnlyNote user={user} fromOtherPlant={fromOtherPlant} />
       <Section title="Details">
         <UserDetailsForm key={user.updatedAt} mode="edit" initial={formOf(user)} choosePlant={false} readOnly={!user.manageable} submitLabel="Save changes" onSubmit={submit} onCancel={() => navigate(BACK.to)} />

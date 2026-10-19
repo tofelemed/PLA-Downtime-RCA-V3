@@ -14,7 +14,7 @@ export function DismissRecommendation({ recommendation }: { recommendation: RcaR
       triggerVariant="ghost"
       disabled={dismiss.isPending}
       title="Dismiss this recommendation?"
-      description={`RCA recommended: ${recommendationText(recommendation)}. Say why no RCA is needed; the reason is kept with the recommendation.`}
+      description={`Investigation recommended: ${recommendationText(recommendation)}. Say why no investigation is needed; the reason is kept with the recommendation.`}
       confirmLabel="Dismiss recommendation"
       onConfirm={(reason) => dismiss.submit({ id: recommendation.id, reason })}
     >

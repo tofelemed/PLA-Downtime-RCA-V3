@@ -5,6 +5,7 @@ import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { RecalculationNotice } from './components/recalculation-notice';
+import { ValuationRatesLink } from './components/valuation-rates-link';
 import { DemandStatusesTab } from './demand/demand-statuses-tab';
 import { FxRatesTab } from './fx/fx-rates-tab';
 import { PoliciesTab } from './policies/policies-tab';
@@ -22,6 +23,7 @@ function FinanceScreen() {
           title="Finance"
           description={`Valuation policy, exchange rates and product demand of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
         />
+        <ValuationRatesLink />
         <RecalculationNotice />
         <Tabs value={tab} onValueChange={(value) => setTab(value as FinanceTab)}>
           <TabsList className="h-auto flex-wrap">

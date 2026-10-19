@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { hasLeaveHost, requestLeave } from './leave-confirmation';
 
 export const DEFAULT_UNSAVED_MESSAGE = 'You have unsaved changes. Leave this page and discard them?';
 
@@ -50,20 +51,70 @@ function inAppHref(event: MouseEvent): string | null {
   const url = new URL(anchor.href, window.location.href);
   if (url.origin !== window.location.origin) return null;
   const current = window.location.pathname + window.location.search;
-  return url.pathname + url.search === current ? null : url.href;
+  const target = url.pathname + url.search;
+  return target === current ? null : target + url.hash;
 }
 
+/**
+ * In-app link clicks: with the app's dialog mounted the click is held, the dialog asks, and leaving
+ * navigates through the router; without it the browser's `confirm()` answers synchronously.
+ */
 function useLinkClickGuard(active: boolean, message: string): void {
+  const navigate = useNavigate();
   useEffect(() => {
     if (!active) return undefined;
     const onClick = (event: MouseEvent) => {
-      if (!inAppHref(event) || window.confirm(message)) return;
+      const target = inAppHref(event);
+      if (!target) return;
+      const withDialog = hasLeaveHost();
+      if (!withDialog && window.confirm(message)) return;
       event.preventDefault();
       event.stopPropagation();
+      if (withDialog) void requestLeave(message).then((leave) => leave && navigate(target));
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
-  }, [active, message]);
+  }, [active, message, navigate]);
+}
+
+interface HistoryFlags {
+  /** the next popstate is our own step back: swallow it */
+  restoring: boolean;
+  /** the next popstate is the confirmed navigation: let the router have it */
+  passing: boolean;
+}
+
+/** The browser's synchronous `confirm()` (no dialog host, or history indices unknown). */
+function askNatively(event: PopStateEvent, message: string, flags: HistoryFlags, step: number | null): void {
+  if (window.confirm(message)) return;
+  event.stopImmediatePropagation();
+  if (step === null || step === 0) return;
+  flags.restoring = true;
+  window.history.go(-step);
+}
+
+/** The app dialog: history is stepped back at once (the page stays), and stepped on again when the user leaves. */
+function askWithDialog(event: PopStateEvent, message: string, flags: HistoryFlags, step: number): void {
+  event.stopImmediatePropagation();
+  flags.restoring = true;
+  window.history.go(-step);
+  void requestLeave(message).then((leave) => {
+    if (!leave) return;
+    flags.passing = true;
+    window.history.go(step);
+  });
+}
+
+/** Our own history moves (`restoring`, `passing`); true when the event is handled. */
+function consumeOwnMove(event: PopStateEvent, flags: HistoryFlags): boolean {
+  if (flags.restoring) {
+    flags.restoring = false;
+    event.stopImmediatePropagation();
+    return true;
+  }
+  if (!flags.passing) return false;
+  flags.passing = false;
+  return true;
 }
 
 /**
@@ -71,7 +122,7 @@ function useLinkClickGuard(active: boolean, message: string): void {
  * declined prompt stops the event (the router never sees it) and steps history back to where it was.
  */
 function usePopStateGuard(active: boolean, message: string): void {
-  const restoring = useRef(false);
+  const flags = useRef<HistoryFlags>({ restoring: false, passing: false });
   const lastIndex = useRef<number | null>(null);
   const { key } = useLocation();
   useEffect(() => {
@@ -80,18 +131,11 @@ function usePopStateGuard(active: boolean, message: string): void {
   useEffect(() => {
     if (!active) return undefined;
     const onPopState = (event: PopStateEvent) => {
-      if (restoring.current) {
-        restoring.current = false;
-        event.stopImmediatePropagation();
-        return;
-      }
-      const nextIndex = historyIndex();
-      if (window.confirm(message)) return;
-      event.stopImmediatePropagation();
-      const previous = lastIndex.current;
-      if (previous === null || nextIndex === null || previous === nextIndex) return;
-      restoring.current = true;
-      window.history.go(previous - nextIndex);
+      if (consumeOwnMove(event, flags.current)) return;
+      const next = historyIndex();
+      const step = next === null || lastIndex.current === null ? null : next - lastIndex.current;
+      if (hasLeaveHost() && step) askWithDialog(event, message, flags.current, step);
+      else askNatively(event, message, flags.current, step);
     };
     window.addEventListener('popstate', onPopState, true);
     return () => window.removeEventListener('popstate', onPopState, true);
@@ -111,15 +155,25 @@ function useBeforeUnloadGuard(active: boolean): void {
 }
 
 /**
- * Asks before leaving a form with unsaved edits: in-app link clicks and back/forward get a confirm
- * prompt, closing or reloading the tab gets the browser's own prompt. Programmatic `navigate()` (e.g.
- * after a successful save) is not intercepted. Needs a router; works under `<BrowserRouter>` and `<MemoryRouter>`
+ * Asks before leaving a form with unsaved edits: in-app link clicks and back/forward ask through the
+ * app's dialog (`UnsavedChangesDialogHost`; the browser's `confirm()` when no host is mounted), closing
+ * or reloading the tab gets the browser's own prompt. Programmatic `navigate()` (e.g. after a
+ * successful save) is not intercepted; a Cancel button that navigates in code awaits the returned
+ * `confirmLeave()` first. Needs a router; works under `<BrowserRouter>` and `<MemoryRouter>`
  * (react-router's `useBlocker` needs a data router, which this app does not use).
  *
  * @example useUnsavedChangesGuard(form.formState.isDirty);
  */
-export function useUnsavedChangesGuard(isDirty: boolean, message: string = DEFAULT_UNSAVED_MESSAGE): void {
+export function useUnsavedChangesGuard(
+  isDirty: boolean,
+  message: string = DEFAULT_UNSAVED_MESSAGE,
+): { confirmLeave: () => Promise<boolean> } {
   useLinkClickGuard(isDirty, message);
   usePopStateGuard(isDirty, message);
   useBeforeUnloadGuard(isDirty);
+  const confirmLeave = useCallback(async () => {
+    if (!isDirty) return true;
+    return hasLeaveHost() ? requestLeave(message) : window.confirm(message);
+  }, [isDirty, message]);
+  return { confirmLeave };
 }

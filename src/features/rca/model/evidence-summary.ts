@@ -25,10 +25,11 @@ function codeText(value: unknown): string | null {
 
 function impactOf(value: unknown): ApprovedImpactView | null {
   const impact = bag(value);
-  if (!impact || typeof impact.lines !== 'number' || !Array.isArray(impact.quantities) || !Array.isArray(impact.values)) {
+  if (!impact || typeof impact.lines !== 'number' || !Array.isArray(impact.quantities)) {
     return null;
   }
-  return impact as unknown as ApprovedImpactView;
+  // `values` is absent for a caller without the money capability (QA re-test): quantities still show
+  return { ...impact, values: Array.isArray(impact.values) ? impact.values : [] } as unknown as ApprovedImpactView;
 }
 
 export function summarizeEvidence(evidence: Bag | null): EvidenceSummary {

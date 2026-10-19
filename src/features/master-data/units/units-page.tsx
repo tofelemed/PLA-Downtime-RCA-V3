@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -34,6 +34,7 @@ function useColumns(): DataTableColumn<MasterUnitView>[] {
 
 /** `/master-data/units`: the plant's production units, 20 per page, searchable, active by default. */
 export function UnitsPage() {
+  const navigate = useNavigate();
   const { filters, update } = useListFilters();
   const canWrite = useMasterDataWriter();
   const units = useRecordPage<MasterUnitView>(UNITS, listQueryOf(filters));
@@ -55,6 +56,8 @@ export function UnitsPage() {
           columns={columns}
           rows={units.rows}
           getRowKey={(unit) => unit.id}
+          onRowClick={(unit) => navigate(`/master-data/units/${unit.id}`)}
+          rowsHaveLink
           pager={units.pager}
           status={units.status}
           empty={{ title: 'No units', text: filters.q ? 'No unit matches the search.' : 'This plant has no units with this status yet.' }}

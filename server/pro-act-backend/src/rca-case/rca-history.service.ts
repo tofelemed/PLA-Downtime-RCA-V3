@@ -8,6 +8,7 @@ import { RcaHistoryV2QueryDto } from '../v2/rca/rca-history-v2.dto';
 import { listResponse, ListResponse } from '../v2/common/response';
 import { RCA_AUDIT_ENTITIES } from './rca-audit';
 import { findCase, scopeOf } from './rca-scope';
+import { historyReason } from './repair-reasons';
 
 /** One entry of a case's field history (`GET /v2/rcas/{id}/history`). */
 export interface RcaHistoryEntryV2View {
@@ -30,6 +31,12 @@ export interface RcaHistoryEntryV2View {
   afterHash: string | null;
   /** the remaining facts of the command (tool, file name, link target, …) */
   detail: Record<string, unknown>;
+}
+
+/** A page of the history with the number of entries of the case (QA L8: the pager names it on every page). */
+export interface RcaHistoryPageV2View
+  extends ListResponse<RcaHistoryEntryV2View> {
+  totalCount: number;
 }
 
 const strings = (value: unknown): string[] =>
@@ -61,7 +68,7 @@ function toEntry(
     actorId: row.actorId,
     actorName: row.actorId ? (names.get(row.actorId) ?? null) : null,
     service: row.service,
-    reason: row.reason,
+    reason: historyReason(row),
     revision: row.revision,
     changedFields: strings(changedFields),
     values: record(values),
@@ -84,7 +91,7 @@ export class RcaHistoryService {
     context: RequestContext,
     rcaId: string,
     query: RcaHistoryV2QueryDto,
-  ): Promise<ListResponse<RcaHistoryEntryV2View>> {
+  ): Promise<RcaHistoryPageV2View> {
     const scope = scopeOf(context);
     await findCase(this.dataSource.manager, scope, rcaId);
     const qb = this.dataSource
@@ -95,6 +102,7 @@ export class RcaHistoryService {
         types: [...RCA_AUDIT_ENTITIES],
       })
       .andWhere(`a.detail ->> 'caseId' = :rcaId`, { rcaId });
+    const totalCount = await qb.clone().getCount();
     const page = await keysetPage(qb, {
       alias: 'a',
       property: 'at',
@@ -103,7 +111,7 @@ export class RcaHistoryService {
       limit: query.limit,
     });
     const names = await this.actorNames(page.items);
-    return listResponse(
+    const list = listResponse(
       page.items.map((row) => toEntry(row, names)),
       page.nextCursor,
       {
@@ -111,6 +119,7 @@ export class RcaHistoryService {
         ...(scope.units ? { unitIds: scope.units } : {}),
       },
     );
+    return { ...list, totalCount };
   }
 
   private async actorNames(

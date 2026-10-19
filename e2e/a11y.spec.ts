@@ -87,7 +87,7 @@ test.describe('Accessibility of the main pages (axe, WCAG 2.1 AA, serious / crit
     ['Finance', '/finance', 'main'],
     ['Uncertainty budgets', '/measurement-uncertainty', 'main'],
     ['Delegations', '/delegations', 'main'],
-    ['Codes and rules', '/master-data/codes-rules', 'main'],
+    ['Codes & rules', '/master-data/codes-rules', 'main'],
     ['Tasks', '/tasks', 'main'],
     ['Settings', '/admin?tab=settings', 'main'],
   ];

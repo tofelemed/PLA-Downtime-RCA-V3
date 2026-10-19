@@ -46,7 +46,24 @@ export interface Capabilities {
   canReviewSourceStatusRules: boolean;
   /** user management, permissions, settings of the plant */
   canAdministerTenant: boolean;
+  /** QA re-test 2026-10-19: the User management workspace (users, permissions, delegations): administrators */
   canUseUserManagement: boolean;
+  /**
+   * QA re-test 2026-10-19: approval-role holders who are not administrators reach only their delegations, under
+   * their own menu entry "Approval delegations" (`/delegations`), not "User management"
+   */
+  canReachDelegationsOnly: boolean;
+  /**
+   * QA re-test 2026-10-19 (W-OP): Pending approvals for the roles that decide some inbox kind
+   * (`APPROVAL_DECIDERS`, operators included: duplicate-stop merges); never for a read-only plant
+   */
+  canReachApprovals: boolean;
+  /**
+   * QA re-test 2026-10-19 (L16): the Equipment setup guide is a configuration journey for the roles that set
+   * equipment up or review it (analysis readers, master-data administrators); operations-only roles do not
+   * see it
+   */
+  canReachSetupGuide: boolean;
   canUseAdminPanel: boolean;
   canViewAuditLogs: boolean;
   /** approve plans, profiles, rules and RCAs */
@@ -141,12 +158,13 @@ const GLOBAL_ROLES = ['SuperAdmin', 'OrgAdmin'];
 /** server/pro-act-backend/src/app-settings/app-settings-access.policy.ts canWriteSetting (tenant-owned settings) */
 const PLANT_SETTINGS_WRITERS = ['TenantAdmin', 'manager_approver'] as const;
 const OPERATIONS_ONLY_ROLES: ReadonlySet<string> = new Set(['Operator', 'operator']);
+const MONEY_EXCLUDED_ROLES: ReadonlySet<string> = new Set(ServerRoles.MONEY_EXCLUDED_ROLES);
 const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES);
 
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canReachDelegationsOnly' | 'canReachApprovals' | 'canReachSetupGuide' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -214,7 +232,8 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     canViewOperations: held.length > 0,
     canViewAnalysis,
     canReachPeriodQuality: canViewAnalysis || writes.canWriteDispositions,
-    canViewMoney: canViewAnalysis,
+    // the server withholds money from the same roles (MoneyRedactionInterceptor, `canViewMoney`)
+    canViewMoney: held.some((role) => !MONEY_EXCLUDED_ROLES.has(role)),
     canManageMasterData,
     canReachMasterData:
       canViewAnalysis || canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
@@ -223,7 +242,10 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     canReviewSourcePriority: isSuperAdmin || writes.canApproveSourceAuthority,
     canReviewSourceStatusRules: isSuperAdmin || writes.canApproveStatusMappings,
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
-    canUseUserManagement: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']) || writes.canDelegateApprovals,
+    canUseUserManagement: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
+    canReachDelegationsOnly: writes.canDelegateApprovals && !holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
+    canReachApprovals: !readOnly && ServerRoles.satisfiesAnyRole(held, ServerRoles.APPROVAL_DECIDERS),
+    canReachSetupGuide: canViewAnalysis || canManageMasterData,
     canUseAdminPanel: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']) || writes.canManagePlantSettings,
     // the server's GET /audit-logs roles (read in the acting plant only)
     canViewAuditLogs: ServerRoles.satisfiesAnyRole(held, ServerRoles.AUDIT_READERS),

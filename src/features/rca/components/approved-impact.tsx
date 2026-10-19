@@ -2,22 +2,11 @@ import type { ApprovedImpactView } from '@/api/v2/types/rca';
 import { currencyDigits, entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { humanize } from '@/features/ux-kit/labels';
+import { basisSentence, valueBasisLabel } from '@/features/ux-kit/labels/value-basis';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { plural } from '@/features/ux-kit/format/plural';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-
-const VIEW_LABELS: Readonly<Record<string, string>> = {
-  contribution_margin: 'Contribution margin',
-  standard_cost: 'Standard cost',
-  economic_impact: 'Economic impact',
-};
-
-/** The server's basis as a sentence: capitalised, one closing full stop (older packages are lower case). */
-function sentence(text: string): string {
-  const trimmed = text.trim().replace(/[.]$/, '');
-  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}.` : '';
-}
 
 export interface ApprovedImpactProps {
   impact: ApprovedImpactView;
@@ -48,7 +37,7 @@ export function ApprovedImpact({ impact, viewNote }: ApprovedImpactProps) {
         ))}
       </ul>
       {canViewMoney && <ApprovedImpactValues impact={impact} viewNote={viewNote} />}
-      <p className="text-xs text-muted-foreground">{plural(impact.lines, 'approved line', 'approved lines', number)}. {sentence(impact.basis)}</p>
+      <p className="text-xs text-muted-foreground">{plural(impact.lines, 'approved line', 'approved lines', number)}. {basisSentence(impact.basis)}</p>
     </div>
   );
 }
@@ -59,11 +48,10 @@ function ApprovedImpactValues({ impact, viewNote }: ApprovedImpactProps) {
   return (
     <>
       <p className="text-xs text-muted-foreground" data-testid="approved-impact-view">
-        Value: {VIEW_LABELS[impact.view ?? 'contribution_margin']}
-        {viewNote ? ` (${viewNote})` : ''}
+        {valueBasisLabel(impact.view, viewNote)}
       </p>
       <ul>
-        {entriesInCurrency(impact.values, (row) => row.currency, currency).map((row) => (
+        {entriesInCurrency(impact.values ?? [], (row) => row.currency, currency).map((row) => (
           <li key={row.currency}>
             {row.currency}:{' '}
             {row.amount === null ? (

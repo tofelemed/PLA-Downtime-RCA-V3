@@ -34,11 +34,12 @@ export const CODING_STATE_LABELS: Readonly<Record<CodingState, string>> = {
   reviewed: 'Reviewed',
 };
 
+/** An event's investigation state in the glossary's words (QA L10: "investigation", never "RCA" on screen). */
 export const EVENT_RCA_STATE_LABELS: Readonly<Record<EventRcaState, string>> = {
-  none: 'No RCA',
-  required: 'RCA required',
-  linked: 'RCA linked',
-  completed: 'RCA completed',
+  none: 'No investigation',
+  required: 'Investigation recommended',
+  linked: 'Investigation linked',
+  completed: 'Investigation completed',
 };
 
 /** Event kind (physical type). */

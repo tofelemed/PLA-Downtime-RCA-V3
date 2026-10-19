@@ -14,6 +14,7 @@ const plant = vi.hoisted(() => ({ id: 'tenant-a' }));
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: { tenant: { id: plant.id } } }) }));
 vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () => ({ timezone: 'Asia/Dubai', loading: false }) }));
+vi.mock('@/features/ux-kit/use-operational-day-start', () => ({ useOperationalDayStart: () => '00:00' }));
 const unitId = '10000000-0000-4000-8000-000000000001';
 const productId = '10000000-0000-4000-8000-000000000002';
 const productB = '10000000-0000-4000-8000-000000000003';

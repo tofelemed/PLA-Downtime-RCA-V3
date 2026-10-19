@@ -42,7 +42,7 @@ export function MicroStopForm({ unitId, current }: MicroStopFormProps) {
     }
   };
   return (
-    <form className="max-w-2xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+    <form noValidate className="max-w-2xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <TextField id="micro-seconds" label="Micro-stop threshold (s)" value={draft.microStopSeconds} onChange={(v) => set({ microStopSeconds: v })} error={errors.microStopSeconds} hint="Shorter stops stay in running time and reduce performance." required />
       <ClassThresholdsEditor rows={draft.classes} onChange={(classes) => set({ classes })} error={errors.classes} />
       <TextField id="micro-trips" label="Trip reason codes" value={draft.tripCodes} onChange={(v) => set({ tripCodes: v })} hint="Comma separated. A process trip is always an availability event, never a micro-stop." multiline />

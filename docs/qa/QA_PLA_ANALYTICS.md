@@ -190,3 +190,179 @@ Omid can now open `/plans/…/periods/…` from the period list. The MARUN repor
 ## Data created
 
 None in the plant records. Every non-GET API call was blocked except login, refresh and the export jobs. Export jobs were created through the UI (permitted, read-only): 1 PLA period summary CSV and 4 Reports exports. The display-currency choice is browser-local only.
+
+## Re-test 19 Oct
+
+Run 2026-10-19 15:00 plant time, after commit `dd04dd24` and its deploy. The method is the same as round 1: headless Chromium, UI login, every non-GET API call blocked except login, refresh and export jobs. Pages were captured at 1440×900 and 768×1024, and the server figures were re-probed through `GET /api/v2/reports/*`.
+
+Evidence is in `C:\Users\Admin\AppData\Local\Temp\claude\d--HMI-Project-Usama-ProAct\8340f887-b72f-4b11-b2f2-ae7460ebd8b3\scratchpad\qa\pla\r2\`. That folder holds the scripts `omid.mjs`, `omid2.mjs`, `leila.mjs`, `leila2.mjs`, `roles.mjs`, `w768.mjs` and `draft.mjs`, plus `results.jsonl`, the `r2-*.png` screenshots, the `r2-export-*` files and `probe-leila.json` (`probe-leila-round1.json` is the round-1 copy).
+
+**FIXED 19 / PARTIAL 5 / OPEN 4 / NEW 9**
+
+**Figures are unchanged.** For the day and for shifts A, B and C, the waterfall, OEE, loss value, reconciliation and Bad actors responses match round 1:
+- day: 672 − 42 − 4 − 5 = 621
+- OEE 92.4 %
+- contribution margin 7,650 USD (A 5,250, B 150, C 2,250)
+- economic impact 6,900 + 400 USD
+- Bad actors: 28.00 t, 4,200.00 USD
+
+Only the loss tree's response changed, and the change is additive: `eventLines` and a `quality_dispositions` group. Its totals are still 51 t. The UI matches the server for Leila, Sara, Kamran, Reza, Farid, Neda and SuperAdmin. There are no console errors, no failed requests and no "demo" text, raw uuids or snake_case on any page. axe reports nothing serious or critical at either width.
+
+### Round-1 findings
+
+| # | Finding (round 1) | Status | Evidence (r2 folder) |
+|---|---|---|---|
+| M1 | A production day shown as two calendar days; date inputs in browser locale; re-picking dates switches to midnight | PARTIAL | The day window now reads "Chosen dates · 2026-10-17 (production day 06:00–06:00)", on Reports too. The inputs are text `YYYY-MM-DD` labelled From / To (inclusive). Re-picking 17→17 keeps 02:30Z → 02:30Z (`leila2.out`). **Still open:** a shift-C window (22:00–06:00) reads "Chosen dates · 2026-10-17 – 2026-10-18" (`leila.out`, "SHIFT C WINDOW") |
+| M2 | Loss events "Lost quantity —" | FIXED | The column is "Lost quantity (attributed)": the 02:00 stop shows 14.00 t and the 08:00 stop 28.00 t (`r2-leila-loss-events.png`) |
+| M3 | Drill-downs that end in an empty list | PARTIAL | Fixed: the quality bar and row open "Periods · quality losses from lot dispositions" with "Open dispositions" (`r2-leila-drill-quality.png`). The SPEED-LOSS row says "Manual loss lines with no event: nothing to open". **Still open:** the Performance bar on Overview and the Performance row of "by OEE component" link to `breakdown=loss-events&oee=performance`, which shows "No loss events in this window". The 4 t is the manual SPEED-LOSS line (`r2-leila-drill-performance.png`) |
+| M4 | Dashboard "All repeat causes" lands on the loss tree | FIXED | The link is `?breakdown=repeat-causes` and opens Repeat causes (`r2-leila-dash-repeat.png`) |
+| M5 | Raw `gearbox_failure` on Bad actors | FIXED | The column reads "Gearbox functional failure" (`r2-leila-ba-fm.png`) |
+| M6 | Bad actors at 768 px: scroll region not focusable | FIXED | axe is clean at 768 for both groupings (`r2-leila-768_reliability_bad-actors*.png`) |
+| Q1 | Operator sees money; "Reports & exports" link leads to a refusal | PARTIAL | See "Operator (Omid)" below. Money, the toggle, value metrics, Top opportunities, the export and the PLA Reports link are gone. The "Loss valuation" tab and the Dashboard "OEE and downtime report" link still lead Omid to "No access" |
+| — | "Not coded" group includes quality dispositions | FIXED | Separate groups: "Not coded" 14.00 t and "Quality (dispositions)" 5.00 t |
+| — | Trends tooltip color-contrast (axe serious) | FIXED | axe is clean on Trends at 1440 and 768 |
+| — | Loss lines export without reason | FIXED | The CSV appends `reason_code`, `reason_name` and labels (MECH-GEARBOX / Gearbox failure). The PDF has a Reason column ("MECH-GEARBOX · Gearbox failure", "SPEED-LOSS · Reduced extrusion") (`r2-export-reports-2/3-*`) |
+| L | "Custom window" vs "Chosen dates" | FIXED | Every deep link reads "Chosen dates" |
+| L | Export `requested_by` uuid, `timezone,UTC` | FIXED | Adds `requested_by_name,Leila`, `plant_timezone,Asia/Tehran` and plant-time columns. The PDF shows "Requested by Leila · Time zone Asia/Tehran". BOM present |
+| L | "by oee component" | FIXED | "Lost quantity by OEE component · plan ledger" |
+| L | "1 groups", "1 periods" | FIXED | "Total (4 groups, 6 lines)", "over 1 period" |
+| L | Repeat causes by asset says "Not coded" | FIXED | "No asset recorded" |
+| L | OEE trend chart: no values table; "(labelled)" | PARTIAL | "(labelled)" was removed. There is still no "View values" table for the OEE line chart, only "Calculation details" |
+| L | Period label with nested brackets | FIXED | "2026-10-17 C · 22:00" |
+| L | Standard / operational cost "— Provisional" with no reason | FIXED | "Not valued in USD (No approved valuation rate)" and "(Impact code missing)" |
+| L | Duplicate currency toggle on Loss valuation | FIXED | One toggle (header) on every PLA page and Reports. Bad actors still has two: see N4 |
+| L | Dashboard: two availabilities without a clear caption | OPEN | "Scheduled availability 97.3 % · Run time ÷ scheduled time" next to OEE availability 93.8 %, with no scope caption |
+| L | Dashboard "Stops to code" tile has no count | OPEN | Still only "View stops to code" |
+| L | Dashboard 24 h repeated "Not available" | FIXED | "— · Not available · No slices" |
+| L | Reports caption does not follow the revisions toggle | FIXED | "approved revisions only" and "approved revision, else the open draft (provisional)" follow the select |
+| L | Reports header range shows two dates | FIXED | "2026-10-17 (production day 06:00–06:00)" |
+| L | Bad actors copy and format | PARTIAL | Spacing fixed ("28.00 t", "4,200.00 USD"). Still shown: the raw lower-case server basis ("approved plan lines … CA8 cumulative same-mode downtime rule…") and an exclusive end "2026-08-03 00:00 – 2026-11-01 00:00" |
+| L | Bad actors rows are not links | OPEN | No drill to the asset's events or the investigation |
+| L | "Bad Actors" vs "Bad actors" | FIXED | h1, title and the No-access page all read "Bad actors" |
+| L | API `month=1405-07` accepted | OPEN | Still 200, read as Gregorian year 1405 |
+
+### Operator (Omid): no money
+
+| Check | Result | Evidence |
+|---|---|---|
+| Loss valuation menu item | PASS: not offered | sidebar links: Dashboard and PLA only |
+| `/pla-analytics/valuation` direct | PASS: "No access · Your roles in this plant do not include Loss valuation." | `r2-omid_pla-analytics_valuation.png` |
+| USD / IRR toggle | PASS: absent on Dashboard, all PLA pages, Reports, Bad actors and the event page | toggle count 0 |
+| Loss tree metric | PASS: "Lost quantity" only. `?metric=margin` falls back to quantity | `r2-omid_pla-analytics_losses_metric_margin.png` |
+| Top opportunities | PASS: tab hidden. `?breakdown=opportunities` shows the loss tree | `r2-omid_pla-analytics_losses_breakdown_opportunities.png` |
+| Period summary export | PASS: no export button on any PLA page | — |
+| "Reports & exports" header link | PASS: gone from every PLA page | — |
+| Reports, `/reports?view=value`, Finance, Bad actors | PASS: No access | `r2-omid_reports*.png` |
+| Period page (from the period list) | PASS: opens on Actuals & quality only. `/value`, `/review` and `/history` redirect to `/actuals`. No money | `r2-omid-period*.png` |
+| Event page, Attributed losses | PASS (WARN): "Availability: 28.00 t" with no amount, but the label "Value basis: Contribution margin" is still shown (N5) | `r2-omid-event-Losses.png` |
+| Quantities | PASS: waterfall 672 → 621, loss tree 51 t, OEE 92.4 %, loss events 14 / 28 t, Dashboard tiles | `r2-omid_*.png` |
+| PLA tab "Loss valuation" | **FAIL (N1)**: shown on every PLA page and leads to No access | `r2-omid-valuation-tab-click.png` |
+| Dashboard "OEE and downtime report" | **FAIL (N2)**: `/reports?view=production`, No access | `omid2.mjs` output |
+| Server | **WARN (N3)**: as Omid, `GET /v2/reports/loss-value`, `loss-tree?metric=margin` and `bad-actors` return 200 with USD/IRR values | API probe |
+
+### New findings
+
+| # | Page / route | Role | Result | Finding | Severity | Suggested fix |
+|---|---|---|---|---|---|---|
+| N1 | All PLA pages, tab bar | Omid | FAIL | The in-page PLA tab bar still lists "Loss valuation", which opens "No access". The menu and route are gated but the tab bar is not | Medium | Filter the tab bar's `PLA_PAGES` by the same capability as the menu (`canViewMoney` for `valuation`), e.g. in the PLA tab nav component |
+| N2 | `/dashboard`, OEE section | Omid | FAIL | The header link "OEE and downtime report" → `/reports?view=production` is a refusal for operators | Low | Hide it without `canViewAnalysis` (Dashboard link builder) |
+| N3 | API `/v2/reports/loss-value`, `loss-tree` (money metrics), `bad-actors` | Omid | WARN | No money is a UI-only rule: an operator's token still receives values, and also Bad actors data although its page refuses him. DECISIONS 19 Oct names server redaction as a follow-up | Medium | Server-side `canViewMoney` check: 403, or value fields redacted |
+| N4 | `/reliability/bad-actors` | all | WARN | The page has its own "$ USD / IRR" toggle in addition to the header's (2 toggles), against "one display-currency toggle per screen" | Low | `bad-actor-page.tsx`: drop the in-page toggle |
+| N5 | `/events/:id` Attributed losses | Omid | WARN | "Value basis: Contribution margin" is shown to an operator without any value | Low | `attributed-losses-card.tsx`: hide the basis line without `canViewMoney` |
+| N6 | PLA Overview, rolling preset | Leila | WARN | "Last 7 days · 2026-10-12 – 2026-10-18 (production days 15:04–15:04)": a rolling now − 7 d window is described as production days with the current clock time, and the end date (18) is not the window's end (19 Oct 15:04) | Low | Apply the "production day" wording only when both bounds sit on the day boundary; otherwise show date and time |
+| N7 | PLA Reconciliation period list (`?periods=draft`, 7 d) | Leila | WARN | Periods from 18 Oct on show "no plan" (lower case, terse) in "Period accounting", while elsewhere they read "No approved plan covers this period". Bad actors counts them in "5 of 8 periods not approved yet, so their loss is not included", although they cannot be approved | Low | Use the shared wording; leave uncovered periods out of the Bad actors "not approved" count, or name them |
+| N8 | Window panel | Leila | WARN | Typing a date in another format (`17/10/2026`) shows no inline message; the panel keeps the old window silently | Low | Inline "Use YYYY-MM-DD" validation |
+| N9 | Loss lines PDF / CSV | Leila | WARN | The uncoded Shift C availability line (14 t) has an empty Reason cell instead of "Not coded" | Low | `export-report.ts`: "Not coded" for cause-event lines without a reason |
+
+### Pages swept (re-test)
+
+All six PLA pages, Reports (all four views, with the revisions toggle), Dashboard (24 h, 7 d), Bad actors (both groupings), the window panel, drill-downs and Back, at 1440 and 768.
+- **Leila:** full check list.
+- **Omid:** money visibility.
+- **Sara, Kamran, Reza, Farid, Neda and SuperAdmin:** access and figures. Each has PLA, Loss valuation, Reports and Bad actors, with identical figures. Their header badges show the guide role ("Production accountant", "Finance approver", "Manager (approver)", "Reliability engineer", "Quality / Lab approver").
+- **Headings:** h1 and title follow the page-name source ("Production loss analysis · Loss breakdown", "Reports", "Bad actors"). No console errors, failed requests or axe serious/critical issues.
+
+### Data created (re-test)
+
+None in the plant records. Export jobs were created through the UI (permitted, read-only): 1 PLA period summary CSV and 4 Reports exports (period summary CSV/PDF, loss lines CSV/PDF).
+
+## Round 3 re-test (19 Oct 2026)
+
+Run 19 Oct 2026, about 17:00–17:25 Tehran, on the rebuilt Docker stack.
+- **Method:** headless Chromium with UI login. Every non-GET call was blocked except login, refresh and export jobs, and no write was attempted.
+- **Personas:** Leila (full pass at 1440×900 and 768×1024) and Omid (operator, 1440). Kamran and Reza were used for money and roles. The Bad actors API response was read as Leila.
+- **Evidence:** `…\scratchpad\qa\r3\` holds `a1-*.txt`, `a2.txt`, `a3.txt`, `o1` output, `a1-*.png`, `a3-*.png` and `dl\rep-*`.
+
+**17 Oct figures match on every page** (Planning, PLA, Reports and Dashboard):
+- Plan 672 t − availability 42 − performance 4 − quality 5 = 621 t good.
+- Loss tree 51 t: MECH-GEARBOX 28, Not coded 14, Quality (dispositions) 5, SPEED-LOSS 4.
+- OEE 92.4 % (A 93.8 %, P 99.4 %, Q 99.2 %).
+- Contribution margin 7,650.00 USD (A 5,250, B 150, C 2,250). Economic impact components 6,900 + 400 USD.
+- Bad actors: 28.00 t, 4,200.00 USD.
+- The same figures appear in the exported CSV and PDF.
+
+**Clean pages:**
+- 17 pages per persona and width: no console errors, no failed requests, no raw ids or snake_case words, no "demo" or "training".
+- Units have a space. No horizontal scroll at 768 px.
+- axe found no serious or critical issues at either width.
+
+### Verified fixed
+
+- **Production-day windows:**
+  - Typing 2026-10-17 → 2026-10-17 in the PLA window panel gives `from=…17T02:30Z&to=…18T02:30Z&window=dates`, which reads "Chosen dates · 2026-10-17 (production day 06:00–06:00)". Reports gives the same.
+  - A Shift C window reads "Chosen dates · Production day 2026-10-17 · 22:00–06:00", and Shift A reads "… · 06:00–14:00" (Shift C label fixed).
+  - Typing "17/10/2026" or "17.10.2026" shows "Use YYYY-MM-DD, e.g. 2026-10-17" (N8 fixed).
+- **Rolling windows show their real bounds:**
+  - PLA: "Last 7 days · 2026-10-12 17:04 – 2026-10-19 17:04" and "Last 24 h · 2026-10-18 17:04 – 2026-10-19 17:04" (N6 fixed).
+  - Reports covers whole production days: "2026-10-12 – 2026-10-18 (production days 06:00–06:00)", with URL `12T02:30Z → 19T02:30Z`, `window=7d`.
+- **Reports, approved and provisional wording:**
+  - Under "Approved revisions only" no card says Provisional. The coverage note reads "Incomplete data: only approved periods are counted (50 % of periods approved)."
+  - With "Include open drafts (provisional figures)", the header and every card show "Provisional", and the caption reads "approved revision, else the open draft (provisional)".
+  - The 18 Oct row reads "No approved plan covers this period · Open Plans" with "—" in its figures.
+- **Performance drill-down (M3):**
+  - The Overview "Performance loss" control and the "by OEE component" Performance row both open Loss events with "OEE component: Performance".
+  - The page says "No loss events in this window: the loss is in the loss lines with no event below".
+  - It then lists the manual line: "2026-10-17 A · 06:00 · Performance · 4.00 t · SPEED-LOSS Reduced extrusion rate", with its totalizer evidence.
+- **Loss events:** "Loss lines with no event" lists the 4 t SPEED-LOSS line under the event list. The OEE-component grouping is now in the URL (`lossBy=oee`).
+- **Bad actors:**
+  - The value basis is the frozen approval view (API `viewSource: approved_snapshot`, `view: contribution_margin`; the UI reads "Value basis: Contribution margin", 4,200.00 USD).
+  - The window shows inclusive plant dates: "Rolling 90 days: 2026-08-03 – 2026-10-31 (plant dates, both included)".
+  - Periods without a plan are named apart: "5 periods not included: No approved plan covers these periods" (N7 fixed).
+  - The basis is a sentence without rule codes.
+  - An asset row opens its unplanned stops in the Event Hub.
+- **Dashboard:**
+  - The two availabilities have scope captions: "OEE component of the calculated periods (not the downtime scheduled availability)" and "Run time ÷ scheduled time, from the stop records of the window (not the OEE availability)".
+  - "Stops to code" shows a count (1 for 7 and 30 days, 0 for 24 h).
+  - The 24 h window says "No approved plan covers these periods".
+- **Trends:** the OEE chart has "View values" (a table).
+- **Exports:**
+  - The Reports period summary and loss lines (CSV and PDF) and the period loss lines CSV all contain approved revisions only.
+  - The uncoded Shift C line reads "Not coded" in the CSV `reason_name` and in the PDF Reason column (N9 fixed).
+  - The PDF Reason cell wraps inside a taller row, so there is no overprint.
+  - The CSV carries `reason_code` and `reason_name` (MECH-GEARBOX / Gearbox failure).
+- **Operator (Omid), no money:**
+  - The PLA tab bar has no "Loss valuation" (N1 fixed).
+  - The Dashboard has no "OEE and downtime report" link (N2 fixed).
+  - Reports, Bad actors and `/pla-analytics/valuation` show "No access".
+  - There is no currency toggle and no value metric. The loss tree offers "Lost quantity" only.
+  - The event page's Attributed losses shows "Availability: 28.00 t" without a "Value basis" line (N5 fixed).
+- **Bad actors toggles:** one display-currency toggle on the page (N4 fixed).
+
+### Remaining problems
+
+| # | Page | Persona | What is wrong | Expected | Severity |
+|---|---|---|---|---|---|
+| R3-P1 | `/reports` (Approved revisions only, Last 7 days) | Leila | "Incomplete data: only approved periods are counted (50 % of periods approved)" counts the three 18 Oct periods in the denominator, although no approved plan covers them and they "need no approval until a plan covers them" (Month close). Bad actors now leaves such periods out and names them apart; Reports does not | Leave no-plan periods out of the approval share (3 of 3), or name them ("3 periods have no approved plan") | Low |
+| R3-P2 | `/reports` with "Include open drafts" | Leila | The page subtitle still reads "Approved figures of the chosen units and plant dates, with exports." while the header and every card say Provisional | A subtitle that follows the Revisions choice | Low |
+| R3-P3 | `/dashboard?window=24h` | Leila | The OEE tiles give different reasons for the same empty window: OEE, Performance, Quality and Reconciled OEE say "No approved plan covers these periods", while Availability says "No calculated periods" | One reason for the whole tile group | Low |
+| R3-P4 | PLA window label for a midnight-to-midnight link | Leila | `from=2026-10-16T20:30Z&to=2026-10-17T20:30Z` (a calendar day, 00:00–00:00) reads "Chosen dates · 2026-10-17". That is the same text as a production day without its "(production day 06:00–06:00)", so the two windows are easy to confuse | Show the times when the bounds are not the production-day boundary ("2026-10-17 00:00 – 2026-10-18 00:00") | Low |
+| R3-P5 | `/reliability/bad-actors` | Leila | The review month is Gregorian ("October 2026"; API `calendar: gregorian`), while the plant's month close works in Solar Hijri months (Mehr 1405). From a Bad actors row, the Event Hub reads "Custom window · 2026-08-03 00:00–2026-11-01 00:00" (exclusive end), while Bad actors says "2026-08-03 – 2026-10-31 (both included)" | Review months in the plant calendar; the Event Hub label in the same inclusive form (downtime owners) | Low |
+| R3-P6 | Loss lines PDF (Reports and period) | Leila | No overprint, but page breaks are poor: a period heading and its metadata are left at the bottom of page 2 while its table starts on page 3, and page 1 is half empty | Keep headings with their first rows | Low |
+
+Not verifiable live:
+- The approval inbox's "Availability loss line · <reason>" labels. No approval with changed loss lines is pending (see QA_PLANNING R3-3).
+- Rows of My work › RCA actions. No persona owns an action; the filter itself works.
+
+### Data created in round 3
+
+None in the plant records. Read-only export jobs were created through the UI by Leila: 4 Reports exports for 17 Oct (period summary CSV and PDF, loss lines CSV and PDF) and 2 period exports for Shift C (loss lines CSV and PDF).

@@ -31,15 +31,21 @@ describe('master-data links by capability', () => {
     actAs('master_data_admin');
     wrap(<MasterDataNav />);
     expect(linkNames()).toEqual([
-      'Overview', 'Units', 'Assets', 'Products', 'Plant hierarchy', 'Codes & rules', 'RCA templates', 'Cause library', 'Verification checklists',
+      'Overview', 'Production units', 'Assets', 'Products', 'Plant hierarchy', 'Codes & rules', 'RCA templates', 'Cause library', 'Verification checklists',
       'Failure dictionary', 'Plant flow', 'Stop and plan policy', 'Standby equipment', 'Unit impact rules', 'Work-order operations', 'Unit state',
     ]);
   });
 
-  it('a reliability engineer sees only the pages it writes', () => {
+  it('a reliability engineer sees the pages it writes and the failure dictionary it reads (re-test N9)', () => {
     actAs('reliability_engineer');
     wrap(<MasterDataNav />);
-    expect(linkNames()).toEqual(['Overview', 'Codes & rules', 'Standby equipment', 'Unit impact rules', 'Work-order operations']);
+    expect(linkNames()).toEqual(['Overview', 'Codes & rules', 'Failure dictionary', 'Standby equipment', 'Unit impact rules', 'Work-order operations']);
+  });
+
+  it('an operator sees every page it can open, Codes & rules included (QA L1)', () => {
+    actAs('operator');
+    wrap(<MasterDataNav />);
+    expect(linkNames()).toEqual(['Overview', 'Codes & rules', 'Standby equipment']);
   });
 
   it('the overview of an approver without master-data rights lists its pages instead of refusing', () => {

@@ -1,3 +1,4 @@
+import type { LedgerKind } from '@/api/v2/types/period-overview';
 import type { ReconciliationView, SliceReconciliationView } from '@/api/v2/types/reconciliation';
 import { labelOf } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -67,9 +68,14 @@ function SliceFigures({ slice }: { slice: SliceReconciliationView }) {
 }
 
 /** Plan-ledger identity per slice as the server computed it (ACC07/ACC09): target − actual = gap = attributed + tolerance adj. + unaccounted. */
-export function ReconciliationSummary({ view }: { view: ReconciliationView }) {
+export function ReconciliationSummary({ view, ledger = 'plan' }: { view: ReconciliationView; ledger?: LedgerKind }) {
   return (
     <div className="space-y-2" data-testid="reconciliation-summary">
+      {ledger === 'capacity' && (
+        <p className="text-xs text-muted-foreground" data-testid="reconciliation-ledger-note">
+          The reconciliation and the loss lines are always on the plan ledger (against the target). The capacity ledger is shown in the comparison and the waterfall below.
+        </p>
+      )}
       {view.slices.map((slice) => (
         <SliceFigures key={slice.sliceId} slice={slice} />
       ))}

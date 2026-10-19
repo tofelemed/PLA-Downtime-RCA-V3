@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { isUuid } from '../production-event/revisions/revision-actor';
 import { ProductionEvent } from '../production-event/production-event.entity';
 import { RcaLinkType } from '../rca/entities/rca-case-link.entity';
-import { approvedImpact } from './approved-impact';
+import { approvedImpactAsApproved } from './approved-snapshot-view';
 import { inScope, invalidReference, notFound, RcaScope } from './rca-scope';
 
 const MAX_TARGET_EVENTS = 200;
@@ -113,7 +113,7 @@ async function lossLineTarget(
         segmentStart: new Date(line.segment_start).toISOString(),
         segmentEnd: new Date(line.segment_end).toISOString(),
       },
-      approvedImpact: await approvedImpact(manager, scope.tenantId, {
+      approvedImpact: await approvedImpactAsApproved(manager, scope.tenantId, {
         lineIds: [id],
       }),
     },
@@ -145,7 +145,7 @@ async function groupTarget(
       builtAt: new Date().toISOString(),
       targetId: input.id,
       eventIds,
-      approvedImpact: await approvedImpact(manager, scope.tenantId, {
+      approvedImpact: await approvedImpactAsApproved(manager, scope.tenantId, {
         eventIds,
       }),
     },

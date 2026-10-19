@@ -1,3 +1,5 @@
+import { ROLE_LOST } from './role-lost-resolution-sql';
+
 /**
  * Set-based resolution of shared work-item notifications (owner 18 Oct). Each statement updates every open
  * notification of one plant (`$1`) whose work is done, for every recipient at once, at `$2`; it reads only
@@ -148,4 +150,6 @@ export const RESOLUTION_STATEMENTS: readonly string[] = [
   RCA_ACTIONS,
   TASKS,
   SLA,
+  // last: a recipient who lost the role (QA re-test 2026-10-19, `role-lost-resolution-sql.ts`)
+  ROLE_LOST,
 ];

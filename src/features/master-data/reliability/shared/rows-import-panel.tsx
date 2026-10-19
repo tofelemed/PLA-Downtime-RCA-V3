@@ -10,8 +10,8 @@ import { plural } from '@/features/ux-kit/format/plural';
 
 export interface RowsImportPanelProps<TRow, TResult> {
   id: string;
-  /** column names of the CSV form, shown in the label */
-  header: string;
+  /** the CSV columns in plain words, shown as help under the label (QA re-test N8: no internal field names) */
+  columns: string;
   example: string;
   mapRow: (row: TextRow) => MappedRow<TRow>;
   submit: (rows: TRow[]) => Promise<TResult>;
@@ -42,7 +42,7 @@ function ProblemList({ problems }: { problems: RowProblem[] }) {
  * problems without sending anything; "Import" sends every row and the server stores all or none, listing
  * its own row problems when it refuses.
  */
-export function RowsImportPanel<TRow, TResult>({ id, header, example, mapRow, submit, summary, pending }: RowsImportPanelProps<TRow, TResult>) {
+export function RowsImportPanel<TRow, TResult>({ id, columns, example, mapRow, submit, summary, pending }: RowsImportPanelProps<TRow, TResult>) {
   const { text: digits, number } = useNumberFormat();
   const [text, setText] = useState('');
   const [outcome, setOutcome] = useState<Outcome>(NONE);
@@ -63,8 +63,11 @@ export function RowsImportPanel<TRow, TResult>({ id, header, example, mapRow, su
   };
   return (
     <div className="space-y-2" data-testid={`${id}-import`}>
-      <Label htmlFor={id}>CSV ({header}) or JSON list</Label>
-      <Textarea id={id} rows={6} value={text} onChange={(e) => setText(e.target.value)} placeholder={example} />
+      <Label htmlFor={id}>Rows to import (CSV or JSON list)</Label>
+      <p id={`${id}-columns`} className="break-words text-xs text-muted-foreground">
+        Columns: {columns}. The first line of a CSV names the columns exactly as in the example.
+      </p>
+      <Textarea id={id} rows={6} aria-describedby={`${id}-columns`} className="whitespace-pre-wrap break-all" value={text} onChange={(e) => setText(e.target.value)} placeholder={example} />
       <div className="flex gap-2">
         <Button type="button" variant="outline" disabled={!text.trim() || pending} onClick={check}>Check</Button>
         <Button type="button" disabled={!text.trim() || pending} onClick={() => void run()}>Import</Button>

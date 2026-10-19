@@ -20,15 +20,16 @@ const managers = (c: Capabilities) => c.canManageMasterData;
  */
 export const MASTER_DATA_SECTIONS: readonly MasterDataSection[] = [
   { to: '/master-data', label: 'Overview', text: 'Record counts of the plant', end: true, visible: (c) => c.canReachMasterData },
-  { to: '/master-data/units', label: 'Units', text: 'Production units and lines', visible: managers },
+  { to: '/master-data/units', label: 'Production units', text: 'Production units and lines', visible: managers },
   { to: '/master-data/assets', label: 'Assets', text: 'Equipment and instruments', visible: managers },
   { to: '/master-data/products', label: 'Products', text: 'Products of the plant', visible: managers },
   { to: '/master-data/hierarchy', label: 'Plant hierarchy', text: 'Organization, plants, units and assets', visible: managers },
-  { to: '/master-data/codes-rules', label: 'Codes & rules', text: 'Code libraries, reason codes and automatic rules', visible: (c) => c.canViewAnalysis || c.canManageMasterData },
+  // the page admits every operations reader (QA L1: the tab bar lists every page the user can open)
+  { to: '/master-data/codes-rules', label: 'Codes & rules', text: 'Code libraries, reason codes and automatic rules', visible: (c) => c.canViewOperations || c.canManageMasterData },
   { to: '/master-data/rca/templates', label: 'RCA templates', text: 'Logic trees', visible: managers },
   { to: '/master-data/rca/causes', label: 'Cause library', text: 'Causes by category', visible: managers },
   { to: '/master-data/rca/checklists', label: 'Verification checklists', text: 'Checks that confirm a fix worked', visible: managers },
-  { to: '/master-data/failure-dictionary', label: 'Failure dictionary', text: 'ISO 14224-aligned failure codes', visible: managers },
+  { to: '/master-data/failure-dictionary', label: 'Failure dictionary', text: 'ISO 14224-aligned failure codes', visible: (c) => c.canManageMasterData || c.canValidateFailures },
   {
     to: '/master-data/plant-flow',
     label: 'Plant flow',
@@ -69,3 +70,10 @@ export const MASTER_DATA_SECTIONS: readonly MasterDataSection[] = [
 
 /** The sections the user may open, in menu order. */
 export const visibleMasterDataSections = (capabilities: Capabilities) => MASTER_DATA_SECTIONS.filter((s) => s.visible(capabilities));
+
+/** The tab-bar name of a master-data page (single source for link texts elsewhere, QA re-test N5). */
+export function sectionNameOf(to: string): string {
+  const section = MASTER_DATA_SECTIONS.find((candidate) => candidate.to === to);
+  if (!section) throw new Error(`No master-data section at ${to}`);
+  return section.label;
+}

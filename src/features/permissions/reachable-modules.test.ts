@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sidebarNameOf } from '@/features/auth/navigation-items';
 import { reachableModules, userRolesInPlant } from './reachable-modules';
 
 const names = (roles: string[]) => reachableModules(roles, {}).flatMap((group) => group.items.map((item) => item.name));
@@ -25,5 +26,13 @@ describe('permissions: modules the user reaches (QA audit 2026-10-19)', () => {
     expect(userRolesInPlant({ role: 'TenantAdmin', tenantId: 'home', plantRoles: ['viewer'] }, 'other')).toEqual(['viewer']);
     expect(userRolesInPlant({ role: 'SuperAdmin', tenantId: 'home', plantRoles: [] }, 'other')).toEqual(['SuperAdmin']);
     expect(userRolesInPlant({ role: 'Engineer', tenantId: 'home' }, 'other')).toEqual(['Engineer']);
+  });
+
+  it('lists the pages by their sidebar names (QA_SHELL N3)', () => {
+    const shown = reachableModules(['production_accountant'], {}).flatMap((group) => group.items.map(sidebarNameOf));
+    expect(shown).toContain('Downtime overview');
+    expect(shown).toContain('PLA overview');
+    expect(shown).not.toContain('Downtime analysis');
+    expect(shown).not.toContain('Production loss analysis');
   });
 });

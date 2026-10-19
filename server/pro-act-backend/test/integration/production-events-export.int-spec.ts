@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as request from 'supertest';
 import { CSV_BOM } from '../../src/exports/csv';
+import { EXPORT_LABEL_COLUMNS } from '../../src/v2/production-events/production-events-export-labels';
 import { ProductionEventModule } from '../../src/production-event/production-event.module';
 import { V2Module } from '../../src/v2/v2.module';
 import { IntegrationHarness } from './harness';
@@ -11,7 +12,8 @@ import { bearer, createIntegrationApp, signToken } from './support/test-app';
 const HEADER =
   'start_utc,end_utc,duration_seconds,unit,asset,event_type,physical_type,schedule_class,oee_component,' +
   'reason_code,reason,physical_state,coding_state,rca_state,severity,source_kind,description,quantity,' +
-  'quantity_uom,cost';
+  'quantity_uom,cost,' +
+  EXPORT_LABEL_COLUMNS.join(',');
 
 /** Event Hub parity on `/v2/production-events`: source kind, severity and text filters, CSV export. */
 describe('production events v2: Event Hub filters and CSV export', () => {

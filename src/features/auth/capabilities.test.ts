@@ -69,12 +69,15 @@ describe('capabilitiesOf', () => {
 
   it('global admins hold everything; OrgAdmin can reach its permitted administration', () => {
     const superAdmin = capabilitiesOf(['SuperAdmin']);
-    expect(Object.entries(superAdmin).filter(([key]) => key !== 'roles' && key !== 'isReadOnly').every(([, value]) => value === true)).toBe(true);
+    expect(Object.entries(superAdmin).filter(([key]) => key !== 'roles' && key !== 'isReadOnly' && key !== 'canReachDelegationsOnly').every(([, value]) => value === true)).toBe(true);
     const orgAdmin = capabilitiesOf(['OrgAdmin']);
     expect(orgAdmin.canUseAdminPanel).toBe(true);
     expect(orgAdmin.isSuperAdmin).toBe(false);
     expect(orgAdmin.canViewAuditLogs).toBe(true);
     expect(orgAdmin.canManageMasterData).toBe(true);
+    // administrators record delegations inside User management, not under the delegation-only entry
+    expect(superAdmin.canReachDelegationsOnly).toBe(false);
+    expect(orgAdmin.canReachDelegationsOnly).toBe(false);
   });
 
   it.each(['viewer', 'Operator', 'operator', 'master_data_admin', 'integration_admin'])('%s does not gain the admin panel', (role) => {

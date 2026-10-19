@@ -56,6 +56,7 @@ export const CONTROLLABLE_TILE: TileSpec = {
 const REASONS: Readonly<Record<string, string>> = {
   no_data: 'No calculated periods',
   no_scheduled_time: 'No scheduled time',
+  no_known_time: 'No state data covers this window',
   no_completed_stops: 'No completed stops in the window',
   no_failures: 'No failures in the window',
   no_restored_failures: 'No restored failures in the window',

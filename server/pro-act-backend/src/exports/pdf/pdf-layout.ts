@@ -3,10 +3,12 @@ import { coverFacts, PdfSection, REPORT_TITLES } from './pdf-content';
 import {
   ExportPresentation,
   PdfBlock,
+  PdfColumn,
   PdfDocumentModel,
   PdfPage,
 } from './pdf-model';
 import { plantRange, toPlantDigits } from './plant-format';
+import { rowLines } from './pdf-wrap';
 
 /** Text lines that fit between the running header and the footer of an A4 landscape page. */
 export const PAGE_LINES = 32;
@@ -21,8 +23,32 @@ export function linesOf(block: PdfBlock): number {
     case 'facts':
       return block.rows.length + 1;
     case 'table':
-      return block.rows.length + 2;
+      return tableRowLines(block.rows, block.columns) + 2;
   }
+}
+
+/** Text lines the rows of a table take once their cells are wrapped. */
+function tableRowLines(
+  rows: readonly string[][],
+  columns: readonly PdfColumn[],
+): number {
+  return rows.reduce((sum, row) => sum + rowLines(row, columns), 0);
+}
+
+/** How many leading rows fit in `room` lines (0 when not even the first does: it starts a new page). */
+function rowsFitting(
+  rows: readonly string[][],
+  columns: readonly PdfColumn[],
+  room: number,
+): number {
+  let used = 0;
+  let count = 0;
+  for (const row of rows) {
+    used += rowLines(row, columns);
+    if (used > room) break;
+    count += 1;
+  }
+  return count;
 }
 
 export interface LayoutInput {
@@ -79,13 +105,14 @@ class Paginator {
     let rows = block.rows;
     while (rows.length > 0) {
       const room = PAGE_LINES - this.used - 2;
-      if (room < 1) {
+      const count = rowsFitting(rows, block.columns, room);
+      if (count === 0) {
         this.newPage();
         this.keep([{ kind: 'heading', text: `${heading} (continued)` }]);
         continue;
       }
-      this.keep([{ ...block, rows: rows.slice(0, room) }]);
-      rows = rows.slice(room);
+      this.keep([{ ...block, rows: rows.slice(0, count) }]);
+      rows = rows.slice(count);
     }
   }
 }

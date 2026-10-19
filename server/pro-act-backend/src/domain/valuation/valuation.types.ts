@@ -84,6 +84,12 @@ export type DefaultBasis =
   | 'standard_cost'
   | 'economic_impact';
 
+/**
+ * Where a report's valuation view comes from: the view frozen in the approval snapshots of the periods
+ * carrying the loss, or the policy's default now (none froze one, or they froze different ones).
+ */
+export type ValuationViewSource = 'approved_snapshot' | 'policy_default';
+
 /** `valuation_basis` policy as the engine applies it (the version recorded on the run). */
 export interface ValuationPolicySnapshot {
   id: string | null;

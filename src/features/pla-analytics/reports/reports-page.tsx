@@ -10,6 +10,7 @@ import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ScopeExport } from '../components/scope-export';
 import { useAnalyticsScope } from '../hooks/use-analytics-scope';
+import { useProductionDayStart } from '../hooks/use-production-day-start';
 import { exportBlockedReason, exportRequestOf, oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { revisionSelectionLabel } from '../model/links';
 import { ReconciliationTab } from '../tabs/reconciliation-tab';
@@ -54,10 +55,19 @@ export function ReportsV2Page() {
   );
 }
 
+/** Waits for the units and the plant's production-day start: the default window is written to the URL once, in whole production days. */
 function ReportsScreen() {
   const env = useEventHubEnv();
-  // SME R12: management reports default to approved figures; provisional is an explicit choice
-  const { scope, change } = useAnalyticsScope({ approvedByDefault: true });
+  const day = useProductionDayStart();
+  if (env.unitsLoading || day.loading) return <DataState state="loading" />;
+  return <ReportsBody dayStart={day.dayStart} />;
+}
+
+function ReportsBody({ dayStart }: { dayStart: string }) {
+  const env = useEventHubEnv();
+  // SME R12: management reports default to approved figures; provisional is an explicit choice.
+  // DECISIONS 2026-10-19: a rolling window is whole production days (never the current clock time).
+  const { scope, change } = useAnalyticsScope({ approvedByDefault: true, productionDays: { timeZone: env.timezone, dayStart } });
   const [params, setParams] = useSearchParams();
   const view = viewOf(params.get('view'));
   const chooseView = (next: string) =>
@@ -66,14 +76,13 @@ function ReportsScreen() {
       copy.set('view', next);
       return copy;
     });
-  if (env.unitsLoading) return <DataState state="loading" />;
   const allUnits = env.units.map((unit) => unit.id).sort();
   const named: AnalyticsScope = { ...scope, unitIds: scope.unitIds.length > 0 || allUnits.length > MAX_UNITS ? scope.unitIds : allUnits };
   return (
     <Page width="wide">
       <div className="space-y-4" data-testid="reports-v2">
         <ReportsHeader scope={named} shownUnitIds={scope.unitIds} />
-        <ReportsFilters scope={scope} onChange={change} />
+        <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} />
         <Tabs value={view} onValueChange={chooseView}>
           <TabsList className="h-auto flex-wrap justify-start">
             {VIEWS.map((entry) => (

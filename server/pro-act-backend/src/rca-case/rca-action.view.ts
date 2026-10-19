@@ -8,6 +8,7 @@ import {
 } from '../rca/entities/rca-action.entity';
 import { ACTION_EVIDENCE, hasCompletionEvidence } from './action-completion';
 import { RcaActionTaskV2View } from './action-tasks';
+import { frozenPolicyVersion } from './baseline-policy-version';
 
 export type VerificationStatus =
   | 'not_planned'
@@ -42,6 +43,11 @@ export interface RcaActionV2View {
   /** the verification window is fixed once the action is done (changes answer 409 VERIFICATION_WINDOW_LOCKED) */
   verificationWindowLocked: boolean;
   baseline: ActionBaseline | null;
+  /**
+   * QA L11: the RCA policy version the baseline's thresholds come from — frozen with them since 19 Oct 2026,
+   * else (list reads) the version in force when the baseline was computed; null without a baseline
+   */
+  baselinePolicyVersion: number | null;
   postAction: StoredPostAction | null;
   verificationStatus: VerificationStatus;
   /** CA2 verdict once evaluated (null before, and for baselines typed before CA3) */
@@ -101,6 +107,7 @@ export function toActionView(
     verifierId: action.verifierId ?? null,
     verificationWindowLocked: action.status === 'done',
     baseline: action.baseline,
+    baselinePolicyVersion: frozenPolicyVersion(action) ?? null,
     postAction: action.postAction,
     verificationStatus: verificationStatusOf(action, now),
     verdict: action.postAction?.effectiveness?.verdict ?? null,

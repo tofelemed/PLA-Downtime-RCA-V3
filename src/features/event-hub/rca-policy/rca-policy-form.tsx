@@ -95,7 +95,7 @@ export function RcaPolicyForm({ current, unitId }: { current: RcaPolicyVersion; 
       <div className="grid gap-4 sm:grid-cols-2">
         <ProductionFields draft={draft} set={set} />
         <OverrideFields draft={draft} set={set} />
-        <Choice id="rca-auto" label="When a trigger fires" value={draft.autoCreate} options={[['recommend', 'Recommend an RCA on the event'], ['create', 'Open an investigation automatically']]} onChange={(v) => set('autoCreate', v)} />
+        <Choice id="rca-auto" label="When a trigger fires" value={draft.autoCreate} options={[['recommend', 'Recommend an investigation on the event'], ['create', 'Open an investigation automatically']]} onChange={(v) => set('autoCreate', v)} />
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor="rca-notes">Why this change (optional)</Label>
           <Textarea id="rca-notes" maxLength={2000} value={draft.notes} onChange={(e) => set('notes', e.target.value)} />

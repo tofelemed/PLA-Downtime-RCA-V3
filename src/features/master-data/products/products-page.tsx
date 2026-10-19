@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
@@ -40,6 +40,7 @@ function useColumns(): DataTableColumn<MasterProductView>[] {
 
 /** `/master-data/products`: products shared by the organization plus those kept to this plant. */
 export function ProductsPage() {
+  const navigate = useNavigate();
   const { filters, update } = useListFilters();
   const canWrite = useMasterDataWriter();
   const products = useRecordPage<MasterProductView>(PRODUCTS, { ...listQueryOf(filters), includeOrganization: true });
@@ -65,6 +66,8 @@ export function ProductsPage() {
           columns={columns}
           rows={products.rows}
           getRowKey={(product) => product.id}
+          onRowClick={(product) => navigate(`/master-data/products/${product.id}`)}
+          rowsHaveLink
           pager={products.pager}
           status={products.status}
           empty={{ title: 'No products', text: filters.q ? 'No product matches the search.' : 'No product with this status yet.' }}

@@ -41,6 +41,14 @@ const view = (
   units,
   assets,
   failureDefinition: '',
+  dataCoverage: {
+    periodsWithStateData: 0,
+    scheduledSeconds: null,
+    knownSeconds: null,
+    unknownSeconds: null,
+    ratio: null,
+    periodsWithoutPlan: 0,
+  },
   calculationRunIds: [],
 });
 

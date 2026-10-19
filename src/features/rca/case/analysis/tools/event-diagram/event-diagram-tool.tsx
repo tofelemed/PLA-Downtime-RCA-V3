@@ -10,7 +10,7 @@ import { ToolConflict } from '../tool-conflict';
 import { SaveBar } from '../tool-record';
 import { ConnectionDialog } from './connection-dialog';
 import { DiagramToolbar } from './diagram-toolbar';
-import { addConnection, addEvent, fromFlow, removeEvent, toFlowEdges, toFlowNodes, updateEvent, type EventNodeData } from './diagram-model';
+import { addConnection, addEvent, fromFlow, noConnectionsText, removeEvent, toFlowEdges, toFlowNodes, updateEvent, type EventNodeData } from './diagram-model';
 import { EventDialog, type EventFields } from './event-dialog';
 import { EventNode } from './event-node';
 import { useDiagramSession } from './use-diagram-session';
@@ -20,9 +20,12 @@ const NODE_TYPES = { rcaEvent: EventNode };
 
 type Editing = { mode: 'add' } | { mode: 'edit'; id: string } | { mode: 'connect' } | null;
 
+const canvasLabel = (readOnly: boolean) =>
+  readOnly ? 'Event diagram canvas (read-only); the list below has every connection' : 'Event diagram canvas: drag events to arrange them; the list below has every connection';
+
 function Connections({ diagram, readOnly, onRemove }: { diagram: RcaEventDiagram; readOnly: boolean; onRemove: (id: string) => void }) {
   const label = (id: string) => diagram.nodes.find((node) => node.id === id)?.label ?? 'Removed event';
-  if (diagram.edges.length === 0) return <p className="text-sm text-muted-foreground">No connections yet: use "Add connection", or drag from an event's bottom handle to another event.</p>;
+  if (diagram.edges.length === 0) return <p className="text-sm text-muted-foreground" data-testid="diagram-no-connections">{noConnectionsText(readOnly)}</p>;
   return (
     <ul className="divide-y rounded border text-sm" aria-label="Connections">
       {diagram.edges.map((edge) => (
@@ -80,7 +83,7 @@ export function EventDiagramTool() {
           }}
         />
       )}
-      <div className="h-[min(520px,70vh)] min-h-[320px] rounded border" role="region" aria-label="Event diagram canvas: drag events to arrange them; the list below has every connection">
+      <div className="h-[min(520px,70vh)] min-h-[320px] rounded border" role="region" aria-label={canvasLabel(readOnly)}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -95,7 +98,7 @@ export function EventDiagramTool() {
           fitViewOptions={{ maxZoom: 1 }}
         >
           <MiniMap pannable zoomable />
-          <Controls />
+          <Controls showInteractive={!readOnly} />
           <Background gap={16} size={1} />
         </ReactFlow>
       </div>

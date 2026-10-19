@@ -29,8 +29,9 @@ export function AdjustmentForm({ period, timezone, backTo, onSaved }: Adjustment
   const [start] = useState<AdjustmentFormValues>(() => emptyAdjustment(period.slices[0]?.id ?? ''));
   const [values, setValues] = useState<AdjustmentFormValues>(start);
   const [errors, setErrors] = useState<AdjustmentErrors>({});
+  const [quantityText, setQuantityText] = useState('');
   const propose = useProposeAdjustment();
-  useUnsavedChangesGuard(hasUnsavedChanges(values, start, [propose.isPending]));
+  useUnsavedChangesGuard(hasUnsavedChanges({ ...values, quantityText }, { ...start, quantityText: '' }, [propose.isPending]));
   const set = <K extends keyof AdjustmentFormValues>(key: K, value: AdjustmentFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
   const uom = period.slices.find((s) => s.id === values.sliceId)?.quantityUom ?? null;
   const save = async () => {
@@ -57,7 +58,7 @@ export function AdjustmentForm({ period, timezone, backTo, onSaved }: Adjustment
           </select>
         </FormField>
         <FormField id="adjQuantity" label={`Change${uom ? ` (${uom})` : ''}, e.g. -5`} required error={errors.quantity}>
-          <DecimalInput id="adjQuantity" value={values.quantity} allowNegative onChange={(v) => set('quantity', v)} />
+          <DecimalInput id="adjQuantity" value={values.quantity} allowNegative onChange={(v) => set('quantity', v)} onTextChange={setQuantityText} />
         </FormField>
         <FormField id="adjBasis" label="Basis" required>
           <select id="adjBasis" className={SELECT} value={values.basis} onChange={(e) => set('basis', e.target.value as AdjustmentFormValues['basis'])}>

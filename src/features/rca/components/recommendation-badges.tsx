@@ -1,4 +1,5 @@
 import type { RcaRecommendationView } from '@/api/v2/types/rca';
+import { EVENT_RCA_STATE_LABELS } from '@/features/ux-kit/labels';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { useCalendarPreference } from '@/lib/dates';
 import { StatusIcon } from '@/lib/icons';
@@ -22,7 +23,7 @@ export function RecommendationBadges({ items, canDismiss = false }: Recommendati
         return (
           <li key={rec.id} className="flex flex-wrap items-center gap-1">
             <StatusBadge tone="info" icon={StatusIcon.info} title={ruleNameOf(rec) ?? undefined}>
-              RCA recommended: {recommendationText(rec)}
+              {EVENT_RCA_STATE_LABELS.required}: {recommendationText(rec)}
             </StatusBadge>
             {detail && (
               <span className="text-xs text-muted-foreground" data-testid="recommendation-detail">

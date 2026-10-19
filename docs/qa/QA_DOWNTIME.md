@@ -262,3 +262,191 @@ Roles: omid, leila, shirin, farid, reza, sara, admin. Layout pass at 768 px.
   - `3ea50fb2…`: row_version 5, uncoded, updated 2026-10-18 17:44Z.
 - The event-form drafts were discarded, and every browser context was thrown away.
 - Two other things were blocked in the browser and never reached the server: one `POST /v2/production-events` (the end-before-start test) and one earlier export attempt.
+
+## Re-test 19 Oct
+
+Run: 19 Oct 2026, 14:52–15:20 Tehran (11:22–11:50Z), after commit dd04dd24 was deployed. Same method, safety net and scratchpad folder as round 1. The round-1 captures were moved to `round1\`. Round-2 captures use the same names, plus `r2-*.json` and `shots\r2-*.png`.
+Personas: omid, leila, shirin, farid, reza, sara and admin. Viewports: 1440×900, plus 768×1024 on 10 pages.
+
+**FIXED 19 / PARTIAL 3 / OPEN 15 / NEW 5**
+
+KPIs still match the guide:
+- Shift A: 1 h, 87.5 %, 100.0 % coded, 1 stop, MTBF 7 h, MTTR 30 min, restore 1 h. The `shifts=A` filter gives the same figures.
+- Day: 1 h 30 min, 66.7 % coded, 2 stops, 93.8 %. MTBF for the day is 22 h 30 min.
+- Pareto: MECH-GEARBOX 1 h / 28.00 t; Not coded 30 min / 14.00 t; total 42.00 t.
+- Value: 4,200 + 2,100 = 6,300.00 USD, or 3,780,000,000 IRR.
+- Event A and event C pages and their History actors are unchanged.
+
+Other results:
+- No console errors on any page.
+- No failed requests: the previous-period 422 is gone.
+- axe found serious issues in one place only: the Recharts tooltip contrast.
+- No "demo" text, no raw uuids, and no horizontal scroll at 768 px.
+- Products show as "HD5502 HDPE grade A" and "TRAIN-B HDPE grade B".
+- Menu, h1, title and breadcrumb now agree: "Downtime analysis · Overview", "Stops & timeline", "Trends & comparisons".
+
+### Role check: Sara read-only, writers keep access
+
+| Persona | UI (Event Hub / event page) | Server (PATCH event, POST bulk-code, POST split with an invalid body) | Result |
+|---|---|---|---|
+| sara (production_accountant) | Only Export CSV. No row checkboxes, no Code, Merge, Bulk code or New event. The note reads "Events: read-only for your role". The event page has no Edit / code, Split or Dismiss. `/events/new` and `/events/:id/edit` show "No access · Your roles in this plant do not include …". She still sees the money and the KPIs | **403 FORBIDDEN_ROLE** ×3 ("Requires one of: operator, production_engineer, reliability_engineer, manager_approver") | PASS (Q1 resolved) |
+| omid, leila, shirin, farid, reza | New event, Merge, Bulk code, Code all matching and row Code. The event page has Edit / code and Split. Create or link investigation shows only for farid, reza and admin, and only on stop C | The role guard passes. Each request then stops at **428 REVISION_REQUIRED**, so nothing changed | PASS |
+| admin | Same as the writers, plus the RCA trigger settings link | — | PASS |
+
+Evidence: `roles-omid-leila-shirin-farid-reza-sara-admin.json`, `r2-api-roles.json`, `r2-extra.json` (sara), `shots\r2-sara-*.png`.
+
+### Round-1 findings
+
+| ID | Round-1 finding | Status | Evidence (round 2) |
+|---|---|---|---|
+| F1 | Previous-period comparison 422 (no `views`) | FIXED | The request now sends `views=day:duration:*`. The current side shows 1 h 30 min, 2 stops, mean 45 min and 93.8 %. The previous side (16 Oct) reads "Not available · No calculated periods". `shots\dt3-leila-calendar-comparison.png` |
+| F2 | Summary ignores Schedule class | FIXED | class=planned gives 0 s, "—", 0, "—", with the note "Figures for planned stops only. Figures that are not split by schedule class show '—'". The header names "Schedule class: Planned". `shots\dt3-leila-planned.png` |
+| F3 | New event: no end-after-start check | FIXED | The inline error "The end must be after the start" appears, and no POST is sent (blocked list empty). `form.json` |
+| F4a | Values tab raw keys / duplicate "Event type" | FIXED | The tab shows Trip alarm, Investigation pending ×2, Gearbox functional failure and Critical. The rows are now "Event kind" and "Event type". `explore2-farid.json` |
+| F4b | History notes `failure_validation`, `verification` | FIXED | The notes read "Failure detail validated", "Coding verified", "Investigation linked", "Investigation closed" and "Created" |
+| F4c | RCA trigger settings `five_why`, `logic_tree`… | FIXED | The page shows "5-Why, Fishbone, Logic tree, Fault tree, FMEA, Barrier analysis". `r2-extra.json` |
+| F5a | Bulk preview "2 events change" when nothing changes | FIXED | The preview reads "0 events change · 2 already coded this way · 0 excluded" and "Nothing to apply…". "Apply to 0" is disabled, and the recalculation windows are on separate lines. `misc.json` |
+| F5b | Bulk preview audited as `CREATE ProductionEvent "unknown"` | FIXED | `audit_logs` has no ProductionEvent row after the 11:31Z preview |
+| F6 | Split dialog slider without a name (axe serious) | FIXED | axe finds 0 issues in the Split dialog. `edit-leila.json` |
+| L1 | Window select repeats "Last 7 days"; preset sets differ | OPEN | The disabled placeholder still repeats the current preset ("Last 7 days" twice). Event Hub offers 8 h/24 h/7 d/30 d, Downtime offers 24 h/7 d/30 d/90 d. `hub-omid.json` |
+| L2 | Custom range label without a date | FIXED | "Custom range · 2026-10-17 06:00–06:00" on Event Hub and on Downtime |
+| L3 | Apply range enabled on an invalid range | FIXED | `applyDisabled: true`. `misc.json` |
+| L4 | Shift list offers tomorrow | FIXED | The list ends at the current shift, "2026-10-19 B" |
+| L5 | CSV without a BOM, UTC only, raw enums | FIXED | The file has a BOM, `start_plant`/`end_plant` (+03:30) and `*_label` columns ("Ended", "Uncoded", "Investigation completed"). `dl-omid-traverse-forge-production-events-2026-10-17.csv` |
+| L6 | Code dialog "since" on an ended stop | OPEN | It still reads "HDPE Extruder 1, since 2026-10-18 02:00". `last.json`, `r2-extra.json` |
+| L7 | RCA trigger page: "New version" for read-only roles; "Recommend an RCA" | OPEN | omid still sees the "New version" heading and "Takes effect immediately…" with no form, and "When a trigger fires: Recommend an RCA" |
+| L8 | Stale "time range is not valid" box in duration mode | FIXED | After an invalid end, switching to Duration shows "Impacted periods 2026-10-19 B · Not calculated" and no error box. `r2-extra2.json` |
+| L9 | Leaving New event: no "draft kept" message | OPEN | Leaving by the breadcrumb shows no toast. The draft is restored on return, as before |
+| L10 | "RCA" vs "investigation" wording | PARTIAL | Now "Create or link investigation", "Open the linked investigation" and "Similar past investigations", and the action is no longer offered on stop A (closed). Still "RCA completed" / "No RCA" chips, "RCA recommended: Large lost quantity · RCA policy v1", and the list cell "RCA completed (open the investigation)" |
+| L11 | "Quality 80" badge on similar investigations | OPEN | Event C still shows "same unit · Quality 80" |
+| L12 | Evidence tab lists every empty field; odd labels | PARTIAL | "Sol type" is now "Safe operating limit type" and the duplicate "Event type" is gone. About 25 empty "—" fields are still listed per delivery |
+| L13 | Repair tab "Open the stop" links to the same page | OPEN | `explore2-farid.json` |
+| L14 | Periods tab "2026-10-17 A" with no `?view=approved` | OPEN | The Periods tab still shows "2026-10-17 A" → `/plans/…/periods/…` with no view. The losses card shows "2026-10-17 · A" with `?view=approved`. `last.json` |
+| L15 | Back from the event: breadcrumb unfiltered, page scrolled, drill lost | FIXED | The breadcrumb is now "Causes & Pareto" with the full URL. `drill=` is in the URL and the list reopens on return. scrollY is 0. `back.json` |
+| L16 | Edit breadcrumb "Event" | FIXED | "Event Hub › Downtime · HDPE Extruder 1 › HDPE Extruder 1 · Stop from 2026-10-17 08:00" |
+| L17 | Controllable view not in the URL | OPEN | The URL does not change, and after a reload the switch is "unchecked" |
+| L18 | "System change by System (data repair)" | OPEN | Event C, revision 5 still reads this |
+| L19 | "Shifts: 1 selected" | PARTIAL | The header line now reads "· Shifts: A", but the filter button still reads "Shifts: 1 selected" |
+| L20 | To date inclusive reads 18/10 for one production day | OPEN | From 2026-10-17, To (inclusive) 2026-10-18 |
+| L21 | "Unit: time in h:mm" chip vs "1 h 30 min" | OPEN | Still shown on all 5 pages |
+| L22 | "SME D12" in KPI help | FIXED | Now "(pilot targets: 95 % by shift end, 99 % at daily approval)". No SME/Dnn text on Overview or More figures |
+| L23 | Export disabled reason only in a tooltip; no link after start | OPEN | Still only `title` ("Exports contain approved figures only: tick 'Approved only'…"), with no `aria-describedby` and no visible hint. The toast was not re-checked: the safety net blocked the POST this round |
+| L24 | Causes/Reliability ignore shift but keep `shifts=A` | OPEN | Same as before: the scope note says the filters do not apply, and there is no chip on the filter itself. Low, by design |
+| L25 | Trend legend raw lowercase, "1 h 15min", repeated subtitle | OPEN | Legend "planned unplanned external unknown"; axis "1 h 15min" and "1 h 40min"; the Trends subtitle is still "What is down, why, how often and where" |
+| L26 | Reliability "D13 default: FailureWO event" | FIXED | "A failure is a failure work order, or an unplanned stop with a failure code that lasts at least the micro-stop threshold" |
+| L27 (round-1 table row, no ID) | Recharts tooltip colour contrast (axe serious) | OPEN | Still 4 nodes on Trends (day, shift A, `shifts=A`) |
+| Q1 | Sara write access | FIXED | See the role check above |
+
+Q2 was answered by the F2 fix.
+
+### New findings
+
+| ID | Page / route | Role | Finding | Evidence | Severity | Suggested fix |
+|---|---|---|---|---|---|---|
+| N1 | /downtime/causes › Lost production › **Lost value** | omid (operator) | **The operator sees money.** The "Lost value" toggle is offered to omid and shows "MECH-GEARBOX 2,520,000,000 IRR / 4,200.00 USD … total 3,780,000,000 IRR / 6,300.00 USD". This breaks the 19 Oct rule "operators see no money". The rest of the area complies: there is no currency toggle in the header, and the event page's Attributed losses and Causes in quantity mode show no amounts | `shots\r2-omid-lost-value.png`, `r2-extra2.json` | High | `src/features/downtime-analysis/components/lost-production-pareto.tsx`: hide the `value` metric unless `canViewMoney`. The server should also withhold value amounts from operator roles |
+| N2 | /downtime/causes › Lost value | leila | The value view shows **two tables, IRR first and then USD**, while the header toggle is on "$ USD". The display-currency toggle is ignored, so the USD default is not followed | `shots\dt3-leila-lost-value.png` | Low | `lost-production-pareto.tsx`: show the display currency's table only (the other currency behind a toggle). Possibly present in round 1 but not flagged then |
+| N3 | /events/:id › Attributed losses | omid | The money is hidden, but the card still says "Value basis: Contribution margin" | `r2-extra.json` | Low | `attributed-losses-card.tsx`: hide the basis line when `!canViewMoney` |
+| N4 | /downtime and /downtime/trends (chart summary) | leila | "Stacked downtime for **1 periods**" | `dt1-leila-day.json` | Low | `trend-chart.tsx`: use the new plural helper |
+| N5 | /downtime/* with Last 7 days, and New event › Impacted periods | leila | In windows that reach 18 Oct onward, the 18 Oct A–C and 19 Oct A periods (calculated, no approved plan) count in scheduled time. So 7-day availability reads 97.3 %, MTBF 2 d 7 h and coverage 88 %. They are labelled "Incomplete data · Provisional · Some periods are not calculated", not "No approved plan covers this period". The trend lists only the 17 Oct bucket. New event shows "2026-10-19 B · Not calculated" | `r2-extra3.json`, `shots\r2-leila-7d-*.png` | Low (owner question) | Decide whether downtime analysis should count no-plan periods. If yes, name the reason ("No approved plan covers this period") instead of "not calculated" |
+
+### Use cases re-run
+
+- Event Hub: all of round 1 (presets, custom range, shifts, filters, sort, To code, CSV, Bulk code preview, Merge, Code all matching, row Code dialog, RCA trigger settings by role).
+- Event create: validation, Now, end-before-start, duration mode, draft and Discard.
+- Event detail: both stops, the summary and all 7 tabs, for leila and farid. Period and investigation links for omid and sara. Back from the list, Causes & Pareto and Stops & timeline.
+- Edit page and Split dialog.
+- Downtime analysis: all 5 pages for the day, Shift A and `shifts=A`. Schedule class, controllable view, Pareto drill and frequency, bad actors, lost value, timeline, trends by shift, crew, previous period, Reliability. Also a Last 7 days sweep.
+- Role check: UI for 7 personas, plus a server role probe for 6 personas.
+- 768 px layout on 10 pages.
+
+### Data created in round 2
+
+- **3 `ACCESS_DENIED` audit rows** (11:23:36Z) from the server role probe as Sara. Each was a PATCH, bulk-code or split request with an invalid body, refused with 403.
+- The same probe for omid, leila, farid, reza and shirin stopped at 428 (no If-Match). Nothing was written and nothing was audited.
+- No export jobs: the period-summary export POST was blocked by the safety net.
+- The bulk-code preview was not audited (F5b fixed).
+- The two 17 Oct stops are unchanged:
+  - `67cc2c2a…`: row_version 7, coded, updated 2026-10-18 14:41Z.
+  - `3ea50fb2…`: row_version 5, uncoded, updated 2026-10-18 17:44Z.
+- Form drafts were removed from localStorage.
+
+## Round 3 re-test (19 Oct 2026)
+
+Run: 19 Oct 2026, about 16:50–17:45 Tehran, right after the 17:18 redeploy of the round-3 fixes (working tree on `feat/downtime-area2-b`). Headless Chromium, UI login per persona, at 1440×900 and 768×1024. A route guard aborted every write from the browser (none was attempted). Scripts, JSON captures, screenshots and downloads are in `C:\Users\Admin\AppData\Local\Temp\claude\d--HMI-Project-Usama-ProAct\8340f887-b72f-4b11-b2f2-ae7460ebd8b3\scratchpad\qa\r3dr\`.
+
+Personas:
+- leila, omid, sara and shirin: all 5 Downtime pages, Event Hub, both 17 Oct stops with all 7 tabs, Dashboard and the PLA overview.
+- farid, reza and maryam: the RCA trigger page and links.
+
+Checked on every page: h1 and title, console errors, failed requests, axe serious/critical issues, horizontal scroll at 768 px, "demo" or "training" text, raw keys and uuids. **Result: no console errors, no failed requests, no axe serious/critical issues (chart tooltips included), no horizontal scroll at 768 px, no raw keys or uuids, no "demo" text.**
+
+### Figures for 17 Oct agree across modules
+
+| Figure | Downtime | Other module |
+|---|---|---|
+| Downtime | 1 h 30 min, 2 stops, 66.7 % coded | Event Hub "Downtime in window 1 h 30 min"; Dashboard 1 h 30 min, 2 stops |
+| Scheduled availability | 93.8 % for the day; 93.8 % for Last 7 days (was 97.3 %) | Dashboard 93.8 %; Dashboard OEE availability 93.8 % |
+| Shift A | 1 h, 100.0 % coded, 1 stop, 87.5 % | — |
+| Lost quantity | MECH-GEARBOX 28.00 t + Not coded 14.00 t = 42.00 t | PLA waterfall availability loss −42.0 t (672 → 621 t) |
+| Lost value | 4,200.00 + 2,100.00 = 6,300.00 USD (3,780,000,000 IRR) | Bad actors 4,200.00 USD; investigation approved loss 28.00 t / 4,200.00 USD |
+| MTBF / MTTR / restore | 22 h 30 min / 30 min / 1 h | — |
+
+### Verified fixed in round 3
+
+- **Operator money (N1, N3).** Omid has none of these:
+  - a "Lost value" switch or an "Export period summary" button;
+  - a currency switch in the header;
+  - a "Value basis" line or a Cost row on the stop page.
+
+  The server refuses his period-summary download with 403 `MONEY_NOT_VISIBLE`. His Event Hub CSV keeps an empty `cost` column.
+- **Lost value table (N2).** Leila sees one table, in USD (6,300.00 USD). Switching the header to IRR shows the IRR table (3,780,000,000 IRR).
+- **Unknown time (N5).** Last 7 days now reads 93.8 %. The page adds:
+  - "Data covers 43 % of the window. Time without state data is not counted…"
+  - "5 periods in this window: No approved plan covers this period · Open Plans"
+- **Production-day dates (L20).** One production day reads From 2026-10-17, To (inclusive) 2026-10-17.
+- **Wording.** All of these now appear as listed:
+  - investigation chips "Investigation completed", "No investigation" and "Investigation recommended";
+  - "Record quality 80 / 100" and "Data repair by the system";
+  - "Unit: hours and minutes", and "Shifts: A" on the filter button;
+  - "Stacked downtime for 1 period", the legend "Planned Unplanned External Not classified" and the axis label "1 h 15 min";
+  - a separate subtitle on each page.
+- **Display.**
+  - The window select shows "Custom range" once, selected.
+  - The controllable view is kept in the URL (`controllable=1`) and survives a reload.
+  - The Evidence tab says "21 empty fields not shown".
+  - The Repair tab no longer has an "Open the stop" column.
+  - The Periods tab reads "2026-10-17 · Shift C" and its link carries `?view=approved`.
+  - The reason the export is disabled is shown on screen and linked by `aria-describedby`.
+- **Code dialog (L6).** It reads "Code stop · HDPE Extruder 1, 2026-10-18 02:00 – 2026-10-18 02:30". It was cancelled.
+- **RCA trigger page (L7).** Omid and Leila see no "New version" section. The page says "When a trigger fires: Recommend an investigation".
+- **Exports.**
+  - Event Hub CSV: has a BOM, `start_plant` / `end_plant` (+03:30) columns and `*_label` columns ("Ended", "Uncoded", "Investigation completed").
+  - Period-summary CSV (an existing completed job, downloaded as Leila): has a BOM, `plant_start` / `plant_end` / `approved_at_plant` columns and product names.
+- **Sara (production accountant) is read-only.** Event Hub shows only Export CSV, with the note "Events: read-only for your role". The stop page has no Edit / code or Split. She still sees money.
+- **Dialogs and drill-down.**
+  - Code, Merge (2 stops) and Split were opened and cancelled. The Split dialog has no axe issues.
+  - The 3-level Pareto drill goes MECHANICAL → DRIVE-TRAIN → "Stops coded MECH-GEARBOX Gearbox failure", and the URL keeps the path.
+  - The crew and previous-period views were opened.
+
+### Remaining problems
+
+| # | Page | Persona | What's wrong | Expected | Severity |
+|---|---|---|---|---|---|
+| R3-1 | Event Hub, stop page | shirin (independent coding verifier) | Shirin gets every coding control: Code, Edit / code, Bulk code, Code all matching, Merge and Split. Her production engineer role allows coding. The server stops her verifying a stop she coded herself (`OWN_CODING`), so the data stays sound. Still, nothing stops her from coding. | If the verifier must never code, give her a verify-only role (or a verifier grant without coding rights), so the coding controls are hidden. This needs an owner decision. | Medium |
+| R3-2 | Causes & Pareto (Downtime reasons) tooltip | all | The chart tooltip shows raw series names: "value : 1 h", "cumulative : 66.7 %". The PLA waterfall does the same ("range : -5.00 t"). | "Downtime: 1 h" and "Cumulative share: 66.7 %": set the Recharts series `name`. | Low |
+| R3-3 | Reliability, Last 7 days | leila | MTBF reads 22 h 33 min over 7 days but 22 h 30 min for the 17 Oct day, although only 17 Oct has state data. The same card shows two different "coverage" figures: "Coverage 88 %" and "Data covers 43 % of the window". | The same MTBF when no other time is known. Give the two figures different names, for example "Periods calculated 88 %" and "State data covers 43 %". | Low |
+| R3-4 | Overview / Reliability, Last 7 days | leila | Each KPI still says "Provisional · Some periods are not calculated" next to the new "No approved plan covers this period" line. The real reason is the periods without a plan, so the two messages disagree. | One reason: "No approved plan covers 5 periods". | Low |
+| R3-5 | Split dialog | leila, omid | "(+03:30 Asia/Tehran)" appears 5 times in a 3-line dialog ("Part 1: 02:00 (+03:30 Asia/Tehran) – 02:15 (+03:30 Asia/Tehran)"). | State the time zone once, in the dialog header. | Low |
+| R3-6 | Stop page h1, Event Hub rows, Dashboard "Latest loss events" | all | A downtime record is called "Downtime": the h1 reads "Downtime · HDPE Extruder 1" and the row labels read "Open Downtime on HDPE Extruder 1" and "Code Downtime on …". The glossary calls a downtime event a "Stop", and the breadcrumb already says "Stop from 2026-10-17 08:00". | "Stop · HDPE Extruder 1", "Open stop on HDPE Extruder 1 …". | Low |
+| R3-7 | Period-summary CSV | leila | The header line says "…provisional FX rate, SME V7", which is an internal reference. `valuation_view` holds the raw key ("contribution_margin") and has no label column, unlike the other coded columns. | Drop "SME V7" and add a `valuation_view_label` column ("Contribution margin"). | Low |
+| R3-8 | Dashboard › Periods by workflow state (Last 7 days) | leila | The 18–19 Oct periods, which have no approved plan, count as "Not calculated 1" and "Draft 4". | Show them as "No approved plan". This belongs to the shell area owner. | Low |
+| R3-9 | Event Hub vs Downtime window presets | all | The two pages still offer different presets: Event Hub has 8 h / 24 h / 7 d / 30 d, Downtime has 24 h / 7 d / 30 d / 90 d. | One set of presets, or accept the difference as deliberate. | Low (carried over) |
+
+Not re-checked this round: L9 (the "draft kept" message on leaving New event) and the New event form.
+
+### Data created in round 3
+
+- The browser sent no writes: the guard log is empty for every run.
+- One GET download of the existing period-summary export `c99545f2…` as Leila. This may raise the export's download count.
+- One refused GET download as Omid: 403 `MONEY_NOT_VISIBLE`. It is audited as an access denial, by design.
+- Nothing was coded, merged, split or edited.

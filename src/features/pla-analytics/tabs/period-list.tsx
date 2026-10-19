@@ -2,6 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { usePeriodSummaryList } from '@/api/v2/queries/period-summaries';
 import type { PeriodSummaryView } from '@/api/v2/types/period-overview';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { NoPlanLink } from '@/features/month-close/components/no-plan-notice';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels';
 import { useCalendarPreference } from '@/lib/dates';
@@ -35,7 +36,7 @@ function useColumns(filter: PeriodListFilter): Array<DataTableColumn<PeriodSumma
             {filter.kind === 'quality' ? 'Open dispositions' : 'Open'}
           </Link>
         ) : (
-          <span className="text-xs text-muted-foreground">no plan</span>
+          <NoPlanLink />
         ),
     },
   ];

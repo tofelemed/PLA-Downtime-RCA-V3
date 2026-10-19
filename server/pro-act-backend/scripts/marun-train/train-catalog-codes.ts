@@ -118,15 +118,9 @@ const entry = (
 ): DictionaryEntrySpec => ({ kind, code, name, description, ...extra });
 
 export const DICTIONARY: readonly DictionaryEntrySpec[] = [
-  entry(
-    'equipment_class',
-    'EXTRUDER',
-    'Extruder',
-    'Polymer extruder (training plant)',
-    {
-      assetTypes: ['Equipment'],
-    },
-  ),
+  entry('equipment_class', 'EXTRUDER', 'Extruder', 'Polymer extruder', {
+    assetTypes: ['Equipment'],
+  }),
   entry(
     'maintainable_item',
     'GEARBOX',
@@ -222,7 +216,7 @@ export const RCA_CAUSES: readonly CauseSpec[] = [
     name: 'Lubricant contamination degraded gearbox lubrication',
     category: 'Material',
     description:
-      'Lubricant sample shows contamination that degrades lubrication (gearbox case, lesson 25)',
+      'Lubricant sample shows contamination that degrades lubrication',
   },
   {
     code: 'EQ-COOLING-RESTRICT',

@@ -155,7 +155,7 @@ test('month navigation shows blocked current prerequisites and server-defined mo
   await expect(page.getByTestId('pending-periods')).toBeVisible();
 });
 
-test('correction evidence is required and an open month refuses the proposed correction without storing it', async ({ page }) => {
+test('an open month offers no proposed correction (QA re-test) and the server refuses one without storing it', async ({ page }) => {
   const periodId = world.fixture.periods.b;
   const path = `/v2/production-periods/${periodId}/change-proposals`;
   const before = await call<{ items: ChangeProposalView[] }>(world.accountant.token, 'GET', path);
@@ -163,17 +163,15 @@ test('correction evidence is required and an open month refuses the proposed cor
   await signIn(page, ACCOUNTING_USERS.accountant);
   await openAccountingPeriod(page, world, periodId);
   await openPeriodSection(page, 'History & exports');
-  await page.getByTestId('propose-correction').click();
-  const dialog = page.getByRole('alertdialog');
-  await expect(dialog.getByRole('button', { name: 'Propose correction', exact: true })).toBeDisabled();
-  await page.getByTestId('correction-reason').fill('Demo: open-month correction must use the normal revision workflow');
-  await page.getByTestId('correction-evidence-type').selectOption('log');
-  await page.getByTestId('correction-evidence-ref').fill(`DEMO-UI-OPEN-${world.fixture.suffix}`);
-  const refusal = page.waitForResponse((r) => r.url().endsWith('/v2/period-change-proposals') && r.request().method() === 'POST');
-  await dialog.getByRole('button', { name: 'Propose correction', exact: true }).click();
-  expect((await refusal).status()).toBe(409);
-  await expect(page.getByTestId('workflow-problem')).toHaveAttribute('data-code', 'MONTH_OPEN');
-  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId('propose-correction')).toHaveCount(0);
+  await expect(page.getByTestId('correction-direct')).toContainText('Reopen for revision');
+  const view = await readReconciliation(world.accountant.token, periodId);
+  const refused = await command<{ code: string }>(world.accountant.token, '/v2/period-change-proposals', {
+    periodId, approvedRevision: view.publishedRevision, reason: 'Demo: open-month correction must use the normal revision workflow',
+    evidenceType: 'log', evidenceRef: `DEMO-API-OPEN-${world.fixture.suffix}`,
+  });
+  expect(refused.status).toBe(409);
+  expect(refused.body.code).toBe('MONTH_OPEN');
   const after = await call<{ items: ChangeProposalView[] }>(world.accountant.token, 'GET', path);
   expect(after.status).toBe(200);
   expect(after.body.items.map((item) => item.id)).toEqual(before.body.items.map((item) => item.id));

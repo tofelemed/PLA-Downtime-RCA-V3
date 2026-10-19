@@ -64,6 +64,7 @@ export function LossValueCard({ scope, metric = 'margin' }: { scope: AnalyticsSc
       testId="report-loss-value"
       query={query}
       response={query.data && unvalued && approved ? { ...query.data, isProvisional: false } : query.data}
+      approvedOnly={scope.approvedOnly}
       isEmpty={data?.groups.length === 0}
       emptyText="Nothing valued in these periods."
       note={`Valued from each period's calculation · ${revisionSelectionLabel(scope.approvedOnly).toLowerCase()}.`}

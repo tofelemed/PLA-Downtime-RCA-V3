@@ -1,5 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { MoneyOnly } from '../../auth/money/money.decorators';
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { AnalyticsResponse } from '../common/response';
@@ -13,6 +14,7 @@ import { LossValueReportV2Service } from './loss-value-v2.service';
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'reports', version: '2' })
+@MoneyOnly()
 export class LossValueReportV2Controller {
   constructor(private readonly reports: LossValueReportV2Service) {}
 

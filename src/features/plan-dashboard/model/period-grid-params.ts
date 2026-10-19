@@ -61,6 +61,16 @@ export function planDateBounds(plan: PlanWindow, timeZone: string): { min: strin
 }
 
 /**
+ * "Go to date" outside the plan window (e.g. an old `?date=` link): the grid shows the plan from its start,
+ * and says so. `toText` writes an ISO date in the plant calendar. Null when the date is empty or inside.
+ */
+export function outsidePlanMessage(date: string, bounds: { min: string; max: string }, toText: (isoDate: string) => string): string | null {
+  if (!date || !bounds.min || !bounds.max) return null;
+  if (date >= bounds.min && date <= bounds.max) return null;
+  return `${toText(date)} is outside this plan (${toText(bounds.min)} – ${toText(bounds.max)}): showing it from the plan start.`;
+}
+
+/**
  * The server window of the grid: the plan window, or — with "Go to date" — from 00:00 plant time of that
  * date to the plan end, so the first page starts at the period containing it (server overlap semantics).
  * A date outside the plan keeps the plan window.

@@ -45,7 +45,7 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="downtime-analysis">
-        {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime analysis · ${page.label}`} />
+        {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime analysis · ${page.label}`} description={page.description} />
           : <PageHeader title={`Downtime analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {windowText} · {env.timezone}</p>} />}
         <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
         <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={params.get('presentation') !== 'timeline' || view !== 'stops'} />

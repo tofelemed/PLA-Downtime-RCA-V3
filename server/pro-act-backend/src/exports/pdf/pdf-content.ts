@@ -54,15 +54,15 @@ export const PDF_COLUMNS: Record<ExportReportType, readonly PdfColumn[]> = {
     col('Actuals', 12, 'left'),
   ],
   loss_lines: [
-    col('Product', 14, 'left'),
+    col('Product', 12, 'left'),
     col('Line', 10, 'left'),
     col('Kind', 12, 'left'),
-    col('State', 10, 'left'),
-    col('Quantity', 10),
-    col('UoM', 6, 'left'),
-    col('Basis', 12, 'left'),
+    col('State', 9, 'left'),
+    col('Quantity', 9),
+    col('UoM', 5, 'left'),
+    col('Basis', 11, 'left'),
     col('Loss value', 14),
-    col('Reason', 12, 'left'),
+    col('Reason', 18, 'left'),
   ],
 };
 

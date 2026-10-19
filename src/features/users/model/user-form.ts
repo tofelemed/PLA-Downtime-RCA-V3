@@ -27,7 +27,7 @@ export function validateUserForm(values: UserFormValues, mode: 'create' | 'edit'
   const errors: UserFormErrors = {};
   if (!values.name.trim()) errors.name = 'Enter the user’s name.';
   if (!EMAIL.test(values.email.trim())) errors.email = 'Enter a valid e-mail address.';
-  if (!values.role) errors.role = 'Choose a role.';
+  if (!values.role) errors.role = 'Choose a sign-in type.';
   const password = values.password;
   if (mode === 'create' && !password) errors.password = 'Enter a first password.';
   else if (password && password.length < MIN_PASSWORD_LENGTH) {
@@ -54,4 +54,14 @@ export function toUpdateInput(values: UserFormValues, original: UserView): Updat
   if (values.role && values.role !== original.role) input.role = values.role;
   if (values.password) input.password = values.password;
   return input;
+}
+
+/**
+ * Help text of the sign-in type (the legacy role, QA re-test 2026-10-19): what it does to plant roles, so an
+ * administrator does not mistake it for the user's permissions.
+ */
+export function signInTypeHint(mode: 'create' | 'edit'): string {
+  return mode === 'create'
+    ? 'Gives the first plant role in the home plant. Add or remove plant roles under Access after creating the user.'
+    : 'Counts as a plant role only while the user holds none in the home plant. Changing it also changes the plant role it gave there; plant roles are managed under Access.';
 }

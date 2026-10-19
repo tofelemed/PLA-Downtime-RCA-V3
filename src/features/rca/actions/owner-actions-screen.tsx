@@ -1,29 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
-import { OWNER_STATUS_LABELS, OWNER_STATUSES, ownerStatusFromParams, type OwnerStatus } from '../model/action-queue-filters';
+import { ownerStatusFromParams, type OwnerStatus } from '../model/action-queue-filters';
 import { MyRcaActionsList } from './my-rca-actions-list';
-
-function OwnerStatusFilter({ value, onChange }: { value: OwnerStatus; onChange: (next: OwnerStatus) => void }) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor="owner-action-status">Status</Label>
-      <Select value={value} onValueChange={(next) => onChange(OWNER_STATUSES.find((s) => s === next) ?? 'open')}>
-        <SelectTrigger id="owner-action-status" className="w-full sm:w-56" data-testid="owner-action-status">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {OWNER_STATUSES.map((status) => (
-            <SelectItem key={status} value={status}>
-              {OWNER_STATUS_LABELS[status]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
+import { OwnerStatusFilter } from './owner-status-filter';
 
 /**
  * `/rca` for a member without analysis roles (an operator): the RCA actions they own, each linking its
@@ -41,7 +20,7 @@ export function OwnerActionsScreen() {
         <PageHeader title="My RCA actions" description="Corrective and preventive actions you own. Open the investigation to record progress and completion evidence; someone else checks the evidence and marks the action done." />
         <Section title="Actions">
           <div className="space-y-3">
-            <OwnerStatusFilter value={status} onChange={setStatus} />
+            <OwnerStatusFilter id="owner-action-status" value={status} onChange={setStatus} />
             <MyRcaActionsList mine status={status} limit={20} showAllLink={false} />
           </div>
         </Section>

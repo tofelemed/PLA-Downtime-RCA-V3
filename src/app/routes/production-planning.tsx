@@ -49,6 +49,7 @@ export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/planning/profiles/:profileId', element: <ProfilePage />, preload: ProfilePage.preload },
   { path: '/planning/profiles/:profileId/edit', element: <EditProfile />, preload: EditProfile.preload },
   { path: '/planning/calendars/new', element: <NewCalendarVersion />, preload: NewCalendarVersion.preload, requires: 'canWriteCalendars', gateTitle: 'Calendar editing' },
+  { path: '/planning/calendars/:versionId', element: <CalendarVersion />, preload: CalendarVersion.preload },
   { path: '/planning/calendars/:versionId/edit', element: <CalendarVersion />, preload: CalendarVersion.preload },
   { path: '/period-accounting', element: <PeriodAccounting />, preload: PeriodAccounting.preload },
   { path: '/plans/:planId', element: <PlanDashboard />, preload: PlanDashboard.preload },

@@ -10,7 +10,8 @@ import { ExposureCoverage } from './exposure-coverage';
 import { plural } from '@/features/ux-kit/format/plural';
 import { criteriaSourceText } from '../model/rca-labels';
 
-function Criteria({ baseline }: { baseline: RcaActionBaseline }) {
+/** `policyVersion`: the version the server names for the thresholds (frozen with them, else in force then). */
+function Criteria({ baseline, policyVersion }: { baseline: RcaActionBaseline; policyVersion: number | undefined }) {
   const { number, percent } = useNumberFormat();
   const criteria = baseline.criteria;
   if (!criteria) return null;
@@ -18,7 +19,7 @@ function Criteria({ baseline }: { baseline: RcaActionBaseline }) {
     <p className="text-xs text-muted-foreground" data-testid="baseline-criteria">
       Effective when the same-mode rate falls by at least {percent(criteria.requiredReduction * 100)} over at least{' '}
       {number(criteria.minExposureHours)} run hours{criteria.zeroRepeat ? '; any repeat counts as not effective (high consequence)' : ''}.{' '}
-      <span data-testid="baseline-criteria-source">{criteriaSourceText(criteria.policyVersion)}</span>
+      <span data-testid="baseline-criteria-source">{criteriaSourceText(policyVersion ?? criteria.policyVersion)}</span>
     </p>
   );
 }
@@ -57,7 +58,7 @@ export function ActionBaseline({ action }: { action: RcaActionView }) {
       <p className="text-sm">
         <Counted baseline={baseline} />
       </p>
-      <Criteria baseline={baseline} />
+      <Criteria baseline={baseline} policyVersion={action.baselinePolicyVersion ?? undefined} />
       <BaselineCorrection action={action} baseline={baseline} />
     </div>
   );

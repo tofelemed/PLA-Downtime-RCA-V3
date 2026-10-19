@@ -15,6 +15,7 @@ const ADMINS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'];
 const PREVIOUS_MENU: Record<string, string[]> = {
   // Overview
   Dashboard: ALL,
+  // QA re-test 19 Oct (W-OP): roles that decide an inbox kind (operators decide duplicate-stop merges)
   'Pending approvals': ALL,
   Reports: NOT_OPERATOR,
   // Production
@@ -53,11 +54,14 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Enhanced historian': ['SuperAdmin'],
   // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
   // stop and plan policy; Operator = operator: standby log); they see only those pages' links
-  'Equipment setup guide': ALL,
+  // QA re-test 19 Oct (L16): a configuration journey, not for operations-only roles
+  'Equipment setup guide': NOT_OPERATOR,
   'Master data': ALL,
   Finance: NOT_OPERATOR,
-  'User management': [...ADMINS, 'Manager'],
-  // SME R1 / R6: administrators for anyone, approval-role holders (Manager = manager_approver) for themselves
+  // QA re-test 19 Oct: administrators; approval-role holders (Manager = manager_approver) record their own
+  // delegations under "Approval delegations" (SME R1 / R6)
+  'User management': ADMINS,
+  'Approval delegations': ['Manager'],
   'Admin panel': [...ADMINS, 'Manager'],
   'Audit log': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
 };
@@ -132,7 +136,10 @@ describe('navigation items by capability', () => {
   });
 
   it.each([
-    ['Equipment setup guide', 'canReachMasterData'],
+    ['Equipment setup guide', 'canReachSetupGuide'],
+    ['Pending approvals', 'canReachApprovals'],
+    ['User management', 'canUseUserManagement'],
+    ['Approval delegations', 'canReachDelegationsOnly'],
     ['Enhanced historian', 'canReachIntegration'],
     ['Admin panel', 'canUseAdminPanel'],
     ['Audit log', 'canViewAuditLogs'],
@@ -167,9 +174,28 @@ describe('navigation items by capability', () => {
       organizationId: 'org-demo',
       scopes: [{ tenantId: 'plant-demo-2', role: 'operator' }, { tenantId: HOME, role: 'viewer' }],
     };
-    expect(menuFor(grace, HOME)).toEqual(menuFor(legacyUser('Engineer')));
+    // a viewer decides no approval (QA re-test 19 Oct, W-OP)
+    expect(menuFor(grace, HOME)).toEqual(menuFor(legacyUser('Engineer')).filter((name) => name !== 'Pending approvals'));
     expect(menuFor(grace, 'plant-demo-2')).toEqual(menuFor(legacyUser('Operator')));
     expect(menuFor(grace, 'plant-partner')).toEqual([]);
+  });
+});
+
+describe('menus of the guide roles (QA re-test 19 Oct)', () => {
+  const menuOf = (role: string) => visibleNavigationItems(capabilitiesOf([role]), FLAGS_ON).map((item) => item.name);
+
+  it.each(['finance_maintainer', 'master_data_admin', 'integration_admin'])('%s has no Pending approvals: it decides no inbox kind', (role) => {
+    expect(menuOf(role)).not.toContain('Pending approvals');
+  });
+
+  it.each(['finance_approver', 'production_accountant', 'quality_approver', 'metrology_approver', 'manager_approver'])('%s records its own delegations under "Approval delegations", not User management', (role) => {
+    expect(menuOf(role)).toContain('Approval delegations');
+    expect(menuOf(role)).not.toContain('User management');
+  });
+
+  it('an operator decides duplicate-stop merges (Pending approvals) but has no Equipment setup guide', () => {
+    expect(menuOf('operator')).toContain('Pending approvals');
+    expect(menuOf('operator')).not.toContain('Equipment setup guide');
   });
 });
 

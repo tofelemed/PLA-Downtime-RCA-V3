@@ -1,5 +1,6 @@
 import type { BadActorQuery } from '@/api/v2/queries/bad-actors';
-import type { BadActorGroupBy, BadActorItemView, BadActorRankBy, BadActorTriggerState, BadActorTriggerView } from '@/api/v2/types/bad-actors';
+import type { BadActorGroupBy, BadActorItemView, BadActorRankBy, BadActorReportView, BadActorTriggerState, BadActorTriggerView } from '@/api/v2/types/bad-actors';
+import { formatDate, type DateDisplayOptions } from '@/lib/dates';
 import type { StartRcaContext } from '../model/start-rca';
 import { plural } from '@/features/ux-kit/format/plural';
 
@@ -30,12 +31,6 @@ export const TRIGGER_LABELS: Readonly<Record<BadActorTriggerState, string>> = {
   over_threshold: 'Over the bad-actor limit',
   below: 'Below the limit',
   off: 'Trigger off',
-};
-
-export const VIEW_LABELS: Readonly<Record<string, string>> = {
-  contribution_margin: 'contribution margin',
-  standard_cost: 'standard cost',
-  economic_impact: 'economic impact',
 };
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -95,4 +90,33 @@ export function badActorStartRca(item: BadActorItemView): StartRcaContext {
     title: `Bad actor: ${asset}${mode}`,
     description: `${asset}${mode} ranks #${item.rank} in the bad-actor review with ${plural(item.stops, 'stop', 'stops')}. Link the stops behind it from Links.`,
   };
+}
+
+/**
+ * The review window as inclusive plant dates (QA re-test: "2026-08-03 00:00 – 2026-11-01 00:00" read as if
+ * 1 Nov were reviewed): the server's bounds are local midnights, so the last day is the one before `to`.
+ */
+export function reviewWindowDates(report: Pick<BadActorReportView, 'from' | 'to'>, opts: DateDisplayOptions): string {
+  const lastDay = new Date(Date.parse(report.to) - 1).toISOString();
+  return `${formatDate(report.from, opts)} – ${formatDate(lastDay, opts)}`;
+}
+
+/**
+ * Which periods the approved figures leave out (QA re-test N7): those still waiting for approval, and apart
+ * from them those no approved plan covers (they cannot be approved until planned). Empty when all approved.
+ */
+export function excludedPeriodsNote(report: Pick<BadActorReportView, 'valuationStatus' | 'periods' | 'approvedPeriods' | 'uncoveredPeriods'>): string {
+  if (report.valuationStatus !== 'provisional') return '';
+  const uncovered = report.uncoveredPeriods ?? 0;
+  const waiting = Math.max(0, report.periods - report.approvedPeriods - uncovered);
+  const parts: string[] = [];
+  if (waiting > 0) parts.push(`${waiting} of ${plural(report.periods, 'period', 'periods')} not approved yet, so their loss is not included`);
+  if (uncovered > 0) parts.push(`${plural(uncovered, 'period', 'periods')} not included: No approved plan covers ${uncovered === 1 ? 'this period' : 'these periods'}`);
+  return parts.join('; ');
+}
+
+/** Event Hub list of the asset's unplanned stops in the review window (bad-actor row drill-down). */
+export function badActorEventsHref(item: Pick<BadActorItemView, 'assetId'>, report: Pick<BadActorReportView, 'from' | 'to'>): string {
+  const params = new URLSearchParams({ from: report.from, to: report.to, assets: item.assetId, classes: 'unplanned' });
+  return `/events?${params.toString()}`;
 }

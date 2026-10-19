@@ -84,7 +84,7 @@ describe('Marun E2E RCA fixes: models', () => {
       links: [{ type: 'event', targetId: 'e1', linkedBy: 'name:farid' }],
       closure: { residualRisk: 'Low', approvedBy: 'name:maryam', effectivenessVerdict: 'insufficient_evidence' },
     });
-    const csv = recommendationsCsv(rca, NAMES, 'Asia/Tehran').split('\n');
+    const csv = recommendationsCsv(rca, NAMES, { timeZone: 'Asia/Tehran', money: true }).split('\n');
     expect(csv[0]).toContain('"Due date (Asia/Tehran)","Due (UTC)"');
     expect(csv[1]).toContain('"2026-10-19","2026-10-18T20:30:00.000Z"');
   });

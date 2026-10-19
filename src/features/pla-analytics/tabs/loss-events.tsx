@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useEventLosses } from '@/api/v2/queries/pla-analytics';
+import { useEventLosses, useLinesWithoutEvent } from '@/api/v2/queries/pla-analytics';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { QueryParams } from '@/api/v2/request-url';
 import type { ProductionEventView } from '@/api/v2/types/events';
@@ -17,6 +17,8 @@ import { StartRcaLink } from '@/features/rca/components/start-rca-link';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { eventLossQuery, LOSS_EVENT_TYPES, lossEventsQuery, type AnalyticsScope, type LossEventType } from '../model/analytics-scope';
 import { eventLossesOf, type EventLoss } from '../model/event-losses';
+import { linesWithoutEventQuery } from '../model/lines-without-event';
+import { LinesWithoutEvent } from './lines-without-event';
 import { LOSS_EVENT_TYPE_LABELS } from '../model/display';
 
 function AttributedLoss({ losses }: { losses: readonly EventLoss[] | undefined }) {
@@ -71,6 +73,7 @@ export function LossEvents({ scope, onChange }: LossEventsProps) {
   const location = useLocation();
   const { from, to, unitIds, ...filters } = lossEventsQuery(scope);
   const losses = useEventLosses(eventLossQuery(scope), env.timezone);
+  const eventless = useLinesWithoutEvent(linesWithoutEventQuery(scope), env.timezone).data?.data.total ?? 0;
   const events = usePagedQuery<ProductionEventView>({
     resource: 'production-events',
     path: '/production-events',
@@ -104,11 +107,12 @@ export function LossEvents({ scope, onChange }: LossEventsProps) {
         getRowKey={(e) => e.id}
         pager={events.pager}
         status={events.status}
-        empty={{ text: 'No loss events in this window.' }}
+        empty={{ text: eventless > 0 ? 'No loss events in this window: the loss is in the loss lines with no event below.' : 'No loss events in this window.' }}
         onRowClick={(e) => navigate(`/events/${e.id}`, { state: { listSearch: `${location.pathname}${location.search}` } })}
         rowLabel={(e) => `${labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType)} on ${env.unitName(e.unitId)}`}
         density="compact"
       />
+      <LinesWithoutEvent scope={scope} />
     </div>
   );
 }

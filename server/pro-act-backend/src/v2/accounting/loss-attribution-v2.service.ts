@@ -12,6 +12,7 @@ import {
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { invalid, notFound } from '../../profiles/profile-errors';
 import { escapeLike } from '../administration/users/plant-user-directory';
+import { approvedSnapshotView } from '../../rca-case/approved-snapshot-view';
 import { defaultValuationBasis } from '../../valuation/valuation-policy.store';
 import { listResponse, ListResponse } from '../common/response';
 import {
@@ -56,7 +57,12 @@ export class LossAttributionV2Service {
       .getOne();
     if (!event) throw notFound('Production event');
     const manager = this.events.manager;
-    const view = await defaultValuationBasis(manager, tenantId);
+    // owner 18 Oct 2026: the view frozen when the event's periods were approved, as on the investigation
+    const frozen = await approvedSnapshotView(manager, tenantId, {
+      eventIds: [event.id],
+    });
+    const view =
+      frozen?.view ?? (await defaultValuationBasis(manager, tenantId));
     const params = [
       tenantId,
       event.id,
@@ -80,6 +86,7 @@ export class LossAttributionV2Service {
     return {
       eventId: event.id,
       valuationView: view,
+      valuationViewSource: frozen ? 'approved_snapshot' : 'policy_default',
       items,
       truncated,
       asOf: new Date().toISOString(),

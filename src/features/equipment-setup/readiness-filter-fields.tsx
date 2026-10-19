@@ -8,7 +8,7 @@ import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import type { ReadinessFilters } from './readiness-model';
 
-export function ReadinessFilterFields({ filters, onChange, timezone }: { filters: ReadinessFilters; onChange: (filters: ReadinessFilters) => void; timezone: string }) {
+export function ReadinessFilterFields({ filters, onChange, timezone, dayStart }: { filters: ReadinessFilters; onChange: (filters: ReadinessFilters) => void; timezone: string; dayStart: string | null }) {
   const [modeDraft, setModeDraft] = useState(filters.operatingMode);
   const products = useRecordLookup<MasterProductView>(PRODUCTS, { status: 'active', sort: 'code' });
   const selectedUnavailable = filters.productId && !products.items.some((product) => product.id === filters.productId);
@@ -27,6 +27,7 @@ export function ReadinessFilterFields({ filters, onChange, timezone }: { filters
         <p className="text-xs text-muted-foreground">Must match the production profile. Applied when you leave this field.</p>
       </div>
     </div>
-    <DateRangeInput label="Readiness window (whole plant days, maximum 31)" timeZone={timezone} value={filters.range} onChange={(range) => onChange({ ...filters, range })} />
+    <DateRangeInput label="Readiness window (whole production days, maximum 31)" timeZone={timezone} value={filters.range} onChange={(range) => onChange({ ...filters, range })} />
+    {dayStart && dayStart !== '00:00' && <p className="text-xs text-muted-foreground">Each production day runs from {dayStart} to {dayStart} the next day, named by the date it starts on.</p>}
   </>;
 }

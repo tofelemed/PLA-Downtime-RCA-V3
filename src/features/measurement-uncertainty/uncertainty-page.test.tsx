@@ -98,6 +98,13 @@ describe('measurement uncertainty screen (SME E4)', () => {
     expect(calls.find((c) => c.url.pathname.endsWith('/uncertainty-budgets'))?.url.searchParams.get('unitId')).toBe('unit-1');
   });
 
+  it('QA re-test N7: the intro uses the glossary term Unaccounted, not "residual"', async () => {
+    renderPage();
+    await screen.findByTestId('budget-card');
+    expect(screen.getByText(/Unaccounted figures are always published/)).toBeInTheDocument();
+    expect(screen.queryByText(/residuals/)).toBeNull();
+  });
+
   it('production accounting cannot approve a budget: the metrology owner decides', async () => {
     actAs('production_accountant', 'accountant-1');
     renderPage();

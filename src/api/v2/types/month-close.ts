@@ -119,6 +119,8 @@ export interface MonthCloseView {
     /** the month is over in the plant time zone (its last shift ended): closing quantities needs it */
     monthEnded: boolean;
     monthEndsAt: string;
+    /** the month's first plant-local date has begun (absent from older servers) */
+    monthStarted?: boolean;
     /** production days (unit × date) and the certified ones (owner decision: day certification) */
     days: number;
     certifiedDays: number;

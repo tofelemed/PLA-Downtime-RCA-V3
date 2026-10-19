@@ -1,6 +1,7 @@
 import { useContext, type ReactNode } from 'react';
 import { AnalysisSnapshotContext } from '@/features/analysis-navigation/analysis-snapshot-context';
 import { SnapshotStatus } from './snapshot-status';
+import { shownAsProvisional } from '../model/provisional';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,9 @@ export interface AnalyticsCardProps {
   title: string;
   testId: string;
   query: QueryLike & { refetch: () => unknown; isFetching?: boolean; isPlaceholderData?: boolean };
-  response: Pick<AnalyticsResponse<unknown>, 'isProvisional'> | undefined;
+  response: (Pick<AnalyticsResponse<unknown>, 'isProvisional'> & Partial<Pick<AnalyticsResponse<unknown>, 'coverage'>>) | undefined;
+  /** the scope shows approved revisions only: missing periods are incomplete, not "Provisional" (same rule as the header) */
+  approvedOnly?: boolean;
   isEmpty?: boolean;
   emptyText?: string;
   /** a label the figures need (scope or cohort note) */
@@ -28,6 +31,7 @@ export interface AnalyticsCardProps {
  */
 export function AnalyticsCard(props: AnalyticsCardProps) {
   const { title, testId, query, response, isEmpty, emptyText, note, actions, children } = props;
+  const provisional = shownAsProvisional(response, props.approvedOnly ?? false);
   const state = dataStateOf(query, { isEmpty });
   const refreshing = Boolean(query.isPlaceholderData || (query.isFetching && !query.isLoading));
   return (
@@ -35,7 +39,7 @@ export function AnalyticsCard(props: AnalyticsCardProps) {
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-base">{title}</CardTitle>
-          {response?.isProvisional && <Badge variant="secondary">Provisional</Badge>}
+          {provisional && <Badge variant="secondary">Provisional</Badge>}
         </div>
         {actions}
       </CardHeader>

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FormField } from '@/features/admin/shared/form-field';
 import { roleLabel } from '@/features/ux-kit/labels';
 import { StatusIcon } from '@/lib/icons';
-import { type UserFormErrors, type UserFormValues, MIN_PASSWORD_LENGTH, validateUserForm } from '../model/user-form';
+import { type UserFormErrors, type UserFormValues, MIN_PASSWORD_LENGTH, signInTypeHint, validateUserForm } from '../model/user-form';
 
 export interface UserDetailsFormProps {
   mode: 'create' | 'edit';
@@ -21,7 +21,10 @@ export interface UserDetailsFormProps {
   onCancel: () => void;
 }
 
-/** Name, e-mail, password, role (only roles the server lets you give) and, for new users, the plant. */
+/**
+ * Name, e-mail, password, sign-in type (the legacy role, only types the server lets you give) and, for new
+ * users, the plant. Plant roles are given under Access; the sign-in type is hidden on a read-only profile.
+ */
 export function UserDetailsForm({ mode, initial, choosePlant, readOnly = false, submitLabel, onSubmit, onCancel }: UserDetailsFormProps) {
   const ids = { name: useId(), email: useId(), password: useId(), role: useId(), plant: useId() };
   const [values, setValues] = useState(initial);
@@ -53,7 +56,7 @@ export function UserDetailsForm({ mode, initial, choosePlant, readOnly = false, 
       <FormField htmlFor={ids.email} label="E-mail" error={errors.email} required>
         <Input id={ids.email} type="email" value={values.email} disabled={readOnly} autoComplete="off" onChange={(e) => set({ email: e.target.value })} />
       </FormField>
-      <RoleField id={ids.role} value={values.role} current={initial.role} disabled={readOnly} error={errors.role} onChange={(role) => set({ role })} />
+      {!readOnly && <SignInTypeField id={ids.role} mode={mode} value={values.role} current={initial.role} error={errors.role} onChange={(role) => set({ role })} />}
       {!readOnly && (
         <FormField
           htmlFor={ids.password}
@@ -81,25 +84,30 @@ export function UserDetailsForm({ mode, initial, choosePlant, readOnly = false, 
   );
 }
 
-interface RoleFieldProps {
+interface SignInTypeFieldProps {
   id: string;
+  mode: 'create' | 'edit';
   value: string;
-  /** the role the user has now (kept selectable even when you could not give it) */
+  /** the type the user has now (kept selectable even when you could not give it) */
   current: string;
-  disabled: boolean;
   error?: string;
   onChange: (role: UserFormValues['role']) => void;
 }
 
-function RoleField({ id, value, current, disabled, error, onChange }: RoleFieldProps) {
+/**
+ * QA re-test 2026-10-19 (DECISIONS "Legacy role = sign-in / display compatibility only"): the legacy role is the
+ * sign-in type. It gives the first plant role in the home plant, and counts as a plant role only while the
+ * user holds no plant role there; what the user may do is the plant roles under Access.
+ */
+function SignInTypeField({ id, mode, value, current, error, onChange }: SignInTypeFieldProps) {
   const grantable = useGrantableRoles();
   const roles: readonly string[] = grantable.data?.roles ?? [];
   const options = current && !roles.includes(current) ? [current, ...roles] : roles;
   return (
-    <FormField htmlFor={id} label="Role" error={error} hint="You can give roles up to your own." required>
-      <Select value={value} onValueChange={(role) => onChange(role as UserFormValues['role'])} disabled={disabled || grantable.isLoading}>
+    <FormField htmlFor={id} label="Sign-in type" error={error} hint={signInTypeHint(mode)} required={mode === 'create'}>
+      <Select value={value} onValueChange={(role) => onChange(role as UserFormValues['role'])} disabled={grantable.isLoading}>
         <SelectTrigger id={id}>
-          <SelectValue placeholder={grantable.isLoading ? 'Loading roles…' : 'Choose a role'} />
+          <SelectValue placeholder={grantable.isLoading ? 'Loading sign-in types…' : 'Choose a sign-in type'} />
         </SelectTrigger>
         <SelectContent>
           {options.map((role) => (

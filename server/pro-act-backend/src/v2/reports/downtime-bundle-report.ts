@@ -17,6 +17,7 @@ import {
 } from './kpi-reports-v2.view';
 import { breakdownGroups, periodStats, policyVersions } from './report-sql';
 import { ReportScope } from './report-scope';
+import { dataCoverage } from './data-coverage';
 
 type Metric = (typeof DOWNTIME_METRICS)[number];
 type ScheduleClass = (typeof SCHEDULE_CLASSES)[number];
@@ -108,6 +109,7 @@ export async function downtimeBundleReport(
     scheduleClass,
     summary,
     views,
+    dataCoverage: await dataCoverage(manager, scope),
     calculationRunIds: stats.runIds,
   };
   return reportEnvelope(data, {

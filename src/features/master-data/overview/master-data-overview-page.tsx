@@ -20,7 +20,7 @@ interface Tile {
 }
 
 const PLANT_TILES: readonly Tile[] = [
-  { to: '/master-data/units', title: 'Units', text: 'Production units and lines of this plant', icon: EntityIcon.unit, count: 'units' },
+  { to: '/master-data/units', title: 'Production units', text: 'Production units and lines of this plant', icon: EntityIcon.unit, count: 'units' },
   { to: '/master-data/assets', title: 'Assets', text: 'Equipment and instruments, each under a unit', icon: EntityIcon.asset, count: 'assets' },
   { to: '/master-data/products', title: 'Products', text: 'Shared by the organization or kept to this plant', icon: EntityIcon.product, count: 'products' },
 ];

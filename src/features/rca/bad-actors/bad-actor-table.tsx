@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useFailureDictionary } from '@/api/v2/queries/failure-dictionary';
 import type { BadActorItemView, BadActorReportView } from '@/api/v2/types/bad-actors';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import { humanize } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { EventRcaChip } from '../components/event-rca-chip';
 import { StartRcaLink } from '../components/start-rca-link';
-import { assetText, badActorStartRca, failureModeText, rcaStateOfTrigger, TRIGGER_LABELS } from './bad-actor-model';
+import { assetText, badActorEventsHref, badActorStartRca, failureModeText, rcaStateOfTrigger, TRIGGER_LABELS } from './bad-actor-model';
 
 const TRIGGER_VARIANT: Readonly<Record<string, 'default' | 'secondary' | 'outline' | 'destructive'>> = {
   fired: 'destructive',
@@ -76,9 +77,15 @@ function columnsOf(report: BadActorReportView, number: (value: number) => string
       id: 'asset',
       header: 'Asset',
       cell: (item) => (
-        <span data-testid="bad-actor-asset" data-key={item.key}>
+        <Link
+          to={badActorEventsHref(item, report)}
+          className="text-primary underline-offset-2 hover:underline"
+          data-testid="bad-actor-asset"
+          data-key={item.key}
+          aria-label={`${assetText(item)}: open its unplanned stops of the review window`}
+        >
           {assetText(item)}
-        </span>
+        </Link>
       ),
     },
   ];

@@ -1,13 +1,11 @@
 import { EntityManager } from 'typeorm';
-import {
-  PlantCalendar,
-  plantMonthDates,
-} from '../../domain/calendar/plant-month';
+import { planCoveredSql } from '../../close/plan-coverage-sql';
+import { PlantCalendar } from '../../domain/calendar/plant-month';
 import { BadActorGroup } from '../../domain/rca/bad-actor';
 import { failureModeKeySql } from '../../domain/rca/failure-mode-key';
 import { LOSS_VALUE_KINDS } from '../../domain/valuation/reconciled-valuation';
-import { invalid } from '../../profiles/profile-errors';
 import { INCIDENT } from '../../rca-case/triggers/trigger-inputs';
+import { reviewMonthDates } from './bad-actor-month';
 import { ReportScope } from './report-scope';
 import { params, SHOWN } from './report-sql';
 
@@ -266,12 +264,50 @@ export async function reviewWindow(
   );
   const calendar: PlantCalendar =
     tenant?.calendar === 'persian' ? 'persian' : 'gregorian';
-  const dates = plantMonthDates(input.month, calendar);
-  if (!dates) throw invalid('INVALID_MONTH', 'month must be YYYY-MM');
+  const dates = reviewMonthDates(input.month, calendar);
   const [row] = await manager.query<Array<{ from: Date; to: Date }>>(
     `SELECT ($1::date::timestamp AT TIME ZONE $2::text) - make_interval(days => $3::int) AS "from",
             $1::date::timestamp AT TIME ZONE $2::text AS "to"`,
     [dates.next, tenant?.tz ?? 'UTC', input.days],
   );
   return { from: new Date(row.from), to: new Date(row.to), calendar };
+}
+
+/**
+ * QA re-test N7 (owner decision "Periods with no approved plan"): the window's periods that are not
+ * approved and that no approved plan covers. They cannot be approved until planned, so the review names
+ * them apart from the periods still waiting for approval. Information only: no figure changes.
+ */
+export async function uncoveredPeriodCount(
+  manager: EntityManager,
+  scope: ReportScope,
+): Promise<number> {
+  const [row] = await manager.query<Array<{ uncovered: number }>>(
+    `${SHOWN}
+     SELECT count(*) FILTER (WHERE s."lifecycle" IS DISTINCT FROM 'approved'
+                               AND NOT ${planCoveredSql('p')})::int AS "uncovered"
+       FROM shown s JOIN "production_periods" p ON p."id" = s."period_id"`,
+    params(scope),
+  );
+  return row?.uncovered ?? 0;
+}
+
+/**
+ * Valuation views frozen in the approval snapshots of the window's approved periods (the latest approved
+ * revision each): approved loss is valued in the view it was approved in (owner 18 Oct 2026), the same rule
+ * as the investigation and the stop (`rca-case/approved-snapshot-view.ts`).
+ */
+export async function frozenViewsOfScope(
+  manager: EntityManager,
+  scope: ReportScope,
+): Promise<Array<string | null>> {
+  const rows = await manager.query<Array<{ view: string | null }>>(
+    `${SHOWN}
+     SELECT DISTINCT snap."content" -> 'reviewed' -> 'valuation' ->> 'defaultView' AS "view"
+       FROM shown s
+       JOIN "approval_snapshots" snap ON snap."tenant_id" = $1 AND snap."revision_id" = s."revision_id"
+      WHERE s."lifecycle" = 'approved'`,
+    params({ ...scope, approvedOnly: true }),
+  );
+  return rows.map((row) => row.view);
 }

@@ -69,7 +69,7 @@ export function MappingEditor({ unitId, current, timezone }: { unitId: string; c
   };
   const fields = { draft, errors: shown, set };
   return (
-    <form className="max-w-3xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+    <form noValidate className="max-w-3xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <SignalField unitId={unitId} {...fields} />
       <StateRulesEditor rules={draft.rules} error={shown.rules} onAdd={() => setDraft(withRule)} onRemove={(i) => setDraft((d) => withoutRule(d, i))} onChange={(i, c) => setDraft((d) => withRuleChange(d, i, c))} />
       <AnalogFields analog={draft.analog} errors={shown.analog} onChange={(analog) => set({ analog })} />

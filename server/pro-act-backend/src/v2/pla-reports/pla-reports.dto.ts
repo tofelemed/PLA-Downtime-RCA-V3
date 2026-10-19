@@ -106,6 +106,18 @@ export class LossTreeQueryDto extends ReportWindowQueryDto {
   kinds?: LossTreeKind[];
 }
 
+/** `GET /reports/lines-without-event`: the loss lines of the scope that explain no event (QA PLA M3 re-test). */
+export class LinesWithoutEventQueryDto extends ReportWindowQueryDto {
+  @ApiPropertyOptional({ enum: LEDGERS, default: 'plan' })
+  @IsOptional()
+  @IsIn(LEDGERS)
+  ledger?: Ledger;
+
+  /** only these loss kinds (e.g. performance for the Performance drill); every kind of the tree when absent */
+  @EnumArrayParam(LOSS_TREE_KINDS)
+  kinds?: LossTreeKind[];
+}
+
 /** `GET /reports/reconciliation-trend`: unaccounted / over-accounted / overproduction per site-local bucket. */
 export class ReconciliationTrendQueryDto extends ReportWindowQueryDto {
   @ApiPropertyOptional({ enum: TREND_GROUPS, default: 'day' })

@@ -77,14 +77,14 @@ export function PeriodWorkspace({ planId, periodId, unitName, planLabel, planWin
       <h2 className="text-lg font-semibold" data-testid="period-section-heading">{PERIOD_SECTIONS.find((item) => item.path === section)?.label}</h2>
       {/* Keep the editor subtree alive too: unfinished manual-line fields and conflict dialogs are local state. */}
       <div hidden={section !== ''} className="space-y-6" data-testid="period-reconciliation-panel">
-        <ReconciliationSummary view={data} />
+        <ReconciliationSummary view={data} ledger={ledger} />
         <LedgerComparison accounting={accounting} ledger={ledger} />
         <LossLineEditorContent view={data} timezone={timezone} readOnly={!editable || retained.pending !== null || retained.atCapacity} editor={editor} />
         {section === '' && <Suspense fallback={<Skeleton className="h-48 w-full" />}><WaterfallPanel periodId={periodId} ledger={ledger} view={view} /></Suspense>}
       </div>
       {section === 'actuals' && <div className="space-y-6"><ActualsProvenance periodId={periodId} timezone={timezone} /><AdjustmentsSection planId={planId} periodId={periodId} /><DispositionsSection planId={planId} periodId={periodId} timezone={timezone} /></div>}
       {section === 'review' && <ReviewSection data={data} view={view} timezone={timezone} periodId={periodId} onView={onView} actions={actions} />}
-      {section === 'value' && <ValuationTiles key={data.revision.id} period={data} ledger={ledger} approvedOnly={view === 'approved'} historyHref={`${basePath}/history${search}`} />}
+      {section === 'value' && <ValuationTiles key={data.revision.id} period={data} ledger={ledger} approvedOnly={view === 'approved'} historyHref={`${basePath}/history${search}`} reviewHref={`${basePath}/review${search}`} />}
       {section === 'history' && <Suspense fallback={<Skeleton className="h-24 w-full" />}><PeriodHistory view={data} timezone={timezone} /></Suspense>}
     </section>
   );

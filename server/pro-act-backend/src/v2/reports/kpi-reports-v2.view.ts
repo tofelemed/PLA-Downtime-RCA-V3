@@ -2,6 +2,7 @@ import { formatDec } from '../../domain/actuals/decimal';
 import { combine, GroupTerms, unitOf } from '../../domain/kpi/aggregate';
 import { KpiMetric, KpiQuality, KpiUnit } from '../../domain/kpi/kpi.types';
 import { AnalyticsResponse, ListScope } from '../common/response';
+import { DataCoverageView } from './data-coverage';
 import { PeriodStats } from './report-sql';
 import { ReportScope } from './report-scope';
 
@@ -55,6 +56,11 @@ export interface ReportGroupView {
   key: string | null;
   label: string | null;
   metrics: KpiAggregateView[];
+  /**
+   * OEE report, period-level groups (day, shift, week, …): true when no approved plan covers any period of
+   * the group ("No approved plan covers this period", owner decision 2026-10-19). Absent for product groups.
+   */
+  noApprovedPlan?: boolean;
 }
 
 export interface OeeReportView {
@@ -95,6 +101,11 @@ export interface DowntimeReportView {
    * independent of groupBy, metric, scheduleClass and parentReasonId
    */
   summary: KpiAggregateView[];
+  /**
+   * state data coverage and no-plan periods of the window (owner decision 2026-10-19: unknown state time
+   * is left out of scheduled / available time and MTBF exposure)
+   */
+  dataCoverage: DataCoverageView;
   calculationRunIds: string[];
 }
 
@@ -123,6 +134,11 @@ export interface DowntimeBundleView {
   summary: KpiAggregateView[];
   /** in request order, duplicates removed */
   views: DowntimeBundleItemView[];
+  /**
+   * state data coverage and no-plan periods of the window (owner decision 2026-10-19: unknown state time
+   * is left out of scheduled / available time and MTBF exposure)
+   */
+  dataCoverage: DataCoverageView;
   calculationRunIds: string[];
 }
 
@@ -142,6 +158,11 @@ export interface ReliabilityReportView {
   units: ReliabilityRowView[];
   assets: ReliabilityRowView[];
   failureDefinition: string;
+  /**
+   * state data coverage and no-plan periods of the window (owner decision 2026-10-19: unknown state time
+   * is left out of scheduled / available time and MTBF exposure)
+   */
+  dataCoverage: DataCoverageView;
   calculationRunIds: string[];
 }
 

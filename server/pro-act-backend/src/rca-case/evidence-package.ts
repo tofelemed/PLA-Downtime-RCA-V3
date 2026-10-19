@@ -1,6 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { ProductionEvent } from '../production-event/production-event.entity';
-import { approvedImpact, ApprovedImpact } from './approved-impact';
+import { ApprovedImpact } from './approved-impact';
+import { approvedImpactAsApproved } from './approved-snapshot-view';
 import { priorRecurrence } from './rca-recurrence';
 
 const HOUR_MS = 3_600_000;
@@ -196,7 +197,7 @@ export async function eventEvidencePackage(
       before: event.startTime,
       windowDays: RECURRENCE_WINDOW_DAYS,
     }),
-    approvedImpact: await approvedImpact(manager, tenantId, {
+    approvedImpact: await approvedImpactAsApproved(manager, tenantId, {
       eventIds: [event.id],
     }),
   };

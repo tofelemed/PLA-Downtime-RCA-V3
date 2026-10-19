@@ -36,7 +36,7 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
         <DialogHeader>
           <DialogTitle>{event.classification.physicalType === 'downtime' ? 'Code stop' : 'Code event'}</DialogTitle>
           <DialogDescription>
-            {env.unitName(event.unitId)}, since {dateTime(event.startTime)}
+            {env.unitName(event.unitId)}, {event.endTime ? `${dateTime(event.startTime)} – ${dateTime(event.endTime)}` : `since ${dateTime(event.startTime)}`}
           </DialogDescription>
         </DialogHeader>
         <ReasonCodeSelect id="code-reason" value={reasonCodeId} onChange={setReasonCodeId} allowEmpty={false} />

@@ -14,6 +14,7 @@ import { Quantity } from '@/features/ux-kit/quantity';
 import { useCalendarPreference } from '@/lib/dates';
 import { formatMoney, valuationReasonLabel } from '../model/display';
 import { valuationChoiceOf } from '../model/valuation-basis';
+import { RestatedValueNote } from '../restatement/restated-value-note';
 import { ValuationBasisNote } from './valuation-basis-note';
 import { ValuationBreakdown } from './valuation-breakdown';
 
@@ -33,6 +34,8 @@ export interface ValuationTilesProps {
   approvedOnly: boolean;
   /** the period's History & exports section (change proposals) */
   historyHref: string;
+  /** the period's Review & close section (the restatement); absent = no restatement note */
+  reviewHref?: string;
 }
 
 /**
@@ -41,7 +44,7 @@ export interface ValuationTilesProps {
  * reasons — an unapproved policy or a missing FX rate is shown, never a zero; unpriced quantities are listed
  * with their unit. An approved revision opens on the view frozen at its approval (owner, 18 Oct 2026).
  */
-export function ValuationTiles({ period, ledger, approvedOnly, historyHref }: ValuationTilesProps) {
+export function ValuationTiles({ period, ledger, approvedOnly, historyHref, reviewHref }: ValuationTilesProps) {
   const [wantCurrent, setWantCurrent] = useState(false);
   const choice = valuationChoiceOf(period, wantCurrent);
   const query = { unitIds: [period.unitId], from: period.utcStart, to: period.utcEnd, ledger, approvedOnly, metric: choice.metric };
@@ -57,6 +60,7 @@ export function ValuationTiles({ period, ledger, approvedOnly, historyHref }: Va
         <h3 className="text-sm font-medium">Loss value{data ? ` · ${data.label}` : ''}</h3>
         <DisplayCurrencyToggle />
       </div>
+      {reviewHref && <RestatedValueNote view={period} reviewHref={reviewHref} />}
       {period.approvedValuation && (
         <ValuationBasisNote approved={period.approvedValuation} shown={choice.shown} onShow={(shown) => setWantCurrent(shown === 'current')} historyHref={historyHref} />
       )}

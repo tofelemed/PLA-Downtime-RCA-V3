@@ -16,6 +16,7 @@ import {
   TIME_GROUPS,
 } from './report-sql';
 import { ReportScope } from './report-scope';
+import { uncoveredGroupKeys } from './plan-coverage-groups';
 
 const OPERATIONAL: readonly KpiMetric[] = [
   'availability',
@@ -42,11 +43,15 @@ async function groupViews(
   metrics: readonly KpiMetric[],
 ): Promise<{ groups: ReportGroupView[]; total: KpiAggregateView[] }> {
   const product = groupBy === 'product';
+  const groupSql = product ? PRODUCT_KEY : TIME_GROUPS[groupBy];
   const grouped = await kpiGroups(manager, scope, {
-    groupSql: product ? PRODUCT_KEY : TIME_GROUPS[groupBy],
+    groupSql,
     metrics,
     level: product ? 'slice' : 'period',
   });
+  const uncovered = product
+    ? null
+    : await uncoveredGroupKeys(manager, scope, groupSql);
   const overall = await kpiGroups(manager, scope, {
     groupSql: `'total'`,
     metrics,
@@ -57,6 +62,7 @@ async function groupViews(
       key,
       label: key,
       metrics: metrics.map((m) => aggregateView(m, byMetric.get(m))),
+      ...(uncovered ? { noApprovedPlan: uncovered.has(key) } : {}),
     })),
     total: metrics.map((m) => aggregateView(m, overall.get('total')?.get(m))),
   };

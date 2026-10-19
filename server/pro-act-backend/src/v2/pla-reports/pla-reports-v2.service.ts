@@ -24,9 +24,14 @@ import {
   qualityAccumulator,
   qualityView,
 } from './actuals-quality';
+import {
+  linesWithoutEvent,
+  LinesWithoutEventView,
+} from './lines-without-event';
 import { lossTreeCells, LossTreeView } from './loss-tree-report';
 import { lossTreeView } from './loss-tree-view';
 import {
+  LinesWithoutEventQueryDto,
   LossTreeQueryDto,
   ReconciliationStatusQueryDto,
   ReconciliationTrendQueryDto,
@@ -117,6 +122,20 @@ export class PlaReportsV2Service {
       unvalued,
       data.totals.flatMap((t) => t.reasons),
     );
+  }
+
+  /** QA PLA M3 re-test: the lines behind a loss that has no event to open (manual lines with their evidence). */
+  async linesWithoutEvent(
+    context: RequestContext,
+    query: LinesWithoutEventQueryDto,
+  ): Promise<AnalyticsResponse<LinesWithoutEventView>> {
+    const manager = this.periods.manager;
+    const scope = await resolveReportScope(manager, context, query);
+    const data = await linesWithoutEvent(manager, scope, {
+      ledger: query.ledger ?? 'plan',
+      kinds: query.kinds,
+    });
+    return this.envelope(scope, data, false);
   }
 
   async reconciliationTrend(

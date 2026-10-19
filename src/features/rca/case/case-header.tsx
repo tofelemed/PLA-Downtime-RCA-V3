@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRcaLinks } from '@/api/v2/queries/rca-cases';
 import { useDeleteRcaCase } from '@/api/v2/queries/rca-commands';
 import { Button } from '@/components/ui/button';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { PRIORITY_TONES, RCA_CASE_STATUS_TONES } from '@/features/ux-kit/labels';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
@@ -70,7 +71,7 @@ export function CaseHeader() {
   return (
     <PageHeader
       title={rca.title}
-      back={{ to: '/rca', label: 'Investigations' }}
+      back={{ to: '/rca', label: pageNameOf('/rca') }}
       meta={meta}
       actions={
         <>

@@ -53,7 +53,7 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
     await loginOperator(page, OPERATORS.carlos);
     await page.goto(`/downtime?units=${world.line1.id}`);
     await expect(page.getByTestId('downtime-analysis')).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId('filter-units')).toHaveAttribute('aria-label', /1 selected/);
+    await expect(page.getByTestId('filter-units')).not.toHaveAttribute('aria-label', /: All$/);
     await expect(page.getByTestId('kpi-summary')).toBeVisible();
     await expect(page.getByTestId('kpi-summary').getByTestId('kpi-downtime_total')).toBeVisible();
     await expect(page.getByTestId('reason-pareto')).toBeVisible();

@@ -54,7 +54,7 @@ function OeeTrend({ scope }: { scope: AnalyticsScope }) {
   const label = (key: string | null) => bucketLabel(key, scope.trendBy, pref);
   return <AnalyticsCard title={`${report?.label ?? 'OEE'} by ${TREND_LABELS[scope.trendBy].toLowerCase()}`} testId="pla-oee-trend" query={trend} response={trend.data} isEmpty={report?.groups.length === 0} note="Buckets use the plant's operational date and shift; each value is the sum of numerators over the sum of denominators.">
     {report && <div data-testid="oee-trend" data-group-by={report.groupBy} data-policy={report.policy}>
-      <Suspense fallback={<Skeleton className="h-64 w-full" />}><SeriesChart rows={oeeRows(report, label)} series={report.total.map((entry) => ({ key: entry.metric, label: OEE_METRIC_LABELS[entry.metric.replace('reconciled_', '')] ?? entry.metric }))} kind="line" ratio /></Suspense>
+      <Suspense fallback={<Skeleton className="h-64 w-full" />}><SeriesChart rows={oeeRows(report, label)} series={report.total.map((entry) => ({ key: entry.metric, label: OEE_METRIC_LABELS[entry.metric.replace('reconciled_', '')] ?? entry.metric }))} kind="line" ratio valuesTable /></Suspense>
     </div>}
   </AnalyticsCard>;
 }

@@ -4,11 +4,14 @@ import { AnalyticsCard } from '../components/analytics-card';
 import { OeeTile } from '../components/oee-tile';
 import { oeeQuery, type AnalyticsScope, type OeePolicy } from '../model/analytics-scope';
 import { findKpi, OEE_METRIC_LABELS } from '../model/display';
+import { OEE_AVAILABILITY_CAPTION } from './availability-captions';
 import { sharedUnavailableReason } from './kpi-unavailable';
 
 const LABELS: Record<OeePolicy, string> = { operational: 'Operational OEE (ISO 22400)', reconciled: 'Reconciled PLA OEE' };
 const DENOMINATORS: Record<OeePolicy, string> = { operational: 'over scheduled time', reconciled: 'capacity-ledger good ÷ capacity' };
 const COMPONENTS = ['availability', 'performance', 'quality'] as const;
+
+const componentCaption = (component: (typeof COMPONENTS)[number]) => (component === 'availability' ? OEE_AVAILABILITY_CAPTION : 'of the same periods');
 
 /**
  * The operational OEE with its availability, performance and quality; the reconciled OEE as one labelled
@@ -29,7 +32,7 @@ export function DashboardOee({ scope, policy }: { scope: AnalyticsScope; policy:
       <div className={policy === 'operational' ? 'grid grid-cols-2 gap-2 sm:grid-cols-4' : 'grid grid-cols-1 gap-2'}>
         <OeeTile title="OEE" label={label} view={oee} denominator={DENOMINATORS[policy]} testId={`dashboard-oee-${policy}-tile`} showReason={shared === null} />
         {components.map((component, index) => (
-          <OeeTile key={component} title={OEE_METRIC_LABELS[component]} label={label} view={views[index]} denominator="of the same periods" testId={`dashboard-oee-${component}`} showReason={shared === null} />
+          <OeeTile key={component} title={OEE_METRIC_LABELS[component]} label={label} view={views[index]} denominator={componentCaption(component)} testId={`dashboard-oee-${component}`} showReason={shared === null} />
         ))}
       </div>
       {shared && (

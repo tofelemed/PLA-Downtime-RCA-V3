@@ -204,6 +204,6 @@ describe('Event Hub v2 flows (plan 3.2)', () => {
     render(<StateBadges states={{ physical: 'open', coding: 'coded', rca: 'required' }} />, { wrapper });
     expect(screen.getByLabelText('Physical state: Ongoing')).toBeTruthy();
     expect(screen.getByLabelText('Coding state: Coded')).toBeTruthy();
-    expect(screen.getByLabelText('Investigation state: RCA required')).toBeTruthy();
+    expect(screen.getByLabelText('Investigation state: Investigation recommended')).toBeTruthy();
   });
 });

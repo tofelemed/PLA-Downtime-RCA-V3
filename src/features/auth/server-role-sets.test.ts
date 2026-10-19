@@ -56,6 +56,7 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.STATE_MAPPING_WRITERS, 'v2/reliability/reliability-roles.ts', 'STATE_MAPPING_WRITERS'],
   [Mirror.AUDIT_READERS, 'audit-log/audit-roles.ts', 'AUDIT_READERS'],
   [Mirror.READ_ONLY_ROLES, 'auth/guards/write-access.guard.ts', 'READ_ONLY_ROLES'],
+  [Mirror.MONEY_EXCLUDED_ROLES, 'auth/money/money-access.ts', 'MONEY_EXCLUDED_ROLES'],
 ];
 
 describe('server role sets mirror', () => {
@@ -105,5 +106,30 @@ describe('server role sets mirror', () => {
     expect(Mirror.satisfiesAnyRole(['OrgAdmin'], ['manager_approver'])).toBe(true);
     expect(Mirror.satisfiesAnyRole(['OrgAdmin'], ['SuperAdmin'])).toBe(false);
     expect(Mirror.satisfiesAnyRole(['Engineer', 'production_engineer'], ['manager_approver'])).toBe(false);
+  });
+});
+
+describe('approval inbox deciders (QA_SHELL W-OP)', () => {
+  const ALIASES: Readonly<Record<string, readonly string[]>> = { STOP_DECISION_ROLES: Mirror.EVENT_WRITERS };
+  const rolesOf = (token: string): readonly string[] => {
+    if (token.startsWith('[')) return [...token.matchAll(/'([^']+)'/g)].map((m) => m[1]);
+    const mirrored = (Mirror as Record<string, unknown>)[token] ?? ALIASES[token];
+    if (!Array.isArray(mirrored)) throw new Error(`${token} is not mirrored`);
+    return mirrored as readonly string[];
+  };
+
+  it.each(['v2/approvals/approval-workflows.ts', 'v2/approvals/approval-catalog.ts'])('every decider role of %s is in APPROVAL_DECIDERS', (file) => {
+    const text = readFileSync(join(SERVER, file), 'utf8');
+    const tokens = [...text.matchAll(/\broles: (\[[^\]]*\]|[A-Z_]+)/g)].map((m) => m[1]);
+    expect(tokens.length).toBeGreaterThan(0);
+    for (const token of tokens) {
+      for (const role of rolesOf(token)) expect(Mirror.APPROVAL_DECIDERS).toContain(role);
+    }
+  });
+
+  it('leaves out the roles that decide nothing', () => {
+    for (const role of ['finance_maintainer', 'master_data_admin', 'integration_admin', 'viewer']) {
+      expect(Mirror.APPROVAL_DECIDERS).not.toContain(role);
+    }
   });
 });

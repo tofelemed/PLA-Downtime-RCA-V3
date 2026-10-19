@@ -13,6 +13,7 @@ import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePagedProfiles } from '../hooks/use-profile-reads';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
+import { operatingModeLabel } from '../model/plan-labels';
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
   return [
@@ -25,7 +26,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
         </span>
       ),
     },
-    { id: 'mode', header: 'Operating mode', cell: (p) => p.operatingMode },
+    { id: 'mode', header: 'Operating mode', cell: (p) => operatingModeLabel(p.operatingMode) },
     { id: 'version', header: 'Version', nowrap: true, cell: (p) => `Version ${p.version}` },
     { id: 'capacity', header: 'Capacity model', cell: (p) => labelOf(CAPACITY_MODEL_LABELS, p.capacityModel) },
     {

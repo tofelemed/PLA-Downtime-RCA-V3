@@ -27,6 +27,21 @@ const PLANT: ExportPresentation = {
   currency: 'USD',
 };
 
+/** An accepted availability candidate caused by a stop, with or without a reason code. */
+const candidate = (reasonCodeId: string | null, quantity: string) => ({
+  lossLineId: `cand-${quantity}`,
+  autoKey: quantity,
+  sliceId: SLICE,
+  kind: 'availability',
+  quantity,
+  basis: 'planning_rate',
+  reasonCodeId,
+  impactCodeId: null,
+  causeEventId: 'event-1',
+  state: 'accepted',
+  effectiveQuantity: quantity,
+});
+
 function job(overrides: Partial<ExportJob> = {}): ExportJob {
   return {
     id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -293,19 +308,7 @@ describe('PDF export layout', () => {
 
   it('loss lines: labelled source, kind and state, and a reason column with the pinned code or the comment', () => {
     const coded = source({ lines: 1 });
-    coded.reviewed.candidates.push({
-      lossLineId: 'cand-1',
-      autoKey: 'a',
-      sliceId: SLICE,
-      kind: 'availability',
-      quantity: '28',
-      basis: 'planning_rate',
-      reasonCodeId: 'rc-1',
-      impactCodeId: null,
-      causeEventId: 'event-1',
-      state: 'accepted',
-      effectiveQuantity: '28',
-    });
+    coded.reviewed.candidates.push(candidate('rc-1', '28'));
     const { model } = pdfDocumentOf(
       job({
         reportType: 'loss_lines',
@@ -336,6 +339,19 @@ describe('PDF export layout', () => {
     expect(allText(model.pages[0].blocks)).toEqual(
       expect.arrayContaining(['Requested by', 'Sara']),
     );
+  });
+
+  it('QA re-test N9: an uncoded stop-caused line prints "Not coded" in the Reason column', () => {
+    const uncoded = source();
+    uncoded.reviewed.candidates.push(candidate(null, '14'));
+    const { model } = pdfDocumentOf(
+      job({ reportType: 'loss_lines' }),
+      [uncoded],
+      LATIN,
+    );
+    const table = model.pages[0].blocks.find((b) => b.kind === 'table');
+    const rows = table?.kind === 'table' ? table.rows : [];
+    expect(rows[0].at(-1)).toBe('Not coded');
   });
 
   it('says so when the window has no approved revisions', () => {
@@ -405,6 +421,37 @@ describe('PDF drawing', () => {
     expect(status).toHaveLength(model.pages.length);
     expect(status[0].style.color).toBe('#92400e');
     expect(Math.max(...surface.texts.map((t) => t.y))).toBeLessThan(595 - 20);
+  });
+
+  it('QA re-test N4: a long reason wraps inside its row and the next row starts below it', async () => {
+    const long = source({ lines: 2 });
+    long.reviewed.lines[0].reason =
+      'MECH-GEARBOX · Gearbox failure — bearing seized on the main drive after the restart';
+    long.reviewed.lines[1].reason = 'SPEED-LOSS · Reduced extrusion rate';
+    const { model } = pdfDocumentOf(
+      job({ reportType: 'loss_lines' }),
+      [long],
+      LATIN,
+    );
+    const surface = new FakeSurface();
+    await drawDocument(model, surface);
+    const firstLine = surface.texts.find((t) => t.text.startsWith('MECH'));
+    const second = surface.texts.find((t) => t.text.startsWith('SPEED'));
+    const firstRowLines = surface.texts.filter(
+      (t) => t.y >= (firstLine?.y ?? 0) && t.y < (second?.y ?? 0),
+    );
+    expect(firstLine && second).toBeTruthy();
+    const reasonLines = firstRowLines.filter(
+      (t) => t.style.width === firstLine?.style.width,
+    );
+    expect(reasonLines.length).toBeGreaterThan(1);
+    const lastOfFirst = Math.max(...reasonLines.map((t) => t.y));
+    expect(second?.y ?? 0).toBeGreaterThan(lastOfFirst);
+    for (const page of model.pages) {
+      expect(
+        page.blocks.reduce((sum, b) => sum + linesOf(b), 0),
+      ).toBeLessThanOrEqual(PAGE_LINES);
+    }
   });
 
   it('the writer hands the info to the surface factory and returns the printed rows', async () => {

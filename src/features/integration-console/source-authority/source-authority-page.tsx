@@ -13,6 +13,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { selfApprovalNote } from '@/features/ux-kit/format/self-approval-note';
 import { CONSOLE_PATH } from '../paths';
 import { HierarchyEditor } from './hierarchy-editor';
 import { PolicySources, VersionCard } from './version-card';
@@ -60,7 +61,7 @@ function SourceAuthorityScreen() {
   const setUnitId = (id: string) => setParams((current) => { const next = new URLSearchParams(current); next.set('unitId', id); return next; });
   const [drafting, setDrafting] = useState(false);
   const { timezone } = usePlantTimezone();
-  const { canWriteSourceAuthority } = useCapabilities();
+  const { canWriteSourceAuthority, isSuperAdmin } = useCapabilities();
   const chosen = unitId || unitOptions[0]?.value || '';
   return (
     <Page width="wide">
@@ -68,7 +69,7 @@ function SourceAuthorityScreen() {
         <PageHeader
           title="Source priority"
           back={{ to: CONSOLE_PATH, label: 'Connectivity' }}
-          description="Which measurement source counts for a unit's output, best first. A new version is a draft by the integration owner or production accounting; it applies only once production accounting approves it, SuperAdmin may approve their own version. Periods already calculated keep their version until they are recalculated."
+          description={`Which measurement source counts for a unit's output, best first. A new version is a draft by the integration owner or production accounting; it applies only once production accounting approves it.${selfApprovalNote(isSuperAdmin, 'version')} Periods already calculated keep their version until they are recalculated.`}
           actions={
             canWriteSourceAuthority &&
             chosen && (

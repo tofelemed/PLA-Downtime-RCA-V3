@@ -190,6 +190,10 @@ describe('approval detail page', () => {
     mount(POSTING);
     const form = await screen.findByTestId('inline-restatement-posting');
     expect(within(form).getByText(/Restates approved revision 1/)).toBeTruthy();
+    // QA_SHELL #21: the Request section reads in sentence case, like the inbox list
+    const summary = screen.getByTestId('approval-summary');
+    expect(within(summary).getByText('Awaiting posting')).toBeTruthy();
+    expect(summary.textContent).not.toMatch(/awaiting posting|awaiting_posting/);
     fireEvent.change(within(form).getByTestId('posting-date'), { target: { value: '2026-11-03' } });
     fireEvent.change(within(form).getByTestId('posting-treatment'), { target: { value: 'estimate_change' } });
     fireEvent.click(within(form).getByTestId('posting-save'));

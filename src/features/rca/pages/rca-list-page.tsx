@@ -2,6 +2,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
@@ -71,7 +72,7 @@ function ListScreen() {
     <div data-testid="rca-v2">
       <Page width="wide">
         <PageHeader
-          title="RCA Analysis"
+          title={pageNameOf('/rca')}
           description="Investigations of this plant. Triggers only recommend an investigation; a person opens and closes it."
           actions={actions}
           meta={<CaseSummary filters={filters} onPick={(chip) => setFilters(filtersOfChip(chip))} />}
@@ -97,7 +98,7 @@ function ListScreen() {
             </Section>
           </TabsContent>
           <TabsContent value={RECOMMENDED}>
-            <Section title="Recommended investigations" description="Events where an RCA trigger fired and no investigation is linked yet. Triggers only recommend; a person decides.">
+            <Section title="Recommended investigations" description="Stops where an RCA trigger fired and no investigation is linked yet. Triggers only recommend; a person decides.">
               <RecommendedTab />
             </Section>
           </TabsContent>

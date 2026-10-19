@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { V2ApiError } from '@/api/v2/errors';
 import { useChangeRule, useCreateRule, useRuleCheck } from '@/api/v2/queries/rules';
 import type { RuleKind, RulesSchemaView, RuleView } from '@/api/v2/types/rules';
@@ -45,14 +45,17 @@ export function RuleEditor({ schema, rule, onSaved }: RuleEditorProps) {
   const create = useCreateRule();
   const change = useChangeRule();
   const saveError = create.error ?? change.error;
+  // untouched rows stay quiet until a save is attempted (QA re-test N1)
+  const [attempted, setAttempted] = useState(false);
   // the live check runs the save's own validation on the current draft; a refused save fills in until it answers
   const errors = useMemo(
-    () => errorsByRow(draft, checked.data?.fieldErrors ?? (saveError instanceof V2ApiError ? saveError.fieldErrors : [])),
-    [draft, checked.data, saveError],
+    () => errorsByRow(draft, checked.data?.fieldErrors ?? (saveError instanceof V2ApiError ? saveError.fieldErrors : []), { revealUntouched: attempted }),
+    [draft, checked.data, saveError, attempted],
   );
   const readOnly = draft.nested || rule?.state === 'retired' || !canAuthorRules;
   useUnsavedChangesGuard(hasUnsavedChanges(draft, initial, [readOnly, create.isPending, change.isPending]));
   const save = async () => {
+    setAttempted(true);
     const common = { name: draft.name.trim(), description: draft.description.trim() || null, priority: Number(draft.priority) || 0, definition };
     const saved = rule
       ? await change.submit({ rule, body: common }).catch(() => null)

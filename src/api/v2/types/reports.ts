@@ -15,6 +15,8 @@ export interface ReportGroupView {
   key: string | null;
   label: string | null;
   metrics: KpiAggregateView[];
+  /** OEE report, period-level groups: no approved plan covers any period of the group (absent for products) */
+  noApprovedPlan?: boolean;
 }
 
 export interface OeeReportView {
@@ -37,6 +39,22 @@ export interface DowntimeGroupView {
   periods: number;
 }
 
+/**
+ * What a window's figures stand on (owner decision 2026-10-19 "Unknown time is never available time"):
+ * state data coverage (unknown state time is left out of scheduled / available time and MTBF exposure) and
+ * the periods no approved plan covers.
+ */
+export interface DataCoverageView {
+  /** shown periods with state data (0 = no state mapping: availability is not adjusted) */
+  periodsWithStateData: number;
+  scheduledSeconds: string | null;
+  knownSeconds: string | null;
+  unknownSeconds: string | null;
+  /** known ÷ scheduled, 0..1; null without scheduled time */
+  ratio: string | null;
+  periodsWithoutPlan: number;
+}
+
 export interface DowntimeReportView {
   groupBy: string;
   metric: 'duration' | 'frequency';
@@ -49,6 +67,7 @@ export interface DowntimeReportView {
   total: string;
   /** period KPIs of the whole scope (KPI05 / KPI06), independent of groupBy, metric, class and reason */
   summary: KpiAggregateView[];
+  dataCoverage?: DataCoverageView;
   calculationRunIds: string[];
 }
 
@@ -67,5 +86,6 @@ export interface ReliabilityReportView {
   units: ReliabilityRowView[];
   assets: ReliabilityRowView[];
   failureDefinition: string;
+  dataCoverage?: DataCoverageView;
   calculationRunIds: string[];
 }

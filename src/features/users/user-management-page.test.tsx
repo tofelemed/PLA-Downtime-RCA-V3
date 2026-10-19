@@ -5,6 +5,7 @@ import { configureV2Session } from '@/api/v2/config';
 import { actAs } from '@/test/acting-user';
 import { UserManagementPage } from './user-management-page';
 import { UserManagementRedirect } from './user-management-redirect';
+import { DelegationsRoute } from './delegations-route';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
@@ -17,7 +18,7 @@ function show(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><Location /><Routes>
     <Route path="/users" element={<UserManagementPage />} />
     <Route path="/permissions" element={<UserManagementRedirect tab="permissions" />} />
-    <Route path="/delegations" element={<UserManagementRedirect tab="delegations" />} />
+    <Route path="/delegations" element={<DelegationsRoute />} />
   </Routes></MemoryRouter>);
 }
 afterEach(() => actAs('SuperAdmin'));
@@ -33,11 +34,17 @@ describe('consolidated User Management', () => {
     await screen.findByText('Permission content');
     expect(screen.getByRole('status')).toHaveTextContent('/users?user=u1&q=Anna&tab=permissions#access');
   });
-  it('a manager reaches only Delegations even when a permission tab is typed', async () => {
+  it('a manager is sent to their own Approval delegations page even when a permission tab is typed', async () => {
     actAs('Manager'); show('/users?tab=permissions');
     expect(await screen.findByText('Delegation content')).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: 'Users' })).toBeNull();
-    expect(screen.queryByRole('tab', { name: 'Permissions' })).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(/^\/delegations$/);
+    expect(screen.queryByRole('tab')).toBeNull();
+  });
+  it('an administrator opening /delegations lands on the Delegations tab of User management', async () => {
+    actAs('TenantAdmin'); show('/delegations');
+    expect(await screen.findByText('Delegation content')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('/users?tab=delegations');
+    expect(screen.getAllByRole('tab')).toHaveLength(3);
   });
   it('a viewer cannot reach any tab', () => {
     actAs('viewer'); show('/users?tab=permissions');

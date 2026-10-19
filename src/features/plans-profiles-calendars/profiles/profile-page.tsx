@@ -5,6 +5,7 @@ import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { usePlanningRefs } from '../hooks/use-planning-refs';
 import { useProfile } from '../hooks/use-profile-reads';
 import { ProfileDetail } from './profile-detail';
+import { operatingModeLabel } from '../model/plan-labels';
 
 const BACK = { to: '/planning?tab=profiles', label: 'Profiles & rates' };
 
@@ -26,7 +27,7 @@ export function ProfilePage() {
   const p = profile.data;
   return (
     <Page>
-      <PageHeader title={`${refs.unitName(p.unitId)} × ${refs.productName(p.productId)}`} description={`Operating mode ${p.operatingMode} · version ${p.version}`} back={BACK} />
+      <PageHeader title={`${refs.unitName(p.unitId)} × ${refs.productName(p.productId)}`} description={`Operating mode: ${operatingModeLabel(p.operatingMode)} · version ${p.version}`} back={BACK} />
       <ProfileDetail profile={p} refs={refs} onEdit={() => navigate(`/planning/profiles/${p.id}/edit`)} />
     </Page>
   );

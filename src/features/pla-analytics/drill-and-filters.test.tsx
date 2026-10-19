@@ -7,6 +7,7 @@ import type { LossTreeGroupView, ScopeWaterfallView } from '@/api/v2/types/pla-a
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => ({ session: { tenant: { id: 'tenant-a' } } }) }));
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC', units: [], unitName: (id: string) => id }) }));
+vi.mock('@/features/pla-analytics/hooks/use-production-day-start', () => ({ useProductionDayStart: () => ({ dayStart: '06:00', loading: false }) }));
 vi.mock('@/features/plan-dashboard/components/waterfall-chart', () => ({ WaterfallChart: () => <div>chart</div> }));
 const waterfall = vi.hoisted(() => ({ data: null as ScopeWaterfallView | null }));
 vi.mock('@/api/v2/queries/pla-analytics', async (original) => ({

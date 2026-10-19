@@ -10,7 +10,9 @@ vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user'
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () => ({ timezone: 'UTC', source: 'tenant', loading: false }) }));
 vi.mock('@/features/rca/actions/my-rca-actions-list', () => ({
-  MyRcaActionsList: (props: { mine?: boolean; limit?: number }) => <div data-testid="rca-actions-embed" data-mine={String(props.mine)} data-limit={props.limit} />,
+  MyRcaActionsList: (props: { mine?: boolean; limit?: number; statusFilter?: boolean }) => (
+    <div data-testid="rca-actions-embed" data-mine={String(props.mine)} data-limit={props.limit} data-status-filter={String(props.statusFilter)} />
+  ),
 }));
 
 const { MyQueuePage } = await import('./my-queue-page');
@@ -79,11 +81,21 @@ describe('My work page (UX audit §5.7)', () => {
     expect(within(table).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning?tab=plans');
   });
 
+  it('QA re-test N9: an empty queue shows only the empty state, without a table header', async () => {
+    stubV2Fetch((call) => (call.url.pathname.endsWith('/reconciliation-queue') ? jsonResponse(200, listPage([])) : undefined));
+    open();
+    expect(await screen.findByTestId('my-work-periods-empty')).toHaveTextContent('Nothing waiting for you');
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'To do' })).toBeNull();
+  });
+
   it('RCA actions: embeds the user\'s own actions list', async () => {
     stubV2Fetch(reply);
     open('/my-queue?tab=rca-actions');
     const embed = await screen.findByTestId('rca-actions-embed');
     expect(embed).toHaveAttribute('data-mine', 'true');
+    // RCA re-test L16: the full tab offers the To do / Done / All status filter
+    expect(embed).toHaveAttribute('data-status-filter', 'true');
     expect(screen.getByTestId('my-work-tab-rca-actions')).toHaveAttribute('data-state', 'active');
   });
 

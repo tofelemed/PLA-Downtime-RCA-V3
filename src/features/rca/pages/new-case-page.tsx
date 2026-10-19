@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCreateRcaCase } from '@/api/v2/queries/rca-commands';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
@@ -54,7 +55,7 @@ function StandaloneCase({ start }: { start: StartRcaContext }) {
           <Button type="submit" disabled={missingTitle || busy} aria-describedby={missingTitle ? 'create-case-reason' : undefined} data-testid="create-case">
             {start.lossLineId ? 'Create investigation and link the loss line' : 'Create investigation'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => mayLeave() && navigate('/rca')}>
+          <Button type="button" variant="outline" onClick={() => void mayLeave().then((leave) => leave && navigate('/rca'))}>
             Cancel
           </Button>
         </div>
@@ -68,7 +69,7 @@ function StandaloneCase({ start }: { start: StartRcaContext }) {
 function NoAccess() {
   return (
     <Page>
-      <PageHeader title="New investigation" back={{ to: '/rca', label: 'Investigations' }} />
+      <PageHeader title="New investigation" back={{ to: '/rca', label: pageNameOf('/rca') }} />
       <DataState state="no-permission" detail="Only reliability engineers and manager approvers open investigations." />
     </Page>
   );
@@ -98,7 +99,7 @@ export function NewCasePage() {
       <PageHeader
         title={eventId ? 'Investigate an event' : 'New investigation'}
         description={eventId ? DESCRIPTIONS.event : start.lossLineId ? DESCRIPTIONS.lossLine : DESCRIPTIONS.standalone}
-        back={eventId ? { to: `/events/${encodeURIComponent(eventId)}`, label: 'Back to the stop' } : { to: '/rca', label: 'Investigations' }}
+        back={eventId ? { to: `/events/${encodeURIComponent(eventId)}`, label: 'Back to the stop' } : { to: '/rca', label: pageNameOf('/rca') }}
       />
       {eventId ? (
         <EventCaseSection eventId={eventId} initialMode={params.get('mode') === 'existing' ? 'existing' : 'new'} lossLineId={start.lossLineId} />

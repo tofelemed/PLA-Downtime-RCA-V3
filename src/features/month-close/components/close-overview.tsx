@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { MonthCloseView } from '@/api/v2/types/month-close';
 import { Section } from '@/features/ux-kit/page-layout';
+import { closeHeadline } from '../model/close-blockers';
 import { closeSearch, type CloseSection } from '../model/close-section';
 import { CloseDeadlines } from './close-deadlines';
 import { CloseSignOffs } from './close-sign-offs';
@@ -18,7 +19,7 @@ function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: UR
   ];
   return (
     <div className="space-y-2" data-testid="close-prerequisites" data-met={p.met}>
-      <p className="text-sm text-muted-foreground">{view.state === 'locked' ? 'Month locked.' : p.met ? 'Prerequisites met.' : 'Prerequisites need attention.'} Select a count to inspect its records.</p>
+      <p className="text-sm text-muted-foreground"><span data-testid="close-headline">{closeHeadline(view)}</span> Select a count to inspect its records.</p>
       <div className="grid gap-3 sm:grid-cols-3">
         {counts.map(({ section, label, count, detail }) => (
           <Link key={section} to={{ search: `?${closeSearch(params, 'section', section)}` }}

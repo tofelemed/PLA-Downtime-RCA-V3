@@ -7,16 +7,16 @@ import { PageGate } from '@/features/admin/shared/page-gate';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
-import { roleLabel } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
-import { placeOf } from '@/features/users/components/user-columns';
+import { placeOf, plantRolesText } from '@/features/users/components/user-columns';
 import { UserActivationButton } from '@/features/users/components/user-activation-button';
 import { UserStatusBadge } from '@/features/users/components/user-status-badge';
 import { ModulePermissionsPanel } from './module-permissions-panel';
 
 const COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
   { id: 'name', header: 'Name', cell: (user) => user.name },
-  { id: 'role', header: 'Role', cell: (user) => roleLabel(user.role), nowrap: true },
+  // QA re-test 2026-10-19: the plant roles that decide the menu, not the legacy sign-in type
+  { id: 'role', header: 'Plant roles', cell: plantRolesText },
   { id: 'place', header: 'Plant', cell: placeOf },
   { id: 'status', header: 'Status', cell: (user) => <UserStatusBadge isActive={user.isActive} />, nowrap: true },
 ];
@@ -47,7 +47,7 @@ function PermissionsScreen({ embedded }: { embedded: boolean }) {
       return next;
     });
   return (
-    <SectionPage embedded={embedded} title="Permissions" description="See what each user's role reaches and activate or deactivate users.">
+    <SectionPage embedded={embedded} title="Permissions" description="See what each user's plant roles reach and activate or deactivate users.">
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title="Users">
           <DebouncedSearchInput label="Search users" value={q} onChange={(text) => update({ q: text || null })} />

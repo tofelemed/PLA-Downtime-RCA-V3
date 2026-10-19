@@ -30,8 +30,13 @@ interface Report {
     to: string;
     windowDays: number;
     view: string;
+    viewSource: string;
     uom: string | null;
     valuationStatus: string;
+    periods: number;
+    approvedPeriods: number;
+    uncoveredPeriods: number;
+    basis: string;
     items: Item[];
   };
 }
@@ -49,6 +54,7 @@ const codeOf = (response: { body: unknown }) =>
 describe('bad-actor report (CA8)', () => {
   const env = new RcaWorld();
   const pump = randomUUID();
+  let sealLeak = '';
   const report = async (query: string, token = env.admin) =>
     (
       (await env.get(`reports/bad-actors?${query}`, token).expect(200))
@@ -75,7 +81,7 @@ describe('bad-actor report (CA8)', () => {
       [pump, env.world.unitA1, env.world.tenantA],
     );
     const reason = await env.reasonCode('EXT');
-    await env.lossEvent(env.world.unitA1, plus(A, HOUR), 1, {
+    sealLeak = await env.lossEvent(env.world.unitA1, plus(A, HOUR), 1, {
       reasonCodeId: reason,
       assetId: env.world.assetA1,
       failureMode: 'Seal leak',
@@ -104,8 +110,15 @@ describe('bad-actor report (CA8)', () => {
       from: '2027-01-01T00:00:00.000Z',
       windowDays: 90,
       view: 'economic_impact',
+      viewSource: 'approved_snapshot',
       uom: 't',
     });
+    // QA re-test N7: periods no approved plan covers are counted apart from those waiting for approval
+    expect(data.uncoveredPeriods).toBeGreaterThanOrEqual(0);
+    expect(data.uncoveredPeriods).toBeLessThanOrEqual(
+      data.periods - data.approvedPeriods,
+    );
+    expect(data.basis).toMatch(/^Lost quantity and value: approved plan/);
     // only assets with approved loss compete on approved quantity: the pump's stops are not approved loss
     expect(data.items).toHaveLength(1);
     const [first] = data.items;
@@ -118,6 +131,45 @@ describe('bad-actor report (CA8)', () => {
     expect(Number(first.quantity)).toBeGreaterThan(0);
     expect(first.value).toMatchObject({ currency: 'USD', status: 'valued' });
     expect(Number(first.value?.amount)).toBe(Number(first.quantity) * 300);
+  });
+
+  it('approved loss keeps the view it was approved in when the policy default changes (Bad actors and the stop)', async () => {
+    const setDefault = (basis: string) =>
+      env.rows(
+        `UPDATE accounting_policies SET body = jsonb_set(body, '{defaultBasis}', to_jsonb($2::text))
+          WHERE tenant_id = $1 AND policy_kind = 'valuation_basis' AND scope_key = 'tenant'`,
+        [env.world.tenantA, basis],
+      );
+    const [{ basis: before }] = await env.rows<{ basis: string }>(
+      `SELECT body->>'defaultBasis' AS basis FROM accounting_policies
+        WHERE tenant_id = $1 AND policy_kind = 'valuation_basis' AND scope_key = 'tenant'
+        ORDER BY version DESC LIMIT 1`,
+      [env.world.tenantA],
+    );
+    await setDefault('standard_cost');
+    try {
+      const data = await report('month=2027-03');
+      expect(data).toMatchObject({
+        view: 'economic_impact',
+        viewSource: 'approved_snapshot',
+      });
+      const losses = (
+        await env
+          .get(`production-events/${sealLeak}/attributed-losses`)
+          .expect(200)
+      ).body as { valuationView: string; valuationViewSource: string };
+      expect(losses).toMatchObject({
+        valuationView: 'economic_impact',
+        valuationViewSource: 'approved_snapshot',
+      });
+      // a window with no approved period has no frozen view: the policy default now
+      expect(await report('month=2027-07')).toMatchObject({
+        view: 'standard_cost',
+        viewSource: 'policy_default',
+      });
+    } finally {
+      await setDefault(before);
+    }
   });
 
   it('the critical pump is over its halved bad-actor limit (5.5 h ≥ 4 h); by stops it ranks first', async () => {
@@ -170,6 +222,10 @@ describe('bad-actor report (CA8)', () => {
       .expect(422);
     expect(codeOf(other)).toBe('INVALID_REFERENCE');
     await env.get('reports/bad-actors?month=2027-3').expect(422);
+    const jalali = await env
+      .get('reports/bad-actors?month=1405-07')
+      .expect(422);
+    expect(codeOf(jalali)).toBe('MONTH_KEY_AMBIGUOUS');
     expect((await report('month=2027-03', env.adminB)).items).toEqual([]);
   });
 

@@ -1,3 +1,4 @@
+import { MoneyOnly } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -53,6 +54,8 @@ const PROVISIONAL =
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'fx-rates', version: '2' })
+// QA re-test 2026-10-19: finance records are money (403 MONEY_NOT_VISIBLE for operators)
+@MoneyOnly()
 export class FxRatesV2Controller {
   constructor(private readonly rates: FxRatesService) {}
 

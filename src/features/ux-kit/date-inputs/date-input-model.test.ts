@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   INVALID_DATE_MESSAGE,
+  INVALID_GREGORIAN_DATE_MESSAGE,
   RANGE_ORDER_MESSAGE,
   boundsError,
   dateRangeError,
@@ -25,7 +26,8 @@ describe('date-input-model', () => {
     for (const text of ['1404/12/30', '1405/13/01', '1405/07/31', '14050720', 'abc']) {
       expect(parseDateText(text, 'persian')).toEqual({ value: '', error: INVALID_DATE_MESSAGE });
     }
-    expect(parseDateText('2026-02-30', 'gregorian').error).toBe(INVALID_DATE_MESSAGE);
+    expect(parseDateText('2026-02-30', 'gregorian').error).toBe(INVALID_GREGORIAN_DATE_MESSAGE);
+    expect(parseDateText('17/10/2026', 'gregorian').error).toBe('Use YYYY-MM-DD, e.g. 2026-10-17');
     expect(parseDateText('2026/2/3', 'gregorian')).toEqual({ value: '2026-02-03', error: null });
   });
 

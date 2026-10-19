@@ -1,8 +1,10 @@
 import type { GridWorkflowState, RevisionSelector } from '@/api/v2/types/period-overview';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/features/ux-kit/date-inputs';
+import { dateToText } from '@/features/ux-kit/date-inputs/date-input-model';
+import { useCalendarPreference } from '@/lib/dates';
 import { WORKFLOW_LABELS } from '../model/display';
-import { GRID_STATES, RESIDUAL_FILTERS, type GridParamKey, type GridParams } from '../model/period-grid-params';
+import { GRID_STATES, outsidePlanMessage, RESIDUAL_FILTERS, type GridParamKey, type GridParams } from '../model/period-grid-params';
 
 export interface PeriodGridFiltersProps {
   params: GridParams;
@@ -17,6 +19,8 @@ const SELECT = 'h-9 max-w-full rounded-md border border-input bg-background px-2
 
 /** Server filters of the period grid: workflow state, Unaccounted, shown revision and "Go to date" (a plant date in the plan). */
 export function PeriodGridFilters({ params, onParam, view, onView, bounds }: PeriodGridFiltersProps) {
+  const { calendar } = useCalendarPreference();
+  const outside = outsidePlanMessage(params.date, bounds, (date) => dateToText(date, calendar));
   return (
     <div className="flex flex-wrap items-end gap-3 text-sm">
       <label className="min-w-0 max-w-full space-y-1">
@@ -56,6 +60,11 @@ export function PeriodGridFilters({ params, onParam, view, onView, bounds }: Per
           </Button>
         )}
       </div>
+      {outside && (
+        <p role="status" className="basis-full text-xs text-muted-foreground" data-testid="grid-date-outside">
+          {outside}
+        </p>
+      )}
     </div>
   );
 }

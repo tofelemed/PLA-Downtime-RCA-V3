@@ -1,3 +1,4 @@
+import { MoneyOnly } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -49,6 +50,8 @@ const REVALUATION =
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'demand-statuses', version: '2' })
+// QA re-test 2026-10-19: finance records are money (403 MONEY_NOT_VISIBLE for operators)
+@MoneyOnly()
 export class DemandStatusesV2Controller {
   constructor(private readonly statuses: DemandStatusesService) {}
 

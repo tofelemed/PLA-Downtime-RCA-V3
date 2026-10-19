@@ -102,6 +102,9 @@ export const AUDIT_READERS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_
 /** auth/guards/write-access.guard.ts: roles that can never write */
 export const READ_ONLY_ROLES = ['viewer'] as const;
 
+/** auth/money/money-access.ts (QA re-test 2026-10-19): the roles the server withholds money from */
+export const MONEY_EXCLUDED_ROLES = ['Operator', 'operator'] as const;
+
 /**
  * `satisfiesRole` of `auth/roles/role-model.ts`: SuperAdmin satisfies anything, OrgAdmin anything but
  * SuperAdmin, everyone else needs the role itself (the D06 mapping is already in `roles`).
@@ -111,3 +114,29 @@ export function satisfiesAnyRole(roles: readonly string[], required: readonly st
   if (roles.includes('OrgAdmin')) return required.some((role) => role !== 'SuperAdmin');
   return roles.some((role) => required.includes(role));
 }
+
+/**
+ * v2/approvals/approval-workflows.ts + approval-catalog.ts: every role that decides a kind of the Pending
+ * approvals inbox (STOP_DECISION_ROLES = EVENT_WRITERS: operators decide duplicate-stop merges there), plus the
+ * legacy administrator roles the inbox serves (TenantAdmin / Manager). A plant role outside it (finance
+ * maintainer, master data or integration administrator, viewer) can never decide an inbox item.
+ */
+export const APPROVAL_DECIDERS: readonly string[] = [
+  ...new Set([
+    'TenantAdmin',
+    'Manager',
+    ...PLAN_APPROVERS,
+    ...PROFILE_APPROVERS,
+    ...ADJUSTMENT_APPROVERS,
+    ...REVISION_APPROVERS,
+    ...DISPOSITION_APPROVERS,
+    ...BUDGET_APPROVERS,
+    ...SOURCE_AUTHORITY_APPROVERS,
+    ...SOURCE_OWNERS,
+    ...UNIT_IMPACT_RULE_APPROVERS,
+    ...RULE_APPROVERS,
+    ...FINANCE_APPROVERS,
+    ...MATERIALITY_REVIEWERS,
+    ...EVENT_WRITERS,
+  ]),
+];

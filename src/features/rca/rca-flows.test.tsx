@@ -135,6 +135,22 @@ describe('RCA flows (v2 case workspace)', () => {
     expect(screen.getByTestId('outcome-realized').textContent).toContain('Realign: 2.00 recurrences');
   });
 
+  it('QA re-test N1: an operator sees the approved quantities but no claimed avoided loss (the server omits money)', async () => {
+    actAs('operator');
+    const outcome = {
+      rcaId: 'c1',
+      approvedHistoricalLoss: { lines: 1, quantities: [{ kind: 'availability', uom: 't', quantity: '28' }], basis: 'b' },
+      realized: [],
+      note: 'separate',
+    } as RcaOutcomeView;
+    reply = () => json(200, outcome);
+    wrap(<OutcomePanel rcaId="c1" />);
+    expect((await screen.findByTestId('approved-impact')).textContent).toContain('28.00 t');
+    expect(screen.queryByTestId('outcome-claimed')).toBeNull();
+    expect(screen.getByTestId('outcome-panel').textContent).not.toContain('USD');
+    actAs('SuperAdmin');
+  });
+
   it('SME V7 / V8: the approved impact names its view (economic impact) and a provisional exchange rate', async () => {
     const outcome: RcaOutcomeView = {
       rcaId: 'c1',

@@ -4,7 +4,7 @@ import { usePlans } from '@/api/v2/queries/plans';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { PLAN_LIST_PATH, periodAccountingTarget, singleUnitOf, type PeriodAccountingTarget } from './period-accounting-target';
 
 const HINTS: Record<'none' | 'several', string> = {
@@ -15,7 +15,8 @@ const HINTS: Record<'none' | 'several', string> = {
 function Redirect({ target }: { target: PeriodAccountingTarget }) {
   const hint = target.kind === 'list' ? HINTS[target.reason] : null;
   useEffect(() => {
-    if (hint) toast({ title: 'Period accounting', description: hint });
+    // QA P-14: the Sonner region is a labelled list without hidden focus proxies (the Radix toast failed axe here)
+    if (hint) toast('Period accounting', { description: hint });
   }, [hint]);
   return <Navigate to={target.to} replace />;
 }

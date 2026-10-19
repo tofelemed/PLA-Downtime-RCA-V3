@@ -37,7 +37,7 @@ function MyWorkScreen() {
             </TabsContent>
           )}
           <TabsContent value="rca-actions">
-            <MyRcaActionsList mine limit={RCA_ACTIONS_PAGE_SIZE} />
+            <MyRcaActionsList mine statusFilter limit={RCA_ACTIONS_PAGE_SIZE} />
           </TabsContent>
           <TabsContent value="tasks">
             <MyTasksTab />

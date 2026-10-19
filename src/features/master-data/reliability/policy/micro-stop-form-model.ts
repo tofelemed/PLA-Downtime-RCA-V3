@@ -36,7 +36,8 @@ export const tripCodesOf = (text: string): string[] => [...new Set(text.split(/[
 /** Field problems before sending; the server's parser checks the body again (422 INVALID_POLICY). */
 export function microStopErrors(draft: MicroStopDraft): MicroStopErrors {
   const errors: MicroStopErrors = {};
-  if (seconds(draft.microStopSeconds) === null) errors.microStopSeconds = 'Whole seconds from 0 to 86400';
+  if (draft.microStopSeconds.trim() === '') errors.microStopSeconds = 'Enter the threshold in whole seconds (0 to 86400)';
+  else if (seconds(draft.microStopSeconds) === null) errors.microStopSeconds = 'Whole seconds from 0 to 86400';
   const names = draft.classes.map((c) => c.assetClass.trim());
   if (names.some((n) => !n) || draft.classes.some((c) => seconds(c.seconds) === null)) {
     errors.classes = 'Each row needs an asset class and whole seconds from 0 to 86400';

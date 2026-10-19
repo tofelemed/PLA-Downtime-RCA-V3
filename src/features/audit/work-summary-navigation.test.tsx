@@ -12,6 +12,7 @@ vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () =>
 vi.mock('@/features/event-hub/event-hub-env', () => ({ EventHubEnvProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ units: [], unitsLoading: false }) }));
 vi.mock('@/features/pla-analytics/reports/reports-header', () => ({ ReportsHeader: () => <h1>Reports</h1> }));
+vi.mock('@/features/pla-analytics/hooks/use-production-day-start', () => ({ useProductionDayStart: () => ({ dayStart: '06:00', loading: false }) }));
 vi.mock('@/features/pla-analytics/reports/reports-filters', () => ({ ReportsFilters: () => null }));
 vi.mock('@/features/pla-analytics/reports/production-report', () => ({ OeeByDay: () => null, DowntimeReasonCard: () => null }));
 

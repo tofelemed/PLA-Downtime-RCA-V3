@@ -5,6 +5,7 @@ import type { QueueItemView } from '@/api/v2/types/period-sla';
 import { QUEUE_TASK_LABELS } from '@/features/plan-dashboard/model/sla-labels';
 import { SlaBadges } from '@/features/plan-dashboard/sla/sla-badges';
 import { DataTable, ListPager, type DataTableColumn, type DataTableProps } from '@/features/ux-kit/data-table';
+import { EmptyMessage } from '@/features/ux-kit/data-table/data-table-states';
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
@@ -88,13 +89,16 @@ export function MyPeriodsTab() {
   const { number } = useNumberFormat();
   const [now] = useState(() => new Date().toISOString());
   const cols = columns(timezone, pref);
-  const settled = !queue.status.isLoading && !queue.status.isError && queue.rows.length > 0;
+  const loaded = !queue.status.isLoading && !queue.status.isError;
+  const settled = loaded && queue.rows.length > 0;
+  const empty = loaded && queue.rows.length === 0 && !queue.pager.canPrevious;
   return (
     <div className="space-y-4" data-testid="my-work-periods">
       <p className="text-sm text-muted-foreground">
         Periods waiting for you — to prepare, to review, or escalated to your role — earliest due first. Deadlines follow the plant&apos;s reconciliation policy.
       </p>
-      {!settled && <QueueTable title="My reconciliation queue" columns={cols} rows={queue.rows} pager={queue.pager} status={queue.status} empty={EMPTY} />}
+      {empty && <div className="rounded-md border p-6" data-testid="my-work-periods-empty"><EmptyMessage empty={EMPTY} /></div>}
+      {!settled && !empty && <QueueTable title="My reconciliation queue" columns={cols} rows={queue.rows} pager={queue.pager} status={queue.status} empty={EMPTY} />}
       {settled && groupQueueRows(queue.rows, now, timezone).map((group) => (
         <Section key={group.key} title={`${group.title} (${number(group.rows.length)})`} headingLevel={3}>
           <QueueTable title={`My reconciliation queue: ${group.title}`} columns={cols} rows={group.rows} pager="none" />

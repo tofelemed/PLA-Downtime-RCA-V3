@@ -18,6 +18,7 @@ import {
   TIME_GROUPS,
 } from './report-sql';
 import { resolveAssets, ReportScope } from './report-scope';
+import { dataCoverage } from './data-coverage';
 
 const METRICS: readonly KpiMetric[] = [
   'mtbf',
@@ -113,6 +114,7 @@ export async function reliabilityReport(
     groupSql: TIME_GROUPS.unit,
     metrics: METRICS,
     level: 'period',
+    excludeUnknownTime: true,
   });
   const assetRows = await kpiGroups(manager, scope, {
     groupSql: `k."scope"->>'assetId'`,
@@ -132,6 +134,7 @@ export async function reliabilityReport(
       ),
     ),
     failureDefinition: FAILURE_DEFINITION,
+    dataCoverage: await dataCoverage(manager, scope),
     calculationRunIds: stats.runIds,
   };
   return reportEnvelope(data, {

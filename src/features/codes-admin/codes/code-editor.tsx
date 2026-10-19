@@ -47,7 +47,7 @@ function DefaultsFields({ form, readOnly, set }: DefaultsProps) {
 
 /** Edits a code: every save is its next version (If-Match; 412 when someone else saved first). */
 export function CodeEditor({ library, code }: CodeEditorProps) {
-  const { canWriteCodes } = useCapabilities();
+  const { canWriteCodes, canViewMoney } = useCapabilities();
   const spec = LIBRARIES[library];
   const [form, setForm] = useState<CodeForm>(() => formOf(code));
   const change = useChangeCode(library);
@@ -71,7 +71,7 @@ export function CodeEditor({ library, code }: CodeEditorProps) {
           </Field>
         )}
         {spec.fields.includes('defaults') && <DefaultsFields form={form} readOnly={readOnly} set={set} />}
-        {spec.fields.includes('costPerHour') && (
+        {spec.fields.includes('costPerHour') && canViewMoney && (
           <Field id="code-cost" label="Cost per hour (plant currency)" hint="Used only where no approved valuation rate exists">
             <DecimalInput id="code-cost" value={form.costPerHour} onChange={(value) => setForm((current) => ({ ...current, costPerHour: value }))} scale={4} disabled={readOnly} />
           </Field>

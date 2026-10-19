@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useFailureDictionary, useRetireDictionaryEntry } from '@/api/v2/queries/failure-dictionary';
 import { DICTIONARY_KIND_LABELS, type DictionaryKind, type FailureDictionaryEntryView } from '@/api/v2/types/failure-dictionary';
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
@@ -68,12 +69,14 @@ export function FailureDictionaryPage() {
   const { entries, isLoading, error } = useFailureDictionary();
   const [kind, setKind] = useState<DictionaryKind | ''>('');
   const canWrite = useMasterDataWriter();
+  // QA re-test N9: reliability engineers read the dictionary (they validate failure detail); writes stay master data
+  const { canValidateFailures } = useCapabilities();
   const dates = usePlantDates();
   const [retiring, setRetiring] = useState<FailureDictionaryEntryView | null>(null);
   const rows = useMemo(() => entries.filter((e) => !kind || e.kind === kind), [entries, kind]);
   const classes = useMemo(() => entries.filter((e) => e.kind === 'equipment_class').map((e) => e.code), [entries]);
   return (
-    <MasterDataLayout title="Failure dictionary" description="ISO 14224-aligned failure codes that maintenance uses to describe a stop's technical failure.">
+    <MasterDataLayout title="Failure dictionary" alsoAllowed={canValidateFailures} description="ISO 14224-aligned failure codes that maintenance uses to describe a stop's technical failure.">
       <Section title="Entries in force">
         <label className="flex items-center gap-2 text-sm">
           List

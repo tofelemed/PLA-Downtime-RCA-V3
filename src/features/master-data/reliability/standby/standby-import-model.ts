@@ -3,6 +3,9 @@ import { optional, type TextRow } from '../shared/delimited-rows';
 import { choiceProblem, instantProblem, type MappedRow } from '../shared/row-mapping';
 
 export const STANDBY_CSV_HEADER = 'assetCode,kind,startedAt,endedAt,outcome,externalRef,notes';
+/** The columns in plain words (help text of the import panel). */
+export const STANDBY_CSV_COLUMNS =
+  'asset code, kind (demand, test or run), start and end time (ISO 8601 with offset), outcome (success, failed to start or failed while running), external reference and notes';
 export const STANDBY_CSV_EXAMPLE = `${STANDBY_CSV_HEADER}\nP-101B,demand,2026-10-01T08:00:00Z,2026-10-01T08:00:30Z,success,LOG-1,Duty pump tripped`;
 
 const KINDS = ['demand', 'test', 'run'] as const;

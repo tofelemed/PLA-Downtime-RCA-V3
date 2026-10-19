@@ -97,7 +97,7 @@ describe('codes & rules flows (plan 3.8)', () => {
       { timeout: 3000 },
     );
     await waitFor(() => expect(screen.getByTestId('rule-validation')).toHaveAttribute('data-state', 'invalid'));
-    expect(within(screen.getAllByTestId('rule-condition')[0]).getByTestId('row-error').textContent).toBe('Value: must be a number');
+    expect(within(screen.getAllByTestId('rule-condition')[0]).getByTestId('row-error').textContent).toBe('Enter a number.');
     expect(JSON.stringify(lastCheck())).not.toMatch(/function|=>/);
   });
 

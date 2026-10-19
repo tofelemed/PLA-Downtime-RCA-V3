@@ -1,3 +1,4 @@
+import { MoneyFields } from '../../auth/money/money.decorators';
 import {
   Body,
   Controller,
@@ -48,6 +49,8 @@ export interface ProposalDecisionV2View {
 @ApiBearerAuth()
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'period-change-proposals', version: '2' })
+// QA re-test 2026-10-19: `values` here are loss values per currency (left out for operators)
+@MoneyFields('values')
 export class ChangeProposalsV2Controller {
   constructor(
     private readonly reads: ReconciliationV2Service,

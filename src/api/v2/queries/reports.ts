@@ -17,6 +17,7 @@ export type ReportKind =
   | 'loss-value'
   | 'scope-waterfall'
   | 'loss-tree'
+  | 'lines-without-event'
   | 'reconciliation-trend'
   | 'reconciliation-status'
   | 'actuals-quality';

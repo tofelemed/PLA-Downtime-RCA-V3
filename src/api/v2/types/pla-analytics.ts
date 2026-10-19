@@ -142,3 +142,39 @@ export interface ActualsQualityView {
 
 /** `GET /reports/scope-waterfall`: the 3.5 waterfall of every period of a window and units. */
 export type ScopeWaterfallView = Omit<WaterfallView, 'view'> & { view: 'approved' | 'shown' };
+
+/**
+ * `GET /reports/lines-without-event` (QA PLA M3 re-test): a loss line of the scope that explains no event —
+ * a manual line or a calculated line without a cause — with the reason and evidence it rests on.
+ */
+export interface LineWithoutEventView {
+  lineId: string;
+  origin: 'approved' | 'run';
+  periodId: string;
+  /** plan of the period (its page lives under it); null without one */
+  planId: string | null;
+  unitId: string;
+  localDate: string;
+  shiftName: string | null;
+  periodStart: string;
+  kind: string;
+  quantity: string;
+  uom: string | null;
+  reasonCodeId: string | null;
+  /** `CODE Name` of the reason code */
+  reasonLabel: string | null;
+  /** the editor's reason for the line */
+  reason: string | null;
+  comment: string | null;
+  evidenceType: string | null;
+  evidenceRef: string | null;
+}
+
+export interface LinesWithoutEventView {
+  ledger: 'plan' | 'capacity';
+  kinds: string[];
+  /** largest first, at most 50 */
+  items: LineWithoutEventView[];
+  /** every matching line */
+  total: number;
+}

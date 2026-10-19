@@ -187,6 +187,15 @@ describe('QA planning: forms, reasons and URL state', () => {
     expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe('/planning?tab=profiles');
   });
 
+  it('Import rates asks before Cancel leaves a typed document reference (P-5 re-test)', () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    wrap(<RateImportPage />);
+    fireEvent.change(screen.getByLabelText(/^Document reference/), { target: { value: 'qa test text' } });
+    fireEvent.click(screen.getByRole('link', { name: 'Cancel' }));
+    expect(confirm).toHaveBeenCalled();
+    expect(screen.getByTestId('where').textContent).toBe('/form');
+  });
+
   it('the planning unit picker lives in the URL next to the tab', () => {
     wrap(<UnitPicker />, '/form?tab=streams');
     fireEvent.click(screen.getByRole('button', { name: 'unit:' }));

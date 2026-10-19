@@ -55,13 +55,17 @@ export interface BadActorReportView {
   groupBy: BadActorGroupBy;
   rankBy: BadActorRankBy;
   limit: number;
-  /** valuation view of the value column (the policy's default basis, SME V8) */
+  /** valuation view of the value column: the view the window's periods were approved in, else the policy's default (SME V8) */
   view: 'contribution_margin' | 'standard_cost' | 'economic_impact';
+  /** where `view` comes from */
+  viewSource?: 'approved_snapshot' | 'policy_default';
   currency: string;
   uom: string | null;
   valuationStatus: 'approved' | 'provisional';
   approvedPeriods: number;
   periods: number;
+  /** of the periods not approved, those no approved plan covers (they are not waiting for approval) */
+  uncoveredPeriods: number;
   basis: string;
   items: BadActorItemView[];
 }

@@ -20,3 +20,11 @@ export const POSTING_TREATMENT_LABELS: Record<PostingTreatment, string> = {
   other_adjustment: 'another adjustment',
   no_posting: 'no posting',
 };
+
+/** The same treatments as choices of the posting form, in sentence case (QA re-test: no lower-case options). */
+export const POSTING_TREATMENT_OPTIONS: Record<PostingTreatment, string> = {
+  correction: 'Correction',
+  estimate_change: 'Change in estimate',
+  other_adjustment: 'Other adjustment',
+  no_posting: 'No posting',
+};

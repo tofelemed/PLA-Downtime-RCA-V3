@@ -142,7 +142,10 @@ export async function expectRepairHistory(
       actorId: null,
       changedFields: ['recommendations'],
     });
-    expect(entries[0].reason).toMatch(/^Data repair: /);
+    // QA N4: the History shows the repair in its words — no "Data repair:" prefix, statuses as "Done"
+    expect(entries[0].reason).toMatch(
+      /^Recommendations completed after the investigation closed: .*Done or Cancelled/,
+    );
     await migration.down(runner);
     expect(await repairs()).toHaveLength(0);
   } finally {

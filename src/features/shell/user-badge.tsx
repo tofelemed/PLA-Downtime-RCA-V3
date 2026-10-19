@@ -15,8 +15,11 @@ export function UserBadge() {
   const plantRoles = plantRoleSummary(roles, session.user.role);
   return (
     <div className="flex items-center gap-2">
-      <EntityIcon.user className="hidden h-5 w-5 text-muted-foreground sm:block" aria-hidden />
-      <div className="hidden min-w-0 leading-tight md:block">
+      {/* QA_MASTERDATA L27: below lg the name and roles fold into the icon's tooltip so the plant scope stays readable */}
+      <span className="hidden sm:block" title={`${session.user.name} · ${plantRoles.full}`}>
+        <EntityIcon.user className="h-5 w-5 text-muted-foreground" aria-hidden />
+      </span>
+      <div className="hidden min-w-0 leading-tight lg:block">
         <div className="truncate text-sm font-medium">{session.user.name}</div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="truncate" title={plantRoles.full} data-testid="user-plant-roles">{plantRoles.short}</span>

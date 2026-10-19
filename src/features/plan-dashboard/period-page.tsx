@@ -6,6 +6,7 @@ import { PeriodDetail } from './components/period-detail';
 import { usePlanContext } from './hooks/use-plan-context';
 import { usePeriodTitle } from './hooks/use-period-title';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { periodGridTitle } from './model/period-title';
 import { isPeriodSection, periodPath, QUALITY_ONLY_SECTION } from './model/period-navigation';
 
 /** Back to the event the period was opened from (its "Periods" tab sends `listSearch`), else null. */
@@ -18,7 +19,7 @@ function eventOrigin(state: unknown): { to: string; label: string } | null {
 /** Back without an event origin: the plan's period grid, or the events for an operator (no grid access). */
 function gridBack(canViewAnalysis: boolean, planId: string | null, planName: string | undefined): { to: string; label: string } {
   if (!canViewAnalysis) return { to: '/events', label: 'Events' };
-  return { to: `/plans/${planId ?? ''}`, label: planName ? `${planName} · periods` : 'Periods' };
+  return { to: `/plans/${planId ?? ''}`, label: periodGridTitle(planName) };
 }
 
 /**

@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { EntityManager } from 'typeorm';
 import { appendAudit, AuditDraft } from '../common/audit/audit-trail';
 import { canonicalJson } from '../common/idempotency/idempotency.service';
+import { itemChangesOf } from './audit-item-changes';
 import { RcaScope } from './rca-scope';
 
 /** Entity types of the RCA field history (`audit_log.entity_type`); every row carries its case id. */
@@ -125,6 +126,11 @@ export function snapshotHash(snapshot: RcaSnapshot | null): string | null {
 
 function draftOf(scope: RcaScope, entry: RcaAuditEntry): AuditDraft {
   const fields = changedFields(entry.before, entry.after);
+  const items = itemChangesOf(
+    fields,
+    fieldsOf(entry.before),
+    fieldsOf(entry.after),
+  );
   return {
     tenantId: scope.tenantId,
     actorId: scope.userId,
@@ -141,6 +147,7 @@ function draftOf(scope: RcaScope, entry: RcaAuditEntry): AuditDraft {
       caseId: entry.caseId,
       changedFields: fields,
       values: changedValues(fields, entry.before, entry.after),
+      ...(items ? { itemChanges: items } : {}),
     },
   };
 }
@@ -149,7 +156,9 @@ function draftOf(scope: RcaScope, entry: RcaAuditEntry): AuditDraft {
  * RCA field history (item 2): every case command appends `audit_log` rows in its own transaction — who,
  * what, the changed top-level fields, hashes of the row before and after, small scalar values (status,
  * owner, due date, root-cause length) and the reason when the command has one. Large JSON content is
- * never copied: its hash and field name are enough to prove what changed. Rows are append-only.
+ * never copied: its hash and field name are enough to prove what changed; for list fields (evidence,
+ * recommendations) the titles of the items added, removed or edited and the edited field names are kept
+ * (`itemChanges`, QA L8). Rows are append-only.
  */
 export function recordRcaAudit(
   manager: EntityManager,

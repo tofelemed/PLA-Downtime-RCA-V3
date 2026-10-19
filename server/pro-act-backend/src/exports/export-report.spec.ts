@@ -327,6 +327,20 @@ describe('export report rows (plan 2.9, AN03)', () => {
     ).toBeNull();
   });
 
+  it('QA re-test N9: an uncoded stop-caused line names its reason "Not coded"; other lines stay empty', () => {
+    const rows = reportRows('loss_lines', source(), {
+      requestedByName: null,
+      plantTimezone: null,
+      reasonCodes: {},
+    });
+    const col = (name: string) => REPORT_COLUMNS.loss_lines.indexOf(name);
+    expect(rows[0][col('cause_event_id')]).toBe('event-1');
+    expect(rows[0][col('reason_code')]).toBeNull();
+    expect(rows[0][col('reason_name')]).toBe('Not coded');
+    expect(rows[0][col('reason')]).toBeNull();
+    expect(rows[1][col('reason_name')]).toBeNull();
+  });
+
   it('header names status, scope, filters and the source count', () => {
     const records = headerRecords({
       jobId: 'job-1',

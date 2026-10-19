@@ -86,7 +86,8 @@ export interface ProductionEventView {
   quantityUom: string | null;
   /** SME E3: disposition of a quality_loss event's tonnes (downgrade / scrap / rework); absent / null = none */
   dispositionClass?: string | null;
-  cost: string | null;
+  /** absent for a caller without the money capability (operators, QA re-test 2026-10-19) */
+  cost?: string | null;
   value: string | null;
   occurrenceId: string;
   supersededByEventId: string | null;
@@ -213,14 +214,20 @@ export interface AttributedPeriodView {
   /** approved = the published revision's lines; provisional = the open revision's run proposals */
   status: 'approved' | 'provisional';
   quantities: AttributedQuantityView[];
-  values: AttributedValueView[];
+  /** absent for a caller without the money capability (operators, QA re-test 2026-10-19) */
+  values?: AttributedValueView[];
 }
 
 /** `GET /v2/production-events/{id}/attributed-losses` (backend `EventAttributedLossesV2View`). */
 export interface EventAttributedLossesView {
   eventId: string;
-  /** the valuation view of `values` (the tenant policy's default basis) */
-  valuationView: string;
+  /**
+   * the valuation view of `values`: the view frozen when the event's periods were approved, else the tenant
+   * policy's default basis; absent without the money capability
+   */
+  valuationView?: string;
+  /** where `valuationView` comes from */
+  valuationViewSource?: 'approved_snapshot' | 'policy_default';
   items: AttributedPeriodView[];
   /** more periods than the server bound (200) carried this event; the earliest are listed */
   truncated: boolean;

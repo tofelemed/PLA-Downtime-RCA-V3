@@ -8,6 +8,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Section } from '@/features/ux-kit/page-layout';
 import type { PlanningRefs } from '../hooks/use-planning-refs';
+import { usePlanTargetUom } from '../hooks/use-plan-target-uom';
 import { isOpenVersion } from '../model/plan-form';
 import { GenerationProgress } from './generation-progress';
 import { OpenVersionActions } from './open-version-actions';
@@ -35,6 +36,18 @@ function FrozenVersion({ version }: { version: PlanVersionView }) {
   );
 }
 
+/** Summary and slices of a loaded version, with the targets' unit from its profiles. */
+function VersionFigures({ plan, version, refs }: { plan: PlanView; version: PlanVersionView; refs: PlanningRefs }) {
+  const uom = usePlanTargetUom(version);
+  return (
+    <>
+      <PlanVersionSummary version={version} timezone={refs.timezone} uom={uom} />
+      <PlanReviewNote plan={plan} version={version} timezone={refs.timezone} />
+      <SlicesTable version={version} refs={refs} uom={uom} />
+    </>
+  );
+}
+
 /** The plan's current version (with slices), what can be done with it, and its history. */
 export function PlanDetail({ plan, refs }: PlanDetailProps) {
   const current = usePlanVersion(plan.id, plan.currentVersion);
@@ -47,9 +60,7 @@ export function PlanDetail({ plan, refs }: PlanDetailProps) {
         <DataState state={dataStateOf(current)} error={current.error}>
           {version && (
             <div className="space-y-4">
-              <PlanVersionSummary version={version} timezone={tz} />
-              <PlanReviewNote plan={plan} version={version} timezone={tz} />
-              <SlicesTable version={version} refs={refs} />
+              <VersionFigures plan={plan} version={version} refs={refs} />
               {jobId && <GenerationProgress jobId={jobId} />}
               {isOpenVersion(version) ? (
                 <OpenVersionActions key={`${version.id}-${version.rowVersion}`} version={version} timezone={tz} productName={refs.productName} onGenerated={setJobId} />

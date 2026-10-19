@@ -20,13 +20,19 @@ function withOthers(scope: AnalyticsScope, current: URLSearchParams, defaults: S
 /**
  * The analytics scope in the URL (plan 3.6 step 1). The default window is anchored to the instant the
  * page was opened and written to the URL once, so a reload or a shared link shows the same window.
- * `defaults.approvedByDefault`: the Reports page shows approved figures first (SME R12).
+ * `defaults.approvedByDefault`: the Reports page shows approved figures first (SME R12); `defaults.productionDays`:
+ * its rolling windows are whole production days.
  */
 export function useAnalyticsScope(defaults: ScopeDefaults = {}): AnalyticsScopeState {
   const [params, setParams] = useSearchParams();
   const [openedAt] = useState(() => Date.now());
   const approvedByDefault = defaults.approvedByDefault ?? false;
-  const scope = useMemo(() => parseScope(params, openedAt, { approvedByDefault }), [params, openedAt, approvedByDefault]);
+  const zone = defaults.productionDays?.timeZone;
+  const dayStart = defaults.productionDays?.dayStart;
+  const scope = useMemo(
+    () => parseScope(params, openedAt, { approvedByDefault, productionDays: zone && dayStart ? { timeZone: zone, dayStart } : undefined }),
+    [params, openedAt, approvedByDefault, zone, dayStart],
+  );
 
   useEffect(() => {
     if (!params.get('from') || !params.get('to')) setParams((current) => withOthers(scope, current, { approvedByDefault }), { replace: true });

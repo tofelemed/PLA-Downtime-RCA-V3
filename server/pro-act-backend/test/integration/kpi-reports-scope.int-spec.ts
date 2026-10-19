@@ -141,6 +141,25 @@ describe('KPI reports and the unit scope (plan 2.7)', () => {
     expect((long.body as ApiError).code).toBe('WINDOW_TOO_LARGE');
   });
 
+  it('OEE groups say when no approved plan covers their periods (QA re-test N4); product groups do not', async () => {
+    type Groups = {
+      data: { groups: Array<{ key: string | null; noApprovedPlan?: boolean }> };
+    };
+    const byUnit = (
+      await env.get(`reports/oee?${window}&groupBy=unit`).expect(200)
+    ).body as Groups;
+    const flag = (unitId: string) =>
+      byUnit.data.groups.find((g) => g.key === unitId)?.noApprovedPlan;
+    expect(flag(env.world.unitA1)).toBe(false);
+    expect(flag(env.world.unitA3)).toBe(true);
+    const byProduct = (
+      await env.get(`reports/oee?${window}&groupBy=product`).expect(200)
+    ).body as Groups;
+    expect(
+      byProduct.data.groups.every((g) => g.noApprovedPlan === undefined),
+    ).toBe(true);
+  });
+
   it('reads are side-effect free: no table changes during the report GETs', async () => {
     const before = await writeFingerprint();
     for (const report of REPORTS) {

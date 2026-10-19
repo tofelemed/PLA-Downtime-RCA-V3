@@ -10891,7 +10891,7 @@
     },
     "/api/v2/production-events/{id}/attributed-losses": {
       "get": {
-        "description": "Quantities per kind and unit of measure and the value of the tenant default valuation view per currency (amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are left out. At most 200 periods, earliest first (`truncated` when cut). 404 for an event outside the tenant or the caller scope.",
+        "description": "Quantities per kind and unit of measure and the value per currency in the valuation view frozen when the event’s periods were approved (the tenant default view when none froze one or they differ; `valuationViewSource`) (amount null when any line is unvalued). Loss kinds only; periods of units outside the caller scope are left out. At most 200 periods, earliest first (`truncated` when cut). 404 for an event outside the tenant or the caller scope.",
         "operationId": "EventAttributedLossesV2Controller_attributedLosses_v2",
         "parameters": [
           {
@@ -13165,6 +13165,126 @@
         ]
       }
     },
+    "/api/v2/fx-rates/{id}/source": {
+      "patch": {
+        "description": "Corrects descriptive text only (QA re-test N3): figures, validity, state and approval are unchanged, so nothing is revalued and an approved version stays approved; the change is in the audit log. Finance maintainers with a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); foreign ids are 404.",
+        "operationId": "FinanceTextCorrectionsV2Controller_fxSource_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FxSourceCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Correct the source text of an FX rate version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/demand-statuses/{id}/evidence": {
+      "patch": {
+        "description": "Corrects descriptive text only (QA re-test N3): figures, validity, state and approval are unchanged, so nothing is revalued and an approved version stays approved; the change is in the audit log. Finance maintainers with a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); foreign ids are 404.",
+        "operationId": "FinanceTextCorrectionsV2Controller_demandEvidence_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandEvidenceCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Correct the evidence text of a demand status version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
+    "/api/v2/valuation-policies/{id}/text": {
+      "patch": {
+        "description": "Corrects descriptive text only (QA re-test N3): figures, validity, state and approval are unchanged, so nothing is revalued and an approved version stays approved; the change is in the audit log. Finance maintainers with a tenant-wide grant (403 TENANT_SCOPE_REQUIRED); foreign ids are 404. 422 NOTHING_TO_CORRECT (empty body), NOT_BACKDATED (backdateReason on a version that was not backdated).",
+        "operationId": "FinanceTextCorrectionsV2Controller_policyText_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyTextCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Correct the notes or backdate reason of a valuation policy version",
+        "tags": [
+          "v2 · Valuation"
+        ]
+      }
+    },
     "/api/v2/valuation-policies": {
       "get": {
         "operationId": "ValuationPoliciesV2Controller_list_v2",
@@ -13448,7 +13568,7 @@
     },
     "/api/v2/reports/bad-actors": {
       "get": {
-        "description": "CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the policy default view, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only.",
+        "description": "CA8: the rolling window of the tenant RCA policy (pilot 90 days) ending at the end of `month` in the plant time zone. Approved lost quantity and value come from approved periods only (value in the view frozen when the periods were approved, else the policy default view — `viewSource`, SME V8; null when not valued, never zero; fxProvisional when a provisional FX rate converted it); stops = unplanned stops and failure work orders. Ranked on the server, top `limit` (≤ 50). Each item carries the cumulative bad-actor trigger state of its asset (fired, over_threshold, below, off). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. A month key whose year belongs to the other calendar (1405-07 on a Gregorian plant) is 422 MONTH_KEY_AMBIGUOUS.",
         "operationId": "BadActorReportV2Controller_badActors_v2",
         "parameters": [
           {
@@ -14592,7 +14712,7 @@
     },
     "/api/v2/rcas/{id}/history": {
       "get": {
-        "description": "Every command on the case, its actions, links, analysis tools and causes: who, when, the action, the changed top-level fields, small before / after values (status, owner, due date, root-cause length), the reason, and hashes of the row before and after. Keyset pages (cursor, limit); 404 outside your tenant and units.",
+        "description": "Every command on the case, its actions, links, analysis tools and causes: who, when, the action, the changed top-level fields, small before / after values (status, owner, due date, root-cause length), the reason, and hashes of the row before and after. Keyset pages (cursor, limit) with `totalCount`, the number of entries of the case; 404 outside your tenant and units.",
         "operationId": "RcaHistoryV2Controller_list_v2",
         "parameters": [
           {
@@ -17008,6 +17128,102 @@
           }
         ],
         "summary": "Loss lines per reason, impact, OEE component, kind or unit: quantity per unit of measure or one valuation view per currency, largest first with cumulative share",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
+    },
+    "/api/v2/reports/lines-without-event": {
+      "get": {
+        "description": "Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only. Same lines as GET /reports/loss-tree (approved lines of an approved revision, else the shown run's lines); the 50 largest are listed, total counts every one. Lets a drill-down whose loss has no event show the lines instead of an empty event list.",
+        "operationId": "PlaReportsV2Controller_linesWithoutEvent_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "ledger",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "plan",
+              "enum": [
+                "plan",
+                "capacity"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "kinds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "schedule_exclusion",
+                  "availability",
+                  "performance",
+                  "quality",
+                  "transition_allowance",
+                  "transition_excess",
+                  "bridge",
+                  "unaccounted_classified"
+                ]
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Loss lines that explain no event (manual lines and calculated lines without a cause), largest first, with reason, comment and evidence",
         "tags": [
           "v2 · PLA analytics"
         ]
@@ -28648,6 +28864,44 @@
           "status",
           "evidence"
         ]
+      },
+      "FxSourceCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "DemandEvidenceCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "evidence": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "evidence"
+        ]
+      },
+      "PolicyTextCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 2000
+          },
+          "backdateReason": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
       },
       "ValuationPolicyCreateDto": {
         "type": "object",

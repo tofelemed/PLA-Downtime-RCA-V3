@@ -44,6 +44,9 @@ export function WindowSelect({ unitIds, label, bounds, onChange }: WindowSelectP
   const { instances, current } = useShiftWindows(unitId);
   const shiftLabel = (shift: ShiftInstanceView) => `${formatOperationalDate(shift.localDate, preference)} ${shift.shiftName}`;
   const hint = shiftHint(unitIds.length);
+  // QA L1: the current preset is the selected option, never repeated as a placeholder
+  const shownPreset = WINDOW_PRESETS.find((entry) => entry.label === label);
+  const selected = shownPreset ? `preset:${shownPreset.key}` : '';
 
   const choose = (value: string) => {
     const preset = WINDOW_PRESETS.find((entry) => `preset:${entry.key}` === value);
@@ -61,13 +64,15 @@ export function WindowSelect({ unitIds, label, bounds, onChange }: WindowSelectP
         id="event-window"
         data-testid="event-window"
         className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-        value=""
+        value={selected}
         aria-describedby={hint ? 'event-window-hint' : undefined}
         onChange={(event) => choose(event.target.value)}
       >
-        <option value="" disabled>
-          {label}
-        </option>
+        {!shownPreset && (
+          <option value="" disabled>
+            {label}
+          </option>
+        )}
         {WINDOW_PRESETS.map((preset) => (
           <option key={preset.key} value={`preset:${preset.key}`}>
             {preset.label}

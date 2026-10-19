@@ -1,6 +1,7 @@
 import type { QueryOf } from '../schema-types';
 import type {
   ActualsQualityView,
+  LinesWithoutEventView,
   LossTreeView,
   ReconciliationStatusView,
   ReconciliationTrendView,
@@ -31,6 +32,13 @@ export type EventLossQuery = ReportQueryBase & { groupBy: 'event'; metric: 'qty'
 
 export function useEventLosses(query: EventLossQuery | null, tz?: string) {
   return useReport<LossTreeView>('loss-tree', query, tz);
+}
+
+/** The scope's loss lines that explain no event, of some loss kinds (QA PLA M3 re-test: a drill with no event). */
+export type LinesWithoutEventQuery = ReportQueryBase & { ledger: 'plan' | 'capacity'; kinds: string[] };
+
+export function useLinesWithoutEvent(query: LinesWithoutEventQuery | null, tz?: string) {
+  return useReport<LinesWithoutEventView>('lines-without-event', query, tz);
 }
 
 export function useReconciliationTrend(query: ReconciliationTrendQuery | null, tz?: string) {

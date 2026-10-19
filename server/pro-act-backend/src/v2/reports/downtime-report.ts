@@ -25,6 +25,7 @@ import {
   TIME_GROUPS,
 } from './report-sql';
 import { ReportScope } from './report-scope';
+import { dataCoverage } from './data-coverage';
 
 /** Period-level downtime KPIs of the whole scope (KPI05 / KPI06), summed in SQL (AN03). */
 const SUMMARY_METRICS: readonly KpiMetric[] = [
@@ -177,6 +178,7 @@ export async function summaryOf(
     groupSql: `'total'`,
     metrics: SUMMARY_METRICS,
     level: 'period',
+    excludeUnknownTime: true,
   });
   const total = terms.get('total');
   return SUMMARY_METRICS.map((m) => aggregateView(m, total?.get(m)));
@@ -219,6 +221,7 @@ export async function downtimeReport(
     parentReasonId: query.parentReasonId ?? null,
     ...groups,
     summary: await summaryOf(manager, scope),
+    dataCoverage: await dataCoverage(manager, scope),
     calculationRunIds: stats.runIds,
   };
   return reportEnvelope(data, {

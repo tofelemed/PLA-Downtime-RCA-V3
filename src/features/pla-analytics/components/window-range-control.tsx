@@ -7,6 +7,7 @@ import { UiIcon } from '@/lib/icons';
 import { CHOSEN_DATES, presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
 import { windowRangeText } from '../model/window-range';
 import { PlantDaysInput } from './plant-days-input';
+import { useProductionDayStart } from '../hooks/use-production-day-start';
 
 export interface WindowRangeControlProps {
   scope: AnalyticsScope;
@@ -20,7 +21,9 @@ export interface WindowRangeControlProps {
  */
 export function WindowRangeControl({ scope, timeZone, onChange }: WindowRangeControlProps) {
   const pref = useCalendarPreference();
+  const { dayStart } = useProductionDayStart();
   const [open, setOpen] = useState(false);
+  const text = windowRangeText(scope, scope.windowLabel, { timeZone, dayStart }, pref);
   const choosePreset = (hours: number, label: string) => {
     onChange({ ...presetWindowOf(hours), windowLabel: label });
     setOpen(false);
@@ -28,9 +31,9 @@ export function WindowRangeControl({ scope, timeZone, onChange }: WindowRangeCon
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="h-9 gap-1" data-testid="pla-window" aria-label={`Window: ${windowRangeText(scope, scope.windowLabel, timeZone, pref)}`}>
+        <Button type="button" variant="outline" size="sm" className="h-9 gap-1" data-testid="pla-window" aria-label={`Window: ${text}`}>
           <span className="text-muted-foreground">Window</span>
-          <span className="font-medium">{windowRangeText(scope, scope.windowLabel, timeZone, pref)}</span>
+          <span className="font-medium">{text}</span>
           <UiIcon.chevronDown aria-hidden="true" className="h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -42,7 +45,7 @@ export function WindowRangeControl({ scope, timeZone, onChange }: WindowRangeCon
             </Button>
           ))}
         </div>
-        <PlantDaysInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={timeZone} onChange={(range) => onChange({ ...range, windowLabel: CHOSEN_DATES })} />
+        <PlantDaysInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={timeZone} dayStart={dayStart} onChange={(range) => onChange({ ...range, windowLabel: CHOSEN_DATES })} />
       </PopoverContent>
     </Popover>
   );

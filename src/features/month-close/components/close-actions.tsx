@@ -4,6 +4,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { useCalendarPreference } from '@/lib/dates';
+import { closeBlockedReason } from '../model/close-blockers';
 import { monthLabelOf } from '../model/month-label';
 import { CloseMonthEnd } from './close-month-end';
 import { StepConfirm } from './step-confirm';
@@ -57,12 +58,13 @@ export function CloseActions({ view, only }: { view: MonthCloseView; only?: read
   const signedQuantities = !caps.isSuperAdmin && userId !== null && view.signOffs.quantitiesClosedBy?.id === userId;
   const busy = command.isPending;
   const month = monthLabelOf(view.monthKey, view.calendar, useCalendarPreference().digits);
+  const blockedWhy = closeBlockedReason(view);
   const problem = command.error ? <FriendlyErrorAlert error={command.error} /> : null;
   return (
     <div id="close-actions" className="scroll-mt-24 space-y-2" data-testid="close-actions">
       <div className="flex flex-wrap gap-2">
         {steps.close && (
-          <StepConfirm trigger="Close quantities…" testId="step-close-quantities" disabled={busy || !view.prerequisites.met} title={`Close the quantities of ${month}?`} description="You confirm every period of the month is approved. Finance signs off next; nobody can revise the month's periods until it is reopened." confirmLabel="Close quantities" onConfirm={run('close-quantities')}>
+          <StepConfirm trigger="Close quantities…" testId="step-close-quantities" disabled={busy || !view.prerequisites.met} disabledReason={blockedWhy} title={`Close the quantities of ${month}?`} description="You confirm every period of the month is approved. Finance signs off next; nobody can revise the month's periods until it is reopened." confirmLabel="Close quantities" onConfirm={run('close-quantities')}>
             {problem}
           </StepConfirm>
         )}
@@ -88,7 +90,7 @@ export function CloseActions({ view, only }: { view: MonthCloseView; only?: read
         )}
       </div>
       {steps.close && <CloseMonthEnd view={view} />}
-      {steps.close && !view.prerequisites.met && <p className="text-sm text-muted-foreground" data-testid="close-blocked">Resolve the blocking prerequisites shown above before closing the quantities.</p>}
+      {steps.close && !view.prerequisites.met && blockedWhy && <p className="text-sm text-muted-foreground" data-testid="close-blocked">{blockedWhy}</p>}
       {steps.signOff && signedQuantities && <p className="text-sm text-muted-foreground" data-testid="close-sod">You closed the quantities; finance sign-off needs someone else.</p>}
       {problem}
     </div>

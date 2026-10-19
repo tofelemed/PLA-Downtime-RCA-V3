@@ -12,10 +12,13 @@ import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, reasonText, SU
 import { ControllableSwitch } from '@/features/downtime-analysis/components/controllable-switch';
 import { AnalyticsCard } from '../components/analytics-card';
 import { repeatQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { SCHEDULED_AVAILABILITY_CAPTION } from './availability-captions';
 import { assetStopsHref, downtimeHref, plaHref } from './dashboard-links';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
-const DASHBOARD_TILES = SUMMARY_TILES.filter((tile) => ['downtime_total', 'downtime_unplanned', 'stop_count', 'scheduled_availability'].includes(tile.metric));
+const DASHBOARD_TILES = SUMMARY_TILES.filter((tile) => ['downtime_total', 'downtime_unplanned', 'stop_count', 'scheduled_availability'].includes(tile.metric)).map((tile) =>
+  tile.metric === 'scheduled_availability' ? { ...tile, note: SCHEDULED_AVAILABILITY_CAPTION } : tile,
+);
 const TOP = 5;
 
 function TileValue({ spec, view }: { spec: TileSpec; view: KpiAggregateView }) {

@@ -118,7 +118,9 @@ describe('G-2(a) periods of an event link to their workspace', () => {
     expect(links[0]).toHaveAttribute('href', '/plans/plan-1/periods/p1');
     expect(screen.getAllByTestId('impacted-period')[1]).toHaveTextContent('Night');
     // owner finding 2: the period's workflow state in the shared wording, not the display-only readiness
-    expect(screen.getAllByTestId('impacted-period-workflow').map((badge) => badge.textContent)).toEqual(['In review', 'Not calculated']);
+    expect(screen.getAllByTestId('impacted-period-workflow').map((badge) => badge.textContent)).toEqual(['In review']);
+    // owner decision 2026-10-19: a period with no plan and no accounting names the reason
+    expect(screen.getAllByTestId('impacted-period')[1]).toHaveTextContent('No approved plan covers this period');
     fireEvent.click(links[0]);
     expect(JSON.parse(screen.getByTestId('probe').textContent ?? '{}')).toEqual({ path: '/plans/plan-1/periods/p1', search: '', state: { listSearch: '/events/e1?tab=periods' } });
   });
@@ -167,6 +169,25 @@ describe('G-2(b) attributed losses of an event', () => {
     expect(provisional.getByTestId('attributed-value')).toHaveTextContent('Not fully valued in USD (2 of 3 lines without a value)');
     expect(screen.getByTestId('attributed-valuation-view')).toHaveTextContent('Contribution margin');
     expect(screen.queryByTestId('attributed-truncated')).toBeNull();
+  });
+
+  it('QA re-test N3 / N5: an operator gets quantities only, no value and no value basis (the server omits both)', () => {
+    actAs('operator');
+    const { values: _values, ...withoutMoney } = LOSSES.items[0];
+    const { valuationView: _view, ...rest } = LOSSES;
+    losses.query = stub({ ...rest, items: [withoutMoney] });
+    wrap(<AttributedLossesCard eventId="e1" />);
+    expect(screen.getByTestId('attributed-quantity')).toHaveTextContent('Availability: 12.50 t');
+    expect(screen.queryByTestId('attributed-value')).toBeNull();
+    expect(screen.queryByTestId('attributed-no-value')).toBeNull();
+    expect(screen.queryByTestId('attributed-valuation-view')).toBeNull();
+    actAs('SuperAdmin');
+  });
+
+  it('names the view the periods were approved in with the shared value-basis label', () => {
+    losses.query = stub({ ...LOSSES, valuationView: 'economic_impact', valuationViewSource: 'approved_snapshot' });
+    wrap(<AttributedLossesCard eventId="e1" />);
+    expect(screen.getByTestId('attributed-valuation-view').textContent).toMatch(/^Value basis: Economic impact/);
   });
 
   it('shows IRR when the user switched the display currency, naming a provisional exchange rate', () => {

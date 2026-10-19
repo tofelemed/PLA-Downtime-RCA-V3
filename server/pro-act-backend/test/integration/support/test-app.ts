@@ -28,6 +28,7 @@ import { RequestContextMiddleware } from '../../../src/common/context/request-co
 import { configureHttpApp } from '../../../src/common/http/configure-http-app';
 import { CorrelationIdMiddleware } from '../../../src/common/http/correlation-id.middleware';
 import { IdempotencyInterceptor } from '../../../src/common/idempotency/idempotency.interceptor';
+import { MoneyRedactionInterceptor } from '../../../src/auth/money/money-redaction.interceptor';
 import { IdempotencyModule } from '../../../src/common/idempotency/idempotency.module';
 import { UserIpThrottlerGuard } from '../../../src/common/throttling/user-ip-throttler.guard';
 import { RealtimeModule } from '../../../src/realtime/realtime.module';
@@ -117,6 +118,7 @@ export async function createIntegrationApp(
       { provide: APP_GUARD, useClass: WriteAccessGuard },
       { provide: APP_GUARD, useClass: TenantBindingGuard },
       { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
+      { provide: APP_INTERCEPTOR, useClass: MoneyRedactionInterceptor },
     ],
   })
     .overrideProvider(Clock)

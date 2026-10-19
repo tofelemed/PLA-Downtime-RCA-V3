@@ -62,9 +62,9 @@ test.describe('Reliability engineer — RCA trigger policy (journey 8)', () => {
     await expect(stopCard(page, stopId)).toBeVisible();
     await openStop(page, stopId);
     const panel = page.getByTestId('event-rca-panel');
-    await expect(panel.getByTestId('rca-recommendations')).toContainText('RCA recommended: Long unplanned stop · RCA policy v');
+    await expect(panel.getByTestId('rca-recommendations')).toContainText('Investigation recommended: Long unplanned stop · RCA policy v');
     await expect(panel.getByTestId('rca-recommendations')).toContainText('provisional (event still open)');
-    await expect(panel.getByTestId('rca-recommendations').getByText('RCA recommended')).toHaveCount(1);
+    await expect(panel.getByTestId('rca-recommendations').getByText('Investigation recommended')).toHaveCount(1);
     await page.screenshot({ path: test.info().outputPath('t1-long-stop-recommended.png'), fullPage: true });
   });
 

@@ -120,6 +120,22 @@ describe('change proposals panel: manual correction (SME R4)', () => {
     expect(post?.body).toEqual({ periodId: 'per-1', approvedRevision: 1, reason: 'Demo: lab re-test', evidenceType: 'lot_sample', evidenceRef: 'LOT-42' });
   });
 
+  it('QA re-test: an open month offers no proposal (the server refuses MONTH_OPEN) but says how to correct', async () => {
+    actAs('production_accountant', 'accountant-1');
+    renderPanel({ ...VIEW, monthClose: { state: 'open', monthKey: null, correctionPath: 'direct' } } as ReconciliationView);
+    expect(await screen.findByTestId('correction-direct')).toHaveTextContent('Reopen for revision');
+    expect(screen.queryByTestId('propose-correction')).toBeNull();
+  });
+
+  it('QA re-test: in a locked month the dialog speaks of the locked month, without the SuperAdmin clause for others', async () => {
+    actAs('production_accountant', 'accountant-1');
+    renderPanel({ ...VIEW, monthClose: { state: 'locked', monthKey: '1405-07', correctionPath: 'proposal' } } as ReconciliationView);
+    fireEvent.click(await screen.findByTestId('propose-correction'));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toHaveTextContent('The month is locked');
+    expect(dialog).not.toHaveTextContent('SuperAdmin');
+  });
+
   it('a production engineer cannot propose; nothing is offered while a proposal is open', async () => {
     actAs('production_engineer', 'engineer-1');
     renderPanel();

@@ -10,7 +10,10 @@ export const CASE_REPAIRED_ACTION = 'rca_case.repaired';
 export interface CaseRepair {
   /** the repairing migration's name; marks its entries (`detail.repair`) so up is idempotent and down exact */
   name: string;
-  /** what was repaired and why, in words a reader of the History understands */
+  /**
+   * what was repaired and why, in words a reader of the History understands: no "Data repair:" prefix (the
+   * entry's title says it) and statuses as the screens name them ("Done"); QA N4
+   */
   reason: string;
   /** top-level fields of the case the repair changed (`recommendations`, …) */
   changedFields: readonly string[];

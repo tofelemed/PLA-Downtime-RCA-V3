@@ -6,6 +6,7 @@ import {
   PendingPeriod,
   UncertifiedDay,
 } from '../../close/month-prerequisites';
+import { localDateOf } from '../../close/close-calendar';
 import { addDays } from '../../domain/calendar/wall-clock';
 import { nextMonth, previousMonth } from '../../domain/close/financial-month';
 import {
@@ -88,6 +89,8 @@ export interface MonthCloseV2View {
     /** the month is over in the plant time zone (its last shift ended): the quantity close needs it */
     monthEnded: boolean;
     monthEndsAt: string;
+    /** the month's first plant-local date has begun (additive, QA re-test: a future month says so) */
+    monthStarted: boolean;
     /** production days (unit × date) and the certified ones (owner decision: day certification) */
     days: number;
     certifiedDays: number;
@@ -155,6 +158,15 @@ function deadlinesOf(
   };
 }
 
+/** Whether the month has begun: the plant-local date of `asOf` is on or after its first date. */
+export function monthStartedAt(
+  asOf: Date,
+  firstDate: string,
+  timezone: string,
+): boolean {
+  return localDateOf(asOf, timezone) >= firstDate;
+}
+
 function prerequisitesOf(
   snapshot: MonthCloseSnapshot,
 ): MonthCloseV2View['prerequisites'] {
@@ -169,6 +181,11 @@ function prerequisitesOf(
     ...p,
     monthEnded,
     monthEndsAt: snapshot.endsAt.toISOString(),
+    monthStarted: monthStartedAt(
+      snapshot.asOf,
+      snapshot.context.month.firstDate,
+      snapshot.context.calendar.timezone,
+    ),
   };
 }
 

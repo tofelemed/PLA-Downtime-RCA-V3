@@ -101,7 +101,7 @@ describe('RCA knowledge base v2 screen', () => {
     reply = (call) => json(200, list(call.url.pathname === '/api/v2/rca-knowledge' ? [ENTRY] : []));
     wrap(<RcaKnowledgePage />);
     expect(await screen.findByText('Extruder coupling failures')).toBeTruthy();
-    expect(screen.getByTestId('quality-score').textContent).toBe('Quality 77');
+    expect(screen.getByTestId('quality-score').textContent).toBe('Record quality 77 / 100');
     expect(knowledgeCalls()[0].url.searchParams.get('limit')).toBe('20');
     fireEvent.change(screen.getByLabelText('Search knowledge entries'), { target: { value: 'coupling' } });
     await waitFor(() => expect(knowledgeCalls().some((call) => call.url.searchParams.get('q') === 'coupling')).toBe(true));

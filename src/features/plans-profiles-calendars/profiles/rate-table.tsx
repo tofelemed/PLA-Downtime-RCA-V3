@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useProfileRates } from '@/api/v2/queries/profiles';
@@ -28,9 +28,16 @@ function byKind(rates: readonly RateView[]): RateView[] {
   return [...rates].sort((a, b) => (order.get(a.rateKind) ?? 99) - (order.get(b.rateKind) ?? 99) || a.version - b.version);
 }
 
-function columnsOf(profile: ProfileView, timezone: string): DataTableColumn<RateView>[] {
+const rowMarker = (r: RateView, children: ReactNode) => (
+  <div data-testid="rate-row" data-kind={r.rateKind} data-version={r.version} data-state={r.state}>
+    {children}
+  </div>
+);
+
+/** Without approve rights the Actions column would stay empty (QA planning): it is left out, and the row marker moves to State. */
+function columnsOf(profile: ProfileView, timezone: string, withActions: boolean): DataTableColumn<RateView>[] {
   const uom = profile.quantityUom;
-  return [
+  const columns: DataTableColumn<RateView>[] = [
     { id: 'kind', header: 'Kind', cell: (r) => labelOf(RATE_KIND_LABELS, r.rateKind) },
     { id: 'version', header: 'Version', nowrap: true, cell: (r) => `Version ${r.version}${r.source === 'import' ? ' · imported' : ''}` },
     { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (r) => <Quantity value={r.rate} uom={uom ? `${uom}/${r.timebase}` : null} /> },
@@ -45,15 +52,15 @@ function columnsOf(profile: ProfileView, timezone: string): DataTableColumn<Rate
         </span>
       ),
     },
-    { id: 'state', header: 'State', cell: (r) => <VersionStateBadge state={r.state} /> },
+    { id: 'state', header: 'State', cell: (r) => (withActions ? <VersionStateBadge state={r.state} /> : rowMarker(r, <VersionStateBadge state={r.state} />)) },
+  ];
+  if (!withActions) return columns;
+  return [
+    ...columns,
     {
       id: 'actions',
       header: 'Actions',
-      cell: (r) => (
-        <div data-testid="rate-row" data-kind={r.rateKind} data-version={r.version} data-state={r.state}>
-          <VersionActions resource="rates" id={r.id} state={r.state} timezone={timezone} testId="rate-actions" authorId={r.createdBy} />
-        </div>
-      ),
+      cell: (r) => rowMarker(r, <VersionActions resource="rates" id={r.id} state={r.state} timezone={timezone} testId="rate-actions" authorId={r.createdBy} />),
     },
   ];
 }
@@ -64,7 +71,7 @@ function columnsOf(profile: ProfileView, timezone: string): DataTableColumn<Rate
  * A deep link (`#rate-<id>`) opens the page holding the version, sought on the server when not loaded.
  */
 export function RateTable({ profile, timezone }: RateTableProps) {
-  const { canWriteProfiles } = useCapabilities();
+  const { canWriteProfiles, canApproveProfiles } = useCapabilities();
   const anchor = useAnchorFocus('rate-');
   const rates = useProfileRates(profile.id, anchor.focus);
   const [adding, setAdding] = useState(false);
@@ -83,7 +90,7 @@ export function RateTable({ profile, timezone }: RateTableProps) {
         {adding && <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Rate versions"
-          columns={columnsOf(profile, timezone)}
+          columns={columnsOf(profile, timezone, canApproveProfiles)}
           rows={items}
           getRowKey={(r) => r.id}
           getRowAnchor={(r) => `rate-${r.id}`}

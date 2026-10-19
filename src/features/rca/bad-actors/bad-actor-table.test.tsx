@@ -21,7 +21,7 @@ const item = (key: string, failureMode: string): BadActorItemView => ({
 
 const REPORT: BadActorReportView = {
   month: '2026-10', calendar: 'gregorian', from: '2026-08-03T00:00:00.000Z', to: '2026-11-01T00:00:00.000Z', windowDays: 90, groupBy: 'failure_mode', rankBy: 'quantity', limit: 5,
-  view: 'contribution_margin', currency: 'USD', uom: 't', valuationStatus: 'approved', approvedPeriods: 3, periods: 3, basis: 'approved plan lines',
+  view: 'contribution_margin', currency: 'USD', uom: 't', valuationStatus: 'approved', approvedPeriods: 3, periods: 3, uncoveredPeriods: 0, basis: 'approved plan lines',
   items: [item('a1|mode:gearbox_failure', 'mode:gearbox_failure'), item('a1|mode:seal leak', 'mode:seal leak')],
 };
 

@@ -1,4 +1,5 @@
 import type { RcaHistoryEntryView } from '@/api/v2/types/rca-history';
+import { fieldChangeText } from '../../model/history-item-changes';
 import { historyActionLabel, historyActor, historyFieldLabel, historyValueLines, visibleChangedFields, type HistoryResolvers } from '../../model/history-entry';
 
 export interface HistoryEntryItemProps {
@@ -32,7 +33,7 @@ export function HistoryEntryItem({ entry, resolve, when }: HistoryEntryItemProps
       )}
       {others.length > 0 && (
         <p className="text-muted-foreground" data-testid="history-fields">
-          Changed: {others.map(historyFieldLabel).join(', ')}
+          Changed: {others.map((field) => fieldChangeText(entry, field, historyFieldLabel(field))).join(' · ')}
         </p>
       )}
       {entry.reason && (

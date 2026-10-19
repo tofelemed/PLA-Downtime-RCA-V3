@@ -39,8 +39,9 @@ function LegacyCost({ profile }: { profile: ProfileView }) {
   );
 }
 
-function columnsOf(timezone: string): DataTableColumn<ValuationRateView>[] {
-  return [
+/** The Actions column only for those who can act (approve / retire): otherwise it would stay empty. */
+function columnsOf(timezone: string, withActions: boolean): DataTableColumn<ValuationRateView>[] {
+  const columns: DataTableColumn<ValuationRateView>[] = [
     { id: 'basis', header: 'Basis', cell: (r) => <span data-testid="valuation-row">{labelOf(VALUATION_BASIS_LABELS, r.basis)}</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (r) => `Version ${r.version}` },
     { id: 'value', header: 'Value', align: 'right', nowrap: true, cell: (r) => <Quantity value={r.value} uom={r.currency ? `${r.currency}/${r.perUom}` : `${r.perUom}/${r.perUom}`} /> },
@@ -55,13 +56,14 @@ function columnsOf(timezone: string): DataTableColumn<ValuationRateView>[] {
       ),
     },
     { id: 'state', header: 'State', cell: (r) => <VersionStateBadge state={r.state} /> },
-    { id: 'actions', header: 'Actions', cell: (r) => <VersionActions resource="valuation-rates" id={r.id} state={r.state} timezone={timezone} authorId={r.createdBy} /> },
   ];
+  if (!withActions) return columns;
+  return [...columns, { id: 'actions', header: 'Actions', cell: (r) => <VersionActions resource="valuation-rates" id={r.id} state={r.state} timezone={timezone} authorId={r.createdBy} /> }];
 }
 
 /** Margin / standard-cost versions of the profile: basis, value, currency, validity and approval (20 per page). */
 export function ValuationRateTable({ profile, timezone }: ValuationRateTableProps) {
-  const { canMaintainValuation } = useCapabilities();
+  const { canMaintainValuation, canApproveValuation } = useCapabilities();
   const anchor = useAnchorFocus('valuation-rate-');
   const rates = useValuationRates(profile.id, anchor.focus);
   const [adding, setAdding] = useState(false);
@@ -81,7 +83,7 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
         {adding && <ValuationRateForm profileId={profile.id} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Valuation rate versions"
-          columns={columnsOf(timezone)}
+          columns={columnsOf(timezone, canApproveValuation)}
           rows={items}
           getRowKey={(r) => r.id}
           getRowAnchor={(r) => `valuation-rate-${r.id}`}

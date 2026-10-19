@@ -95,6 +95,9 @@ describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
     expect(gate.getAttribute('data-mode')).toBe('warn');
     expect(gate.textContent).toContain('shown as a warning');
     expect(gate.textContent).toContain('daily target 99');
+    // QA open item: an incomplete day reads like the shift's coding card (bordered warning), not grey small print
+    expect(gate.className).toContain('border-warning');
+    expect(gate.querySelector('p.font-medium')?.textContent).toBe('Day stop coding incomplete — shown as a warning');
   });
 
   it('SuperAdmin certifies a day whose shifts they submitted', async () => {
