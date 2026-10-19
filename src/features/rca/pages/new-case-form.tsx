@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DateInput } from '@/features/ux-kit/date-inputs';
+import { FormField } from '@/features/ux-kit/form-field';
 import { PrioritySelect } from '../cases/status-fields';
 import { UnitSelect } from '../cases/unit-select';
 import type { RcaCaseForm } from '../model/rca-form';
@@ -14,12 +15,11 @@ export interface NewCaseFieldsProps {
   unitLocked?: boolean;
 }
 
-/** Fields of a new case: title, problem, priority, target date, unit and template. */
+/** Fields of a new case: title (required, marked), problem, priority, target date, unit and template. */
 export function NewCaseFields({ form, onChange, unitLocked = false }: NewCaseFieldsProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2" data-testid="new-case-fields">
-      <div className="space-y-1 md:col-span-2">
-        <Label htmlFor="case-title">Title</Label>
+      <FormField id="case-title" label="Title" required className="md:col-span-2">
         <Input
           id="case-title"
           value={form.title}
@@ -28,7 +28,7 @@ export function NewCaseFields({ form, onChange, unitLocked = false }: NewCaseFie
           placeholder="Brief description of the issue"
           onChange={(e) => onChange({ title: e.target.value })}
         />
-      </div>
+      </FormField>
       <div className="space-y-1 md:col-span-2">
         <Label htmlFor="case-description">Problem statement</Label>
         <Textarea

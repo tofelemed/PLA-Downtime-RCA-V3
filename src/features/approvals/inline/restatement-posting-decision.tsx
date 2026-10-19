@@ -1,6 +1,6 @@
 import { useRestatement } from '@/api/v2/queries/restatement';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { POSTING_TREATMENT_LABELS } from '@/features/plan-dashboard/model/restatement-labels';
+import { PostingDecisionText } from '@/features/plan-dashboard/restatement/posting-decision-text';
 import { PostingForm } from '@/features/plan-dashboard/restatement/posting-form';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -11,7 +11,7 @@ import { useDecidedWhen } from './use-decided-when';
 /**
  * Finance's posting decision of an approved restatement on the approval page: the operational date the
  * figures describe, then the workspace's posting date + treatment form (finance approvers; the delta is in
- * "What changes" above). The proposer of the correction behind the restatement sees why they cannot decide.
+ * "What changes" above); a decided posting is read-only (owner decision 2026-10-19). The proposer of the correction behind the restatement sees why they cannot decide.
  */
 export function RestatementPostingDecision({ item, onDecided }: InlineFormProps) {
   const { canDecidePosting } = useCapabilities();
@@ -28,9 +28,14 @@ export function RestatementPostingDecision({ item, onDecided }: InlineFormProps)
           <p className="text-sm">
             Restates approved revision {data.supersededRevision}
             {data.afterClose ? ' — correction after month close' : ''} · operational date {formatOperationalDate(data.operationalEffectiveDate, pref)}
-            {data.posting ? ` · posted on ${formatOperationalDate(data.posting.postingDate, pref)} as ${POSTING_TREATMENT_LABELS[data.posting.treatment]}` : ''}
+            {data.posting && (
+              <>
+                {' · '}
+                <PostingDecisionText data={data} />
+              </>
+            )}
           </p>
-          <PostingForm data={data} />
+          {data.posting ? <p className="text-xs text-muted-foreground">The posting decision is final.</p> : <PostingForm data={data} />}
         </div>
       )}
     </DataState>

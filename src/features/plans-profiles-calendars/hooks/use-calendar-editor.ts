@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { hasUnsavedChanges } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useCreateCalendarVersion, usePatchCalendarVersion, usePublishCalendarVersion } from '@/api/v2/queries/calendars';
 import type { CalendarDefinition, CalendarPublishView, CalendarVersionView } from '@/api/v2/types/calendars';
 import { calendarCreateBody, calendarPatchBody, definitionOf, draftOf, validateCalendarDraft, type CalendarDraft } from '../model/calendar-draft';
@@ -20,7 +21,8 @@ export interface PreviewCandidate {
  * or a published version (read-only; publish = immutable, changes are a new version).
  */
 export function useCalendarEditor(version: CalendarVersionView | null, seed: CalendarDraft, scope: CalendarScope) {
-  const [draft, setDraft] = useState<CalendarDraft>(version ? draftOf(version) : seed);
+  const [initial] = useState<CalendarDraft>(() => (version ? draftOf(version) : seed));
+  const [draft, setDraft] = useState<CalendarDraft>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [published, setPublished] = useState<CalendarPublishView | null>(null);
   const create = useCreateCalendarVersion();
@@ -55,6 +57,8 @@ export function useCalendarEditor(version: CalendarVersionView | null, seed: Cal
   const serverErrors = refusalOf(saveError)?.fieldErrors ?? {};
   return {
     draft,
+    /** typed into and not being saved: leaving asks first (QA P-5) */
+    edited: hasUnsavedChanges(draft, initial, [readOnly, create.isPending, patch.isPending]),
     setDraft,
     errors: { ...serverErrors, ...errors },
     readOnly,

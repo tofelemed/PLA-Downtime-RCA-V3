@@ -21,6 +21,9 @@ import { IfMatch } from '../../common/concurrency/revision';
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { SkipAuditOnPreview } from '../../audit-log/skip-audit-preview.decorator';
+import { EVENT_WRITERS } from './event-write-roles';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
   BulkCodeV2Dto,
@@ -53,6 +56,7 @@ export class ProductionEventOperationsV2Controller {
   ) {}
 
   @Post('merge')
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @ApiOperation({
     summary: 'Merge adjacent or overlapping events of one unit (DT09)',
@@ -72,13 +76,16 @@ export class ProductionEventOperationsV2Controller {
   }
 
   @Post('bulk-code')
+  @Roles(...EVENT_WRITERS)
+  @SkipAuditOnPreview()
   @Idempotent()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Code many events at once (DT10)',
     description:
-      '`preview: true` reports before/after per event, exclusions (not found, superseded, retracted, stale ' +
-      'version, duplicate) and affected windows. `preview: false` applies up to 500 events atomically (404/409/' +
+      '`preview: true` reports before/after per event (`changed` = the coding differs; `changedCount` of them), ' +
+      'exclusions (not found, superseded, retracted, stale version, duplicate) and affected windows; a preview ' +
+      'changes nothing and is not written to the audit log. `preview: false` applies up to 500 events atomically (404/409/' +
       '412/422 when any item is excluded) or, above 500, answers 202 with a job processed in chunks of 200.',
   })
   @ApiHeader(IDEMPOTENCY_HEADER)
@@ -95,6 +102,7 @@ export class ProductionEventOperationsV2Controller {
   }
 
   @Post(':id/split')
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @ApiOperation({
     summary: 'Split an event at an instant (DT09)',
@@ -115,6 +123,7 @@ export class ProductionEventOperationsV2Controller {
   }
 
   @Post(':id/close')
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -136,6 +145,7 @@ export class ProductionEventOperationsV2Controller {
   }
 
   @Post(':id/retract')
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

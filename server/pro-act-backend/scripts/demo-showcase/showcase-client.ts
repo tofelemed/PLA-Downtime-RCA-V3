@@ -13,7 +13,7 @@ const MAX_PAGES = 500;
 /** below the API's 300 requests / min / user, leaving room for the browser of a person testing */
 const MIN_INTERVAL_MS = 230;
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface CallOptions {
   /** sends `Idempotency-Key` (derived from this purpose and the body) */

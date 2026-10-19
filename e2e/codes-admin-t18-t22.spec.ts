@@ -114,7 +114,7 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     await expect(page.getByTestId('impact-children')).toHaveAttribute('data-count', '1');
     await confirmDialog(page, 'Retire code');
     await expect(adminRefusal(page)).toHaveAttribute('data-code', 'CODE_HAS_CHILDREN');
-    await expect(page.getByTestId('refusal-references')).toContainText('1 active sub-code(s)');
+    await expect(page.getByTestId('refusal-references')).toContainText('1 active sub-code,');
     await page.keyboard.press('Escape');
 
     // a new mapping version leaves the historical one unchanged

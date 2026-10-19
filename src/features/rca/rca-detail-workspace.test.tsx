@@ -122,7 +122,7 @@ describe('RCA detail workspace and definition draft safety', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Leave case' }));
     query.rca = { ...CASE, rowVersion: 9, title: 'New server title', status: 'Monitoring' };
     fireEvent.click(screen.getByRole('link', { name: 'Return to definition' }));
-    await screen.findByText(/case or plant timezone changed/i);
+    await screen.findByText(/investigation or plant timezone changed/i);
     fireEvent.click(screen.getByRole('button', { name: 'Restore definition draft' }));
     expect(screen.getByLabelText('Team lead')).toBeDisabled();
     rejectSave = true;

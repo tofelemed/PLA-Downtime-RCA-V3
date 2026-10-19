@@ -38,6 +38,8 @@ const { eventColumns } = await import('./components/event-columns');
 const { useEventForm } = await import('./hooks/use-event-form');
 const { useWindowClock } = await import('./hooks/use-window-clock');
 const { draftKey, draftStore } = await import('./model/event-draft');
+const { customRangeProblem } = await import('./model/custom-range');
+const { startedShifts } = await import('./hooks/use-shift-windows');
 
 const ENV: EventHubEnv = {
   tenantId: 'tenant-a', timezone: 'UTC', timezoneIsFallback: false, units: [{ id: 'u1', code: 'unit100', name: 'Extruder Line 1', siteId: null }],
@@ -158,6 +160,27 @@ describe('window select (E-2)', () => {
     fireEvent.click(screen.getByTestId('event-window-custom-apply'));
     expect(onChange).toHaveBeenCalledWith({ from: '2026-10-17T08:00:00.000Z', to: '2026-10-18T06:00:00.000Z', label: 'Custom range' });
   });
+
+  it('QA audit L3: "Apply range" stays disabled while the typed range is reversed', async () => {
+    const onChange = vi.fn();
+    wrap(<WindowSelect unitIds={[]} label="Last 24 h" bounds={{ from: '2026-10-17T06:00:00.000Z', to: '2026-10-17T08:00:00.000Z' }} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId('event-window-custom'));
+    fireEvent.change(await screen.findByLabelText('To time'), { target: { value: '05:00' } });
+    expect(screen.getByTestId('event-window-custom-apply')).toBeDisabled();
+    expect(screen.getByText('The end must be after the start')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('To time'), { target: { value: '09:00' } });
+    expect(screen.getByTestId('event-window-custom-apply')).toBeEnabled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(customRangeProblem({ from: '2026-10-18T07:00:00.000Z', to: '2026-10-18T05:00:00.000Z' })).toBe('The end must be after the start');
+    expect(customRangeProblem({ from: null, to: '2026-10-18T05:00:00.000Z' })).toMatch(/both/);
+  });
+
+  it('QA audit L4: a shift that has not started is not offered', () => {
+    const shift = (id: string, utcStart: string) => ({ id, utcStart, utcEnd: utcStart, isExcluded: false }) as ShiftInstanceView;
+    const now = Date.parse('2026-10-19T09:00:00.000Z');
+    const listed = startedShifts([shift('a', '2026-10-19T02:30:00.000Z'), shift('b', '2026-10-19T10:30:00.000Z'), { ...shift('c', '2026-10-18T02:30:00.000Z'), isExcluded: true }], now);
+    expect(listed.map((s) => s.id)).toEqual(['a']);
+  });
 });
 
 describe('event list (C-9, C-10, E-1, E-6)', () => {
@@ -229,6 +252,8 @@ describe('event detail and form context (E-5, E-8, E-9, E-10, C-10)', () => {
     expect(screen.getByTestId('split-preview')).toHaveTextContent('Part 1: 06:00');
     expect(screen.getByTestId('split-preview')).toHaveTextContent('07:30');
     expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '90');
+    // QA audit F6: the drag handle has an accessible name and reads the chosen instant
+    expect(screen.getByRole('slider', { name: 'Split at' })).toHaveAttribute('aria-valuetext', expect.stringContaining('07:30'));
     fireEvent.change(time, { target: { value: '09:30' } });
     expect(screen.getByText(/Choose a time inside the stop/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Split' })).toBeDisabled();

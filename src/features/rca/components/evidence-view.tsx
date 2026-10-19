@@ -1,16 +1,24 @@
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { summarizeEvidence } from '../model/evidence-summary';
 import { ApprovedImpact } from './approved-impact';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { useFailureModeLabel } from '../use-failure-mode-label';
+import { useRcaFormat } from '../use-rca-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface EvidenceViewProps {
   evidence: Record<string, unknown> | null;
-  timezone: string;
+  /** kept for the callers; times use the plant formatter of every RCA screen (QA L7) */
+  timezone?: string;
 }
 
-/** RCA02 evidence package: revisions, cause codes, trend window, recurrence and approved impact. */
-export function EvidenceView({ evidence, timezone }: EvidenceViewProps) {
+/**
+ * RCA02 evidence package: revisions, cause codes, trend window, recurrence and approved impact. The package
+ * was frozen when the link was made (QA M3: its value view is labelled "at link time").
+ */
+export function EvidenceView({ evidence }: EvidenceViewProps) {
   const { number } = useNumberFormat();
+  const { dateTime } = useRcaFormat();
+  const modeLabel = useFailureModeLabel(Boolean(evidence));
   if (!evidence) return <p className="text-sm text-muted-foreground">No evidence package.</p>;
   const summary = summarizeEvidence(evidence);
   return (
@@ -22,13 +30,13 @@ export function EvidenceView({ evidence, timezone }: EvidenceViewProps) {
         </>
       )}
       <dt className="text-muted-foreground">Cause</dt>
-      <dd>{[summary.reason, summary.failureMode].filter(Boolean).join(' · ') || 'Not coded'}</dd>
+      <dd>{[summary.reason, modeLabel(summary.failureMode)].filter(Boolean).join(' · ') || 'Not coded'}</dd>
       {summary.trendWindow && (
         <>
           <dt className="text-muted-foreground">Trend window</dt>
           <dd>
-            <PlantTime iso={summary.trendWindow.from} tz={timezone} withDate /> – <PlantTime iso={summary.trendWindow.to} tz={timezone} withDate />{' '}
-            ({summary.trendWindow.signals} signal(s))
+            {dateTime(summary.trendWindow.from)} – {dateTime(summary.trendWindow.to)}{' '}
+            ({plural(summary.trendWindow.signals, 'signal', 'signals')})
           </dd>
         </>
       )}
@@ -41,7 +49,7 @@ export function EvidenceView({ evidence, timezone }: EvidenceViewProps) {
         </>
       )}
       <dt className="text-muted-foreground">Approved impact</dt>
-      <dd>{summary.approvedImpact ? <ApprovedImpact impact={summary.approvedImpact} /> : '—'}</dd>
+      <dd>{summary.approvedImpact ? <ApprovedImpact impact={summary.approvedImpact} viewNote="at link time" /> : '—'}</dd>
     </dl>
   );
 }

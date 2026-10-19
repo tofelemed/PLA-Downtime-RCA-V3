@@ -2,6 +2,7 @@ import type { AttributedValueView } from '@/api/v2/types/events';
 import { currencyDigits } from '@/features/display-currency/money-format';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 /**
  * One currency's value of an attributed loss, as the server states it: the amount, or in words why there
@@ -23,7 +24,7 @@ export function AttributedValueText({ value }: { value: AttributedValueView }) {
       )}
       {value.fxProvisional && (
         <span className="ml-1 text-xs text-warning" data-testid="attributed-fx-provisional">
-          (provisional exchange rate on {number(value.provisionalLines)} line(s))
+          (provisional exchange rate on {plural(value.provisionalLines, 'line', 'lines', number)})
         </span>
       )}
     </span>

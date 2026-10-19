@@ -1,6 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { QUEUE_WINDOW_DAYS } from '../close/reconciliation-queue.service';
 import { slaPeriodsCte, SqlParams } from '../close/sla-sql';
+import { planCoveredSql } from '../close/plan-coverage-sql';
 import { DueReminder, dueReminder } from '../domain/close/due-reminders';
 import { ReconciliationSlaPolicy } from '../domain/close/sla-policy';
 import { REVISION_APPROVERS } from '../v2/periods/period-roles';
@@ -35,7 +36,7 @@ function dueRows(
   const since = new Date(at.asOf.getTime() - QUEUE_WINDOW_DAYS * 86_400_000);
   const where = `p."tenant_id" = ${params.add(tenantId)} AND p."local_date" >= ${params.add(
     since.toISOString().slice(0, 10),
-  )}::date AND NOT (p."is_excluded" AND r."id" IS NULL)`;
+  )}::date AND NOT (p."is_excluded" AND r."id" IS NULL) AND ${planCoveredSql('p')}`;
   const cte = slaPeriodsCte(params, { where, ...at });
   return manager.query(
     `${cte}

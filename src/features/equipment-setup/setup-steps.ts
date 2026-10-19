@@ -48,3 +48,14 @@ export function stepPrerequisite(step: SetupStep, selection: SetupSelection): st
   if (step.connection && !selection.connectionId) return 'Open the saved MQTT connection during the connection step first.';
   return null;
 }
+
+const emptyStepSelection: SetupSelection = { unitId: '', connectionId: '', planId: '', periodId: '' };
+
+/**
+ * Whether the user can open a step's page (QA L15): with the step's own capability, or read-only on a
+ * master-data page the user reaches as a master-data administrator. Writing stays the page's decision.
+ */
+export function canOpenStep(step: SetupStep, capabilities: Readonly<Record<CapabilityKey, boolean>>): boolean {
+  if (capabilities[step.capability]) return true;
+  return step.to(emptyStepSelection).startsWith('/master-data') && capabilities.canManageMasterData;
+}

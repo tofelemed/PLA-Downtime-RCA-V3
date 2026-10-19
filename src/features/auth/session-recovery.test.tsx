@@ -66,11 +66,12 @@ describe('session recovery controls', () => {
 
   it('shows a service outage, retains entered fields and enables a successful login retry', async () => {
     loginStatus = 503; mount(); await settle();
-    fireEvent.change(screen.getByLabelText('USER ID'), { target: { value: user.email } });
-    fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'private-password' } });
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: user.email } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'private-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Secure sign in' })); await settle();
     expect(screen.getByRole('alert')).toHaveTextContent('temporarily unavailable');
-    expect(screen.getByLabelText('PASSWORD')).toHaveValue('private-password');
+    expect(screen.getByLabelText('Password')).toHaveValue('private-password');
     expect(screen.getByRole('button', { name: 'Secure sign in' })).toBeEnabled();
     loginStatus = 200; fireEvent.click(screen.getByRole('button', { name: 'Secure sign in' })); await settle();
     expect(screen.getByText('Signed in: Alice; plant: plant-a')).toBeVisible();
@@ -78,8 +79,8 @@ describe('session recovery controls', () => {
 
   it('keeps invalid credentials distinct from a recoverable service outage', async () => {
     loginStatus = 401; mount(); await settle();
-    fireEvent.change(screen.getByLabelText('USER ID'), { target: { value: user.email } });
-    fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'wrong-password' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: user.email } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Secure sign in' })); await settle();
     expect(screen.getByRole('alert')).toHaveTextContent('Check your credentials');
     expect(screen.getByRole('button', { name: 'Secure sign in' })).toBeEnabled();

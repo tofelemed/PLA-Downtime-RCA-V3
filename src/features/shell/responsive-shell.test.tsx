@@ -71,7 +71,7 @@ describe('responsive shell (UX audit H-1)', () => {
     const nav = within(drawer).getByRole('navigation', { name: 'Main menu' });
     // always expanded in the drawer, without the rail toggle
     expect(within(nav).queryByRole('button', { name: /sidebar/ })).toBeNull();
-    await userEvent.click(within(nav).getByRole('link', { name: 'Month Close' }));
+    await userEvent.click(within(nav).getByRole('link', { name: 'Month close' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull());
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false');
   });

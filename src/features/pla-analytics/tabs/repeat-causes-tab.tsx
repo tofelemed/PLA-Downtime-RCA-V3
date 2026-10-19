@@ -6,9 +6,12 @@ import { NumberText } from '@/features/ux-kit/number-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
 import { repeatQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { shareText } from '../model/display';
+import { inSentence, shareText } from '../model/display';
 
 type Group = DowntimeReportView['groups'][number];
+
+/** An empty group key: a stop without a reason is "Not coded"; a stop without an asset has "No asset recorded" (as the Dashboard says). */
+const NO_KEY: Readonly<Record<string, string>> = { Reason: 'Not coded', Asset: 'No asset recorded' };
 
 function columnsOf(title: string): Array<DataTableColumn<Group>> {
   return [
@@ -17,7 +20,7 @@ function columnsOf(title: string): Array<DataTableColumn<Group>> {
       header: title,
       cell: (group) => (
         <span data-testid="repeat-row" data-key={group.key ?? ''} data-count={group.value} data-periods={group.periods}>
-          {group.label ?? (group.key ? 'Unknown' : 'Not coded')}
+          {group.label ?? (group.key ? 'Unknown' : (NO_KEY[title] ?? 'Not coded'))}
         </span>
       ),
     },
@@ -30,7 +33,7 @@ function columnsOf(title: string): Array<DataTableColumn<Group>> {
 function RepeatTable({ report, title, testId }: { report: DowntimeReportView; title: string; testId: string }) {
   return (
     <div data-testid={testId}>
-      <DataTable caption={`Repeat causes by ${title.toLowerCase()}`} columns={columnsOf(title)} rows={report.groups} getRowKey={(group) => group.key ?? '-'} density="compact" />
+      <DataTable caption={`Repeat causes by ${inSentence(title)}`} columns={columnsOf(title)} rows={report.groups} getRowKey={(group) => group.key ?? '-'} density="compact" />
     </div>
   );
 }

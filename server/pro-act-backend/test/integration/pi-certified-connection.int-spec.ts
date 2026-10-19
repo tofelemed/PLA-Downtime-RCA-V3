@@ -104,7 +104,7 @@ describe('PI connection diagnostics and the v1 sync jobs (plan 1.6)', () => {
         auth: { status: 'ok' },
         version: { status: 'ok', detail: 'PI Web API 1.13.0-sim' },
         authz: { status: 'ok' },
-        read: { status: 'ok', detail: '1 AF database(s)' },
+        read: { status: 'ok', detail: '1 AF database' },
       });
       expect(result.capabilities).toEqual({ batch: true });
     });

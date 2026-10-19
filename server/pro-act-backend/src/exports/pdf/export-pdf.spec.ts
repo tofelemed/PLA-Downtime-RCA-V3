@@ -291,6 +291,53 @@ describe('PDF export layout', () => {
     expect(printed).toBe(80);
   });
 
+  it('loss lines: labelled source, kind and state, and a reason column with the pinned code or the comment', () => {
+    const coded = source({ lines: 1 });
+    coded.reviewed.candidates.push({
+      lossLineId: 'cand-1',
+      autoKey: 'a',
+      sliceId: SLICE,
+      kind: 'availability',
+      quantity: '28',
+      basis: 'planning_rate',
+      reasonCodeId: 'rc-1',
+      impactCodeId: null,
+      causeEventId: 'event-1',
+      state: 'accepted',
+      effectiveQuantity: '28',
+    });
+    const { model } = pdfDocumentOf(
+      job({
+        reportType: 'loss_lines',
+        labels: {
+          requestedByName: 'Sara',
+          plantTimezone: 'Asia/Tehran',
+          reasonCodes: {
+            'rc-1': { code: 'MECH-GEARBOX', name: 'Gearbox failure' },
+          },
+        },
+      }),
+      [coded],
+      LATIN,
+    );
+    const table = model.pages[0].blocks.find((b) => b.kind === 'table');
+    expect(table?.kind === 'table' && table.columns.at(-1)?.label).toBe(
+      'Reason',
+    );
+    const rows = table?.kind === 'table' ? table.rows : [];
+    expect(rows[0].slice(1, 4)).toEqual([
+      'Calculated',
+      'Availability',
+      'Accepted',
+    ]);
+    expect(rows[0].at(-1)).toBe('MECH-GEARBOX · Gearbox failure');
+    expect(rows[1].slice(1, 4)).toEqual(['Manual', 'Availability', 'In force']);
+    expect(rows[1].at(-1)).toBe('pump trip');
+    expect(allText(model.pages[0].blocks)).toEqual(
+      expect.arrayContaining(['Requested by', 'Sara']),
+    );
+  });
+
   it('says so when the window has no approved revisions', () => {
     const { model } = pdfDocumentOf(
       job({

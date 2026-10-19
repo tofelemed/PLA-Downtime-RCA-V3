@@ -13,6 +13,7 @@ import { useEventHubEnv } from '../use-event-hub-env';
 import { useCurrentRcaPolicy, useRcaPolicyVersions, type RcaPolicyVersion } from './rca-policy-api';
 import { RcaPolicyForm } from './rca-policy-form';
 import { overrideText, ruleFacts, triggerText } from './rca-policy-text';
+import { effectiveFromText } from '@/features/ux-kit/format/built-in-default';
 
 const AUTO_LABELS: Readonly<Record<RcaPolicyVersion['autoCreate'], string>> = {
   recommend: 'Recommend an RCA',
@@ -90,7 +91,7 @@ function CurrentPolicy({ policy, unitScoped }: { policy: RcaPolicyVersion; unitS
       <dt className="text-muted-foreground">When a trigger fires</dt>
       <dd>{AUTO_LABELS[policy.autoCreate]}</dd>
       <dt className="text-muted-foreground">In force since</dt>
-      <dd>{dateTime(policy.effectiveFrom)}</dd>
+      <dd>{effectiveFromText(policy.effectiveFrom, dateTime)}</dd>
     </dl>
   );
 }
@@ -113,7 +114,7 @@ function VersionHistory({ unitId }: { unitId: string | null }) {
     { id: 'version', header: 'Version', align: 'right', cell: (row) => String(row.version) }, // an identifier: stays Latin
     { id: 'triggers', header: 'Triggers', cell: (row) => triggerText(row, duration, digits) },
     { id: 'auto', header: 'When it fires', cell: (row) => AUTO_LABELS[row.autoCreate] },
-    { id: 'from', header: 'From', nowrap: true, cell: (row) => dateTime(row.effectiveFrom) },
+    { id: 'from', header: 'From', nowrap: true, cell: (row) => effectiveFromText(row.effectiveFrom, dateTime) },
     { id: 'to', header: 'Until', nowrap: true, cell: (row) => (row.effectiveTo ? dateTime(row.effectiveTo) : 'In force') },
     { id: 'by', header: 'Set by', cell: (row) => (row.approvedBy ? users.nameOf(row.approvedBy) : 'Default') },
     { id: 'notes', header: 'Why', cell: (row) => (row.approvedBy ? row.notes ?? '—' : 'Built-in default') },

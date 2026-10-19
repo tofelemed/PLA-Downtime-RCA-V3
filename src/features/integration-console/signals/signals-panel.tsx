@@ -5,7 +5,8 @@ import type { SignalView } from '@/api/v2/types/integration-mappings';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { labelOf, SIGNAL_TIMEBASE_LABELS, SIGNAL_TYPE_LABELS, useUnitNames } from '@/features/ux-kit/labels';
+import { labelOf, SIGNAL_TYPE_LABELS, useUnitNames } from '@/features/ux-kit/labels';
+import { signalUomText } from '../model/signal-uom';
 import { ActionIcon } from '@/lib/icons';
 import { historianPath, newSignalPath } from '../paths';
 import { SignalActions } from './signal-actions';
@@ -15,8 +16,6 @@ interface ColumnContext {
   selectedId: string | null;
   onSelect: (signal: SignalView) => void;
 }
-
-const uomOf = (signal: SignalView) => `${signal.canonicalUom ?? '—'}${signal.rateTimebase ? ` ${labelOf(SIGNAL_TIMEBASE_LABELS, signal.rateTimebase)}` : ''}`;
 
 function columnsOf({ unitName, selectedId, onSelect }: ColumnContext, allowBackfill: boolean): DataTableColumn<SignalView>[] {
   return [
@@ -30,7 +29,7 @@ function columnsOf({ unitName, selectedId, onSelect }: ColumnContext, allowBackf
       ),
     },
     { id: 'type', header: 'Type', nowrap: true, cell: (signal) => labelOf(SIGNAL_TYPE_LABELS, signal.semanticType) },
-    { id: 'uom', header: 'Unit of measure', nowrap: true, cell: uomOf },
+    { id: 'uom', header: 'Unit of measure', nowrap: true, cell: signalUomText },
     { id: 'unit', header: 'Production unit', cell: (signal) => <span>{unitName(signal.unitId)}</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (signal) => `v${signal.version}${signal.effectiveTo === null ? ' (current)' : ''}` },
     {

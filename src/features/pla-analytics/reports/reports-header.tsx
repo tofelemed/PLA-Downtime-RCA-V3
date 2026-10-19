@@ -2,7 +2,7 @@ import { useOeeReport } from '@/api/v2/queries/reports';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/features/ux-kit/page-layout';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { unitsLabel } from '../model/links';
+import { revisionSelectionLabel, unitsLabel } from '../model/links';
 import { SnapshotStatus } from '../components/snapshot-status';
 import { oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { useDatesLabel } from '../hooks/use-dates-label';
@@ -30,8 +30,9 @@ export function ReportsHeader({ scope, shownUnitIds }: { scope: AnalyticsScope; 
             response={response}
             isError={query.isError}
             testId="report-snapshot-details"
+            approvedOnly={scope.approvedOnly}
           />
-          <Badge variant="outline">{scope.approvedOnly ? 'Approved revisions only' : 'Approved revision, else the latest draft'}</Badge>
+          <Badge variant="outline">{revisionSelectionLabel(scope.approvedOnly)}</Badge>
         </div>
       }
     />

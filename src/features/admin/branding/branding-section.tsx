@@ -27,7 +27,7 @@ function inputOf(view: BrandingView): BrandingInput {
 
 const announce = () => window.dispatchEvent(new Event('brandingUpdated'));
 
-/** Application name, logo and colours for every plant (super administrators). */
+/** Application name, logo and colors for every plant (super administrators). */
 export function BrandingSection() {
   const branding = useBranding();
   const save = useSaveBranding();
@@ -43,11 +43,11 @@ export function BrandingSection() {
   return (
     <Section
       title="Branding"
-      description="Name, logo and colours shown in the header of every plant."
+      description="Name, logo and colors shown in the header of every plant."
       actions={
         <>
           <ConfirmDialog trigger={<Button variant="outline" disabled={!branding.data.isStored}>Reset to defaults</Button>} title="Reset the branding?"
-            description="The default name, logo and colours come back for every user." confirmLabel="Reset branding" destructive
+            description="The default name, logo and colors come back for every user." confirmLabel="Reset branding" destructive
             onConfirm={() => feedback(() => reset.submit(undefined), 'Branding reset').then(announce)} />
           <Button onClick={() => void submit()} disabled={save.isPending || !draft.appName.trim()}>Save changes</Button>
         </>
@@ -64,10 +64,10 @@ export function BrandingSection() {
           <Input id={ids.initials} value={draft.logoInitials ?? ''} maxLength={4} onChange={(e) => set({ logoInitials: e.target.value })} />
         </FormField>
         <div className="grid grid-cols-2 gap-4">
-          <FormField htmlFor={ids.primary} label="Primary colour">
+          <FormField htmlFor={ids.primary} label="Primary color">
             <Input id={ids.primary} type="color" value={draft.primaryColor ?? '#2563eb'} onChange={(e) => set({ primaryColor: e.target.value })} />
           </FormField>
-          <FormField htmlFor={ids.secondary} label="Secondary colour">
+          <FormField htmlFor={ids.secondary} label="Secondary color">
             <Input id={ids.secondary} type="color" value={draft.secondaryColor ?? '#ec4899'} onChange={(e) => set({ secondaryColor: e.target.value })} />
           </FormField>
         </div>

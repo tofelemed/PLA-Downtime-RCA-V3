@@ -21,8 +21,7 @@ export interface PolicyInForce<T> {
 
 type WorkflowKind = 'month_close' | 'reconciliation_sla';
 
-const SEED_NOTE =
-  'Seeded on first use from the SME R1 / R3 / R4 / R6 pilot settings (EXPERT_REVIEW §3.1, 2026-10-15); change by a new version.';
+const SEED_NOTE = 'Built-in default; change it by recording a new version.';
 
 const toPolicy = <T>(
   row: AccountingPolicy,

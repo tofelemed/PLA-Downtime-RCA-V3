@@ -72,7 +72,9 @@ describe('month-close contracts retained during section restructuring', () => {
     expect(screen.getByTestId('close-count-proposals-value')).toHaveTextContent('56');
     await userEvent.click(screen.getByRole('tab', { name: 'Periods' }));
     const pending = await screen.findByTestId('pending-periods');
-    expect(pending.querySelectorAll('tbody tr')).toHaveLength(50); expect(pending.querySelector('table a')).toBeNull();
+    expect(pending.querySelectorAll('tbody tr')).toHaveLength(50); expect(pending.querySelector('table a[href^="/plans/"]')).toBeNull();
+    // a row without its plan (an older server) says so and leads to Plans, never to an invented period link
+    expect(within(pending).getAllByTestId('no-plan')[0]).toHaveTextContent('No approved plan covers this period');
     expect(screen.getByText(/First 50 of 70 shown/)).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open my queue' })).toHaveAttribute('href', '/my-queue');
     await userEvent.click(screen.getByRole('tab', { name: 'Days' }));
@@ -175,5 +177,35 @@ describe('month-close contracts retained during section restructuring', () => {
     expect(screen.queryByText(/before closing/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open period' })).toHaveAttribute('href', '/plans/plan-a/periods/period-0');
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
+  });
+
+  it('QA P-7: finance sees its own steps disabled with the reason until they are reachable', async () => {
+    actAs('finance_approver', 'kamran'); view.state = 'open'; mount();
+    const signOff = await screen.findByTestId('step-finance-sign-off');
+    expect(signOff).toBeDisabled();
+    expect(signOff).toHaveAccessibleDescription(/Plant management closes the quantities first/);
+    const lock = screen.getByTestId('step-lock');
+    expect(lock).toBeDisabled();
+    expect(lock).toHaveAccessibleDescription(/Finance signs off the month first/);
+    expect(screen.queryByTestId('step-close-quantities')).not.toBeInTheDocument();
+  });
+
+  it('QA P-0: days no approved plan covers are information with a way to Plans; pending periods link to their page', async () => {
+    actAs('manager_approver', 'reza');
+    view.prerequisites.uncoveredDayCount = 2;
+    view.prerequisites.uncoveredDays = [
+      { unitId: 'u1', unitName: 'HDPE Extruder 1', localDate: '2026-10-18', shifts: 3 },
+      { unitId: 'u1', unitName: 'HDPE Extruder 1', localDate: '2026-10-19', shifts: 1 },
+    ];
+    view.prerequisites.pending = [{ periodId: 'p-9', unitId: 'u1', unitName: 'HDPE Extruder 1', localDate: '2026-10-17', shiftName: 'A', workflow: 'draft', planId: 'plan-a' }];
+    view.prerequisites.pendingCount = 1;
+    mount();
+    const notice = await screen.findByTestId('uncovered-days');
+    expect(notice).toHaveTextContent('2 production days have no approved plan.');
+    expect(notice).toHaveTextContent('not counted above');
+    expect(within(notice).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning?tab=plans');
+    expect(within(notice).getAllByRole('row')).toHaveLength(3);
+    await userEvent.click(screen.getByRole('tab', { name: 'Periods' }));
+    expect(await screen.findByTestId('pending-open')).toHaveAttribute('href', '/plans/plan-a/periods/p-9');
   });
 });

@@ -44,10 +44,11 @@ function SubmitControl({ actions, reason }: { actions: WorkflowActions; reason: 
 /**
  * Compact workflow strip pinned to the top of every period section (UX audit D-10, L4): the revision's
  * lifecycle, Submit with what blocks it, and the recompute job's state. It shares the workspace's
- * commands with the full workflow bar, so a recompute started in one shows in the other.
+ * commands with the full workflow bar, so a recompute started in one shows in the other. The link to
+ * Review & close is left out for users who cannot open it (an operator reaches only Actuals & quality).
  */
 export function StickyWorkflowBar({ view, actions, reviewHref, unsavedLines, compact }: StickyWorkflowBarProps) {
-  const { canWritePeriods } = useCapabilities();
+  const { canWritePeriods, canViewAnalysis } = useCapabilities();
   const lifecycle = view.revision.lifecycle;
   const canSubmit = canWritePeriods && lifecycle === 'draft' && !compact;
   const reason = submitBlockers(view, unsavedLines).map((b) => b.text).join(' ');
@@ -59,7 +60,7 @@ export function StickyWorkflowBar({ view, actions, reviewHref, unsavedLines, com
       </StatusBadge>
       {canSubmit && <SubmitControl actions={actions} reason={reason} />}
       <RecomputeState state={actions.recomputeState} testId="sticky-recompute-state" />
-      {reviewHref && (
+      {reviewHref && canViewAnalysis && (
         <Link className="ml-auto text-xs font-medium text-primary underline underline-offset-4" to={reviewHref} data-testid="sticky-review-link">
           Approval, holds and day certification: Review & close
         </Link>

@@ -30,6 +30,8 @@ export async function computeBaseline(
     request: BaselineRequest;
     windowStart: Date | null;
     policy: RcaPolicy;
+    /** version of `policy`, named with the frozen criteria */
+    policyVersion?: number;
     consequenceClass: string | null;
     now: Date;
   },
@@ -71,6 +73,9 @@ export async function computeBaseline(
       requiredReduction: rules.requiredReduction,
       minExposureHours: rules.minExposureHours,
       minimumCoverage: rules.minimumCoverage,
+      ...(input.policyVersion === undefined
+        ? {}
+        : { policyVersion: input.policyVersion }),
       zeroRepeat: (rules.zeroRepeatClasses as readonly string[]).includes(
         input.consequenceClass ?? '',
       ),

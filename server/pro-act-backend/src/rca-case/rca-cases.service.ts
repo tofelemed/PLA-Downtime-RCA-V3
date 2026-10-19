@@ -32,6 +32,7 @@ import {
   toRcaCaseSummary,
   toRcaCaseView,
 } from './rca-case.view';
+import { assertCaseNotClosed } from './case-closed';
 import { findCase, invalidBody, scopeOf } from './rca-scope';
 
 /** target close date passed while the case is not closed */
@@ -146,6 +147,7 @@ export class RcaCasesService {
     const scope = scopeOf(context);
     await this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, target.id, true);
+      assertCaseNotClosed(rca);
       assertRevision(rca.rowVersion, target.expectedRowVersion);
       const unitId =
         body.unitId === undefined ? (rca.unitId ?? null) : body.unitId;

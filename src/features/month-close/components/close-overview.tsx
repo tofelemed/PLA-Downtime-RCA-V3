@@ -4,6 +4,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { closeSearch, type CloseSection } from '../model/close-section';
 import { CloseDeadlines } from './close-deadlines';
 import { CloseSignOffs } from './close-sign-offs';
+import { UncoveredDays } from './no-plan-notice';
 
 function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: URLSearchParams }) {
   const { prerequisites: p, policy } = view;
@@ -29,6 +30,7 @@ function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: UR
           </Link>
         ))}
       </div>
+      <UncoveredDays view={view} />
     </div>
   );
 }

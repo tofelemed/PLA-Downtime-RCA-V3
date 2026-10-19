@@ -103,7 +103,7 @@ export interface paths {
         put?: never;
         /**
          * Code many events at once (DT10)
-         * @description `preview: true` reports before/after per event, exclusions (not found, superseded, retracted, stale version, duplicate) and affected windows. `preview: false` applies up to 500 events atomically (404/409/412/422 when any item is excluded) or, above 500, answers 202 with a job processed in chunks of 200.
+         * @description `preview: true` reports before/after per event (`changed` = the coding differs; `changedCount` of them), exclusions (not found, superseded, retracted, stale version, duplicate) and affected windows; a preview changes nothing and is not written to the audit log. `preview: false` applies up to 500 events atomically (404/409/412/422 when any item is excluded) or, above 500, answers 202 with a job processed in chunks of 200.
          */
         post: operations["ProductionEventOperationsV2Controller_bulkCode_v2"];
         delete?: never;
@@ -245,7 +245,7 @@ export interface paths {
         };
         /**
          * Export the filtered production events as CSV (newest first)
-         * @description Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). At most 50,000 rows (422 EXPORT_TOO_LARGE). Columns: start_utc, end_utc, duration_seconds, unit, asset, event_type, physical_type, schedule_class, oee_component, reason_code, reason, physical_state, coding_state, rca_state, severity, source_kind, description, quantity, quantity_uom, cost.
+         * @description Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). At most 50,000 rows (422 EXPORT_TOO_LARGE). Columns: start_utc, end_utc, duration_seconds, unit, asset, event_type, physical_type, schedule_class, oee_component, reason_code, reason, physical_state, coding_state, rca_state, severity, source_kind, description, quantity, quantity_uom, cost; then the plant clock (start_plant, end_plant, ISO 8601 with offset) and the screen labels (event_type_label, physical_type_label, schedule_class_label, oee_component_label, physical_state_label, coding_state_label, rca_state_label, source_kind_label). UTF-8 with a byte order mark.
          */
         get: operations["ProductionEventsV2Controller_exportCsv_v2"];
         put?: never;
@@ -4193,14 +4193,14 @@ export interface paths {
         post?: never;
         /**
          * Delete an open case nothing refers to yet
-         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 409 RCA_CASE_IN_USE once the case is closed, linked, has actions or a recommendation or knowledge entry points at it. Analysis records go with the case.
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 409 CASE_CLOSED for a closed case; 409 RCA_CASE_IN_USE once it is linked, has actions or a recommendation or knowledge entry points at it. Analysis records go with the case.
          */
         delete: operations["RcaCasesV2Controller_remove_v2"];
         options?: never;
         head?: never;
         /**
          * Change a case (nested content replaced as sent)
-         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). The status is not edited here (422 STATUS_VIA_TRANSITION when it differs from the current one): use POST /v2/rcas/{id}/transitions.
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). The status is not edited here (422 STATUS_VIA_TRANSITION when it differs from the current one): use POST /v2/rcas/{id}/transitions. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         patch: operations["RcaCasesV2Controller_update_v2"];
         trace?: never;
@@ -4216,7 +4216,7 @@ export interface paths {
         put?: never;
         /**
          * Replace the logic tree with a fresh copy of the case's template
-         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 422 NO_TEMPLATE for a case opened without a template.
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver. A unit-limited writer names a unit of its scope (422 INVALID_REFERENCE otherwise; 403 TENANT_SCOPE_REQUIRED for a case without unit). 422 NO_TEMPLATE for a case opened without a template. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaCasesV2Controller_resetLogicTree_v2"];
         delete?: never;
@@ -4314,7 +4314,7 @@ export interface paths {
         put?: never;
         /**
          * Add a cause
-         * @description Requires `Idempotency-Key`. Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).
+         * @description Requires `Idempotency-Key`. Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE). 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaCaseCausesV2Controller_create_v2"];
         delete?: never;
@@ -4335,14 +4335,14 @@ export interface paths {
         post?: never;
         /**
          * Remove a cause
-         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE). 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         delete: operations["RcaCaseCausesV2Controller_remove_v2"];
         options?: never;
         head?: never;
         /**
          * Change a cause
-         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).
+         * @description Requires `If-Match` (428/412). Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested (Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE). 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         patch: operations["RcaCaseCausesV2Controller_update_v2"];
         trace?: never;
@@ -4435,7 +4435,7 @@ export interface paths {
         get?: never;
         /**
          * Save the 5-Why analysis
-         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         put: operations["RcaCaseWorkspaceV2Controller_fiveWhy_v2"];
         post?: never;
@@ -4455,7 +4455,7 @@ export interface paths {
         get?: never;
         /**
          * Save the fishbone (Ishikawa) diagram
-         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         put: operations["RcaCaseWorkspaceV2Controller_fishbone_v2"];
         post?: never;
@@ -4475,7 +4475,7 @@ export interface paths {
         get?: never;
         /**
          * Save the FMEA (the server computes each cause RPN)
-         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         put: operations["RcaCaseWorkspaceV2Controller_fmea_v2"];
         post?: never;
@@ -4495,7 +4495,7 @@ export interface paths {
         get?: never;
         /**
          * Save the fault tree
-         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         put: operations["RcaCaseWorkspaceV2Controller_faultTree_v2"];
         post?: never;
@@ -4515,7 +4515,7 @@ export interface paths {
         get?: never;
         /**
          * Save the barrier analysis
-         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         put: operations["RcaCaseWorkspaceV2Controller_barrier_v2"];
         post?: never;
@@ -4535,7 +4535,7 @@ export interface paths {
         get?: never;
         /**
          * Save the change analysis
-         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.
+         * @description Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read (412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         put: operations["RcaCaseWorkspaceV2Controller_change_v2"];
         post?: never;
@@ -4556,7 +4556,7 @@ export interface paths {
         put?: never;
         /**
          * Store an evidence file of the case (25 MiB, documents / images / videos)
-         * @description RCA writers, or the owner of an open action of the case (completion evidence; 403 FORBIDDEN_ROLE otherwise). Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served.
+         * @description RCA writers, or the owner of an open action of the case (completion evidence; 403 FORBIDDEN_ROLE otherwise). Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. Not idempotent: a repeated upload stores another file, an unreferenced file is never served. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaCaseWorkspaceV2Controller_upload_v2"];
         delete?: never;
@@ -4651,7 +4651,7 @@ export interface paths {
         put?: never;
         /**
          * Add an action
-         * @description Requires `Idempotency-Key`. A baseline without value is counted from history over its windowDays before the verification window (422 BASELINE_NEEDS_WINDOW without one); a claim needs its currency.
+         * @description Requires `Idempotency-Key`. A baseline without value is counted from history over its windowDays before the verification window (422 BASELINE_NEEDS_WINDOW without one); a claim needs its currency. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaActionsV2Controller_create_v2"];
         delete?: never;
@@ -4675,7 +4675,7 @@ export interface paths {
         head?: never;
         /**
          * Change an action
-         * @description Requires `If-Match` (428/412). RCA writers change any field. The owner of the action who is not an RCA writer may only set the status to open / in progress and record the completion evidence (403 FORBIDDEN_ROLE for other fields or other actions, 403 SEPARATION_OF_DUTIES for done, 409 ACTION_FINISHED on a done or cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED).
+         * @description Requires `If-Match` (428/412). RCA writers change any field. The owner of the action who is not an RCA writer may only set the status to open / in progress and record the completion evidence (403 FORBIDDEN_ROLE for other fields or other actions, 403 SEPARATION_OF_DUTIES for done, 409 ACTION_FINISHED on a done or cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED). 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         patch: operations["RcaActionsV2Controller_update_v2"];
         trace?: never;
@@ -4691,7 +4691,7 @@ export interface paths {
         put?: never;
         /**
          * Verify now (the worker also does it hourly once the window has ended)
-         * @description Requires `Idempotency-Key` and `If-Match`. 409 VERIFICATION_WINDOW_OPEN / VERIFICATION_NOT_PLANNED.
+         * @description Requires `Idempotency-Key` and `If-Match`. 409 VERIFICATION_WINDOW_OPEN / VERIFICATION_NOT_PLANNED. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaActionsV2Controller_verify_v2"];
         delete?: never;
@@ -4711,7 +4711,7 @@ export interface paths {
         put?: never;
         /**
          * Propose a correction of the computed baseline, with its reason (SME CA3)
-         * @description Requires `If-Match`. The counted baseline is kept; the correction counts once someone else approves it. 409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan.
+         * @description Requires `If-Match`. The counted baseline is kept; the correction counts once someone else approves it. 409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaActionsV2Controller_proposeCorrection_v2"];
         delete?: never;
@@ -4731,7 +4731,7 @@ export interface paths {
         put?: never;
         /**
          * Approve or reject a proposed baseline correction (SME CA3)
-         * @description SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.
+         * @description SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again. 409 CASE_CLOSED on a closed investigation (reopen it first).
          */
         post: operations["RcaActionsV2Controller_decideCorrection_v2"];
         delete?: never;
@@ -4829,7 +4829,7 @@ export interface paths {
         };
         /**
          * Lessons other plants of your organization shared (read-only, SME CA9)
-         * @description Lessons shared by other plants of your organization. Check process chemistry, operating envelope and design fit, and use your own change control before copying a modification (SME CA9). Redacted to the lesson (no people, assets, cases or events); newest first, keyset pages.
+         * @description Lessons shared by other plants of your organization. Check process chemistry, operating envelope and design fit, and use your own change control before copying a modification. Redacted to the lesson (no people, assets, cases or events); newest first, keyset pages.
          */
         get: operations["RcaKnowledgeV2Controller_shared_v2"];
         put?: never;
@@ -6569,7 +6569,7 @@ export interface paths {
         };
         /**
          * State timeline, known-data coverage and availability bounds of a unit over a window
-         * @description Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and (running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. `coverage` null = no mapping at `from`. Window ≤ 31 days (422 INVALID_RANGE).
+         * @description Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and (running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. `coverage` null = no mapping in the window; when the window starts before the first mapping, `coverageStartsAt` is the start of that mapping and coverage counts from it. Window ≤ 31 days (422 INVALID_RANGE).
          */
         get: operations["UnitStateV2Controller_coverage_v2"];
         put?: never;
@@ -6823,7 +6823,7 @@ export interface paths {
         };
         /**
          * Month close: state, working-day deadlines and overdue flags, sign-offs, prerequisites (periods not approved, open change proposals), materiality findings and history
-         * @description Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key, MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS for a month of the other calendar. `prerequisites` include the scheduled shifts without a period and whether the month has ended.
+         * @description Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key, MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS for a month of the other calendar. `prerequisites` include the scheduled shifts without a period and whether the month has ended; they count only periods an approved plan covers — `uncoveredDays` lists the days without a plan as information.
          */
         get: operations["MonthCloseV2Controller_get_v2"];
         put?: never;
@@ -7042,7 +7042,7 @@ export interface paths {
         put?: never;
         /**
          * Finance sets the posting date and treatment of a restatement (correction, estimate change, other adjustment, no posting)
-         * @description Requires `Idempotency-Key`. A later decision replaces the earlier one (audited). 422 NOT_A_RESTATEMENT.
+         * @description Requires `Idempotency-Key`. A decision is final: 409 POSTING_DECIDED once decided (correct it through a new restatement). 403 SEPARATION_OF_DUTIES for the proposer of the correction. 422 NOT_A_RESTATEMENT.
          */
         post: operations["RestatementV2Controller_decide_v2"];
         delete?: never;
@@ -16076,6 +16076,8 @@ export interface operations {
                 shiftNames?: string[];
                 /** @description Repeat for several crews: only periods whose shift instance was worked by one of them */
                 crewIds?: string[];
+                /** @description The summary of this schedule class only (owner decision 2026-10-19): stop time and stop count of the class (the stored breakdown cells, as the class trend), the class’s own period KPI as stored, every other figure without a value (reason not_by_schedule_class). Omitted: the summary of every class. Views keep their own class token. */
+                scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
                 /** @description Include micro-stops (shorter than the oee_policy threshold) in every view; default availability stops only */
                 includeMicroStops?: boolean;
                 /** @description Repeat for each view: `<groupBy>[:<metric>][:<scheduleClass>]` with groupBy one of reason, reasonLevel1, impact, oee, asset, shift, crew, day, week, month; metric duration (default) or frequency; no class = every class. Duplicate tokens are answered once (first kept). */
@@ -18090,7 +18092,7 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
-                groupBy?: "reason" | "impact" | "oee" | "kind" | "unit";
+                groupBy?: "reason" | "impact" | "oee" | "kind" | "unit" | "event";
                 /** @description qty = lost quantity per unit of measure; margin / standard_cost / operational_cost / economic_impact = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero); value = the default view of the approved valuation policy (SME V8, economic impact from policy version 3; contribution margin while none is approved) */
                 metric?: "qty" | "margin" | "standard_cost" | "operational_cost" | "economic_impact" | "value";
                 ledger?: "plan" | "capacity";

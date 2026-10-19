@@ -80,7 +80,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
     { field: 'assetIds', label: 'Asset', testId: 'filter-assets', options: assets },
     { field: 'codingStates', label: 'Coding', testId: 'filter-coding-states', options: optionsOf(CODING_STATES, CODING_STATE_LABELS) },
     { field: 'verificationStates', label: 'Verification', testId: 'filter-verification', options: optionsOf(VERIFICATION_STATES, VERIFICATION_LABELS) },
-    { field: 'rcaStates', label: 'RCA', testId: 'filter-rca-states', options: optionsOf(RCA_STATES, EVENT_RCA_STATE_LABELS) },
+    { field: 'rcaStates', label: 'Investigation', testId: 'filter-rca-states', options: optionsOf(RCA_STATES, EVENT_RCA_STATE_LABELS) },
     { field: 'physicalStates', label: 'State', testId: 'filter-physical-states', options: optionsOf(PHYSICAL_STATES, PHYSICAL_STATE_LABELS) },
     { field: 'sourceKinds', label: 'Origin', testId: 'filter-source-kinds', options: optionsOf(SOURCE_KINDS, SOURCE_KIND_LABELS) },
     { field: 'severities', label: 'Severity', testId: 'filter-severities', options: optionsOf(SEVERITIES, SEVERITY_LABELS) },

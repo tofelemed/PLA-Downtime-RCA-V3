@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import type { CalendarSystem } from '@/lib/dates';
 import { type LocalDateTime, joinInstant, splitInstant } from './date-input-model';
 import { DateInput } from './date-input';
+import { RequiredMarker } from '../form-field';
 
 /** Props of {@link DateTimeInput}: a UTC instant shown and entered on the plant clock. */
 export interface DateTimeInputProps {
@@ -40,7 +41,10 @@ export function DateTimeInput({ label, value, timeZone, onChange, calendar, disa
 
   return (
     <fieldset className="space-y-1" disabled={disabled}>
-      <legend className="text-sm font-medium leading-none">{label}</legend>
+      <legend className="text-sm font-medium leading-none">
+        {label}
+        {required && <RequiredMarker />}
+      </legend>
       <div className="flex flex-wrap items-start gap-2">
         <div className="min-w-[10rem] flex-1">
           <DateInput

@@ -1,3 +1,4 @@
+import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { useMicroStopPolicy } from '@/api/v2/queries/reliability-policies';
 import type { MicroStopPolicyView } from '@/api/v2/types/reliability';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -18,7 +19,7 @@ function CurrentSettings({ view, unitId, format }: { view: MicroStopPolicyView; 
       <dd>{classes.length ? classes.map(([c, s]) => `${c}: ${format.duration(s)}`).join(' · ') : 'None (the threshold applies to every asset)'}</dd>
       <dt className="text-muted-foreground">Trip reasons</dt>
       <dd>{view.tripReasonCodes.length ? view.tripReasonCodes.join(', ') : 'None'}</dd>
-      {view.notes && <><dt className="text-muted-foreground">Notes</dt><dd>{view.notes}</dd></>}
+      {view.notes && <><dt className="text-muted-foreground">Notes</dt><dd>{policyNoteText(view.notes)}</dd></>}
     </dl>
   );
 }

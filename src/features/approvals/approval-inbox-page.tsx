@@ -1,17 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { useApprovalInbox } from '@/api/v2/queries/approvals';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ListPager } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { ApprovalInboxGroups } from './approval-inbox-groups';
-import { APPROVAL_KINDS } from './approval-kinds';
+import { APPROVAL_KINDS, isApprovalKind } from './approval-kinds';
 
 interface Filters {
   kind: string;
@@ -45,15 +46,29 @@ function EmptyInbox({ decidable }: { decidable: boolean }) {
       <p className="text-sm text-muted-foreground">
         {decidable
           ? 'Nothing waits for your decision. Clear “Only what I can decide” to see requests others must decide.'
-          : 'There are no matching records in your approval scope. Try another workflow or check your plant selection and assigned roles in User Management.'}
+          : 'There are no matching records in your approval scope. Try another workflow or check your plant selection and assigned roles in User management.'}
       </p>
     </div>
   );
 }
 
+/** The Workflow filter lives in the URL (`?kind=`), so a reload or a shared link keeps it; unknown kinds read as "all". */
+function useKindParam(): [string, (kind: string) => void] {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get('kind') ?? '';
+  const kind = isApprovalKind(raw) ? raw : '';
+  const setKind = (next: string) => setParams((current) => {
+    const updated = new URLSearchParams(current);
+    if (next) updated.set('kind', next);
+    else updated.delete('kind');
+    return updated;
+  }, { replace: true });
+  return [kind, setKind];
+}
+
 function ApprovalInboxScreen() {
   const { isSuperAdmin } = useCapabilities();
-  const [kind, setKind] = useState('');
+  const [kind, setKind] = useKindParam();
   const [decidable, setDecidable] = useState(false);
   const inbox = useApprovalInbox(kind || undefined, decidable);
   const { timezone } = usePlantTimezone();
@@ -62,7 +77,7 @@ function ApprovalInboxScreen() {
   return (
     <Page width="wide">
       <div className="space-y-4" data-testid="approval-inbox">
-        <PageHeader title="Pending Approvals" description="Pending records for your approval roles in this plant, oldest first, grouped by workflow. Each row says what changes; open it to decide in place." />
+        <PageHeader title={pageNameOf('/approvals')} description="Pending records for your approval roles in this plant, oldest first, grouped by workflow. Each row says what changes; open it to decide in place." />
         <p className="text-sm text-muted-foreground">
           {isSuperAdmin ? 'You are acting as SuperAdmin. You can decide for every workflow role, including your own requests.' : 'Approvals follow your assigned roles. A different approver must decide your own requests.'} Retire is offered only where that workflow supports it; Reject and Return keep their own meaning.
         </p>

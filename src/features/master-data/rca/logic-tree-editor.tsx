@@ -8,6 +8,7 @@ import { addNode, findNode, flatten, moveSibling, moveUnder, newNodeId, removeNo
 import { MoveNodeDialog } from './move-node-dialog';
 import { NodeDialog } from './node-dialog';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 type Pending = { kind: 'add'; parent: LogicTreeNode | null } | { kind: 'edit' | 'move' | 'delete'; node: LogicTreeNode };
 
@@ -89,7 +90,7 @@ export function LogicTreeEditor({ tree, onChange, editable }: LogicTreeEditorPro
           open
           onOpenChange={(open) => !open && close()}
           title={`Delete ${pending.node.name}?`}
-          description={`It is removed with its ${number(flatten(pending.node.children ?? []).length)} sub-node(s) when you save the template.`}
+          description={`It is removed with its ${plural(flatten(pending.node.children ?? []).length, 'sub-node', 'sub-nodes', number)} when you save the template.`}
           confirmLabel="Delete node"
           destructive
           onConfirm={() => onChange(removeNode(tree, pending.node.id))}

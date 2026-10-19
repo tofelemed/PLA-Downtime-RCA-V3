@@ -1,5 +1,6 @@
 import type { RcaAnalysesView, RcaRecordTool } from '@/api/v2/types/rca-analyses';
 import type { RcaCaseView } from '@/api/v2/types/rca';
+import { plural } from '@/features/ux-kit/format/plural';
 
 /** The nine RCA analysis methods; each is a sub-page `/rca/:caseId/analysis/:tool`. */
 export type AnalysisToolSlug =
@@ -37,9 +38,9 @@ export const toolOf = (slug: string | undefined): AnalysisTool | undefined => AN
 
 /** Short status of a tool for the analysis index ("3 nodes", "Saved", "Not started"). */
 export function toolStatus(tool: AnalysisTool, rca: RcaCaseView, analyses: RcaAnalysesView | undefined): string {
-  if (tool.slug === 'logic-tree') return rca.logicTree.length ? `${rca.logicTree.length} node(s)` : 'Not started';
+  if (tool.slug === 'logic-tree') return rca.logicTree.length ? plural(rca.logicTree.length, 'node', 'nodes') : 'Not started';
   if (tool.slug === 'event-diagram' || tool.slug === 'timeline') {
-    return rca.eventDiagram.nodes.length ? `${rca.eventDiagram.nodes.length} event(s)` : 'Not started';
+    return rca.eventDiagram.nodes.length ? plural(rca.eventDiagram.nodes.length, 'event', 'events') : 'Not started';
   }
   if (!tool.record) return 'Not started';
   if (!analyses) return '…';

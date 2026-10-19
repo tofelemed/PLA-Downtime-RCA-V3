@@ -86,7 +86,7 @@ describe('coding gate panel (SME D12 / D13)', () => {
     actAs('viewer');
     wrap(<CodingGatePanel view={view(GATE)} />);
     const link = screen.getByTestId('coding-gate-uncoded-link');
-    expect(link).toHaveTextContent('1 stop(s) uncoded');
+    expect(link).toHaveTextContent('1 stop uncoded');
     const target = new URL(link.getAttribute('href') ?? '', 'http://test');
     expect(target.pathname).toBe('/events');
     expect(Object.fromEntries(target.searchParams)).toEqual({
@@ -98,9 +98,9 @@ describe('coding gate panel (SME D12 / D13)', () => {
     actAs('production_engineer');
     wrap(<CodingGatePanel view={view(GATE)} />);
     fireEvent.click(screen.getByTestId('verify-shift'));
-    expect(await screen.findByRole('alertdialog', { name: 'Verify 3 stop(s) of this shift?' })).toBeInTheDocument();
+    expect(await screen.findByRole('alertdialog', { name: 'Verify 3 stops of this shift?' })).toBeInTheDocument();
     const review = screen.getByTestId('verify-shift-review-link');
-    expect(review).toHaveTextContent('Review the 3 stop(s) waiting for verification');
+    expect(review).toHaveTextContent('Review the 3 stops waiting for verification');
     const target = new URL(review.getAttribute('href') ?? '', 'http://test');
     expect(target.searchParams.get('verified')).toBe('not_verified');
     expect(target.searchParams.get('coding')).toBeNull();
@@ -114,7 +114,7 @@ describe('coding gate panel (SME D12 / D13)', () => {
     actAs('production_engineer');
     wrap(<CodingGatePanel view={view(GATE)} />);
     fireEvent.click(screen.getByTestId('verify-shift'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Verify 3 stop(s)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Verify 3 stops' }));
     await waitFor(() => expect(screen.getByTestId('verify-outcome').textContent).toContain('2 verified, 1 skipped'));
     expect(bodies[0]).toEqual({ periodId: 'p1' });
   });

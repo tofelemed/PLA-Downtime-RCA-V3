@@ -165,7 +165,7 @@ export class UserScopesV2Service {
           },
         })
       : [];
-    return [
+    const all = [
       ...members,
       ...visible.map((row) => ({
         ...row,
@@ -173,6 +173,30 @@ export class UserScopesV2Service {
         organizationId: row.organizationId ?? null,
       })),
     ];
+    return this.withHomePlantRoles(all);
+  }
+
+  /** Each holder's plant-wide grant roles in its home plant (one query), for the home-role mirror lock. */
+  private async withHomePlantRoles<T extends GrantHolder>(
+    holders: T[],
+  ): Promise<T[]> {
+    const homed = holders.filter((holder) => holder.tenantId);
+    if (homed.length === 0) return holders;
+    const rows = await this.scopes.find({
+      where: {
+        userId: In(homed.map((holder) => holder.id)),
+        scopeKind: 'tenant',
+      },
+      select: { userId: true, tenantId: true, role: true },
+    });
+    return holders.map((holder) => ({
+      ...holder,
+      homePlantRoles: rows
+        .filter(
+          (row) => row.userId === holder.id && row.tenantId === holder.tenantId,
+        )
+        .map((row) => row.role),
+    }));
   }
 
   private async assertUnitOfPlant(

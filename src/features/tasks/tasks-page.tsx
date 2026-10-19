@@ -52,20 +52,20 @@ function Toggle({ id, label, checked, onChange }: { id: string; label: string; c
 
 function TasksScreen() {
   const navigate = useNavigate();
-  const { canWriteEvents } = useCapabilities();
+  const { canWriteTasks } = useCapabilities();
   const dates = usePlantDates();
   const [values, setValues] = useUrlFilters(DEFAULTS);
   const filters = toFilters(values);
   const tasks = useTasksPage(filters);
   const summary = useTaskSummary(filters);
-  const columns = useMemo(() => taskColumns(dates.date, canWriteEvents), [dates, canWriteEvents]);
+  const columns = useMemo(() => taskColumns(dates.date, canWriteTasks), [dates, canWriteTasks]);
   return (
     <Page width="wide">
       <PageHeader
         title="Tasks"
         description="Assign, track and complete tasks linked to investigations, events and plans."
         actions={
-          canWriteEvents && (
+          canWriteTasks && (
             <Button asChild>
               <Link to="/tasks/new">
                 <ActionIcon.add aria-hidden="true" />

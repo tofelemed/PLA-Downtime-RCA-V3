@@ -4,6 +4,7 @@ import {
   FiveWhyRules,
   InvestigationRules,
 } from './rca-policy-rules';
+import { plural } from '../../common/helpers/plural';
 
 export interface GateIssue {
   code: string;
@@ -75,7 +76,7 @@ function fiveWhyIssues(fiveWhy: FiveWhyFacts, rules: FiveWhyRules): GateResult {
     blockers.push({
       code: 'FIVE_WHY_TOO_SHALLOW',
       field: 'fiveWhy.whyLevels',
-      message: `answer at least ${rules.minLevels} why level(s)`,
+      message: `answer at least ${plural(rules.minLevels, 'why level', 'why levels')}`,
     });
   }
   if (

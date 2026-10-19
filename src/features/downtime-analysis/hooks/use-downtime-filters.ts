@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useWindowClock } from '@/features/event-hub/hooks/use-window-clock';
 import { hasAbsoluteWindow, hasWindowParams, parseFilters, toSearchParams, type DowntimeFilters } from '../model/downtime-filters';
+import { DRILL_PARAM } from '../model/reason-drill';
 
 export interface DowntimeFiltersState {
   filters: DowntimeFilters;
@@ -10,9 +11,10 @@ export interface DowntimeFiltersState {
 }
 
 const FILTER_KEYS = new Set(['from', 'to', 'window', 'units', 'class', 'micro', 'approved', 'metric', 'trend', 'reasons', 'products', 'shifts', 'crews']);
-const withOthers = (filters: DowntimeFilters, current: URLSearchParams) => {
+/** Other params (analysis mode, …) are kept; `dropped` ones (the listed Pareto bar) are cleared by a filter change. */
+const withOthers = (filters: DowntimeFilters, current: URLSearchParams, dropped: readonly string[] = []) => {
   const next = toSearchParams(filters);
-  current.forEach((value, key) => { if (!FILTER_KEYS.has(key)) next.set(key, value); });
+  current.forEach((value, key) => { if (!FILTER_KEYS.has(key) && !dropped.includes(key)) next.set(key, value); });
   return next;
 };
 
@@ -37,7 +39,7 @@ export function useDowntimeFilters(): DowntimeFiltersState {
       const keepsDrill = Object.keys(patch).every((key) => DRILL_KEEPING.includes(key as keyof DowntimeFilters));
       const next = { ...filters, ...(keepsDrill ? {} : { reasonPath: [] }), ...patch };
       if (next.relativeWindow && next.relativeWindow !== filters.relativeWindow) refreshWindow();
-      setParams((current) => withOthers(next, current));
+      setParams((current) => withOthers(next, current, [DRILL_PARAM]));
     },
     [filters, setParams, refreshWindow],
   );

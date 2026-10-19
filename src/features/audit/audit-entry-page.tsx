@@ -3,6 +3,7 @@ import { useAuditEntry } from '@/api/v2/queries/administration-audit';
 import type { AuditEntryView } from '@/api/v2/types/administration';
 import { PageGate } from '@/features/admin/shared/page-gate';
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -10,7 +11,7 @@ import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { actionLabel, entityLabel } from './components/audit-columns';
 
-const BACK = { to: '/audit', label: 'Audit log' };
+const BACK = { to: '/audit', label: pageNameOf('/audit') };
 
 /** `/audit/:entryId`: one audit entry with its full details (was the "Audit Entry Details" dialog). */
 export function AuditEntryPage() {
@@ -24,7 +25,7 @@ export function AuditEntryPage() {
       ) : (
         <Page>
           <PageHeader title="Audit entry" back={BACK} />
-          <DataState state={dataStateOf(entry)} error={entry.error} onRetry={() => void entry.refetch()} />
+          <DataState state={dataStateOf(entry)} error={entry.error} onRetry={() => void entry.refetch()} back={BACK} />
         </Page>
       )}
     </PageGate>

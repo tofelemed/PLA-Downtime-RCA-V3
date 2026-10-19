@@ -59,6 +59,16 @@ describe('A-5 rolling windows in the Event Hub URL', () => {
     expect(windowRangeText({ label: 'Custom', from: null, to: null }, format)).toBe('Custom');
   });
 
+  it('QA audit L2: a one-day window of chosen bounds names its day, once', () => {
+    const format = { time: (iso: string) => iso.slice(11, 16), dateTime: (iso: string) => iso.slice(0, 16).replace('T', ' ') };
+    const day = { from: '2026-10-17T06:00:00.000Z', to: '2026-10-18T06:00:00.000Z', relative: false };
+    expect(windowRangeText({ ...day, label: 'Custom range' }, format)).toBe('Custom range · 2026-10-17 06:00–06:00');
+    expect(windowRangeText({ ...day, label: '2026-10-17 A' }, format)).toBe('2026-10-17 A · 06:00–06:00');
+    const custom = shownWindow(parseEventFilters(new URLSearchParams('from=2026-10-17T06:00:00.000Z&to=2026-10-18T06:00:00.000Z&window=Custom%20range'), NOW));
+    expect(custom.relative).toBe(false);
+    expect(windowRangeText(custom, format)).toBe('Custom range · 2026-10-17 06:00–06:00');
+  });
+
   it('E-1: the start-time order is a server sort kept in the URL', () => {
     const oldest = parseEventFilters(new URLSearchParams('window=24h&sort=oldest'), NOW);
     expect(oldest.sort).toBe('oldest');

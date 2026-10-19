@@ -66,7 +66,8 @@ export class MonthCloseV2Controller {
     description:
       'Read-only; a month never acted on is open. 422 INVALID_MONTH for a malformed key, ' +
       'MONTH_CALENDAR_MISMATCH / MONTH_KEY_AMBIGUOUS for a month of the other calendar. ' +
-      '`prerequisites` include the scheduled shifts without a period and whether the month has ended.',
+      '`prerequisites` include the scheduled shifts without a period and whether the month has ended; they count only ' +
+      'periods an approved plan covers — `uncoveredDays` lists the days without a plan as information.',
   })
   async get(
     @Ctx() ctx: RequestContext,

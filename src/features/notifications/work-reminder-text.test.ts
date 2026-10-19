@@ -24,9 +24,10 @@ describe('work reminders in the bell (item 6)', () => {
     const backlog = base('uncoded_backlog', 'unit', 'u1', { level: 2, unitId: 'u1', unitName: 'Extruder 1', localDate: '2026-10-17', stops: 4 });
     expect(notificationText(backlog, {})).toEqual({
       title: 'Uncoded stops still waiting (escalated)',
-      body: 'Extruder 1 · 2026-10-17: 4 stop(s) waiting for a reason',
+      body: 'Extruder 1 · 2026-10-17: 4 stops waiting for a reason',
       href: '/events?units=u1&coding=uncoded',
     });
     expect(notificationText(backlog, { digits: 'persian' }).body).toContain('۴');
+    expect(notificationText({ ...backlog, detail: { ...backlog.detail, stops: 1 } }, {}).body).toBe('Extruder 1 · 2026-10-17: 1 stop waiting for a reason');
   });
 });

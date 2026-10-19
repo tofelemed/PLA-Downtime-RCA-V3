@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { adjustmentBody, emptyAdjustment, validateAdjustment } from './model/adjustment-form';
-import { snapshotFigures } from './model/snapshot-figures';
+import { proposalComparison } from './model/snapshot-figures';
 import { actorLabel } from './model/display';
 
 describe('actuals adjustment form', () => {
@@ -25,30 +25,29 @@ describe('actuals adjustment form', () => {
 });
 
 describe('internal values stay off screen', () => {
-  it('change-proposal snapshots show figures with plain labels, never ids or hashes', () => {
-    const figures = snapshotFigures({ revisionId: '7e1d6c2a-0000-4000-8000-000000000000', residual: '60', inputHash: 'abc', plan: { gap: '150', sliceId: 's1' } });
-    expect(figures).toEqual([
-      { label: 'Unaccounted', value: '60' },
-      { label: 'Plan · gap', value: '150' },
-    ]);
+  it('change-proposal figures are curated with units: the reconciliation apart from each ledger, never ids, hashes or internal fields', () => {
+    const groups = proposalComparison(
+      {
+        revisionId: '7e1d6c2a-0000-4000-8000-000000000000',
+        revision: 1,
+        slices: [{ sliceId: 's1', uom: 't', target: '224', actual: '189', gap: '35', attributed: '35', toleranceAdjustment: '0', unadjustedResidual: '0', residual: '0', flags: [] }],
+        ledgers: [{ sliceId: 's1', ledger: 'capacity', uom: 't', capacity: '224', exclusion: '0', good: '189', actual: '189', quality: '3', residual: '0', flags: [] }],
+      },
+      null,
+    );
+    expect(groups.map((g) => g.title)).toEqual(['Reconciliation', 'Capacity ledger (calculated)']);
+    expect(groups[0].rows.map((r) => r.label)).toEqual(['Target', 'Actual (good)', 'Gap', 'Attributed losses', 'Tolerance adjustment', 'Unaccounted']);
+    expect(groups[0].rows[0]).toMatchObject({ unit: 't', before: '224', after: null });
+    expect(groups[1].rows.map((r) => r.label)).toEqual(['Capacity', 'Actual (good)', 'Availability loss', 'Performance loss', 'Quality loss', 'Unaccounted']);
   });
 
-  it('shows the server snapshot lists: the reconciliation per slice and each run ledger (Marun E2E)', () => {
-    const figures = snapshotFigures({
-      revision: 1,
-      slices: [{ sliceId: 's1', uom: 't', target: '224', actual: '189', gap: '35', attributed: '35', residual: '0', flags: [] }],
-      ledgers: [{ sliceId: 's1', ledger: 'capacity', good: '189', quality: '3', flags: [] }],
-    });
-    expect(figures).toEqual([
-      { label: 'Revision', value: '1' },
-      { label: 'Reconciliation · uom', value: 't' },
-      { label: 'Reconciliation · target', value: '224' },
-      { label: 'Reconciliation · actual', value: '189' },
-      { label: 'Reconciliation · gap', value: '35' },
-      { label: 'Reconciliation · attributed', value: '35' },
-      { label: 'Reconciliation · unaccounted', value: '0' },
-      { label: 'Capacity ledger · good', value: '189' },
-      { label: 'Capacity ledger · quality', value: '3' },
+  it('several slices are named by position; the server values are never summed', () => {
+    const slice = (id: string, target: string) => ({ sliceId: id, uom: 't', target, actual: '1', gap: '0', attributed: '0', toleranceAdjustment: '0', residual: '0' });
+    const [reconciliation] = proposalComparison({ slices: [slice('a', '10'), slice('b', '20')] }, { slices: [slice('a', '10'), slice('b', '25')] });
+    const targets = reconciliation.rows.filter((r) => r.label.startsWith('Target'));
+    expect(targets).toEqual([
+      expect.objectContaining({ label: 'Target · slice 1', before: '10', after: '10' }),
+      expect.objectContaining({ label: 'Target · slice 2', before: '20', after: '25' }),
     ]);
   });
 

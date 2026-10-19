@@ -1,15 +1,14 @@
 import { ForbiddenException } from '@nestjs/common';
 import { RequestContext } from '../../common/context/request-context';
-import { rolesForLegacyRole, satisfiesRole } from './role-model';
+import { legacyRolesOf } from './legacy-roles-of';
+import { satisfiesRole } from './role-model';
 
 /** A plant-wide change needs the required role at plant scope, not an unrelated broad read grant. */
 export function requireTenantRole(
   context: RequestContext,
   required: readonly string[],
 ): void {
-  const legacy = rolesForLegacyRole(context.legacyRole).filter((role) =>
-    context.roles.includes(role),
-  );
+  const legacy = legacyRolesOf(context);
   const grants = context.scopes
     .filter(
       (scope) => scope.tenantId === context.tenantId && scope.kind === 'tenant',

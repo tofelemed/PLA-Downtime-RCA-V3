@@ -8,6 +8,7 @@ import { useAssetOptions } from '../../use-asset-options';
 import { EVIDENCE_TYPES, FIVE_P, SEVERITIES, type EvidenceForm } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { AreaField, ChoiceField, optionsOf, TextField, type ChoiceOption } from './form-controls';
+import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-labels';
 
 export interface EvidenceFieldsProps {
   form: EvidenceForm;
@@ -55,21 +56,21 @@ export function EvidenceClassificationFields({ form, onChange }: EvidenceFieldsP
   );
 }
 
-/** The collection task behind the evidence (who has to bring what by when; the assignee is a plant member). */
+/** The evidence request behind the item (who has to bring what by when; a plant member) — not a Task Management task. */
 export function EvidenceTaskFields({ form, onChange }: EvidenceFieldsProps) {
   return (
-    <Section title="Collection task" headingLevel={3}>
+    <Section title={REQ.section} headingLevel={3}>
       <div className="grid gap-4 md:grid-cols-2">
-        <AreaField id="ev-task" label="Task" value={form.task} maxLength={2000} onChange={(task) => onChange({ task })} />
-        <OwnerSelect id="ev-task-assignee" label="Assigned to" noneLabel="Not assigned" value={form.taskAssigneeId} onChange={(taskAssigneeId) => onChange({ taskAssigneeId })} />
+        <AreaField id="ev-task" label={REQ.request} value={form.task} maxLength={2000} onChange={(task) => onChange({ task })} />
+        <OwnerSelect id="ev-task-assignee" label={REQ.requestedFrom} noneLabel="Not assigned" value={form.taskAssigneeId} onChange={(taskAssigneeId) => onChange({ taskAssigneeId })} />
         <DateInput id="ev-task-due" label="Due date" value={form.taskDueDate} onChange={(taskDueDate) => onChange({ taskDueDate })} />
         <ChoiceField
           id="ev-task-status"
-          label="Task status"
+          label={REQ.status}
           value={form.taskStatus}
           options={[
             { value: 'pending', label: 'Pending' },
-            { value: 'completed', label: 'Completed' },
+            { value: 'completed', label: 'Done' },
           ]}
           onChange={(value) => onChange({ taskStatus: value === 'completed' ? 'completed' : 'pending' })}
         />

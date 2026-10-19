@@ -39,9 +39,13 @@ export function stopsToCodeHref(scope: AnalyticsScope): string {
   return eventsHref(scope, { kinds: 'downtime', coding: 'uncoded' });
 }
 
-/** A routed PLA page with the dashboard context, e.g. `/pla-analytics/losses#repeat-causes`. */
-export function plaHref(scope: AnalyticsScope, path: string, hash = ''): string {
-  return withAnalysisContext(`${path}${hash}`, dashboardContext(scope));
+/**
+ * A routed PLA page with the dashboard context and the page's own parameters, e.g.
+ * `/pla-analytics/losses?breakdown=repeat-causes` (the page reads `breakdown`, never a hash — QA PLA M4).
+ */
+export function plaHref(scope: AnalyticsScope, path: string, own: Readonly<Record<string, string>> = {}): string {
+  const params = new URLSearchParams(own);
+  return withAnalysisContext(params.size > 0 ? `${path}?${params}` : path, dashboardContext(scope));
 }
 
 /** Reports with the dashboard context, optionally on one view (`?view=`). */

@@ -11,6 +11,7 @@ import { RealtimeGateway } from '../../../realtime.gateway';
 import {
   actionTaskExists,
   assertActionTask,
+  assertCaseTaskAllowed,
   recordTaskOutcome,
 } from '../../../rca-case/action-tasks';
 import { Task } from '../../../task/task.entity';
@@ -90,6 +91,10 @@ export class TasksV2CommandsService {
   ): Promise<TaskV2View> {
     const tenantId = requireTenantId(context);
     await this.assertAssignee(tenantId, body.assigneeId);
+    await assertCaseTaskAllowed(this.tasks.manager, {
+      tenantId,
+      rcaId: body.linkType === 'RCA' ? (body.linkId ?? null) : null,
+    });
     if (body.rcaActionId) {
       await assertActionTask(this.tasks.manager, {
         tenantId,
@@ -147,6 +152,10 @@ export class TasksV2CommandsService {
       const linkType =
         body.linkType === undefined ? current.entityType : body.linkType;
       const linkId = body.linkId === undefined ? current.entityId : body.linkId;
+      await assertCaseTaskAllowed(this.tasks.manager, {
+        tenantId: current.tenantId,
+        rcaId: linkType === 'RCA' ? (linkId ?? null) : null,
+      });
       await assertActionTask(this.tasks.manager, {
         tenantId: current.tenantId,
         rcaId: linkType === 'RCA' ? (linkId ?? null) : null,

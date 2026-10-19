@@ -49,7 +49,8 @@ export const AUDIT_ACTION_LABELS: Readonly<Record<string, string>> = {
 /** Audit entity types whose plain name differs from the humanized token. */
 export const AUDIT_ENTITY_LABELS: Readonly<Record<string, string>> = {
   Tenant: 'Plant',
-  USER: 'User',
+  USER: 'User session',
+  Exports: 'Export',
   RCA: GLOSSARY.investigation,
   UserScope: 'Access grant',
   AppSettings: 'Application setting',

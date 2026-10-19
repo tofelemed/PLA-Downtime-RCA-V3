@@ -7,6 +7,8 @@ export interface RcaRecommendationEventFacts {
   assetId: string | null;
   assetName: string | null;
   startTime: string;
+  /** the event's kind (`downtime`, …): the queue names a downtime event "Stop" (glossary, QA L1a) */
+  physicalType: string;
 }
 
 interface FactsRow {
@@ -16,11 +18,12 @@ interface FactsRow {
   asset_id: string | null;
   asset_name: string | null;
   start_time: Date | string;
+  physical_type: string;
 }
 
 /** Events of one page by primary key with their reason and asset names (left joins by primary key). */
 export const RECOMMENDATION_EVENT_FACTS_SQL = `SELECT e."id", e."reason_code_id", rc."name" AS "reason_name", e."asset_id",
-       a."name" AS "asset_name", e."start_time"
+       a."name" AS "asset_name", e."start_time", e."physical_type"::text AS "physical_type"
   FROM "production_events" e
   LEFT JOIN "reason_codes" rc ON rc."id" = e."reason_code_id"
   LEFT JOIN "assets" a ON a."id" = e."asset_id"
@@ -33,6 +36,7 @@ export function toEventFacts(row: FactsRow): RcaRecommendationEventFacts {
     assetId: row.asset_id,
     assetName: row.asset_name,
     startTime: new Date(row.start_time).toISOString(),
+    physicalType: row.physical_type,
   };
 }
 

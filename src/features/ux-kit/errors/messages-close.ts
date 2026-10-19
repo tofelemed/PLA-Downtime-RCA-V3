@@ -27,5 +27,9 @@ export const CLOSE_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   DAY_CERTIFIED: { title: 'The day is already certified', text: 'A correction of a shift reopens it.' },
   INVALID_DATE: { title: 'The date is not valid', text: 'Choose the day again.' },
   NOT_A_RESTATEMENT: { title: 'This revision restates nothing', text: 'Only a revision opened over an approved one has a restatement.' },
+  POSTING_DECIDED: {
+    title: 'Finance has already decided this posting',
+    text: 'A decided posting is final. To change it, propose a correction of the period; its new revision gets its own posting.',
+  },
   PERIOD_APPROVED: { title: 'The period is already approved', text: 'A late value reaches an approved period through a change proposal.' },
 };

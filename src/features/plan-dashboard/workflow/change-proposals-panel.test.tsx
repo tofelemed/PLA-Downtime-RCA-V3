@@ -161,4 +161,31 @@ describe('change proposals panel: manual correction (SME R4)', () => {
     await waitFor(() => expect(screen.getByTestId('proposal-coding-changes').textContent).toContain('Reason changed: SPEED-LOSS'));
     expect(screen.getByTestId('proposal-coding-changes').textContent).toContain('→ none · availability loss line 14.00');
   });
+
+  it('QA P-1: curated figures with units, reconciliation apart from the ledgers, no internal fields; value after once accepted', async () => {
+    const slice = { sliceId: 's1', uom: 't', target: '224', actual: '189', gap: '35', attributed: '35', toleranceAdjustment: '0', unadjustedResidual: '0', residual: '0', overAccounted: '0', flags: [] };
+    const ledger = { sliceId: 's1', ledger: 'plan', uom: 't', capacity: '224', exclusion: '0', availability: '28', performance: '4', quality: '3', good: '189', gain: '0', attributed: '35', residual: '4', target: '224', actual: '189', gap: '35', flags: [] };
+    proposals = [{
+      ...MANUAL,
+      id: 'cp-3',
+      trigger: 'rate_change',
+      manual: null,
+      state: 'accepted',
+      createdRevisionId: 'rev-3',
+      before: { revisionId: 'rev-2', revision: 2, inputHash: 'h', ledgers: [ledger], slices: [slice], values: { view: 'economic_impact', policyVersion: 1, amounts: [{ currency: 'USD', amount: '5040', status: 'valued' }] } },
+      after: { inputHash: 'h2', issues: [], ledgers: [{ ...ledger, residual: '0' }], slices: [slice], codingChanges: [] },
+      valueAfter: { revision: 3, lifecycle: 'approved', values: { view: 'contribution_margin', policyVersion: 2, amounts: [{ currency: 'USD', amount: '5250', status: 'valued' }] } },
+    }];
+    actAs('production_accountant', 'sara');
+    renderPanel(VIEW);
+    const comparison = await screen.findByTestId('proposal-comparison');
+    const text = comparison.textContent ?? '';
+    expect(screen.getByTestId('proposal-group-reconciliation').textContent).toContain('Unaccounted');
+    expect(screen.getByTestId('proposal-group-plan').textContent).toContain('Plan ledger (calculated)');
+    expect(text).toContain('224.00 t');
+    expect(text).not.toMatch(/residual|uom|exclusion|over accounted|unadjusted/i);
+    expect(screen.getByTestId('proposal-value-after').textContent).toContain('5,250.00 USD');
+    expect(screen.getByTestId('proposal-values').textContent).toContain('revision 3, approved, Contribution margin');
+    expect(screen.getByTestId('proposal-values').textContent).toContain('5,040.00 USD');
+  });
 });

@@ -4,6 +4,7 @@ import {
   statusOf,
   TEAM_LOCKED_STATUSES,
 } from '../domain/rca/case-workflow';
+import { assertCaseNotClosed } from '../rca-case/case-closed';
 import { readIds } from '../rca-case/rca-case-json';
 import { RCA } from './rca.entity';
 
@@ -37,7 +38,7 @@ export function assertV1CreateStatus(status: string | undefined): void {
 }
 
 /**
- * RCA-01 / CA1 on the v1 routes: the status never changes by an edit (only the v2 workflow moves it), and
+ * RCA-01 / CA1 / QA H1 on the v1 routes: a closed case is frozen (409 CASE_CLOSED), the status never changes by an edit (only the v2 workflow moves it), and
  * the team is fixed once the investigation is accepted — so a v1 PUT cannot close a case or bypass the
  * independent closure approval.
  */
@@ -45,6 +46,7 @@ export function assertV1Update(
   stored: RCA,
   data: { status?: string; teamLeadId?: string; teamMemberIds?: string[] },
 ): void {
+  assertCaseNotClosed(stored);
   if (data.status !== undefined && data.status !== statusOf(stored.status)) {
     throw refused(
       'STATUS_VIA_TRANSITION',

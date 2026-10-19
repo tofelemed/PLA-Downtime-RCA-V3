@@ -40,6 +40,8 @@ interface LossTreeBody {
     amount: string | null;
     share: string | null;
     cumulativeShare: string | null;
+    lines: number;
+    eventLines: number;
     status: string;
     reasons: string[];
   }>;
@@ -227,6 +229,26 @@ describe('PLA analytics reads (plan 3.6)', () => {
     expect(top.data.groups).toEqual(all.data.groups.slice(0, 1));
     expect(top.data.truncated).toBe(all.data.groups.length - 1);
     expect(top.data.totals).toEqual(all.data.totals);
+  });
+
+  it('loss tree by cause event (QA PLA M2): the same lines per event, adding up to the reason total; reasons count their event lines', async () => {
+    const byReason = await read<LossTreeBody>(
+      `loss-tree?${scope}&groupBy=reason&metric=qty`,
+    );
+    const byEvent = await read<LossTreeBody>(
+      `loss-tree?${scope}&groupBy=event&metric=qty`,
+    );
+    expect(byEvent.data.totals.map((t) => [t.unit, t.amount])).toEqual(
+      byReason.data.totals.map((t) => [t.unit, t.amount]),
+    );
+    expect(byEvent.data.groups.some((g) => g.key !== null)).toBe(true);
+    for (const group of byEvent.data.groups) {
+      expect(group.label).toBeNull();
+      expect(group.eventLines).toBe(group.key === null ? 0 : group.lines);
+    }
+    for (const group of byReason.data.groups) {
+      expect(group.eventLines).toBeLessThanOrEqual(group.lines);
+    }
   });
 
   it('loss tree kinds filter (FE-08): only the chosen loss kinds, totals over them; an unknown kind is 422', async () => {

@@ -13,6 +13,7 @@ import { EVIDENCE_TYPES } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
 import { TaskOverdueBadge } from './task-overdue-badge';
+import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
 function columns(day: (value: string | null) => string, userName: (id: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {
@@ -20,11 +21,11 @@ function columns(day: (value: string | null) => string, userName: (id: string | 
     { id: 'title', header: 'Evidence', cell: (row) => <span className="font-medium">{row.title}</span> },
     { id: 'type', header: 'Type', cell: (row) => row.type ?? 'Note', nowrap: true },
     { id: 'fiveP', header: '5P', cell: (row) => (row.fiveP ? <Badge variant="outline">{row.fiveP}</Badge> : '—') },
-    { id: 'task', header: 'Task', cell: (row) => <span className="line-clamp-2">{row.task ?? '—'}</span> },
-    { id: 'assignee', header: 'Assigned to', cell: (row) => (row.taskAssigneeId ? userName(row.taskAssigneeId) : '—') },
+    { id: 'task', header: REQ.request, cell: (row) => <span className="line-clamp-2">{row.task ?? '—'}</span> },
+    { id: 'assignee', header: REQ.requestedFrom, cell: (row) => (row.taskAssigneeId ? userName(row.taskAssigneeId) : '—') },
     {
       id: 'due',
-      header: 'Task due',
+      header: REQ.due,
       cell: (row) => (
         <span className="inline-flex flex-wrap items-center">
           {day(row.taskDueDate)}
@@ -33,7 +34,7 @@ function columns(day: (value: string | null) => string, userName: (id: string | 
       ),
       nowrap: true,
     },
-    { id: 'status', header: 'Task status', cell: (row) => labelOf(RCA_EVIDENCE_TASK_LABELS, row.taskStatus, 'Pending'), nowrap: true },
+    { id: 'status', header: REQ.status, cell: (row) => labelOf(RCA_EVIDENCE_TASK_LABELS, row.taskStatus, 'Pending'), nowrap: true },
     { id: 'verified', header: 'Verified', cell: (row) => (row.verified ? 'Yes' : 'No'), nowrap: true },
     { id: 'files', header: 'Files', cell: (row) => row.attachments.length, align: 'right' },
   ];
@@ -77,7 +78,7 @@ export function EvidenceListPage() {
             </Badge>
           ))}
         </div>
-        <Input className="max-w-sm" aria-label="Search evidence" placeholder="Search title, type, task or collector" value={text} onChange={(e) => setText(e.target.value)} />
+        <Input className="max-w-sm" aria-label="Search evidence" placeholder="Search title, type, request or collector" value={text} onChange={(e) => setText(e.target.value)} />
         <DataTable
           caption="Evidence of the investigation"
           columns={cols}

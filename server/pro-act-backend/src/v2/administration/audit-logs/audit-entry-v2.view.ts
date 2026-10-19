@@ -69,9 +69,56 @@ export function parseAuditDetails(
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
+/** Verbs of the automatic entries (`CREATE Task "…" via API POST …`) in the words a screen uses. */
+const AUTO_VERBS: Readonly<Record<string, string>> = {
+  CREATE: 'Created',
+  UPDATE: 'Changed',
+  DELETE: 'Deleted',
+  READ: 'Viewed',
+};
+
+/** Record types whose plain name differs from their split-up type name. */
+const RECORD_NOUNS: Readonly<Record<string, string>> = {
+  RCA: 'investigation',
+  Tenant: 'plant',
+  USER: 'user session',
+  UserScope: 'access grant',
+  AppSettings: 'application setting',
+};
+
+const AUTO_ENTRY = /^(CREATE|UPDATE|DELETE|READ) (\S+)(?: "([^"]*)")?(.*)$/;
+
+const ACRONYMS = /\b(rca|oee|pla|fx|mqtt|pi|csv)\b/g;
+
+/** `ProductionPlan` → "production plan", `Exports` (a route name) → "export", `RcaPolicies` → "RCA policy". */
+function recordNoun(type: string): string {
+  if (RECORD_NOUNS[type]) return RECORD_NOUNS[type];
+  const words = type.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+  const singular = words.endsWith('ies')
+    ? `${words.slice(0, -3)}y`
+    : /[^su]s$/.test(words)
+      ? words.slice(0, -1)
+      : words;
+  return singular.replace(ACRONYMS, (word) => word.toUpperCase());
+}
+
+/**
+ * An automatic entry in words (QA audit: `CREATE Exports "unknown"`): "Created export · Period summary
+ * CSV"; an unknown or id-only name is left out.
+ */
+function autoEntryText(text: string): string {
+  const match = AUTO_ENTRY.exec(text);
+  if (!match) return text;
+  const [, verb, type, label, rest] = match;
+  const name =
+    label && label !== 'unknown' && label !== '…' ? ` · ${label}` : '';
+  return `${AUTO_VERBS[verb]} ${recordNoun(type)}${name}${rest}`;
+}
+
 /**
  * The one-line summary a screen shows: the automatic entries' technical tail (` via API PATCH /api/...`)
- * and record ids are left out (the full details stay on the entry's page and in the CSV export).
+ * and record ids are left out (the full details stay on the entry's page and in the CSV export), and their
+ * raw verb and type read as words.
  */
 export function readableSummary(message: string | null): string | null {
   if (!message) return null;
@@ -80,7 +127,7 @@ export function readableSummary(message: string | null): string | null {
     .replace(new RegExp(` "${UUID.source}"`, 'gi'), '')
     .replace(UUID, '…')
     .trim();
-  return text || null;
+  return text ? autoEntryText(text) : null;
 }
 
 export function toAuditEntryView(

@@ -11,6 +11,8 @@ import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_CORRECTION_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { RcaErrorAlert } from '../components/rca-error-alert';
 import { useRcaApprover } from '../use-rca-approver';
+import { useOptionalCaseWorkspace } from '../case/case-context';
+import { useCanWriteRca } from './use-can-write-rca';
 
 const MIN_REASON = 10;
 
@@ -80,12 +82,14 @@ function DecideButtons({ action }: { action: RcaActionView }) {
 
 /** CA3: the counted baseline is corrected only by a proposal (with a reason) that someone else approves. */
 export function BaselineCorrection({ action, baseline }: { action: RcaActionView; baseline: RcaActionBaseline }) {
-  const { canWriteRca, isSuperAdmin } = useCapabilities();
+  const { isSuperAdmin } = useCapabilities();
+  const canWriteRca = useCanWriteRca();
   const approver = useRcaApprover();
   const { session } = useAuth();
   const correction = baseline.correction ?? null;
   const pending = correction?.status === 'pending';
-  const canDecide = pending && approver && (isSuperAdmin || correction?.proposedBy !== session?.user.id);
+  const frozen = useOptionalCaseWorkspace()?.closed ?? false;
+  const canDecide = !frozen && pending && approver && (isSuperAdmin || correction?.proposedBy !== session?.user.id);
   return (
     <div className="space-y-1">
       {correction && <CorrectionState correction={correction} />}

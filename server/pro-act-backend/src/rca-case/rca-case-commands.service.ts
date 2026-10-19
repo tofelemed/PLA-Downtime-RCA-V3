@@ -15,6 +15,7 @@ import { templateLogicTree } from './rca-case-template';
 import { RcaCaseV2View } from './rca-case.view';
 import { RcaCasesService } from './rca-cases.service';
 import { findCase, invalidBody, scopeOf } from './rca-scope';
+import { assertCaseNotClosed } from './case-closed';
 
 /** Counts of the cases in the caller's scope (the RCA list header and the dashboard tiles). */
 export interface RcaCaseSummaryV2View {
@@ -118,7 +119,7 @@ export class RcaCaseCommandsService {
     return evidenceOptions(this.dataSource.manager, scopeOf(context).tenantId);
   }
 
-  /** 409 RCA_CASE_IN_USE once the case is closed, linked, has actions or a recommendation points at it. */
+  /** 409 CASE_CLOSED for a closed case; 409 RCA_CASE_IN_USE once it is linked, has actions or a recommendation points at it. */
   async remove(
     context: RequestContext,
     target: { id: string; expectedRowVersion: number },
@@ -126,8 +127,9 @@ export class RcaCaseCommandsService {
     const scope = scopeOf(context);
     await this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, target.id, true);
+      assertCaseNotClosed(rca);
       assertRevision(rca.rowVersion, target.expectedRowVersion);
-      if (rca.status === 'Closed' || (await isReferenced(manager, rca.id))) {
+      if (await isReferenced(manager, rca.id)) {
         throw new ConflictException({
           code: 'RCA_CASE_IN_USE',
           message:
@@ -151,6 +153,7 @@ export class RcaCaseCommandsService {
     const scope = scopeOf(context);
     await this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, target.id, true);
+      assertCaseNotClosed(rca);
       assertRevision(rca.rowVersion, target.expectedRowVersion);
       if (!rca.templateId) {
         throw invalidBody(

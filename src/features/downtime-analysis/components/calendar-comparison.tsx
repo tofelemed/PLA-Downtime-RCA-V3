@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
-import { useDowntimeReport } from '@/api/v2/queries/reports';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { usePlantFormat } from '@/features/event-hub/hooks/use-plant-format';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf, type QueryLike } from '@/features/ux-kit/data-state-of';
 import { Section } from '@/features/ux-kit/page-layout';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
-import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
-import { downtimeQuery, previousWindow, type DowntimeFilters } from '../model/downtime-filters';
+import { useDowntimeBundle, type DowntimeBundleResult } from '../hooks/use-downtime-bundle';
+import { pageBundleQuery } from '../model/bundle-views';
+import { previousWindow, type DowntimeFilters } from '../model/downtime-filters';
 import { findMetric, SUMMARY_TILES } from '../model/kpi-display';
 import { KpiTile } from './kpi-summary';
 
@@ -16,12 +16,13 @@ const TILES = SUMMARY_TILES.filter((tile) => COMPARED.includes(tile.metric));
 
 /**
  * Calendar comparison: the chosen window (from the page snapshot) beside the window of the same length
- * before it (its own server summary); no difference is computed in the browser.
+ * before it — the same bundle request for the earlier window, so both sides follow the same filters
+ * (schedule class included); no difference is computed in the browser.
  */
 export function CalendarComparison({ filters, bundle }: { filters: DowntimeFilters; bundle: DowntimeBundleResult }) {
   const env = useEventHubEnv();
   const previous = previousWindow(filters);
-  const before = useDowntimeReport(downtimeQuery(previous, 'oee', { metric: 'duration', scheduleClass: 'all' }), env.timezone);
+  const before = useDowntimeBundle(pageBundleQuery(previous, 'trends', 'calendar'), env.timezone);
   return (
     <Section title="Window comparison" className="rounded-md border p-4">
       <div className="grid gap-4 md:grid-cols-2" data-testid="calendar-comparison">

@@ -271,6 +271,8 @@ export interface RcaRecommendationEventFacts {
   assetId: string | null;
   assetName: string | null;
   startTime: string;
+  /** the event's kind; absent from older servers */
+  physicalType?: string;
 }
 
 export interface RcaRecommendationView {

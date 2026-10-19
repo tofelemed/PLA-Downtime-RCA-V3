@@ -5,7 +5,9 @@ import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { hasUnsavedChanges } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { useRcaFormat } from '../use-rca-format';
 import { buildCreateBody, emptyCaseForm, type RcaCaseForm } from '../model/rca-form';
@@ -14,6 +16,7 @@ import { EventCaseSection } from './event-case-section';
 import { NewCaseFields } from './new-case-form';
 import { LossLineFollowUpError } from './loss-line-follow-up-error';
 import { useLossLineFollowUp } from './use-loss-line-follow-up';
+import { TITLE_REQUIRED_REASON, useNewCaseGuard } from './use-new-case-guard';
 
 const prefilledForm = (start: StartRcaContext): RcaCaseForm => ({
   ...emptyCaseForm(start.unitId ?? null),
@@ -27,11 +30,14 @@ function StandaloneCase({ start }: { start: StartRcaContext }) {
   const followUp = useLossLineFollowUp(start.lossLineId);
   const { timezone } = useRcaFormat();
   const [form, setForm] = useState<RcaCaseForm>(() => prefilledForm(start));
+  const [initial] = useState(form);
+  const busy = create.isPending || followUp.isPending || followUp.unlinkedCaseId !== null;
+  const mayLeave = useNewCaseGuard(hasUnsavedChanges(form, initial, [busy, create.isSuccess]));
+  const missingTitle = form.title.trim() === '';
   const submit = async () => {
     const created = await create.submit(buildCreateBody(form, timezone)).catch(() => null);
     if (created) await followUp.finish(created.id);
   };
-  const busy = create.isPending || followUp.isPending || followUp.unlinkedCaseId !== null;
   return (
     <Section title="Investigation">
       <form
@@ -45,15 +51,26 @@ function StandaloneCase({ start }: { start: StartRcaContext }) {
         {create.error ? <FriendlyErrorAlert error={create.error} /> : null}
         <LossLineFollowUpError error={followUp.error} caseId={followUp.unlinkedCaseId} />
         <div className="flex gap-2">
-          <Button type="submit" disabled={form.title.trim() === '' || busy} data-testid="create-case">
+          <Button type="submit" disabled={missingTitle || busy} aria-describedby={missingTitle ? 'create-case-reason' : undefined} data-testid="create-case">
             {start.lossLineId ? 'Create investigation and link the loss line' : 'Create investigation'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/rca')}>
+          <Button type="button" variant="outline" onClick={() => mayLeave() && navigate('/rca')}>
             Cancel
           </Button>
         </div>
+        <DisabledReason id="create-case-reason" reason={missingTitle ? TITLE_REQUIRED_REASON : null} />
       </form>
     </Section>
+  );
+}
+
+/** QA L15: the refusal keeps the page's heading and document title ("New investigation"). */
+function NoAccess() {
+  return (
+    <Page>
+      <PageHeader title="New investigation" back={{ to: '/rca', label: 'Investigations' }} />
+      <DataState state="no-permission" detail="Only reliability engineers and manager approvers open investigations." />
+    </Page>
   );
 }
 
@@ -75,7 +92,7 @@ export function NewCasePage() {
   const start = readStartRca(params);
   const eventId = start.eventId;
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to open an investigation." />;
-  if (!canWriteRca) return <DataState state="no-permission" detail="Only reliability engineers and manager approvers open investigations." />;
+  if (!canWriteRca) return <NoAccess />;
   return (
     <Page>
       <PageHeader

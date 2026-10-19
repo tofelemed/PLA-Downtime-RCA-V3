@@ -19,6 +19,7 @@ interface UserItem {
   isActive: boolean;
   tenantName: string | null;
   manageable: boolean;
+  plantRoles: string[];
 }
 interface Page<T> {
   items: T[];
@@ -335,6 +336,49 @@ describe('v2 administration: users and scope grants', () => {
       .delete(`/api/v2/user-scopes/${bodyOf(created).id}`)
       .set(bearer(adminA.token))
       .expect(204);
+  });
+
+  it('guide roles only: the mirror goes once a plant-wide role is held, and the legacy mapping does not return (QA audit 2026-10-19)', async () => {
+    const analyst = await seedUser(app, harness.dataSource, {
+      name: 'Kim Finance',
+      role: 'Analyst',
+      tenantId: world.plantA,
+      organizationId: world.org1,
+    });
+    const scopesOf = async () =>
+      bodyOf<Page<ScopeItem>>(
+        await http()
+          .get(`/api/v2/user-scopes?userId=${analyst.id}`)
+          .set(bearer(adminA.token))
+          .expect(200),
+      ).items;
+    expect((await scopesOf()).map((s) => s.lock)).toEqual(['home_role']);
+    await http()
+      .post('/api/v2/user-scopes')
+      .set(bearer(adminA.token))
+      .set(key())
+      .send({ userId: analyst.id, role: 'finance_approver' })
+      .expect(201);
+    const mirror = (await scopesOf()).find(
+      (s) => s.role === 'production_engineer',
+    );
+    expect(mirror?.lock).toBeNull();
+    await http()
+      .delete(`/api/v2/user-scopes/${mirror?.id}`)
+      .set(bearer(adminA.token))
+      .expect(204);
+    expect((await scopesOf()).map((s) => s.role)).toEqual(['finance_approver']);
+    const listed = await listUsers(adminA.token, '?q=Kim');
+    expect(listed.items[0]).toMatchObject({
+      role: 'Analyst',
+      plantRoles: ['finance_approver'],
+    });
+    const holders: Array<{ id: string }> = await harness.dataSource.query(
+      `SELECT u."id" FROM "users" u WHERE u."id" = $1 AND u."tenant_id" = $2 AND u."role" = 'Analyst'
+          AND NOT EXISTS (SELECT 1 FROM "user_scopes" own WHERE own."user_id" = u."id" AND own."tenant_id" = $2)`,
+      [analyst.id, world.plantA],
+    );
+    expect(holders).toEqual([]);
   });
 
   it('lists the roles the caller may give', async () => {

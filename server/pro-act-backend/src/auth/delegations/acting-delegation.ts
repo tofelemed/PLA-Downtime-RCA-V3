@@ -1,5 +1,5 @@
 import { RequestContext } from '../../common/context/request-context';
-import { rolesForLegacyRole } from '../roles/role-model';
+import { legacyRolesOf } from '../roles/legacy-roles-of';
 import { UnitRef } from '../roles/unit-roles';
 
 /** The delegation a decision was taken under (recorded with the workflow step). */
@@ -31,9 +31,7 @@ export function actingDelegation(
 ): ActingDelegation | null {
   const tenantId = context.tenantId;
   if (!tenantId || context.isSuperAdmin) return null;
-  const legacy = rolesForLegacyRole(context.legacyRole).filter((r) =>
-    context.roles.includes(r),
-  );
+  const legacy = legacyRolesOf(context);
   if (legacy.some((r) => roles.includes(r) || r === 'OrgAdmin')) return null;
   const relevant = context.scopes.filter(
     (s) =>

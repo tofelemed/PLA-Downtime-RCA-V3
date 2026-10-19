@@ -58,7 +58,7 @@ describe('overview progress counts actions (F-3 default)', () => {
   const actionsStep = (actions: Parameters<typeof progressSteps>[2]) => progressSteps(rca, false, actions).find((step) => step.key === 'actions');
 
   it('is done when every action not cancelled is done', () => {
-    expect(actionsStep([{ status: 'done' }, { status: 'cancelled' }])).toMatchObject({ label: 'Actions', done: true, hint: '1 action(s), 1 done.' });
+    expect(actionsStep([{ status: 'done' }, { status: 'cancelled' }])).toMatchObject({ label: 'Actions', done: true, hint: '1 action, 1 done.' });
     expect(actionsStep([{ status: 'done' }, { status: 'open' }])?.done).toBe(false);
     expect(actionsStep([])?.done).toBe(false);
   });

@@ -239,6 +239,18 @@ export const MAX_BUNDLE_VIEWS = 12;
 /** `GET /reports/downtime-bundle`: several downtime breakdowns read from one run selection (T24). */
 export class DowntimeBundleQueryDto extends DowntimeSelectionQueryDto {
   @ApiPropertyOptional({
+    enum: SCHEDULE_CLASSES,
+    description:
+      'The summary of this schedule class only (owner decision 2026-10-19): stop time and stop count of the ' +
+      'class (the stored breakdown cells, as the class trend), the class’s own period KPI as stored, every other ' +
+      'figure without a value (reason not_by_schedule_class). Omitted: the summary of every class. Views keep ' +
+      'their own class token.',
+  })
+  @IsOptional()
+  @IsIn(SCHEDULE_CLASSES)
+  scheduleClass?: (typeof SCHEDULE_CLASSES)[number];
+
+  @ApiPropertyOptional({
     default: false,
     description:
       'Include micro-stops (shorter than the oee_policy threshold) in every view; default availability stops only',

@@ -27,13 +27,13 @@ export const SUMMARY_TILES: readonly TileSpec[] = [
     metric: 'downtime_maintenance_overrun',
     title: 'Maintenance overrun',
     kind: 'duration',
-    note: 'Planned stops past their approved window (SME D4): counted as unplanned, not as failures',
+    note: 'Planned stops past their approved window: counted as unplanned, not as failures',
   },
   {
     metric: 'coded_downtime_ratio',
     title: 'Stop time coded',
     kind: 'ratio',
-    note: 'Share of stop time with a reason code (SME D12 pilot targets: 95 % by shift end, 99 % at daily approval)',
+    note: 'Share of stop time with a reason code (pilot targets: 95 % by shift end, 99 % at daily approval)',
   },
   { metric: 'stop_count', title: 'Stops', kind: 'count', note: 'Stop occurrences starting in the window' },
   { metric: 'carry_in_count', title: 'Carry-in stops', kind: 'count', note: 'Started before the window, still counted separately' },
@@ -65,6 +65,7 @@ const REASONS: Readonly<Record<string, string>> = {
   incompatible_policies: 'Different OEE policies: not combined',
   above_100_percent: 'Above 100 % (kept as an exception)',
   input_missing: 'Inputs missing',
+  not_by_schedule_class: 'Not split by schedule class',
 };
 
 /** Human text of a server reason code (unknown codes are shown as they are). */

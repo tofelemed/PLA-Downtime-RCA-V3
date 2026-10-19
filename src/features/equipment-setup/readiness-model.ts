@@ -1,7 +1,7 @@
 import type { EquipmentReadinessQuery } from '@/api/v2/queries/equipment-readiness';
 import { DAY_MS } from '@/api/v2/queries/time-window';
 import type { ReadinessCheckView, ReadinessStatus } from '@/api/v2/types/equipment-readiness';
-import type { InstantRange } from '@/features/ux-kit/date-inputs';
+import { datesFromRange, rangeFromDates, type InstantRange } from '@/features/ux-kit/date-inputs';
 import type { SetupJourney } from './journey-storage';
 
 export interface ReadinessFilters { productId: string; operatingMode: string; range: InstantRange }
@@ -15,6 +15,15 @@ export function validReadinessRange(range: InstantRange): boolean {
   if (!range) return false;
   const span = Date.parse(range.to ?? '') - Date.parse(range.from ?? '');
   return span > 0 && span <= 31 * DAY_MS;
+}
+/**
+ * The default readiness window: the last whole plant day, as the inclusive day picker shows it
+ * (QA L14: "To (inclusive)", the instant range is `[start of the day, start of the next day)`).
+ */
+export function lastPlantDay(timezone: string, now: number = Date.now()): InstantRange {
+  const yesterday = new Date(now - DAY_MS).toISOString();
+  const day = datesFromRange({ from: yesterday, to: new Date(Date.parse(yesterday) + 1).toISOString() }, timezone);
+  return rangeFromDates(day, timezone);
 }
 export function readinessQuery(journey: SetupJourney, filters: ReadinessFilters): EquipmentReadinessQuery | null {
   const { from, to } = filters.range;

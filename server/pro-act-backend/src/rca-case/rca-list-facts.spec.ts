@@ -95,6 +95,7 @@ describe('recommendation event facts (UX F-1)', () => {
         asset_id: unitId,
         asset_name: 'Extruder 1',
         start_time: '2026-10-17T22:15:00Z',
+        physical_type: 'downtime',
       },
     ]);
     const facts = await recommendationEventFacts(manager, tenantId, [
@@ -111,6 +112,7 @@ describe('recommendation event facts (UX F-1)', () => {
       assetId: unitId,
       assetName: 'Extruder 1',
       startTime: '2026-10-17T22:15:00.000Z',
+      physicalType: 'downtime',
     });
   });
 });

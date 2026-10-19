@@ -15,8 +15,8 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   { key: 'overview', label: 'Overview', icon: EntityIcon.dashboard },
   { key: 'production', label: 'Production', icon: EntityIcon.plant },
-  { key: 'downtime', label: 'Downtime Analysis', icon: EntityIcon.downtime },
-  { key: 'pla', label: 'Production Loss Analysis (PLA)', icon: EntityIcon.lossAnalysis },
+  { key: 'downtime', label: 'Downtime analysis', icon: EntityIcon.downtime },
+  { key: 'pla', label: 'Production loss analysis (PLA)', icon: EntityIcon.lossAnalysis },
   { key: 'reliability', label: 'Reliability', icon: EntityIcon.rcaCase },
   { key: 'integration', label: 'Integration', icon: EntityIcon.integration },
   { key: 'administration', label: 'Administration', icon: EntityIcon.administration },
@@ -50,11 +50,11 @@ function sidebarLabel(page: { key: string; label: string }, overviewLabel: strin
  */
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: EntityIcon.dashboard, section: 'overview', capability: 'canViewOperations', description: 'Key figures of the selected plant' },
-  { name: 'Pending Approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canViewOperations', description: 'Pending records for your approval roles in the selected plant' },
+  { name: 'Pending approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canViewOperations', description: 'Pending records for your approval roles in the selected plant' },
   { name: 'Reports', href: '/reports', icon: EntityIcon.report, section: 'overview', capability: 'canViewAnalysis', description: 'OEE, loss, downtime and reconciliation reports' },
   { name: 'Event Hub', href: '/events', icon: EntityIcon.event, section: 'production', capability: 'canViewOperations', description: 'Stops and production events' },
   {
-    name: 'Plans, Profiles & Calendars',
+    name: 'Plans, profiles & calendars',
     href: '/planning',
     icon: EntityIcon.planning,
     section: 'production',
@@ -74,7 +74,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     description: 'Periods to prepare or review, your RCA actions and your tasks',
   },
   {
-    name: 'Month Close',
+    name: 'Month close',
     href: '/month-close',
     icon: EntityIcon.calendar,
     section: 'production',
@@ -83,7 +83,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   },
   {
     // SME E4: every analysis role reads; production / integration / accounting record, accounting approves
-    name: 'Measurement Uncertainty',
+    name: 'Measurement uncertainty',
     href: '/measurement-uncertainty',
     icon: EntityIcon.signal,
     section: 'production',
@@ -91,7 +91,8 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     description: 'Uncertainty budgets per measurement boundary that justify the reconciliation tolerance',
   },
   ...DOWNTIME_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'Downtime overview'), href: page.path, icon: page.icon, section: 'downtime', capability: 'canViewOperations', description: page.description, exact: true })),
-  ...PLA_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'PLA overview'), href: page.path, icon: page.icon, section: 'pla', capability: 'canViewOperations', description: page.description, exact: true })),
+  // owner 19 Oct 2026 (QA audit): no money for operators, so Loss valuation needs canViewMoney (menu and route gate)
+  ...PLA_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'PLA overview'), href: page.path, icon: page.icon, section: 'pla', capability: page.key === 'valuation' ? 'canViewMoney' : 'canViewOperations', description: page.description, exact: true })),
   {
     // UX audit B-5: resolves the plan (`/period-accounting` → `/plans/:id`, or the plan list) on click, not on every render
     name: 'Period accounting',
@@ -103,17 +104,17 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   },
   // operators see their RCA actions and the investigations they belong to, read-only (Marun E2E owner rule)
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewOperations', description: 'Root cause investigations' },
-  { name: 'Bad Actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
-  { name: 'Knowledge Base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
+  { name: 'Bad actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
+  { name: 'Knowledge base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track tasks' },
   // owner 18 Oct 2026: the whole Integration section is SuperAdmin-only (menu and routes); approvers of Source
   // Priority / Source Status Rules reach those two review pages from the approvals inbox (route gates below)
   { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canReachIntegration', description: 'Connections, ingestion jobs and mappings' },
-  { name: 'Source Status Rules', href: '/connectivity/source-status', icon: EntityIcon.rule, section: 'integration', capability: 'canReachIntegration', description: 'Which source statuses count as the released record, per source system' },
-  { name: 'Source Priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canReachIntegration', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
-  { name: 'Enhanced Historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canReachIntegration', description: 'Time series of plant signals' },
-  { name: 'Equipment Setup Guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachMasterData', description: 'Six phases from equipment records to the first approved period and analysis' },
-  { name: 'Master Data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', activeAlso: ['/codes-admin'], description: 'Plant records, codes, rules and reliability data' },
+  { name: 'Source status rules', href: '/connectivity/source-status', icon: EntityIcon.rule, section: 'integration', capability: 'canReachIntegration', description: 'Which source statuses count as the released record, per source system' },
+  { name: 'Source priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canReachIntegration', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
+  { name: 'Enhanced historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canReachIntegration', description: 'Time series of plant signals' },
+  { name: 'Equipment setup guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachMasterData', description: 'Six phases from equipment records to the first approved period and analysis' },
+  { name: 'Master data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', activeAlso: ['/codes-admin'], description: 'Plant records, codes, rules and reliability data' },
   {
     name: 'Finance',
     href: '/finance',
@@ -122,12 +123,23 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Valuation policy and exchange rates',
   },
-  { name: 'User Management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canUseUserManagement', activeAlso: ['/permissions', '/delegations'], description: 'Users, permissions and approval delegations' },
+  { name: 'User management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canUseUserManagement', activeAlso: ['/permissions', '/delegations'], description: 'Users, permissions and approval delegations' },
   // SME R1 / R6: administrators record delegations for anyone, approval-role holders for themselves
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
-  { name: 'Admin Panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Plants, branding, custom attributes and plant settings' },
-  { name: 'Audit Logs', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
+  { name: 'Admin panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Plants, branding, custom attributes and plant settings' },
+  { name: 'Audit log', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
 ];
+
+/**
+ * QA M9: the one name of a menu page (sentence case, docs/GLOSSARY.md), shared by the menu, the page h1 /
+ * tab title, the breadcrumb and the route gate's No-access title. Throws for a path outside the menu so a
+ * renamed or removed item fails loudly in tests instead of drifting.
+ */
+export function pageNameOf(href: string, items: readonly NavigationItem[] = NAVIGATION_ITEMS): string {
+  const item = items.find((candidate) => candidate.href === href);
+  if (!item) throw new Error(`No menu page at ${href}`);
+  return item.name;
+}
 
 /** The items the user sees: capability held in the selected plant and, when flagged, the flag on. */
 export function visibleNavigationItems(

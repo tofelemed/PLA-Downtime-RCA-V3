@@ -199,7 +199,7 @@ describe('period workspace navigation and retained editing', () => {
     expect(writes[0].headers.get('If-Match')).toBe('"4"');
     expect(writes[0].body.baseRunId).toBe('run1');
     fireEvent.click(screen.getByTestId('rebase'));
-    await waitFor(() => expect(screen.getByTestId('rebase-dropped')).toHaveTextContent('1 decision(s) dropped'));
+    await waitFor(() => expect(screen.getByTestId('rebase-dropped')).toHaveTextContent('1 decision dropped'));
     fireEvent.click(screen.getByTestId('save-lines'));
     await waitFor(() => expect(writes).toHaveLength(2));
     expect(writes[1].headers.get('If-Match')).toBe('"9"');

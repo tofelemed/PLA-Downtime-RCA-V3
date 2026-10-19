@@ -1,11 +1,13 @@
 import { EntityManager } from 'typeorm';
 import { addDays } from '../domain/calendar/wall-clock';
 import { endOfLocalDay } from './close-calendar';
+import { planCoveredSql } from './plan-coverage-sql';
 import {
   MonthDates,
   MonthPrerequisites,
   PREREQUISITE_LIST_LIMIT,
 } from './month-prerequisites';
+import { MonthUncovered } from './month-uncovered';
 
 /** A scheduled shift of the month that has no production period yet (it cannot be approved). */
 export interface MissingPeriod {
@@ -26,14 +28,16 @@ export interface MonthCoverage {
   endsAt: Date;
 }
 
-/** The month close prerequisites with the periods still to be created. */
+/** The month close prerequisites with the periods still to be created, and the days no plan covers (information). */
 export type ClosePrerequisites = MonthPrerequisites &
-  Pick<MonthCoverage, 'missingPeriodCount' | 'missingPeriods'>;
+  Pick<MonthCoverage, 'missingPeriodCount' | 'missingPeriods'> &
+  MonthUncovered;
 
 /**
  * Shift instances of the month (not excluded, the unit with an approved profile at the shift start) that no
  * production period covers: the periods the materializer is still to create. Same overlap test as the
- * materializer, so an instance it skipped because a period of other bounds covers it is not missing.
+ * materializer, so an instance it skipped because a period of other bounds covers it is not missing. A shift
+ * no approved plan covers is not expected yet (owner decision 2026-10-19; listed by `month-uncovered.ts`).
  * $1 tenant, $2 first date, $3 end date (exclusive). Uses IDX_shift_instances_tenant_unit_date and
  * EX_production_periods_unit_no_overlap.
  */
@@ -46,7 +50,8 @@ const MISSING = `FROM "shift_instances" si
                   AND (pp."effective_to" IS NULL OR pp."effective_to" > si."utc_start"))
    AND NOT EXISTS (SELECT 1 FROM "production_periods" p
                     WHERE p."unit_id" = si."unit_id"
-                      AND tstzrange(p."utc_start", p."utc_end", '[)') && tstzrange(si."utc_start", si."utc_end", '[)'))`;
+                      AND tstzrange(p."utc_start", p."utc_end", '[)') && tstzrange(si."utc_start", si."utc_end", '[)'))
+   AND ${planCoveredSql('si', false)}`;
 
 const LAST_END = `SELECT max(e) AS "last_end" FROM (
   SELECT max(si."utc_end") AS e FROM "shift_instances" si

@@ -24,8 +24,9 @@ const METRICS: readonly KpiMetric[] = [
   'mean_downtime_to_restore',
   'mttr',
 ];
-const FAILURE_DEFINITION =
-  'D13 default: FailureWO event or unplanned stop with a failure code, at least the micro-stop threshold long';
+/** Shown under the Reliability card (QA audit L26: plain words, no internal decision codes or raw keys). */
+export const FAILURE_DEFINITION =
+  'A failure is a failure work order, or an unplanned stop with a failure code that lasts at least the micro-stop threshold';
 
 type Terms = Map<KpiMetric, GroupTerms>;
 
@@ -143,7 +144,7 @@ export async function reliabilityReport(
 }
 
 const MTTR_NOTE =
-  'MTTR needs active-repair evidence; until then see meanDowntimeToRestore (D13)';
+  'MTTR needs active-repair evidence from work orders; until then see the mean time to restore production';
 
 /** The MTTR note only while some unit or asset has no active-repair evidence (Marun E2E 1.5). */
 export function reliabilityNotes(data: ReliabilityReportView): string[] {

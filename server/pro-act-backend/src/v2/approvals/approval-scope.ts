@@ -1,3 +1,4 @@
+import { legacyRolesOf } from '../../auth/roles/legacy-roles-of';
 import { rolesForLegacyRole, satisfiesRole } from '../../auth/roles/role-model';
 import { RequestContext } from '../../common/context/request-context';
 
@@ -12,9 +13,7 @@ export function approvalScope(
     (grant) => grant.tenantId === context.tenantId,
   );
   const legacy = [
-    ...rolesForLegacyRole(context.legacyRole).filter((role) =>
-      context.roles.includes(role),
-    ),
+    ...legacyRolesOf(context),
     ...context.roles.filter((role) => role === 'OrgAdmin'),
   ];
   if (roles.some((role) => satisfiesRole(legacy, role)))

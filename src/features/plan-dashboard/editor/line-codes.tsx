@@ -8,6 +8,11 @@ export interface LineCodesProps {
   /** omitted for lines that carry no impact code (manual lines) */
   impactCodeId?: string | null;
   showImpact?: boolean;
+  /**
+   * default true: an uncoded line shows the amber "Not coded" chip. False for a line no stop caused (a
+   * disposition-based quality line): there is nothing to code, so no coding backlog is suggested.
+   */
+  flagUncoded?: boolean;
 }
 
 /** Name of a code of the library (retired codes keep their name); "loading…" while the library loads. */
@@ -19,14 +24,14 @@ function useCodeName(library: 'reason-codes' | 'impact-codes', id: string | null
 }
 
 /** The reason (and impact) code of a loss line by name, or an amber "Not coded" chip in words. */
-export function LineCodes({ reasonCodeId, impactCodeId = null, showImpact = false }: LineCodesProps) {
+export function LineCodes({ reasonCodeId, impactCodeId = null, showImpact = false, flagUncoded = true }: LineCodesProps) {
   const reason = useCodeName('reason-codes', reasonCodeId);
   const impact = useCodeName('impact-codes', impactCodeId);
   return (
     <span className="flex flex-wrap items-center gap-1 text-xs" data-testid="line-codes">
       {reason ? (
         <span data-testid="line-reason-code">Reason: {reason}</span>
-      ) : (
+      ) : !flagUncoded ? null : (
         <Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning" data-testid="line-not-coded">
           Not coded
         </Badge>

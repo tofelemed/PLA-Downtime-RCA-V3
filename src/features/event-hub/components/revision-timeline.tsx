@@ -8,6 +8,7 @@ import {
   useUserNames,
 } from '@/features/ux-kit/labels';
 import { usePlantFormat } from '../hooks/use-plant-format';
+import { revisionNoteText } from '../model/revision-notes';
 import { useEventHubEnv } from '../use-event-hub-env';
 
 /** Revisions (who changed what, why) and coding history, newest first (DT11 audit trail). */
@@ -28,7 +29,7 @@ export function RevisionTimeline({ history, sourceName }: { history: ProductionE
             <li key={revision.id} className="text-xs">
               <span className="font-medium">Revision {revision.revision}</span> · {labelOf(REVISION_KIND_LABELS, revision.kind)} by <span data-testid="revision-actor">{actorOf(revision)}</span> ·{' '}
               {dateTime(revision.createdAt)}
-              {revision.changeReason && <span className="block text-muted-foreground">{revision.changeReason}</span>}
+              {revision.changeReason && <span className="block text-muted-foreground" data-testid="revision-note">{revisionNoteText(revision.changeReason)}</span>}
             </li>
           ))}
         </ol>

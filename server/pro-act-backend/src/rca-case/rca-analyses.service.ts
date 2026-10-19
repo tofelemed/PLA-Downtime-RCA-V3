@@ -42,6 +42,7 @@ import {
   RcaAnalysesV2View,
 } from './rca-analysis.view';
 import { findCase, RcaScope, scopeOf } from './rca-scope';
+import { assertCaseNotClosed } from './case-closed';
 
 interface AnalysisRow {
   id: string;
@@ -234,7 +235,7 @@ export class RcaAnalysesService {
   ): Promise<E> {
     const scope: RcaScope = scopeOf(context);
     return this.dataSource.transaction(async (manager) => {
-      await findCase(manager, scope, target.rcaId, true);
+      assertCaseNotClosed(await findCase(manager, scope, target.rcaId, true));
       const existing = await this.latest(manager, type, target.rcaId);
       const repository = manager.getRepository(type);
       if (!existing) {

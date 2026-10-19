@@ -94,6 +94,19 @@ describe('revision facts are shown without internal values', () => {
     expect(factText('description', null, resolvers)).toBe('—');
   });
 
+  it('QA audit F4: failure codes by their dictionary names, severity as a label, one "Event type" row', () => {
+    const names: Record<string, string> = { 'detectionMethod:TRIP_ALARM': 'Trip alarm', 'failureMode:GEARBOX_FAILURE': 'Gearbox failure' };
+    const withDictionary: FactResolvers = { ...resolvers, failureName: (field, code) => names[`${field}:${code}`] ?? null };
+    expect(factText('detectionMethod', 'TRIP_ALARM', withDictionary)).toBe('Trip alarm');
+    expect(factText('failureMode', 'GEARBOX_FAILURE', withDictionary)).toBe('Gearbox failure');
+    // free text (no dictionary code) is shown as typed
+    expect(factText('failureCause', 'Seal worn', withDictionary)).toBe('Seal worn');
+    expect(factText('failureSeverity', 'critical', resolvers)).toBe('Critical');
+    expect(factLabel('eventType')).not.toBe(factLabel('apmType'));
+    expect(factLabel('solType')).toBe('Safe operating limit type');
+    expect(factLabel('rcaState')).toBe('Investigation state');
+  });
+
   it('never prints an unknown id or a JSON dump', () => {
     expect(factText('planId', UUID, resolvers)).toBe('Linked record');
     const text = factText('extra', { unitId: UUID, note: 'ok' }, resolvers);

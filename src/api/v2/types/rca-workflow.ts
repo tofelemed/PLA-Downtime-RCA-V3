@@ -70,6 +70,8 @@ export interface RcaEffectivenessCriteria {
   zeroRepeat: boolean;
   /** 0–1 coverage the post-action window needs; absent (frozen before 18 Oct 2026) = 0.95 */
   minimumCoverage?: number;
+  /** version of the RCA policy the criteria were frozen from; absent on criteria frozen before 19 Oct 2026 */
+  policyVersion?: number;
 }
 
 /** Known-data coverage of both windows and the minimum the verdict applied (decimal strings). */

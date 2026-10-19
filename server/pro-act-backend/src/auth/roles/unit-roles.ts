@@ -1,5 +1,6 @@
 import { RequestContext } from '../../common/context/request-context';
-import { rolesForLegacyRole, satisfiesRole } from './role-model';
+import { legacyRolesOf } from './legacy-roles-of';
+import { satisfiesRole } from './role-model';
 
 /** A unit and the site it belongs to (a site grant covers the site's units). */
 export interface UnitRef {
@@ -13,9 +14,7 @@ export interface UnitRef {
  * delegated — on the tenant, the unit's site or the unit itself.
  */
 export function rolesOnUnit(context: RequestContext, unit: UnitRef): string[] {
-  const legacy = rolesForLegacyRole(context.legacyRole).filter((role) =>
-    context.roles.includes(role),
-  );
+  const legacy = legacyRolesOf(context);
   const granted = context.scopes
     .filter((scope) => scope.tenantId === context.tenantId)
     .filter(

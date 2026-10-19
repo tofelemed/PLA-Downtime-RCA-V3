@@ -8,9 +8,10 @@ export const LOGIN_COPY = {
   noticeLead: 'Authorized use notice:',
   noticeBody:
     'Access is restricted to authorized personnel. All sessions, including failed attempts, are logged and monitored in accordance with the site cybersecurity policy aligned to IEC 62443. Loss records, classifications and investigation data are subject to audit trail and approval controls.',
-  userIdLabel: 'USER ID',
-  userIdPlaceholder: 'Enter assigned ID',
-  passwordLabel: 'PASSWORD',
+  heading: 'Sign in',
+  userIdLabel: 'Email',
+  userIdPlaceholder: 'name@company.com',
+  passwordLabel: 'Password',
   passwordPlaceholder: 'Enter your password',
   submit: 'Secure sign in',
   help: 'Access issues? Contact your site system administrator.',

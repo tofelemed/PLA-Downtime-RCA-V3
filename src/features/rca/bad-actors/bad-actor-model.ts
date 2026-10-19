@@ -1,6 +1,7 @@
 import type { BadActorQuery } from '@/api/v2/queries/bad-actors';
 import type { BadActorGroupBy, BadActorItemView, BadActorRankBy, BadActorTriggerState, BadActorTriggerView } from '@/api/v2/types/bad-actors';
 import type { StartRcaContext } from '../model/start-rca';
+import { plural } from '@/features/ux-kit/format/plural';
 
 /** Choices of the CA8 bad-actor review; ranking, window and trigger state are the server's. */
 export interface BadActorFilters {
@@ -92,6 +93,6 @@ export function badActorStartRca(item: BadActorItemView): StartRcaContext {
   return {
     unitId: item.unitId,
     title: `Bad actor: ${asset}${mode}`,
-    description: `${asset}${mode} ranks #${item.rank} in the bad-actor review with ${item.stops} stop(s). Link the stops behind it from Links.`,
+    description: `${asset}${mode} ranks #${item.rank} in the bad-actor review with ${plural(item.stops, 'stop', 'stops')}. Link the stops behind it from Links.`,
   };
 }

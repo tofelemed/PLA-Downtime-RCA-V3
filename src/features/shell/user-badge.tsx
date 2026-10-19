@@ -1,24 +1,25 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { IconButton } from '@/features/ux-kit/icon-button';
-import { roleLabel } from '@/features/ux-kit/labels/role-labels';
 import { ActionIcon, EntityIcon } from '@/lib/icons';
+import { plantRoleSummary } from './plant-role-summary';
 
 /**
- * Signed-in user, their role in plain words, the read-only hint and the sign-out button (kept as the
+ * Signed-in user, their roles in the selected plant in plain words (QA audit 2026-10-19), the read-only hint and the sign-out button (kept as the
  * last button of the header: e2e helpers and screen-reader users find it there).
  */
 export function UserBadge() {
   const { session, logout } = useAuth();
-  const { isReadOnly } = useCapabilities();
+  const { isReadOnly, roles } = useCapabilities();
   if (!session) return null;
+  const plantRoles = plantRoleSummary(roles, session.user.role);
   return (
     <div className="flex items-center gap-2">
       <EntityIcon.user className="hidden h-5 w-5 text-muted-foreground sm:block" aria-hidden />
       <div className="hidden min-w-0 leading-tight md:block">
         <div className="truncate text-sm font-medium">{session.user.name}</div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="truncate">{roleLabel(session.user.role)}</span>
+          <span className="truncate" title={plantRoles.full} data-testid="user-plant-roles">{plantRoles.short}</span>
           {isReadOnly && (
             <span
               className="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-warning"

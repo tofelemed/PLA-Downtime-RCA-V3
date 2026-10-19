@@ -15,15 +15,16 @@ export const RCA_RECOMMENDATION_STATUS_LABELS: Readonly<Record<string, string>> 
   Planned: 'Planned',
   'In Progress': 'In progress',
   in_progress: 'In progress',
-  Completed: 'Completed',
-  done: 'Completed',
+  Completed: 'Done',
+  done: 'Done',
   Cancelled: 'Cancelled',
   cancelled: 'Cancelled',
 };
 
+/** Status of an evidence request (QA L3: a finished step reads "Done" everywhere in RCA). */
 export const RCA_EVIDENCE_TASK_LABELS: Readonly<Record<string, string>> = {
   pending: 'Pending',
-  completed: 'Completed',
+  completed: 'Done',
 };
 
 export const RCA_BASELINE_METRIC_LABELS: Readonly<Record<string, string>> = {
@@ -115,6 +116,7 @@ export const RCA_HISTORY_ACTION_LABELS: Readonly<Record<string, string>> = {
   'rca_case.reopened': 'Investigation reopened',
   'rca_case.deleted': 'Investigation deleted',
   'rca_case.attachment_uploaded': 'File uploaded',
+  'rca_case.repaired': 'Data repair',
   'rca_action.created': 'Action added',
   'rca_action.updated': 'Action changed',
   'rca_action.deleted': 'Action removed',

@@ -25,7 +25,7 @@ function tileOf(key: ForYouTileKey, scope: AnalyticsScope): ReactNode {
 /**
  * The dashboard's first row (UX audit §5.6): what the user's roles in the plant ask of them — operators
  * and supervisors their current stops and stops to code, accountants their periods due, reliability
- * engineers recommended investigations and their overdue actions, managers pending approvals. Server
+ * engineers recommended investigations and their overdue actions, approvers what they can decide. Server
  * figures only; hidden when no role asks for a tile.
  */
 export function ForYouRow({ scope }: { scope: AnalyticsScope }) {

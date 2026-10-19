@@ -9,7 +9,7 @@ import { formatNumber } from '@/features/ux-kit/format/decimal';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { trendQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { bucketLabel } from '../model/buckets';
-import { TREND_LABELS } from '../model/display';
+import { inSentence, TREND_LABELS } from '../model/display';
 import { residualRows, trendUnits } from '../model/series';
 import { formatRatioPercent } from '@/features/plan-dashboard/model/display';
 import { AnalyticsCard } from './analytics-card';
@@ -68,7 +68,7 @@ export function ResidualTrendCard({ scope }: { scope: AnalyticsScope }) {
   const columns = columnsOf(label, pref.digits);
   return (
     <AnalyticsCard
-      title={`Unaccounted / over-accounted by ${TREND_LABELS[scope.trendBy].toLowerCase()} (plan ledger)`}
+      title={`Unaccounted / over-accounted by ${inSentence(TREND_LABELS[scope.trendBy])} (plan ledger)`}
       testId="pla-residual-trend"
       query={query}
       response={query.data}

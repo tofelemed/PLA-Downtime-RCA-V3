@@ -26,3 +26,10 @@ export const APPROVAL_KINDS: ReadonlyArray<readonly [string, string]> = [
   ['month-lock', 'Month lock'],
   ['stop-merge', 'Duplicate stop reviews'],
 ];
+
+const KNOWN_KINDS: ReadonlySet<string> = new Set(APPROVAL_KINDS.map(([value]) => value));
+
+/** Whether `kind` is an inbox workflow (an `/approvals/:kind/:id` address with another kind leads nowhere). */
+export function isApprovalKind(kind: string): boolean {
+  return KNOWN_KINDS.has(kind);
+}

@@ -15,7 +15,7 @@ export const PLANT = {
   code: 'HDPE-TRAIN',
   name: 'HDPE plant',
   description:
-    'Single-extruder training plant of the Marun PLA and downtime student guide (teaching values, not Marun operating data)',
+    'Single-extruder HDPE plant set up from the Marun PLA and downtime guide',
   timezone: 'Asia/Tehran',
   calendarSystem: 'gregorian',
   digits: 'latin',
@@ -61,7 +61,11 @@ export type ScopeRoleName =
 export interface PersonSpec {
   key: string;
   name: string;
-  /** users.role; the server also grants its D06 scope role in the home plant */
+  /**
+   * users.role: sign-in / display compatibility only. Creating the user also writes the D06 mirror grant
+   * (e.g. Analyst → production engineer); the seeder revokes it, so the person holds exactly `roles`
+   * (QA audit 2026-10-19, guide roles only)
+   */
   legacyRole: LegacyRole;
   /** plant-wide scope roles in HDPE-TRAIN */
   roles: readonly ScopeRoleName[];
@@ -157,7 +161,7 @@ export const UNIT = {
   name: 'HDPE Extruder 1',
   unitOfMeasure: 't',
   description:
-    'Extruder production function of the training plant; owns the production account (pellet output at the extruder outlet)',
+    'Extruder production function; owns the production account (pellet output at the extruder outlet)',
 } as const;
 
 export const ASSET = {
@@ -185,16 +189,16 @@ export interface ProductSpec {
 export const PRODUCTS: readonly ProductSpec[] = [
   {
     code: 'HD5502',
-    name: 'HDPE training grade A',
-    description: 'Planned and measured grade of the training production day',
+    name: 'HDPE grade A',
+    description: 'Planned and measured grade of the production day',
     rate: '28',
     margin: '150',
     downgradeDifference: '80',
   },
   {
     code: 'TRAIN-B',
-    name: 'HDPE training grade B',
-    description: 'Second grade, used only in the grade-change extension',
+    name: 'HDPE grade B',
+    description: 'Second grade, used in the grade-change extension',
     rate: '24',
     margin: '150',
     downgradeDifference: null,

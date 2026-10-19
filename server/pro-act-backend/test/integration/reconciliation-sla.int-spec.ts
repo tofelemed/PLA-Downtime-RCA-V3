@@ -68,16 +68,23 @@ describe('reconciliation SLA, waiting for data, rejection and my queue (SME R3 /
   const ids: Record<string, string> = {};
   let reason = '';
 
-  /** A 24 h period of unit A3 on the UTC date `offset` days from today, with an optional revision. */
+  /**
+   * A 24 h period of unit A3 on the UTC date `offset` days from today, with an optional revision; planned
+   * (resolved against the world's approved plan version) unless `planned` is false.
+   */
   const pastPeriod = async (
     key: string,
     offset: number,
     lifecycle: string | null,
+    planned = true,
   ): Promise<void> => {
     const id = randomUUID();
     await env.rows(
-      `INSERT INTO production_periods (id, tenant_id, row_version, unit_id, utc_start, utc_end, local_date)
-       VALUES ($1, $2, 1, $3, $4, $5, $6::date)`,
+      `INSERT INTO production_periods (id, tenant_id, row_version, unit_id, utc_start, utc_end, local_date, selected_plan_version_id)
+       VALUES ($1, $2, 1, $3, $4, $5, $6::date,
+               CASE WHEN $7::boolean THEN (SELECT v.id FROM plan_versions v
+                                            WHERE v.tenant_id = $2 AND v.approval_state = 'approved'
+                                            ORDER BY v.created_at LIMIT 1) END)`,
       [
         id,
         env.world.tenantA,
@@ -85,6 +92,7 @@ describe('reconciliation SLA, waiting for data, rejection and my queue (SME R3 /
         day(offset),
         day(offset + 1),
         day(offset).toISOString().slice(0, 10),
+        planned,
       ],
     );
     if (lifecycle) {
@@ -117,6 +125,8 @@ describe('reconciliation SLA, waiting for data, rejection and my queue (SME R3 /
     await pastPeriod('approved', -3, 'approved');
     await pastPeriod('rejectedThrice', -6, 'draft');
     await pastPeriod('apiHold', -7, null);
+    // owner decision 2026-10-19: a period no approved plan covers is no work item
+    await pastPeriod('noPlan', -9, null, false);
     // the lab hold started when its production day ended: the whole wait is paused
     await env.rows(
       `INSERT INTO period_data_holds (tenant_id, row_version, period_id, unit_id, kind, reason, started_at)
@@ -249,6 +259,7 @@ describe('reconciliation SLA, waiting for data, rejection and my queue (SME R3 /
     } while (cursor);
     const byId = new Map(seen.map((item) => [item.periodId, item]));
     expect(byId.has(ids.approved)).toBe(false);
+    expect(byId.has(ids.noPlan)).toBe(false);
     expect(byId.get(ids.neverReconciled)).toMatchObject({
       task: 'escalated',
       overdue: true,
@@ -270,7 +281,9 @@ describe('reconciliation SLA, waiting for data, rejection and my queue (SME R3 /
     });
     const dues = seen.map((item) => item.dueAt);
     expect(dues).toEqual([...dues].sort());
-    for (const key of Object.keys(ids).filter((k) => k !== 'approved')) {
+    for (const key of Object.keys(ids).filter(
+      (k) => k !== 'approved' && k !== 'noPlan',
+    )) {
       const periodSla = (await sla(key)).sla;
       expect([key, byId.get(ids[key])?.overdue]).toEqual([
         key,

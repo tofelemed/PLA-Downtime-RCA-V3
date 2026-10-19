@@ -1,5 +1,5 @@
 import type { RcaHistoryEntryView } from '@/api/v2/types/rca-history';
-import { historyActionLabel, historyActor, historyFieldLabel, historyValueLines, type HistoryResolvers } from '../../model/history-entry';
+import { historyActionLabel, historyActor, historyFieldLabel, historyValueLines, visibleChangedFields, type HistoryResolvers } from '../../model/history-entry';
 
 export interface HistoryEntryItemProps {
   entry: RcaHistoryEntryView;
@@ -12,7 +12,7 @@ export interface HistoryEntryItemProps {
 export function HistoryEntryItem({ entry, resolve, when }: HistoryEntryItemProps) {
   const lines = historyValueLines(entry, resolve);
   const shown = new Set(lines.map((line) => line.field.replace(/Length$/, '')));
-  const others = entry.changedFields.filter((field) => !shown.has(field));
+  const others = visibleChangedFields(entry.changedFields).filter((field) => !shown.has(field));
   return (
     <li className="space-y-1 p-3 text-sm" data-testid="history-entry" data-action={entry.action}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">

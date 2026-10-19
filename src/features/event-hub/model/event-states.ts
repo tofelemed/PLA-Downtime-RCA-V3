@@ -52,7 +52,7 @@ export function stateChips(states: EventStatesView): StateChip[] {
 const DIMENSION_LABEL: Readonly<Record<StateChip['dimension'], string>> = {
   physical: 'Physical state',
   coding: 'Coding state',
-  rca: 'RCA state',
+  rca: 'Investigation state',
 };
 
 export function dimensionLabel(dimension: StateChip['dimension']): string {

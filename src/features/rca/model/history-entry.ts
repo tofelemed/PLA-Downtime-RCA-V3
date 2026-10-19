@@ -17,7 +17,21 @@ export interface HistoryResolvers {
   day: (value: string) => string;
   /** title of a recommendation of the case, null when it is gone */
   recommendation: (id: string) => string | null;
+  /** "CODE — name" of a cause-library code, null when it is not readable */
+  causeCode: (id: string) => string | null;
 }
+
+/**
+ * Bookkeeping fields of a history entry that mean nothing to a reader (QA L8): record ids, the tenant, who
+ * created the row and the derived investigator list. They are never listed under "Changed".
+ */
+const INTERNAL_FIELDS = new Set(['id', 'rcaId', 'tenantId', 'targetId', 'targetRevision', 'investigatorIds', 'createdBy', 'createdAt', 'linkedAt']);
+
+/** The changed fields a reader is shown (internal bookkeeping fields left out). */
+export const visibleChangedFields = (fields: readonly string[]): string[] => fields.filter((field) => !INTERNAL_FIELDS.has(field));
+
+/** Services that act without a user, in words ("System (data repair)"). */
+const SERVICE_LABELS: Readonly<Record<string, string>> = { data_repair: 'data repair', rca: 'RCA automation' };
 
 export interface HistoryValueLine {
   field: string;
@@ -55,7 +69,7 @@ function idText(field: string, value: string, resolve: HistoryResolvers): string
   if (USER_FIELDS.has(field)) return resolve.user(value);
   if (field === 'unitId') return resolve.unit(value);
   if (field === 'recommendationId') return resolve.recommendation(value) ?? 'a removed recommendation';
-  if (field === 'causeCodeId') return 'a cause code';
+  if (field === 'causeCodeId') return resolve.causeCode(value) ?? 'a removed cause code';
   return looksLikeRawId(value) ? 'set' : value;
 }
 
@@ -80,6 +94,6 @@ export function historyValueLines(entry: RcaHistoryEntryView, resolve: HistoryRe
 /** Who acted: the person's name, the service, or "Former user" when the user is not readable any more. */
 export function historyActor(entry: Pick<RcaHistoryEntryView, 'actorName' | 'actorId' | 'service'>): string {
   if (entry.actorName) return entry.actorName;
-  if (!entry.actorId && entry.service) return `System (${humanize(entry.service)})`;
+  if (!entry.actorId && entry.service) return `System (${SERVICE_LABELS[entry.service] ?? humanize(entry.service).toLowerCase()})`;
   return entry.actorId ? 'Former user' : 'System';
 }

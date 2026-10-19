@@ -82,7 +82,7 @@ test.describe('Master data admin — codes, default mappings and declarative rul
     await expect(page.getByTestId('impact-children')).toHaveAttribute('data-count', '1');
     await confirmDialog(page, 'Retire code');
     await expect(adminRefusal(page)).toHaveAttribute('data-code', 'CODE_HAS_CHILDREN');
-    await expect(page.getByTestId('refusal-references')).toContainText('1 active sub-code(s)');
+    await expect(page.getByTestId('refusal-references')).toContainText('1 active sub-code,');
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('code-detail')).toHaveAttribute('data-active', 'true');
     const root = await api<{ active: boolean }>(hiro.token, 'GET', `/v2/reason-codes/${ids[ROOT]}`);

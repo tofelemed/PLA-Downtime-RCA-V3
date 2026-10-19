@@ -3,6 +3,7 @@ import { flattenPages, useV2InfiniteList } from '@/api/v2/queries/use-v2-list';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 interface TemplateOption {
   id: string;
@@ -42,7 +43,7 @@ export function TemplateSelect({ value, onChange }: { value: string | null; onCh
           <SelectItem value={NONE}>No template (empty logic tree)</SelectItem>
           {templates.map((template) => (
             <SelectItem key={template.id} value={template.id}>
-              {template.name} ({number(template.nodeCount)} node(s))
+              {template.name} ({plural(template.nodeCount, 'node', 'nodes', number)})
             </SelectItem>
           ))}
         </SelectContent>

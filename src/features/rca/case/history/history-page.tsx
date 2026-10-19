@@ -1,30 +1,12 @@
-import { useMemo } from 'react';
 import { useRcaHistoryPage } from '@/api/v2/queries/rca-cases';
 import { ListPager } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { useUnitNames, useUserNames } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
-import type { HistoryResolvers } from '../../model/history-entry';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
 import { HistoryEntryItem } from './history-entry-item';
-
-function useHistoryResolvers(): HistoryResolvers {
-  const { rca } = useCaseWorkspace();
-  const users = useUserNames();
-  const units = useUnitNames();
-  const { day } = useRcaFormat();
-  return useMemo(
-    () => ({
-      user: users.nameOf,
-      unit: units.nameOf,
-      day,
-      recommendation: (id: string) => rca.recommendations.find((row) => row.id === id)?.title ?? null,
-    }),
-    [users, units, day, rca.recommendations],
-  );
-}
+import { useHistoryResolvers } from './use-history-resolvers';
 
 /** `/rca/:caseId/history`: who changed what on the case and its actions, links, analyses and causes (read-only). */
 export function HistoryPage() {

@@ -88,7 +88,7 @@ describe('Start RCA from where the loss is seen (item 4)', () => {
       return json(200, list([]));
     };
     wrap(<NewCasePage />, '/rca/new?lossLineId=l1&title=Recurring+downtime');
-    expect(screen.getByLabelText('Title')).toHaveValue('Recurring downtime');
+    expect(screen.getByLabelText(/^Title/)).toHaveValue('Recurring downtime');
     fireEvent.click(screen.getByTestId('create-case'));
     expect(await screen.findByTestId('case-opened')).toBeInTheDocument();
     const link = calls.find((call) => call.url.pathname === '/api/v2/rcas/c9/links');
@@ -116,7 +116,7 @@ describe('Start RCA from where the loss is seen (item 4)', () => {
     };
     wrap(<EventCaseSection eventId="e1" lossLineId="l1" />);
     await screen.findByTestId('evidence-recurrence');
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Stop' } });
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Stop' } });
     fireEvent.click(screen.getByTestId('link-rca-submit'));
     await waitFor(() => expect(calls.some((call) => call.url.pathname === '/api/v2/rcas/c7/links')).toBe(true));
     const posts = calls.filter((call) => call.method === 'POST').map((call) => call.url.pathname);

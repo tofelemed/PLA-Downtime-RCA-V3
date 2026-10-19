@@ -44,7 +44,24 @@ describe('dashboard "For you" row (UX audit §5.6)', () => {
     expect(forYouTilesOf(['production_engineer', 'Operator'])).toEqual(['currentStops', 'stopsToCode']);
     expect(forYouTilesOf(['manager_approver', 'production_accountant'])).toEqual(['periodsDue', 'approvals']);
     expect(forYouTilesOf(['reliability_engineer'])).toEqual(['recommended', 'myOverdueActions']);
-    expect(forYouTilesOf(['viewer', 'SuperAdmin'])).toEqual([]);
+    expect(forYouTilesOf(['viewer'])).toEqual([]);
+  });
+
+  it('every approver role gets the Pending approvals tile, not only manager approvers (QA audit 2026-10-19)', () => {
+    for (const role of ['finance_approver', 'quality_approver', 'metrology_approver', 'production_accountant', 'SuperAdmin']) {
+      expect(forYouTilesOf([role])).toContain('approvals');
+    }
+    expect(forYouTilesOf(['Analyst', 'finance_approver'])).toEqual(['approvals']);
+    expect(forYouTilesOf(['operator'])).not.toContain('approvals');
+  });
+
+  it('the approvals tile counts only what the caller can decide', async () => {
+    actAs('finance_approver');
+    const calls = stubV2Fetch(reply);
+    renderRow();
+    expect(await screen.findByRole('link', { name: /Pending approvals: 5/ })).toBeInTheDocument();
+    const inbox = calls.find((call) => call.url.pathname.endsWith('/approval-inbox'));
+    expect(inbox?.url.searchParams.get('decidable')).toBe('true');
   });
 
   it('shows a page count with "+" when the server has a further page', () => {

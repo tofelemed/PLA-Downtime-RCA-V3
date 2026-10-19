@@ -15,10 +15,13 @@ export interface NativeSelectProps {
   invalid?: boolean;
   /** accessible name when no visible `<label for>` points at the select */
   ariaLabel?: string;
+  /** set by the enclosing `FormField` (required marker, hint / error ids) */
+  'aria-required'?: boolean;
+  'aria-describedby'?: string;
 }
 
 /** Plain `<select>` (keyboard- and test-friendly, as in the 3.2 / 3.3 screens). */
-export function NativeSelect({ id, value, options, onChange, placeholder, disabled, invalid, ariaLabel }: NativeSelectProps) {
+export function NativeSelect({ id, value, options, onChange, placeholder, disabled, invalid, ariaLabel, ...aria }: NativeSelectProps) {
   return (
     <select
       id={id}
@@ -27,7 +30,8 @@ export function NativeSelect({ id, value, options, onChange, placeholder, disabl
       disabled={disabled}
       aria-label={ariaLabel}
       aria-invalid={invalid || undefined}
-      aria-describedby={invalid ? `${id}-error` : undefined}
+      aria-required={aria['aria-required']}
+      aria-describedby={aria['aria-describedby'] ?? (invalid ? `${id}-error` : undefined)}
       onChange={(event) => onChange(event.target.value)}
     >
       {placeholder !== undefined && <option value="">{placeholder}</option>}

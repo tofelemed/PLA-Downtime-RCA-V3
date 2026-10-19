@@ -26,7 +26,7 @@ export interface SharedLessonV2View {
 
 export const SHARED_LESSON_NOTE =
   'Lessons shared by other plants of your organization. Check process chemistry, operating envelope and ' +
-  'design fit, and use your own change control before copying a modification (SME CA9).';
+  'design fit, and use your own change control before copying a modification.';
 
 interface Row {
   id: string;

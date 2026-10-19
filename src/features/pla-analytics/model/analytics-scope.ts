@@ -1,5 +1,6 @@
 import type {
   ActualsQualityQuery,
+  EventLossQuery,
   LossTreeQuery,
   ReconciliationStatusQuery,
   ReconciliationTrendQuery,
@@ -68,6 +69,9 @@ export interface AnalyticsScope {
 const oneOf = <T extends string>(values: readonly T[], value: string | null, fallback: T): T =>
   value !== null && (values as readonly string[]).includes(value) ? (value as T) : fallback;
 
+/** The label of a window picked by its dates (deep links without a rolling key read the same). */
+export const CHOSEN_DATES = 'Chosen dates';
+
 const isInstant = (value: string | null): value is string => value !== null && !Number.isNaN(Date.parse(value));
 
 /** Page-level defaults: management reports show approved figures unless the user chooses otherwise (SME R12). */
@@ -92,7 +96,7 @@ function windowOf(params: URLSearchParams, now: number): Pick<AnalyticsScope, 'f
   const to = params.get('to');
   const name = params.get('window');
   const rolling = relativeWindowOf(name);
-  if (isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to)) return { from, to, windowLabel: rolling?.label ?? name ?? 'Custom window' };
+  if (isInstant(from) && isInstant(to) && Date.parse(from) < Date.parse(to)) return { from, to, windowLabel: rolling?.label ?? name ?? CHOSEN_DATES };
   const preset = rolling ?? DEFAULT_PRESET;
   return { ...presetWindowOf(preset.hours, now), windowLabel: preset.label };
 }
@@ -174,6 +178,9 @@ export function lossTreeQuery(scope: AnalyticsScope, options: { metric?: LossTre
   return query;
 }
 
+/** The attributed loss of each event of the scope: the same loss lines as the tree, grouped by cause event (QA PLA M2). */
+export const eventLossQuery = (scope: AnalyticsScope): EventLossQuery => ({ ...scopeBase(scope), groupBy: 'event', metric: 'qty', ledger: 'plan' });
+
 export const trendQuery = (scope: AnalyticsScope): ReconciliationTrendQuery => ({ ...scopeBase(scope), groupBy: scope.trendBy });
 export const statusQuery = (scope: AnalyticsScope): ReconciliationStatusQuery => scopeBase(scope);
 export const qualityQuery = (scope: AnalyticsScope): ActualsQualityQuery => scopeBase(scope);
@@ -206,6 +213,16 @@ export function exportRequestOf(scope: AnalyticsScope, reportType: ExportRequest
   const request: ExportRequest = { reportType, format: 'csv', revisionSelector: 'published', from: scope.from, to: scope.to };
   if (scope.unitIds.length > 0) request.unitIds = [...scope.unitIds].sort();
   return request;
+}
+
+/**
+ * Why the export of the shown scope is not offered, in words (QA Reports: "Approved figures only." was too
+ * terse): the toggle to choose first, or the periods still waiting for approval; null when it can start.
+ */
+export function exportBlockedReason(scope: AnalyticsScope, isProvisional: boolean, approvedToggle: string): string | null {
+  if (!scope.approvedOnly) return `Exports contain approved figures only: choose “${approvedToggle}” first.`;
+  if (isProvisional) return 'Some periods of these dates are not approved yet: choose dates whose periods are all approved, or export after their approval.';
+  return null;
 }
 
 const LOSS_PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss'] as const;

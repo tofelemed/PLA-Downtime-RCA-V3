@@ -1,4 +1,5 @@
 import type { ConnectionView } from '@/api/v2/types/integrations';
+import { plural } from '@/features/ux-kit/format/plural';
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
 const record = (value: unknown): Record<string, unknown> =>
@@ -15,7 +16,7 @@ export function endpointSummary(connection: ConnectionView): string {
     if (connection.effectiveClientId) parts.push(`client id ${connection.effectiveClientId}`);
     if (tls.mode === 'insecure') parts.push('TLS verification disabled');
     const topics = Array.isArray(mqtt.topics) ? mqtt.topics.length : 0;
-    parts.push(`${topics} topic filter(s)`);
+    parts.push(plural(topics, 'topic filter', 'topic filters'));
     return parts.join(' · ');
   }
   const parts = [text(config.piWebApiUrl) ?? 'no endpoint'];

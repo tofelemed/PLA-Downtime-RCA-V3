@@ -13,7 +13,9 @@ const LABELS: Record<CounterKey, string> = {
 /** Counters since the subscription started in the worker process (reset on restart; the server counts). */
 export function SubscriptionCounters({ health }: { health: MqttHealthView }) {
   return (
-    <dl className="grid grid-cols-4 gap-2 text-center text-xs sm:grid-cols-7" aria-label="Subscription counters" data-testid="mqtt-counters">
+    <div className="space-y-1">
+    <p className="text-xs text-muted-foreground" id="mqtt-counters-note">Counted since the worker last started (reset when it restarts); stored observations are not affected.</p>
+    <dl className="grid grid-cols-4 gap-2 text-center text-xs sm:grid-cols-7" aria-label="Subscription counters since the worker started" aria-describedby="mqtt-counters-note" data-testid="mqtt-counters">
       {COUNTER_KEYS.map((key) => (
         <div key={key} className="rounded-md border p-2" data-counter={key}>
           <dt className="text-muted-foreground">{LABELS[key]}</dt>
@@ -21,5 +23,6 @@ export function SubscriptionCounters({ health }: { health: MqttHealthView }) {
         </div>
       ))}
     </dl>
+    </div>
   );
 }

@@ -6,7 +6,10 @@ import { changedFields } from './event-draft';
 import { currentStopsQuery, defaultFilters, isToCodeFilters, selectionQuery, toCodeFilters, toEventQuery, type EventFilterState } from './event-filters';
 import {
   EMPTY_FORM,
+  END_BEFORE_START_MESSAGE,
+  endBeforeStartError,
   formValuesOf,
+  impactedInterval,
   serverFormErrors,
   toCreateBody,
   toPatchBody,
@@ -110,8 +113,35 @@ describe('event form (plan 3.2 step 3)', () => {
     expect(validateEventForm(EMPTY_FORM, 'create', TEHRAN)).toEqual({ unitId: 'Choose a unit', startLocal: 'Enter the start time' });
     expect(validateEventForm({ ...values, durationMinutes: '-1' }, 'create', TEHRAN).durationMinutes).toBeDefined();
     expect(validateEventForm({ ...values, durationMinutes: 'x' }, 'create', TEHRAN).durationMinutes).toBeDefined();
-    // an end before the start is the server's decision (422), not the browser's
+    // in duration mode a left-over end time is not sent, so it is not checked
     expect(validateEventForm({ ...values, endLocal: '2026-10-09T07:00' }, 'create', TEHRAN)).toEqual({});
+  });
+
+  it('QA audit F3: an end time at or before the start is refused at the End field before saving', () => {
+    const timed = { ...values, intervalMode: 'end' as const, durationMinutes: '' };
+    expect(validateEventForm({ ...timed, endLocal: '2026-10-01T08:00' }, 'create', TEHRAN)).toEqual({ endLocal: END_BEFORE_START_MESSAGE });
+    expect(validateEventForm({ ...timed, endLocal: '2026-10-09T08:00' }, 'edit', TEHRAN)).toEqual({ endLocal: END_BEFORE_START_MESSAGE });
+    expect(validateEventForm({ ...timed, endLocal: '2026-10-09T08:01' }, 'create', TEHRAN)).toEqual({});
+    expect(endBeforeStartError({ ...timed, endLocal: '' }, TEHRAN)).toBeNull();
+    // the server's 422 lands on the same field
+    const refused = new V2ApiError(422, {
+      code: 'END_BEFORE_START',
+      message: 'endTime must be after startTime',
+      fieldErrors: [{ field: 'endTime', message: 'endTime must be after startTime' }],
+      correlationId: 'c9',
+      retryable: false,
+    });
+    expect(serverFormErrors(refused).fields).toEqual({ endLocal: 'endTime must be after startTime' });
+  });
+
+  it('the impacted-periods preview reads the end time or start + duration, and nothing for a reversed range (F3, L8)', () => {
+    const timed = { ...values, intervalMode: 'end' as const };
+    expect(impactedInterval({ ...timed, endLocal: '2026-10-09T09:00' }, TEHRAN)).toEqual({ from: '2026-10-09T04:30:00.000Z', to: '2026-10-09T05:30:00.000Z' });
+    expect(impactedInterval({ ...timed, endLocal: '2026-10-09T07:00' }, TEHRAN)).toBeNull();
+    expect(impactedInterval({ ...timed, endLocal: '' }, TEHRAN)).toEqual({ from: '2026-10-09T04:30:00.000Z', to: null });
+    // duration mode ignores a stale end time
+    expect(impactedInterval({ ...values, endLocal: '2026-10-09T07:00' }, TEHRAN)).toEqual({ from: '2026-10-09T04:30:00.000Z', to: '2026-10-09T05:15:00.000Z' });
+    expect(impactedInterval({ ...values, startLocal: '' }, TEHRAN)).toBeNull();
   });
 
   it('sends minutes as seconds and plant times as UTC (DTO §15.3)', () => {

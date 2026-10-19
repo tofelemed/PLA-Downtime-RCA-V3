@@ -34,8 +34,13 @@ export interface UnitStateCoverageV2View {
   unitId: string;
   from: string;
   to: string;
-  /** null = the unit has no state mapping at `from` (no state engine for it yet) */
+  /** null = the unit has no state mapping in the window (no state engine for it yet) */
   coverage: StateCoverage | null;
+  /**
+   * set when the window starts before the unit's first state mapping: coverage and segments start at this
+   * instant (the first version's effective start, QA M3); null = they cover the whole window
+   */
+  coverageStartsAt: string | null;
   segments: Array<{
     start: string;
     end: string;
@@ -154,18 +159,46 @@ export class UnitStateV2Service {
     }
     await this.assertUnit(tenantId, query.unitId);
     const scope = { tenantId, unitId: query.unitId };
-    const timeline = await loadStateTimeline(this.manager, scope, window);
-    const excluded = await this.excludedShifts(scope, window);
+    const { timeline, covered } = await this.timelineOf(scope, window);
+    const excluded = await this.excludedShifts(scope, covered);
     const segments = timeline ?? [];
     return {
       unitId: query.unitId,
       from: window.start.toISOString(),
       to: window.end.toISOString(),
       coverage: timeline
-        ? stateCoverage(timeline, scheduledIntervals(window, excluded, false))
+        ? stateCoverage(timeline, scheduledIntervals(covered, excluded, false))
         : null,
+      coverageStartsAt:
+        timeline && covered.start > window.start
+          ? covered.start.toISOString()
+          : null,
       segments: segments.slice(0, MAX_SEGMENTS).map(segmentView),
       truncated: segments.length > MAX_SEGMENTS,
+    };
+  }
+
+  /**
+   * The state timeline over the window; when no mapping is in force at its start, over the part from the
+   * unit's first mapping version on (QA M3: the time before it has no state engine, not "unknown").
+   */
+  private async timelineOf(
+    scope: { tenantId: string; unitId: string },
+    window: { start: Date; end: Date },
+  ) {
+    const timeline = await loadStateTimeline(this.manager, scope, window);
+    if (timeline) return { timeline, covered: window };
+    const rows = await this.manager.query<Array<{ first: Date | null }>>(
+      `SELECT min("effective_from") AS "first" FROM "unit_state_mappings"
+        WHERE "tenant_id" = $1 AND "unit_id" = $2 AND "effective_from" > $3 AND "effective_from" < $4`,
+      [scope.tenantId, scope.unitId, window.start, window.end],
+    );
+    const first = rows[0]?.first ? new Date(rows[0].first) : null;
+    if (!first) return { timeline: null, covered: window };
+    const covered = { start: first, end: window.end };
+    return {
+      timeline: await loadStateTimeline(this.manager, scope, covered),
+      covered,
     };
   }
 

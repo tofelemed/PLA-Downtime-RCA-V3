@@ -29,8 +29,7 @@ import {
   RcaPolicy,
 } from '../domain/rca/rca-policy';
 
-const SEED_NOTE =
-  'Seeded on first use from the D04 / D05 / D06 / D13 default (DECISIONS.md, 2026-10-07); change by a new version.';
+const SEED_NOTE = 'Built-in default; change it by recording a new version.';
 
 /**
  * Kinds seeded approved on first use; `valuation_basis` is seeded unapproved by the valuation module (VAL01);

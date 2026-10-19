@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { V2ApiError } from '@/api/v2/errors';
 import { DataState } from './data-state';
 import { dataStateOf } from './data-state-of';
@@ -50,6 +51,7 @@ describe('UX kit formatting (plan 3.1)', () => {
     render(<Quantity value="1234.5" uom="t" />);
     expect(screen.getByText('1,234.50')).toBeInTheDocument();
     expect(screen.getByText('t')).toBeInTheDocument();
+    expect(screen.getByTitle('1234.5').textContent).toBe('1,234.50 t');
     render(<Quantity value="2" uom={null} />);
     expect(screen.getByText('(unit unknown)')).toBeInTheDocument();
   });
@@ -114,6 +116,13 @@ describe('UX states and scope header (plan 3.1, UX03)', () => {
     render(<DataState state="error" />);
     expect(screen.getByText('Could not load')).toBeInTheDocument();
     expect(screen.getByText('The request failed.')).toBeInTheDocument();
+  });
+
+  it('a record that is gone (404) offers the way back to its list instead of Retry and "Reload the page"', () => {
+    render(<MemoryRouter><DataState state="error" error={apiError(404, 'NOT_FOUND')} onRetry={() => undefined} back={{ to: '/tasks', label: 'Tasks' }} /></MemoryRouter>);
+    expect(screen.getByRole('link', { name: 'Back to Tasks' })).toHaveAttribute('href', '/tasks');
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(screen.queryByText(/Reload the page/)).toBeNull();
   });
 
   it('ScopeHeader shows scope, zone with offset, unit, baseline, provisional and freshness', () => {

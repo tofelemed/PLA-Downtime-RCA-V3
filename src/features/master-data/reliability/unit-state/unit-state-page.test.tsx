@@ -65,6 +65,17 @@ describe('Unit state page (SME D1 / D2)', () => {
     expect(screen.getByText(/Unknown \(no data, stale, bad quality, unmapped\)/)).toBeInTheDocument();
   });
 
+  it('QA M3: a window opening before the first mapping shows coverage from that mapping, and says so', async () => {
+    const clipped = { ...COVERAGE, coverageStartsAt: '2026-10-01T02:00:00.000Z' };
+    stubV2Fetch((call) => (call.url.pathname.endsWith('/unit-state-mappings/coverage') ? jsonResponse(200, clipped) : reply(call)));
+    actAs('integration_admin');
+    renderPage();
+    const note = await screen.findByTestId('coverage-starts-at');
+    expect(note).toHaveTextContent(/Coverage starts at .*, when the first state mapping came into force\./);
+    expect(screen.getByTestId('coverage-facts')).toBeInTheDocument();
+    expect(screen.queryByText(/no state mapping/i)).toBeNull();
+  });
+
   it('records a new version from the one in force and shows the server refusal', async () => {
     const calls = stubV2Fetch(reply);
     actAs('integration_admin');

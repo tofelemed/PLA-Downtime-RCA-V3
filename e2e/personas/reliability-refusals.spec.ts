@@ -66,10 +66,10 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     // collapsed, the sidebar's icon-only links carry no accessible name (UX observation); expand it first
     await nav.getByRole('button', { name: 'Expand sidebar' }).click();
     await expect(nav.getByRole('link', { name: 'RCA Analysis' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Knowledge Base' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Knowledge base' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Event Hub' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Master Data' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: /User Management|Admin Panel|Settings/ })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Master data' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: /User management|Admin panel|Settings/ })).toHaveCount(0);
   });
 
   test('V1 (leila): a new case needs a title; an action whose verification window ends before it starts is refused with the field error', async ({ page }) => {

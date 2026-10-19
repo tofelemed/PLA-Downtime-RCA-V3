@@ -13,6 +13,7 @@ import { useCaseWorkspace } from '../../../case-context';
 import { useCasePatch } from '../../../use-case-patch';
 import { LogicNodeItem, type LogicTreeActions } from './logic-node-item';
 import { NodeDialog, type NodeFields } from './node-dialog';
+import { plural } from '@/features/ux-kit/format/plural';
 
 type Editing = { mode: 'add'; parent: RcaLogicNode | null } | { mode: 'edit'; node: RcaLogicNode } | null;
 
@@ -74,7 +75,7 @@ export function LogicTreeTool() {
     <div className="space-y-4" data-testid="logic-tree">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {counts.nodes} node(s) · {counts.verified} verified · {counts.rootCauses} root cause(s) · {counts.linkedEvidence} evidence item(s) linked
+          {plural(counts.nodes, 'node', 'nodes')} · {counts.verified} verified · {plural(counts.rootCauses, 'root cause', 'root causes')} · {plural(counts.linkedEvidence, 'evidence item', 'evidence items')} linked
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" disabled={rca.logicTree.length === 0} onClick={() => downloadText(JSON.stringify(tree, null, 2), exportName(rca, 'logic-tree.json'), 'application/json')}>

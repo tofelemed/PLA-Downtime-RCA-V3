@@ -8,6 +8,7 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { stateCoverage } from '../../domain/reliability/state-coverage';
+import { durationText } from '../../domain/time/duration-text';
 import {
   stateTimeline,
   StateSample,
@@ -32,6 +33,7 @@ import {
 import { PolicyFacts } from './readiness-policies.service';
 import { ReadinessStore } from './readiness-store';
 import { EquipmentReadinessQueryDto } from './readiness-v2.dto';
+import { plural } from '../../common/helpers/plural';
 
 const SAMPLE_LIMIT = 50_000;
 @Injectable()
@@ -129,7 +131,7 @@ export class ReadinessTelemetryService {
       'connection',
       mqtt.length ? 'ready' : 'needs_attention',
       mqtt.length
-        ? `${mqtt.length} saved active MQTT connection(s) selected or bound to this unit. This checks configuration, not current broker reachability.`
+        ? `${plural(mqtt.length, 'saved active MQTT connection', 'saved active MQTT connections')} selected or bound to this unit. This checks configuration, not current broker reachability.`
         : 'The selected/bound connection is inactive or is not MQTT.',
     );
   }
@@ -201,7 +203,7 @@ export class ReadinessTelemetryService {
         : samples.length
           ? 'needs_attention'
           : 'missing',
-      `Selected window: ${coverage.runningSeconds} s running, ${coverage.knownStoppedSeconds} s known stopped, ${coverage.unknownSeconds} s unknown. This is full-window data coverage, including unscheduled time; period KPIs apply the production schedule.`,
+      `Selected window: ${durationText(coverage.runningSeconds)} running, ${durationText(coverage.knownStoppedSeconds)} known stopped, ${durationText(coverage.unknownSeconds)} unknown. This is full-window data coverage, including unscheduled time; period KPIs apply the production schedule.`,
       coverage.coverage,
     );
   }
@@ -293,7 +295,7 @@ export class ReadinessTelemetryService {
         quantity.quantity !== null && ratio === 1 && !quantity.exceptions.length
           ? 'ready'
           : 'needs_attention',
-        `${signal.name}: ${quantity.coverage.observedSeconds} s observed, ${quantity.coverage.missingSeconds} s missing; findings: ${quantity.exceptions.map((row) => row.code).join(', ') || 'none'}. Preview only; the period calculation resolves authority, conflicts, resets and accounting units.`,
+        `${signal.name}: ${durationText(Number(quantity.coverage.observedSeconds))} observed, ${durationText(Number(quantity.coverage.missingSeconds))} missing; findings: ${quantity.exceptions.map((row) => row.code).join(', ') || 'none'}. Preview only; the period calculation resolves authority, conflicts, resets and accounting units.`,
         ratio,
       );
     } catch (error) {

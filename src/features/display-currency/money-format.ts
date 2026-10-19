@@ -1,5 +1,6 @@
 import type { DigitSystem } from '@/lib/dates';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { withUnit } from '@/features/ux-kit/format/units';
 
 /** Fraction digits per ISO 4217 code for display (D08: IRR without a minor unit, USD 2). */
 const CURRENCY_DIGITS: Readonly<Record<string, number>> = { IRR: 0, USD: 2 };
@@ -10,7 +11,7 @@ export function currencyDigits(currency: string | null | undefined): number {
 
 /** `"1234567.5", "IRR"` → `"1,234,568 IRR"`; `"1234.5", "USD"` → `"1,234.50 USD"` (rounded for display only). */
 export function formatCurrencyAmount(amount: string, currency: string, digits?: DigitSystem): string {
-  return `${formatDecimal(amount, currencyDigits(currency), digits)} ${currency}`;
+  return withUnit(formatDecimal(amount, currencyDigits(currency), digits), currency);
 }
 
 /**

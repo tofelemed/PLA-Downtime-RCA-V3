@@ -81,7 +81,7 @@ test.describe('Reliability engineer — RCA knowledge base (journey 5)', () => {
   test('J5b (leila): the v2 screen finds the entry on the server, opens it with the root cause, keeps one helpful vote', async ({ page }) => {
     await uiLogin(page, REL_USERS.leila);
     await page.goto('/rca-knowledge-base');
-    await expect(page.getByRole('heading', { name: 'RCA Knowledge Base' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('heading', { name: 'Knowledge base' })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('rca-knowledge-v2')).toBeVisible();
     await page.getByLabel('Search knowledge entries').fill(caseTitle);
     const row = page.getByTestId('knowledge-list').getByRole('row', { name: `Open entry ${caseTitle}` });
@@ -111,7 +111,7 @@ test.describe('Reliability engineer — RCA knowledge base (journey 5)', () => {
   test('J5c (leila): the knowledge base offers no manual entry form; entries are born from closed cases only', async ({ page }) => {
     await uiLogin(page, REL_USERS.leila);
     await page.goto('/rca-knowledge-base');
-    await expect(page.getByRole('heading', { name: 'RCA Knowledge Base' })).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('heading', { name: 'Knowledge base' })).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('button', { name: /new entry|add entry|create entry|new template/i })).toHaveCount(0);
     await expect(page.getByTestId('knowledge-filters')).toBeVisible();
   });

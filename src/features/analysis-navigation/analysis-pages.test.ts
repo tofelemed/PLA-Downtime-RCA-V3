@@ -48,8 +48,10 @@ describe('focused analysis navigation', () => {
   it.each([['operator'], ['viewer'], ['SuperAdmin']])('keeps analysis access under the original read capability: %s', (...roles) => {
     const groups = groupNavigationItems(visibleNavigationItems(capabilitiesOf(roles), {}));
     expect(groups.find((group) => group.section.key === 'downtime')?.items).toHaveLength(5);
-    // the PLA section also lists "Period accounting" (UX audit B-5, analysis roles only)
-    expect(groups.find((group) => group.section.key === 'pla')?.items.filter((item) => item.href.startsWith('/pla-analytics'))).toHaveLength(6);
+    // the PLA section also lists "Period accounting" (UX audit B-5, analysis roles only); Loss valuation is
+    // money, which operators do not see (owner 19 Oct 2026, QA audit)
+    const pla = groups.find((group) => group.section.key === 'pla')?.items.filter((item) => item.href.startsWith('/pla-analytics'));
+    expect(pla).toHaveLength(roles.includes('operator') ? 5 : 6);
     expect(groups.find((group) => group.section.key === 'production')?.items.some((item) => item.href.startsWith('/downtime') || item.href.startsWith('/pla-analytics'))).toBe(false);
   });
 
@@ -60,6 +62,8 @@ describe('focused analysis navigation', () => {
     expect(overview.views).toEqual(['day:duration:unplanned']);
     expect(pageBundleQuery(filters, 'causes', 'assets').views).toEqual(['asset:duration:unplanned', 'asset:frequency:unplanned']);
     expect(pageBundleQuery(filters, 'trends', 'crew').views).toEqual(['crew:duration:unplanned']);
-    expect(pageBundleQuery(filters, 'trends', 'calendar').views).toEqual([]);
+    // QA audit F1: the summary-only comparison still names one view (the API refuses an empty list)
+    expect(pageBundleQuery(filters, 'trends', 'calendar').views).toEqual(['day:duration:unplanned']);
+    expect(overview.scheduleClass).toBe('unplanned');
   });
 });

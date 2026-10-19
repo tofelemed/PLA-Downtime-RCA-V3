@@ -6,6 +6,7 @@ import {
 } from '../domain/notifications/work-reminders';
 import { HolderCache, NotificationRow } from './notification-rows';
 import { WorkReminderConfig } from './work-reminder-config';
+import { plural } from '../common/helpers/plural';
 
 /** Item 6: who codes stops of a unit, and who is told about a stop that keeps running. */
 export const BACKLOG_ROLES = ['operator', 'production_engineer'] as const;
@@ -133,7 +134,7 @@ function backlogDetail(
 ): Record<string, unknown> {
   return {
     level,
-    message: `${day.stops} uncoded stop(s) waiting for a reason`,
+    message: `${plural(day.stops, 'uncoded stop', 'uncoded stops')} waiting for a reason`,
     unitId: day.unit_id,
     unitName: day.unit_name,
     localDate: day.local_date,

@@ -11,6 +11,7 @@ import { NO_TEMPLATE, previewBody } from '../model/mapping-draft';
 import { MappingPreview } from './mapping-preview';
 import { MappingRulesTable } from './mapping-rules-table';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface MappingEditorProps {
   connectionId: string;
@@ -53,7 +54,7 @@ export function MappingEditor({ connectionId, sample, timezone }: MappingEditorP
           Preview sample
         </Button>
         <Button size="sm" variant="outline" disabled={mapping.changed.length === 0 || save.isPending} onClick={() => void saveVersion()} data-testid="mapping-save">
-          Save {number(mapping.changed.length)} change(s) as a new version
+          Save {plural(mapping.changed.length, 'change', 'changes', number)} as a new version
         </Button>
         <Button size="sm" variant="ghost" disabled={mapping.changed.length === 0} onClick={mapping.reset}>
           Discard draft

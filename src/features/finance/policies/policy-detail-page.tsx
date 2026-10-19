@@ -5,21 +5,23 @@ import type { ValuationPolicyView, WithRevaluation } from '@/api/v2/types/valuat
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataState } from '@/features/ux-kit/data-state';
 import { InlineError } from '@/features/ux-kit/errors/inline-error';
 import { Fact } from '../components/fact';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DEFAULT_BASIS_LABELS, DEMAND_RULE_LABELS, FX_DATE_RULE_LABELS, FX_POLICY_LABELS, FX_RATE_TYPE_LABELS, labelOf, TIME_BASIS_RULE_LABELS } from '@/features/ux-kit/labels';
-import { AUTHORSHIP_LABELS, POLICY_STATUS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
+import { POLICY_STATUS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
+import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
-import { authorshipOf, currenciesLabel, policyStatus } from '../model/policy-status';
+import { currenciesLabel, policyStatus } from '../model/policy-status';
+import { PolicyPerson } from '../components/policy-person';
 import { RevaluationQueued } from '../components/revaluation-queued';
 import { PolicyApprove } from './policy-approve';
 
-const BACK = { to: '/finance?tab=policies', label: 'Finance' };
+const BACK = { to: '/finance?tab=policies', label: 'Valuation policy' };
+const trailOf = (version: number) => [{ label: 'Finance', to: '/finance' }, { label: 'Valuation policy', to: BACK.to }, { label: `Version ${version}` }];
 const bodyText = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 /** Names of the impact codes counted as independent cost components (never their ids). */
@@ -33,7 +35,6 @@ function IndependentCodes({ ids }: { ids: readonly string[] }) {
 
 function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
   const dates = usePlantDates();
-  const userId = useCurrentUserId();
   const independent = Array.isArray(policy.body.independentImpactCodeIds) ? policy.body.independentImpactCodeIds.filter((entry): entry is string => typeof entry === 'string') : [];
   return (
     <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -45,8 +46,13 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
       <Fact label="Rate date">{labelOf(FX_DATE_RULE_LABELS, bodyText(policy.body.fxDateRule) ?? 'event_date')}</Fact>
       <Fact label="Lost sales">{bodyText(policy.body.demandRule) ? labelOf(DEMAND_RULE_LABELS, bodyText(policy.body.demandRule)) : 'No economic view'}</Fact>
       <Fact label="Valid">{dates.validity(policy.effectiveFrom, policy.effectiveTo)}</Fact>
-      <Fact label="Author">{AUTHORSHIP_LABELS[authorshipOf(policy, userId)]}</Fact>
-      {policy.approvedAt && <Fact label="Approved">{dates.dateTime(policy.approvedAt)}</Fact>}
+      <Fact label="Author"><PolicyPerson id={policy.createdBy} /></Fact>
+      {policy.approvedAt && (
+        <Fact label="Approved">
+          {dates.dateTime(policy.approvedAt)}
+          {policy.approvedBy && <> by <PolicyPerson id={policy.approvedBy} /></>}
+        </Fact>
+      )}
       {bodyText(policy.body.timeBasisRule) === 'independent_components' && (
         <Fact label="Independent cost components">
           <IndependentCodes ids={independent} />
@@ -58,7 +64,7 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
           {policy.restateApproved ? ' · approved figures in range get change proposals' : ''}
         </Fact>
       )}
-      {policy.notes && <Fact label="Notes">{policy.notes}</Fact>}
+      {policy.notes && <Fact label="Notes">{policyNoteText(policy.notes)}</Fact>}
     </dl>
   );
 }
@@ -87,7 +93,7 @@ function PolicyView({ policy }: { policy: ValuationPolicyView & WithRevaluation 
   );
   return (
     <div className="space-y-6" data-testid="policy-detail" data-version={policy.version} data-status={status}>
-      <PageHeader title={`Valuation policy version ${policy.version}`} back={BACK} description={description} actions={actions} />
+      <PageHeader title={`Valuation policy version ${policy.version}`} back={BACK} breadcrumbs={trailOf(policy.version)} description={description} actions={actions} />
       <RevaluationQueued revaluation={policy.revaluation} />
       <Section title="Settings">
         <PolicyFacts policy={policy} />

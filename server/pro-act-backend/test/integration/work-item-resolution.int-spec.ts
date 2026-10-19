@@ -275,7 +275,7 @@ describe('shared work-item notifications', () => {
     // alerted for both closed stops of 7 Oct (e3 1 h, e4 3 h); then e4 is coded and only e3 is owed
     await sql(
       `UPDATE user_notifications SET detail = detail || '{"stops": 2, "uncodedSeconds": 14400,
-              "message": "2 uncoded stop(s) waiting for a reason"}'::jsonb
+              "message": "2 uncoded stops waiting for a reason"}'::jsonb
         WHERE tenant_id = $1 AND kind = 'uncoded_backlog'`,
       [world.tenantA],
     );
@@ -311,12 +311,7 @@ describe('shared work-item notifications', () => {
     expect(
       rows.map((r) => [r.stops, r.seconds, r.message, r.resolved]),
     ).toEqual(
-      rows.map(() => [
-        1,
-        3600,
-        '1 uncoded stop(s) waiting for a reason',
-        false,
-      ]),
+      rows.map(() => [1, 3600, '1 uncoded stop waiting for a reason', false]),
     );
     expect(rows.find((r) => r.user_id === ids.operator)?.read).toBe(true);
     expect(rows.map((r) => r.created_at.getTime())).toEqual(

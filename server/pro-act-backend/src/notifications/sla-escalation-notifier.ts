@@ -3,6 +3,7 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { QUEUE_WINDOW_DAYS } from '../close/reconciliation-queue.service';
 import { slaPeriodsCte, SqlParams } from '../close/sla-sql';
+import { planCoveredSql } from '../close/plan-coverage-sql';
 import { WorkflowPoliciesService } from '../close/workflow-policies.service';
 import { enqueueOutbox } from '../common/outbox/outbox-writer';
 import {
@@ -110,7 +111,7 @@ export class SlaEscalationNotifier {
     const since = new Date(asOf.getTime() - QUEUE_WINDOW_DAYS * 86_400_000);
     const where = `p."tenant_id" = ${params.add(tenantId)} AND p."local_date" >= ${params.add(
       since.toISOString().slice(0, 10),
-    )}::date AND NOT (p."is_excluded" AND r."id" IS NULL)`;
+    )}::date AND NOT (p."is_excluded" AND r."id" IS NULL) AND ${planCoveredSql('p')}`;
     const cte = slaPeriodsCte(params, { where, asOf, policy });
     const at = params.add(asOf);
     return manager.query(

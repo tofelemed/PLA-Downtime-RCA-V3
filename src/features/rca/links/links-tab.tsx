@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { humanize, labelOf } from '@/features/ux-kit/labels';
+import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_LINK_SOURCE_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { EvidenceView } from '../components/evidence-view';
-import { LINK_TYPE_LABELS } from '../model/rca-labels';
+import { LINK_TYPE_LABELS, linkedEventKind } from '../model/rca-labels';
 import { useRcaFormat } from '../use-rca-format';
 import { AddLinkForm } from './add-link-form';
 
@@ -24,9 +24,9 @@ function TargetText({ link }: { link: RcaLinkView }) {
   if (link.linkType === 'event') {
     const event = (link.evidence?.event ?? {}) as EventSnapshot;
     const start = typeof event.start === 'string' ? dateTime(event.start) : null;
-    const kind = typeof event.physicalType === 'string' ? humanize(event.physicalType) : 'Event';
+    const kind = linkedEventKind(event.physicalType);
     return (
-      <Link className="underline" to={`/events/${encodeURIComponent(link.targetId)}`}>
+      <Link className="font-medium underline" to={`/events/${encodeURIComponent(link.targetId)}`}>
         {kind}
         {start ? ` from ${start}` : ''}
       </Link>
@@ -43,7 +43,8 @@ function LinkRow({ link, timezone }: { link: RcaLinkView; timezone: string }) {
     <li className="space-y-2 p-2 text-sm" data-testid="link-row" data-target-id={link.targetId}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span>
-          <span className="font-medium">{LINK_TYPE_LABELS[link.linkType]}</span> <TargetText link={link} />
+          {link.linkType !== 'event' && <span className="font-medium">{LINK_TYPE_LABELS[link.linkType]} </span>}
+          <TargetText link={link} />
           <span className="text-muted-foreground">
             {' '}
             · linked {dateTime(link.linkedAt)} · {labelOf(RCA_LINK_SOURCE_LABELS, link.source)}

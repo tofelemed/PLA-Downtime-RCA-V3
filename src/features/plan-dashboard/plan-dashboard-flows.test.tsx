@@ -97,7 +97,7 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     fireEvent.change(screen.getByTestId('candidate-decision'), { target: { value: 'accept' } });
     const next: ReconciliationView = { ...VIEW, rowVersion: 5, baseRunId: 'run-2', candidates: [{ ...VIEW.candidates[0], autoKey: 'k9' }] };
     rerender(<QueryClientProvider client={client}><MemoryRouter><LossLineEditor view={next} timezone="UTC" /></MemoryRouter></QueryClientProvider>);
-    expect(screen.getByTestId('rebase-dropped').textContent).toContain('1 decision(s) dropped');
+    expect(screen.getByTestId('rebase-dropped').textContent).toContain('1 decision dropped');
     expect(screen.getByTestId('loss-line-editor').getAttribute('data-dirty')).toBe('true');
   });
 
@@ -138,8 +138,8 @@ describe('plan dashboard editor and workflow (plan 3.5)', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
     const dialog = screen.getByRole('alertdialog');
     expect(dialog).toHaveTextContent('Approve revision 1?');
-    expect(within(dialog).getByTestId('approve-summary')).toHaveTextContent('Attributed 90.00t');
-    expect(within(dialog).getByTestId('approve-summary')).toHaveTextContent('Unaccounted 60.00t');
+    expect(within(dialog).getByTestId('approve-summary')).toHaveTextContent('Attributed 90.00 t');
+    expect(within(dialog).getByTestId('approve-summary')).toHaveTextContent('Unaccounted 60.00 t');
     expect(within(dialog).getByTestId('residual-state')).toHaveTextContent('Above tolerance');
     fireEvent.change(screen.getByTestId('wf-approve-comment'), { target: { value: '  checked the logs ' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Approve revision' }));

@@ -4,6 +4,8 @@ import { useDisplayCurrency } from '@/features/display-currency/use-display-curr
 import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 
 const VIEW_LABELS: Readonly<Record<string, string>> = {
   contribution_margin: 'Contribution margin',
@@ -11,15 +13,28 @@ const VIEW_LABELS: Readonly<Record<string, string>> = {
   economic_impact: 'Economic impact',
 };
 
+/** The server's basis as a sentence: capitalised, one closing full stop (older packages are lower case). */
+function sentence(text: string): string {
+  const trimmed = text.trim().replace(/[.]$/, '');
+  return trimmed ? `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}.` : '';
+}
+
+export interface ApprovedImpactProps {
+  impact: ApprovedImpactView;
+  /** where the value view comes from, after its name ("at link time" for a frozen evidence package) */
+  viewNote?: string;
+}
+
 /**
- * Approved historical loss from the ledger (approved revisions only, the valuation policy's default view —
- * economic impact from policy version 3; older packages: contribution margin): one row per loss kind and
- * unit, then the value in the user's display currency (the server reports each reporting currency); a
- * currency without a full valuation says so, and a provisional exchange rate is named.
+ * Approved historical loss from the ledger (approved revisions only, in the value view the server names —
+ * older packages: contribution margin): one row per loss kind and unit, then the value in the user's display
+ * currency (the server reports each reporting currency); a currency without a full valuation says so, and a
+ * provisional exchange rate is named. The basis sentence is the server's (QA M3).
  */
-export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
+export function ApprovedImpact({ impact, viewNote }: ApprovedImpactProps) {
   const { number } = useNumberFormat();
-  const { currency } = useDisplayCurrency();
+  // owner 19 Oct 2026 (QA audit): no money for operators
+  const { canViewMoney } = useCapabilities();
   if (impact.lines === 0) {
     return <p className="text-sm text-muted-foreground" data-testid="approved-impact-none">No approved loss yet (no approved period carries a line of this cause).</p>;
   }
@@ -32,8 +47,20 @@ export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
           </li>
         ))}
       </ul>
+      {canViewMoney && <ApprovedImpactValues impact={impact} viewNote={viewNote} />}
+      <p className="text-xs text-muted-foreground">{plural(impact.lines, 'approved line', 'approved lines', number)}. {sentence(impact.basis)}</p>
+    </div>
+  );
+}
+
+/** The value view and the value per display currency (only for roles that see money). */
+function ApprovedImpactValues({ impact, viewNote }: ApprovedImpactProps) {
+  const { currency } = useDisplayCurrency();
+  return (
+    <>
       <p className="text-xs text-muted-foreground" data-testid="approved-impact-view">
         Value: {VIEW_LABELS[impact.view ?? 'contribution_margin']}
+        {viewNote ? ` (${viewNote})` : ''}
       </p>
       <ul>
         {entriesInCurrency(impact.values, (row) => row.currency, currency).map((row) => (
@@ -52,7 +79,6 @@ export function ApprovedImpact({ impact }: { impact: ApprovedImpactView }) {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-muted-foreground">{number(impact.lines)} approved line(s). {impact.basis}.</p>
-    </div>
+    </>
   );
 }

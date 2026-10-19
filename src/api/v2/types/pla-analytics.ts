@@ -21,6 +21,8 @@ export interface LossTreeGroupView {
   share: string | null;
   cumulativeShare: string | null;
   lines: number;
+  /** lines that explain an event; 0 = manual or lot-disposition lines only, so there is no event to open (absent from older servers) */
+  eventLines?: number;
   status: LossTreeStatus;
   /** SME V7: some amount was converted with an authorised provisional FX rate */
   fxProvisional: boolean;

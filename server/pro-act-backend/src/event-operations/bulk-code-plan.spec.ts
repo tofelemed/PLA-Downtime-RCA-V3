@@ -9,6 +9,7 @@ import {
   affectedWindows,
   assertAssetUnit,
   classifyItems,
+  codingChanged,
   codingPatch,
   codingSnapshot,
   rejectExclusions,
@@ -215,5 +216,25 @@ describe('bulk asset and investigation flag (UX A-1 / E-3)', () => {
       const body = (error as UnprocessableEntityException).getResponse();
       expect(body).toMatchObject({ details: { eventIds: ['b'] } });
     }
+  });
+});
+
+describe('codingChanged (QA audit F5: a preview counts real changes only)', () => {
+  it('is false when the codes leave the coding as it was, true when any part differs', () => {
+    const stop = event('a', { scheduleClass: 'unplanned' });
+    const before = codingSnapshot(stop);
+    const same = codingSnapshot({
+      ...stop,
+      ...codingPatch(stop, { scheduleClass: 'unplanned' }, {}),
+    });
+    expect(codingChanged(before, same)).toBe(false);
+    const planned = codingSnapshot({
+      ...stop,
+      ...codingPatch(stop, { scheduleClass: 'planned' }, {}),
+    });
+    expect(codingChanged(before, planned)).toBe(true);
+    expect(
+      codingChanged(before, { ...before, investigationPending: true }),
+    ).toBe(true);
   });
 });

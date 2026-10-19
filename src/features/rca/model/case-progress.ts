@@ -1,4 +1,5 @@
 import type { RcaActionView, RcaCaseView } from '@/api/v2/types/rca';
+import { plural } from '@/features/ux-kit/format/plural';
 
 /** One step of the investigation checklist (shown with its state; the workflow gates are the server's). */
 export interface ProgressStep {
@@ -23,7 +24,7 @@ export function progressSteps(rca: RcaCaseView, hasToolRecord: boolean, actions?
       done: Boolean(rca.description && rca.teamCharter && rca.teamMemberIds.length > 0),
       hint: 'Problem statement, team charter and at least one team member.',
     },
-    { key: 'evidence', label: 'Data collection', done: evidence > 0, hint: `${evidence} evidence item(s).` },
+    { key: 'evidence', label: 'Data collection', done: evidence > 0, hint: `${plural(evidence, 'evidence item', 'evidence items')}.` },
     {
       key: 'analysis',
       label: 'Analysis',
@@ -50,6 +51,6 @@ function actionsStep(actions: readonly Pick<RcaActionView, 'status'>[] | 'error'
     key: 'actions',
     label: 'Actions',
     done: live.length > 0 && done === live.length,
-    hint: `${live.length} action(s), ${done} done.`,
+    hint: `${plural(live.length, 'action', 'actions')}, ${done} done.`,
   };
 }

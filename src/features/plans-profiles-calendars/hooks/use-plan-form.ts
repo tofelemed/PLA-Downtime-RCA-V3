@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { hasUnsavedChanges } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useCreatePlan, useNewPlanVersion, usePatchPlanVersion } from '@/api/v2/queries/plans';
 import type { PlanVersionView, PlanView } from '@/api/v2/types/plans';
 import { emptyPlanForm, planChangeBody, planCreateBody, planFormOf, validatePlanForm, type PlanFormValues } from '../model/plan-form';
@@ -17,18 +18,24 @@ export function initialPlanValues(mode: PlanFormMode, timezone: string): PlanFor
 
 /** Form state, request-shape validation and the three plan commands; server 422 field errors merge in. */
 export function usePlanForm(mode: PlanFormMode, timezone: string) {
-  const [values, setValues] = useState<PlanFormValues>(() => initialPlanValues(mode, timezone));
+  const [initial] = useState<PlanFormValues>(() => initialPlanValues(mode, timezone));
+  const [values, setValues] = useState<PlanFormValues>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreatePlan();
   const patch = usePatchPlanVersion();
   const next = useNewPlanVersion();
   const command = mode.kind === 'create' ? create : mode.kind === 'edit' ? patch : next;
 
+  /** shows the request-shape errors; true when there are none */
+  const validate = (): boolean => {
+    const found = validatePlanForm(values, timezone, mode.kind === 'create', mode.kind === 'new-version');
+    setErrors(found);
+    return Object.keys(found).length === 0;
+  };
+
   /** saves; resolves to the plan id, or null when refused (the refusal is in `error`) */
   const submit = async (): Promise<string | null> => {
-    const found = validatePlanForm(values, timezone, mode.kind === 'create');
-    setErrors(found);
-    if (Object.keys(found).length > 0) return null;
+    if (!validate()) return null;
     const body = planChangeBody(values, timezone);
     const saved =
       mode.kind === 'create'
@@ -47,6 +54,9 @@ export function usePlanForm(mode: PlanFormMode, timezone: string) {
     errors: { ...(refusalOf(command.error)?.fieldErrors ?? {}), ...errors },
     error: command.error,
     pending: command.isPending,
+    /** edited and not being saved: leaving asks first (QA P-5) */
+    dirty: hasUnsavedChanges(values, initial, [command.isPending]),
+    validate,
     submit,
   };
 }

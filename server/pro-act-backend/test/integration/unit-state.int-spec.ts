@@ -14,6 +14,7 @@ interface CoverageBody {
     availabilityLower: number;
     availabilityUpper: number;
   } | null;
+  coverageStartsAt: string | null;
   segments: Array<{ state: string; unknownReason: string | null }>;
 }
 
@@ -100,6 +101,7 @@ describe('unit state engine: mapping, staleness and coverage bounds (SME D1, D2)
       ['internal_stop', null],
       ['unknown', 'stale'],
     ]);
+    expect(body.coverageStartsAt).toBeNull();
     const c = body.coverage;
     expect(c).toMatchObject({
       runningSeconds: 6 * 3600,
@@ -120,5 +122,31 @@ describe('unit state engine: mapping, staleness and coverage bounds (SME D1, D2)
     const coverage = await metric('state_coverage');
     expect(Number(coverage.value)).toBeCloseTo(c?.coverage ?? 0, 6);
     expect(coverage.quality).toBe('provisional');
+  });
+
+  it('a window starting before the first mapping counts from that mapping, and says so (QA M3)', async () => {
+    const from = plus(A, -3 * 60 * MINUTE);
+    const response = await env
+      .get(
+        `unit-state-mappings/coverage?unitId=${env.world.unitA1}&from=${from}&to=${B}`,
+      )
+      .expect(200);
+    const body = response.body as CoverageBody;
+    const mappingStart = new Date(plus(A, -60 * MINUTE)).toISOString();
+    expect(body.coverageStartsAt).toBe(mappingStart);
+    expect(body.coverage).not.toBeNull();
+    expect(body.segments.map((s) => s.state)).toContain('running');
+    expect(body.coverage?.runningSeconds).toBe(6 * 3600);
+  });
+
+  it('a window wholly before the first mapping has no coverage', async () => {
+    const response = await env
+      .get(
+        `unit-state-mappings/coverage?unitId=${env.world.unitA1}&from=${plus(A, -5 * 60 * MINUTE)}&to=${plus(A, -2 * 60 * MINUTE)}`,
+      )
+      .expect(200);
+    const body = response.body as CoverageBody;
+    expect(body.coverage).toBeNull();
+    expect(body.coverageStartsAt).toBeNull();
   });
 });

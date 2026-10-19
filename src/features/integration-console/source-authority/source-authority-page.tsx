@@ -11,7 +11,7 @@ import { NativeSelect } from '@/features/integration-console/components/native-s
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { CONSOLE_PATH } from '../paths';
 import { HierarchyEditor } from './hierarchy-editor';
@@ -25,7 +25,7 @@ function InForce({ unitId, timezone }: { unitId: string; timezone: string }) {
         {current.data && (
           <div className="space-y-1 text-sm" data-testid="authority-in-force">
             <p className="text-muted-foreground">
-              Version {current.data.version} {current.data.unitId ? 'of this unit' : '(plant-wide)'} since <PlantTime iso={current.data.effectiveFrom} tz={timezone} withDate />
+              Version {current.data.version} {current.data.unitId ? 'of this unit' : '(plant-wide)'} · <EffectiveFrom iso={current.data.effectiveFrom} tz={timezone} prefix="since" />
             </p>
             <PolicySources policy={current.data.policy} />
           </div>

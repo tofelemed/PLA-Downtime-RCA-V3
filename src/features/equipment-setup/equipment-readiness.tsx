@@ -15,8 +15,8 @@ import { useReadinessFilters } from './use-readiness-filters';
 import type { SetupJourney } from './journey-storage';
 
 function UnitReadiness({ journey, storageKey, children }: { journey: SetupJourney; storageKey: string; children: ReactNode }) {
-  const [filters, setFilters] = useReadinessFilters(storageKey);
   const { timezone } = usePlantTimezone();
+  const [filters, setFilters] = useReadinessFilters(storageKey, timezone);
   const query = readinessQuery(journey, filters);
   const validWindow = query !== null;
   const readiness = useEquipmentReadiness(query);
@@ -40,6 +40,6 @@ export function EquipmentReadiness({ children }: { children: ReactNode }) {
   const tenantId = useV2TenantId();
   const userId = useCurrentUserId();
   if (!journey?.unitId || !tenantId || !userId) return <><p className="text-sm text-muted-foreground">Choose the setup production unit to see automatic readiness checks.</p>{children}</>;
-  const storageKey = `proact:equipment-readiness:v1:${tenantId}:${userId}:${journey.unitId}`;
+  const storageKey = `proact:equipment-readiness:v2:${tenantId}:${userId}:${journey.unitId}`;
   return <UnitReadiness key={storageKey} journey={journey} storageKey={storageKey}>{children}</UnitReadiness>;
 }

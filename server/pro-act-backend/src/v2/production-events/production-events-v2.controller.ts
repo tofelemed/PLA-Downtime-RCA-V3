@@ -24,6 +24,8 @@ import { Response } from 'express';
 import { ScopeParam } from '../../auth/decorators/scope-param.decorator';
 import { IfMatch } from '../../common/concurrency/revision';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { EVENT_WRITERS } from './event-write-roles';
 import { ETagInterceptor } from '../../common/concurrency/etag.interceptor';
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
@@ -83,7 +85,10 @@ export class ProductionEventsV2Controller {
       'Same filters as the list; from and to are required (≤ 400 days, 422 INVALID_RANGE / WINDOW_TOO_LARGE). ' +
       'At most 50,000 rows (422 EXPORT_TOO_LARGE). Columns: start_utc, end_utc, duration_seconds, unit, asset, ' +
       'event_type, physical_type, schedule_class, oee_component, reason_code, reason, physical_state, ' +
-      'coding_state, rca_state, severity, source_kind, description, quantity, quantity_uom, cost.',
+      'coding_state, rca_state, severity, source_kind, description, quantity, quantity_uom, cost; then the plant ' +
+      'clock (start_plant, end_plant, ISO 8601 with offset) and the screen labels (event_type_label, ' +
+      'physical_type_label, schedule_class_label, oee_component_label, physical_state_label, ' +
+      'coding_state_label, rca_state_label, source_kind_label). UTF-8 with a byte order mark.',
   })
   async exportCsv(
     @Ctx() ctx: RequestContext,
@@ -149,6 +154,7 @@ export class ProductionEventsV2Controller {
   }
 
   @Post()
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @ScopeParam('unitId', 'body')
   @UseInterceptors(ETagInterceptor)
@@ -172,6 +178,7 @@ export class ProductionEventsV2Controller {
   }
 
   @Patch(':id')
+  @Roles(...EVENT_WRITERS)
   @UseInterceptors(ETagInterceptor)
   @ApiOperation({
     summary: 'Edit user fields of a production event',

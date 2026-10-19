@@ -1,8 +1,9 @@
 import type { LossTreeGroupBy, LossTreeGroupView, LossTreeMetric, LossTreeMetricParam, LossTreeTotalView, TrendGroup } from '@/api/v2/types/pla-analytics';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
+import type { CurrencyValueView } from '@/api/v2/types/period-overview';
 import { formatRatio, reasonText } from '@/features/downtime-analysis/model/kpi-display';
 import { valuationReasonLabel } from '@/features/plan-dashboard/model/display';
-import { currencyDigits } from '@/features/display-currency/money-format';
+import { currencyDigits, formatCurrencyAmount } from '@/features/display-currency/money-format';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { type DigitSystem, toDigits } from '@/lib/dates';
 
@@ -67,6 +68,13 @@ export function shownMetricLabel(asked: LossTreeMetricParam, data: { metric: Los
   return data.defaultView ? `${METRIC_LABELS[data.metric]} (policy default)` : METRIC_LABELS[data.metric];
 }
 
+/** A label inside a sentence: "Reason" → "reason", but acronyms keep their case ("OEE component", never "oee"). */
+export function inSentence(label: string): string {
+  const first = label.split(' ')[0];
+  if (first.length > 1 && first === first.toUpperCase()) return label;
+  return label.charAt(0).toLowerCase() + label.slice(1);
+}
+
 export const TREND_LABELS: Record<TrendGroup, string> = { shift: 'Shift', day: 'Day', week: 'Week', month: 'Month' };
 
 export const OEE_METRIC_LABELS: Readonly<Record<string, string>> = {
@@ -94,6 +102,21 @@ export function amountText(
 export function notValuedReason(reasons: readonly string[]): string {
   if (reasons.length === 0) return 'no valuation recorded';
   return reasons.map((reason) => (reason === 'not_valued' ? 'no valuation recorded' : valuationReasonLabel(reason))).join('; ');
+}
+
+/** An amount, or "Not valued" with the server's reasons in words (QA: "— USD (not valued)" gave no reason). */
+export function valueText(value: CurrencyValueView, digits?: DigitSystem): string {
+  if (value.amount !== null) return formatCurrencyAmount(value.amount, value.currency, digits);
+  return `Not valued in ${value.currency} (${notValuedReason(value.reasons)})`;
+}
+
+/**
+ * What the coverage ratio counts (QA: Reports 43 % vs Dashboard 86 % for the same window): the share of the
+ * window's periods whose figures are shown — approved ones with "Approved revisions only", otherwise every
+ * calculated one (approved, else its draft). Same server ratio, said for the selection it was taken over.
+ */
+export function coverageText(coverage: string, approvedOnly: boolean): string {
+  return approvedOnly ? `${coverage} of periods approved` : `${coverage} of periods calculated`;
 }
 
 /** "87.5 %" from a server ratio; null → "—". */

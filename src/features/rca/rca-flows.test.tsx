@@ -80,7 +80,7 @@ describe('RCA flows (v2 case workspace)', () => {
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <CaseWorkspaceContext.Provider value={{ rca: CASE, readOnly, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
+          <CaseWorkspaceContext.Provider value={{ rca: CASE, readOnly, canWrite: !readOnly, closed: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -159,7 +159,7 @@ describe('RCA flows (v2 case workspace)', () => {
   it('saves the definition with If-Match and only the declared scalar fields', async () => {
     reply = (call) => (call.method === 'PATCH' ? json(200, { ...CASE, rowVersion: 5 }) : overviewGet(call));
     wrap(<DefinitionPage />);
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Pump trips (P-101)' } });
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Pump trips (P-101)' } });
     fireEvent.click(screen.getByTestId('save-case'));
     await screen.findByText('Saved.');
     const patch = calls.find((call) => call.method === 'PATCH');

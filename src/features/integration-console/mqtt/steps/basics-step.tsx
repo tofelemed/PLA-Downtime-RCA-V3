@@ -4,6 +4,7 @@ import { Field } from '../../components/field';
 import { topicList } from '../model/mqtt-form';
 import type { StepProps } from './step-props';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 /** Step 2 — name, broker URL (egress allowlist applies server-side) and the topic filter allowlist. */
 export function BasicsStep({ form, errors, onChange }: StepProps) {
@@ -20,7 +21,7 @@ export function BasicsStep({ form, errors, onChange }: StepProps) {
         id="mqtt-topics"
         label="Topic filters (one per line)"
         error={errors.topics}
-        hint={`${number(topicList(form).length)} filter(s). + matches one level, # the rest (last level only); at most ${number(64)}. A second connection overlapping these filters on the same broker is refused (duplicate feed).`}
+        hint={`${plural(topicList(form).length, 'filter', 'filters', number)}. + matches one level, # the rest (last level only); at most ${number(64)}. A second connection overlapping these filters on the same broker is refused (duplicate feed).`}
       >
         <Textarea id="mqtt-topics" rows={4} className="font-mono text-xs" value={form.topics} onChange={(event) => onChange({ topics: event.target.value })} />
       </Field>

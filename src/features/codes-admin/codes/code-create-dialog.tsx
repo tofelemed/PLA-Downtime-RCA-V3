@@ -6,10 +6,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FAILURE_GROUP_KIND_LABELS } from '@/features/ux-kit/labels';
 import { AdminRefusalAlert } from '../components/admin-refusal-alert';
 import { FAILURE_KINDS, LIBRARIES, singularLabel } from '../model/code-fields';
 import { failureLevelFits } from '../model/code-tree';
+import { createDisabledReason, newCodeErrors } from '../model/new-code';
 
 export interface CodeCreateDialogProps {
   library: CodeLibraryPath;
@@ -33,6 +35,8 @@ export function CodeCreateDialog({ library, parentId, onClose, onCreated }: Code
   const [name, setName] = useState('');
   const [parent, setParent] = useState(spec.hierarchical && parentId ? parentId : '');
   const [groupKind, setGroupKind] = useState<FailureGroupKind>('class');
+  const errors = newCodeErrors(code, lookup.items.map((entry) => entry.code));
+  const disabledReason = createDisabledReason(code, name, errors);
   const parents = lookup.items.filter((entry) => entry.active && (library !== 'failure-code-groups' || failureLevelFits(groupKind, entry.groupKind)));
   const submit = async () => {
     const body: CodeCreateBody = { code: code.trim(), name: name.trim() };
@@ -49,10 +53,10 @@ export function CodeCreateDialog({ library, parentId, onClose, onCreated }: Code
           <DialogDescription>Codes are live as soon as they are created. Every later change is a new version.</DialogDescription>
         </DialogHeader>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-          <Field id="new-code" label="Code" hint="Unique in this library; letters, digits and . _ : -">
+          <Field id="new-code" label="Code" required hint="Unique in this library; letters, digits and . _ : -" error={errors.code}>
             <Input id="new-code" value={code} onChange={(event) => setCode(event.target.value)} />
           </Field>
-          <Field id="new-name" label="Name">
+          <Field id="new-name" label="Name" required>
             <Input id="new-name" value={name} onChange={(event) => setName(event.target.value)} />
           </Field>
           {library === 'failure-code-groups' && (
@@ -75,11 +79,12 @@ export function CodeCreateDialog({ library, parentId, onClose, onCreated }: Code
           )}
           {create.error ? <AdminRefusalAlert error={create.error} /> : null}
         </div>
+        <DisabledReason id="code-create-reason" reason={create.isPending ? null : disabledReason} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={create.isPending || code.trim() === '' || name.trim() === ''} data-testid="code-create-submit">
+          <Button onClick={submit} disabled={create.isPending || disabledReason !== null} aria-describedby={disabledReason ? 'code-create-reason' : undefined} data-testid="code-create-submit">
             Create
           </Button>
         </DialogFooter>

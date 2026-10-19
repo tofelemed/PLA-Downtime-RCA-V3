@@ -14,9 +14,9 @@ export type IntervalMode = 'end' | 'duration';
 /**
  * Create / edit form of an event (plan 3.2 step 3, DTO = §15.3). Times are entered on the plant clock;
  * the end is given **either** as an end time **or** as a duration ("2h 30m", "2:30", minutes), chosen
- * explicitly (E-4), and sent in seconds. The browser only checks what it must to build a request —
- * interval rules (end after start, end and duration agreeing within 1 s) are the server's and come back
- * as 422 field errors.
+ * explicitly (E-4), and sent in seconds. The browser checks what it must to build a request and that an
+ * end time is after the start (QA audit F3, shown at the End field); the server stays the authority for
+ * every interval rule (end after start, end and duration agreeing within 1 s) and answers 422 field errors.
  */
 export interface EventFormValues extends FailureValues, QualityValues {
   unitId: string;
@@ -114,13 +114,48 @@ export function durationSecondsOf(values: Pick<EventFormValues, 'intervalMode' |
   return values.intervalMode === 'duration' ? parseDurationInput(values.durationMinutes) : null;
 }
 
-/** Request-shape checks only; everything about the interval itself is decided by the server. */
+export const END_BEFORE_START_MESSAGE = 'The end must be after the start';
+
+/**
+ * QA audit F3: an end time at or before the start, said next to the End field before anything is sent (the
+ * server stays the authority and answers 422 END_BEFORE_START on the same field). Null while either time is
+ * missing or not a valid time, or when the end is given as a duration.
+ */
+export function endBeforeStartError(values: Pick<EventFormValues, 'intervalMode' | 'startLocal' | 'endLocal'>, timezone: string): string | null {
+  if (values.intervalMode === 'duration' || !values.startLocal || !values.endLocal) return null;
+  const start = plantLocalToUtc(values.startLocal, timezone);
+  const end = plantLocalToUtc(values.endLocal, timezone);
+  if (!start || !end) return null;
+  return Date.parse(end) <= Date.parse(start) ? END_BEFORE_START_MESSAGE : null;
+}
+
+/**
+ * The interval the impacted-periods preview reads (`to` null = open, runs to now): the end time, or the start
+ * plus the typed duration in duration mode. Null while the start is missing or the end is not after the
+ * start — the End field says why, so the preview never shows the server's refusal of a reversed range (F3, L8).
+ */
+export function impactedInterval(values: Pick<EventFormValues, 'intervalMode' | 'startLocal' | 'endLocal' | 'durationMinutes'>, timezone: string): { from: string; to: string | null } | null {
+  const from = plantLocalToUtc(values.startLocal, timezone);
+  if (!from) return null;
+  if (values.intervalMode === 'duration') {
+    const seconds = durationSecondsOf(values);
+    if (seconds === null || !Number.isFinite(seconds) || seconds <= 0) return { from, to: null };
+    return { from, to: new Date(Date.parse(from) + seconds * 1000).toISOString() };
+  }
+  const to = values.endLocal ? plantLocalToUtc(values.endLocal, timezone) : null;
+  if (to && Date.parse(to) <= Date.parse(from)) return null;
+  return { from, to };
+}
+
+/** Request-shape checks and the end-after-start check; the remaining interval rules are the server's. */
 export function validateEventForm(values: EventFormValues, mode: 'create' | 'edit', timezone: string): FieldErrors {
   const errors: FieldErrors = {};
   if (mode === 'create' && !values.unitId) errors.unitId = 'Choose a unit';
   if (!values.startLocal) errors.startLocal = 'Enter the start time';
   else if (!plantLocalToUtc(values.startLocal, timezone)) errors.startLocal = 'Not a valid time';
   if (values.intervalMode !== 'duration' && values.endLocal && !plantLocalToUtc(values.endLocal, timezone)) errors.endLocal = 'Not a valid time';
+  const order = endBeforeStartError(values, timezone);
+  if (order) errors.endLocal = order;
   if (values.plannedEndLocal && !plantLocalToUtc(values.plannedEndLocal, timezone)) errors.plannedEndLocal = 'Not a valid time';
   const seconds = durationSecondsOf(values);
   if (values.intervalMode === 'duration' && (seconds === null || Number.isNaN(seconds))) errors.durationMinutes = 'Enter a duration such as 2h 30m, 2:30 or 150 (minutes)';

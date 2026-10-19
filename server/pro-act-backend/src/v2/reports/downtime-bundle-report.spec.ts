@@ -98,4 +98,19 @@ describe('downtime bundle view tokens (T24)', () => {
       await rejectedFields({ ...WINDOW, views: 'reason', parentReasonId: 'x' }),
     ).toContain('parentReasonId');
   });
+
+  it('query: the summary may follow one schedule class (owner decision 2026-10-19)', async () => {
+    const parsed = await parse({
+      ...WINDOW,
+      views: 'day',
+      scheduleClass: 'planned',
+    });
+    expect(parsed.scheduleClass).toBe('planned');
+    expect((await parse({ ...WINDOW, views: 'day' })).scheduleClass).toBe(
+      undefined,
+    );
+    expect(
+      await rejectedFields({ ...WINDOW, views: 'day', scheduleClass: 'all' }),
+    ).toContain('scheduleClass');
+  });
 });

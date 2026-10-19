@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import type { RcaActionView } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_BASELINE_METRIC_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -14,10 +13,11 @@ import { ActionMeta } from './action-meta';
 import { ActionStatusControls } from './action-status-controls';
 import { ActionVerdict } from './action-verdict';
 import { useActionAccess } from './use-action-access';
+import { useCanWriteRca } from './use-can-write-rca';
 
 /** One action: type, owner, status, completion evidence, baseline, verification and the server's verdict. */
 export function ActionRow({ action }: { action: RcaActionView }) {
-  const { canWriteRca } = useCapabilities();
+  const canWriteRca = useCanWriteRca();
   const access = useActionAccess(action);
   const [editing, setEditing] = useState(false);
   const realized = action.postAction?.realized;

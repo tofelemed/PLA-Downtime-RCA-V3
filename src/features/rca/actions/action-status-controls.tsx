@@ -4,7 +4,6 @@ import type { RcaActionView } from '@/api/v2/types/rca';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { FormField } from '@/features/ux-kit/form-field';
 import { RCA_ACTION_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
@@ -13,6 +12,7 @@ import { ACTION_STATUSES, asActionStatus, type ActionStatus } from '../model/act
 import { statusChoices } from '../model/action-access';
 import { verificationLabel } from '../model/rca-labels';
 import { useActionAccess } from './use-action-access';
+import { useCanWriteRca } from './use-can-write-rca';
 
 export const CANCEL_REASON_MAX = 2000;
 
@@ -58,7 +58,7 @@ function CancelActionDialog({ action, open, onOpenChange, onConfirm, error }: Ca
  * owner who is not an RCA writer moves it between open and in progress only (the server checks it).
  */
 export function ActionStatusControls({ action }: { action: RcaActionView }) {
-  const { canWriteRca } = useCapabilities();
+  const canWriteRca = useCanWriteRca();
   const access = useActionAccess(action);
   const update = useUpdateRcaAction();
   const verify = useVerifyRcaAction();
@@ -83,7 +83,7 @@ export function ActionStatusControls({ action }: { action: RcaActionView }) {
           ))}
         </select>
         <Badge variant="outline" data-testid="verification-status">
-          {verificationLabel(action.verificationStatus)}
+          {verificationLabel(action)}
         </Badge>
         {action.verificationStatus === 'due' && canWriteRca && (
           <Button size="sm" disabled={verify.isPending} onClick={() => void verify.submit(action).catch(() => null)} data-testid="verify-action">

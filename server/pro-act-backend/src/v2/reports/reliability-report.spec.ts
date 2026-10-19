@@ -1,5 +1,5 @@
 import { aggregateView, ReliabilityRowView } from './kpi-reports-v2.view';
-import { reliabilityNotes } from './reliability-report';
+import { FAILURE_DEFINITION, reliabilityNotes } from './reliability-report';
 import { Dec } from '../../domain/actuals/decimal';
 import { GroupTerms } from '../../domain/kpi/aggregate';
 
@@ -51,5 +51,14 @@ describe('reliabilityNotes (Marun E2E 1.5)', () => {
 
   it('drops the note once every unit and asset has MTTR', () => {
     expect(reliabilityNotes(view([row(1800)], [row(1800)]))).toEqual([]);
+  });
+});
+
+describe('reliability texts on screen (QA audit L26)', () => {
+  it('carry no internal decision codes or raw keys', () => {
+    const notes = reliabilityNotes(view([row(null)], []));
+    for (const text of [FAILURE_DEFINITION, ...notes]) {
+      expect(text).not.toMatch(/\bD\d+\b|FailureWO|meanDowntimeToRestore/);
+    }
   });
 });

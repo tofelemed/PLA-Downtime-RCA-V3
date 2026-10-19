@@ -51,9 +51,9 @@ export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues
           {candidate.causeEventId ? <EventLink eventId={candidate.causeEventId}>from a recorded event</EventLink> : 'no cause event'}
         </span>
         {candidate.causeEventRca && <EventRcaChip rcaState={candidate.causeEventRca.state} caseId={candidate.causeEventRca.caseId} />}
-        <LineCodes reasonCodeId={saved?.reasonCodeId ?? candidate.reasonCodeId} impactCodeId={saved?.impactCodeId ?? candidate.impactCodeId} showImpact />
+        <LineCodes reasonCodeId={saved?.reasonCodeId ?? candidate.reasonCodeId} impactCodeId={saved?.impactCodeId ?? candidate.impactCodeId} showImpact flagUncoded={candidate.causeEventId !== null} />
         <Badge variant="secondary">{CANDIDATE_STATE_LABELS[candidate.state]}</Badge>
-        <StartRcaLink context={{ eventId: candidate.causeEventId, lossLineId: candidate.lossLineId }} label="Start an RCA for this loss line" />
+        <StartRcaLink context={{ eventId: candidate.causeEventId, lossLineId: candidate.lossLineId }} label="Start investigation for this loss line" />
         {saved?.flags.includes('baseline_changed') && <Badge variant="destructive">Candidate changed since the decision — save again</Badge>}
         {!readOnly && (
           <select aria-label="Decision" data-testid="candidate-decision" className="ml-auto h-8 rounded-md border border-input bg-background px-2" value={decision?.action ?? ''} onChange={(e) => update(e.target.value ? { action: e.target.value as DecisionAction } : null)}>

@@ -10,7 +10,7 @@ import { StartRcaLink } from '@/features/rca/components/start-rca-link';
 import { useCalendarPreference } from '@/lib/dates';
 import type { DowntimeFilters, DowntimeMetric } from '../model/downtime-filters';
 import { formatCount, formatRatio } from '../model/kpi-display';
-import { barAction, drillCrumbs, paretoQuery, type DrillSelection } from '../model/reason-drill';
+import { barAction, barLabel, drillCrumbs, paretoQuery, type DrillSelection } from '../model/reason-drill';
 import { reasonStartRca } from '../model/start-rca-context';
 import { ReportCard } from './report-card';
 
@@ -33,7 +33,7 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
   const query = useDowntimeReport(paretoQuery(filters), env.timezone);
   const report = query.data?.data;
   const groups = report?.groups ?? [];
-  const labelOf = (group: DowntimeGroupView) => group.label ?? (group.key ? 'Unknown reason' : 'Not coded');
+  const labelOf = barLabel;
   const choose = (group: DowntimeGroupView) => {
     const action = barAction(group, filters.reasonPath, env.allReasonCodes);
     if (action.kind === 'drill') onChange({ reasonPath: [...filters.reasonPath, action.reasonId] });
@@ -82,7 +82,7 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
 
 function ReasonStartRca({ group, label, filters }: { group: DowntimeGroupView; label: string; filters: DowntimeFilters }) {
   const context = reasonStartRca(group, label, filters);
-  return context ? <StartRcaLink context={context} label={`Start an RCA for ${label}`} /> : null;
+  return context ? <StartRcaLink context={context} label={`Start investigation for ${label}`} /> : null;
 }
 
 function MetricToggle({ metric, onChange }: { metric: DowntimeMetric; onChange: (metric: DowntimeMetric) => void }) {

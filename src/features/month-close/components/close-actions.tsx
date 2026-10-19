@@ -8,17 +8,29 @@ import { monthLabelOf } from '../model/month-label';
 import { CloseMonthEnd } from './close-month-end';
 import { StepConfirm } from './step-confirm';
 
-/** Which steps the user may try in this state (display only — the server decides and refuses). */
+/** Why finance cannot sign off yet; null when it can. */
+function signOffReason(view: MonthCloseView, needsReview: boolean): string | null {
+  if (view.state === 'open') return 'Plant management closes the quantities first (every period approved, the month ended).';
+  if (needsReview) return 'The materiality review comes first.';
+  return null;
+}
+
+/**
+ * Which steps the user may see in this state (display only — the server decides and refuses). Finance's
+ * own steps stay visible, disabled with a reason, until they are reachable (QA P-7).
+ */
 function stepsOf(view: MonthCloseView, caps: ReturnType<typeof useCapabilities>) {
   const { state, signOffs } = view;
   const needsReview = signOffs.materialityRequired && !signOffs.materialityReviewedBy;
   return {
     close: state === 'open' && caps.canCloseMonthQuantities,
     review: state === 'quantities_closed' && needsReview && caps.canReviewMonthMateriality,
-    signOff: state === 'quantities_closed' && caps.canSignOffMonth,
-    lock: state === 'finance_signed_off' && caps.canSignOffMonth,
+    signOff: (state === 'open' || state === 'quantities_closed') && caps.canSignOffMonth,
+    lock: state !== 'locked' && caps.canSignOffMonth,
     reopen: (state === 'quantities_closed' || state === 'finance_signed_off') && caps.canReopenMonth,
     needsReview,
+    signOffWhy: signOffReason(view, needsReview),
+    lockWhy: state === 'finance_signed_off' ? null : 'Finance signs off the month first; the lock comes after the sign-off.',
   };
 }
 
@@ -60,12 +72,12 @@ export function CloseActions({ view, only }: { view: MonthCloseView; only?: read
           </StepConfirm>
         )}
         {steps.signOff && (
-          <StepConfirm trigger="Finance sign-off…" testId="step-finance-sign-off" disabled={busy || steps.needsReview || signedQuantities} title={`Sign off ${month} for finance?`} description="Record the finance sign-off. SuperAdmin may also have closed the quantities; other signers must be independent." confirmLabel="Sign off" onConfirm={run('finance-sign-off')}>
+          <StepConfirm trigger="Finance sign-off…" testId="step-finance-sign-off" disabled={busy || steps.signOffWhy !== null || signedQuantities} disabledReason={steps.signOffWhy} title={`Sign off ${month} for finance?`} description="Record the finance sign-off. SuperAdmin may also have closed the quantities; other signers must be independent." confirmLabel="Sign off" onConfirm={run('finance-sign-off')}>
             {problem}
           </StepConfirm>
         )}
         {steps.lock && (
-          <StepConfirm trigger="Lock month…" testId="step-lock" destructive typedConfirmation={month} disabled={busy} title={`Lock ${month}?`} description="This cannot be undone: a locked month is never reopened. After the lock, approved periods change only through change proposals, marked after close." confirmLabel="Lock month" onConfirm={run('lock')}>
+          <StepConfirm trigger="Lock month…" testId="step-lock" destructive typedConfirmation={month} disabled={busy || steps.lockWhy !== null} disabledReason={steps.lockWhy} title={`Lock ${month}?`} description="This cannot be undone: a locked month is never reopened. After the lock, approved periods change only through change proposals, marked after close." confirmLabel="Lock month" onConfirm={run('lock')}>
             {problem}
           </StepConfirm>
         )}

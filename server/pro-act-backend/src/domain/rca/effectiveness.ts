@@ -39,6 +39,8 @@ export interface EffectivenessCriteria {
   zeroRepeat: boolean;
   /** state-data coverage (0–1) the post-action window needs; absent (frozen before 18 Oct 2026) = 0.95 */
   minimumCoverage?: number;
+  /** version of the `rca_policy` the criteria were frozen from (QA L11); absent on criteria frozen before */
+  policyVersion?: number;
 }
 
 /** The known-data coverage both windows reported and the minimum the verdict applied (decimal strings). */

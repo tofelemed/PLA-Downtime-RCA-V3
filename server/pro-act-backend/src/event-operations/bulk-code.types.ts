@@ -64,12 +64,16 @@ export interface AffectedWindow {
 }
 
 export interface BulkCodePreview {
-  /** events the command would change */
+  /** eligible events (not excluded); the apply covers these */
   count: number;
+  /** eligible events whose coding the command actually changes (an unchanged event gets no revision) */
+  changedCount: number;
   items: Array<{
     eventId: string;
     before: CodingSnapshot;
     after: CodingSnapshot;
+    /** the coding after differs from the coding before */
+    changed: boolean;
   }>;
   exclusions: BulkExclusion[];
   affectedWindows: AffectedWindow[];

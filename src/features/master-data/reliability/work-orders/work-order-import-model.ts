@@ -1,6 +1,7 @@
 import type { WorkOrderImportResult, WorkOrderOperationRow } from '@/api/v2/types/reliability';
 import { optional, type TextRow } from '../shared/delimited-rows';
 import { choiceProblem, instantProblem, type MappedRow } from '../shared/row-mapping';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export const WORK_ORDER_CSV_HEADER = 'workOrderId,operationId,kind,startedAt,endedAt,waitingSeconds,waitingReason,assetCode,eventId,description,source';
 export const WORK_ORDER_CSV_EXAMPLE =
@@ -47,4 +48,4 @@ export function workOrderRowOf(row: TextRow): MappedRow<WorkOrderOperationRow> {
 }
 
 export const workOrderImportSummary = (r: WorkOrderImportResult) =>
-  `Imported ${r.total} operation(s): ${r.created} new, ${r.updated} updated, ${r.linked} linked to a stop.`;
+  `Imported ${plural(r.total, 'operation', 'operations')}: ${r.created} new, ${r.updated} updated, ${r.linked} linked to a stop.`;

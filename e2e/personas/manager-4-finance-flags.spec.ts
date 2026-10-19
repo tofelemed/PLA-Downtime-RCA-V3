@@ -113,7 +113,7 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await page.fill('#rate', '2750000');
     await page.getByTestId('fx-save').click();
     await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
-    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2750000 IRR');
+    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2,750,000 IRR');
     await page.context().close();
   });
 

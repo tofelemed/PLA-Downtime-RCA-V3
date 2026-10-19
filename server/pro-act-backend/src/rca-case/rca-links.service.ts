@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { RequestContext } from '../common/context/request-context';
@@ -17,6 +17,7 @@ import { recordRcaAudit } from './rca-audit';
 import { insertCase } from './rca-case-writer';
 import { RcaCaseSummaryV2View, toRcaCaseSummary } from './rca-case.view';
 import { findCase, invalidBody, RcaScope, scopeOf } from './rca-scope';
+import { assertCaseNotClosed } from './case-closed';
 
 export interface RcaLinkV2View {
   id: string;
@@ -58,13 +59,11 @@ export const toLinkView = (link: RcaCaseLink): RcaLinkV2View => ({
  * 409 CASE_CLOSED (Marun regression G4): a closed investigation takes no new link — its findings, impact and
  * closure verdict were approved on the links it had. Reopening it (independent approver) allows linking.
  */
-function assertCaseOpen(rca: RCA): void {
-  if (rca.status !== 'Closed') return;
-  throw new ConflictException({
-    code: 'CASE_CLOSED',
-    message: 'The investigation is closed; reopen it to add a link',
-  });
-}
+const assertCaseOpen = (rca: RCA): void =>
+  assertCaseNotClosed(
+    rca,
+    'The investigation is closed; reopen it to add a link',
+  );
 
 interface LinkInput {
   rca: RCA;

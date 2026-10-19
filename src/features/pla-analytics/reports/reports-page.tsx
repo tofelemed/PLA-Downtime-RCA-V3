@@ -1,14 +1,17 @@
+import { useId } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DataState } from '@/features/ux-kit/data-state';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { Page } from '@/features/ux-kit/page-layout';
 import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ScopeExport } from '../components/scope-export';
 import { useAnalyticsScope } from '../hooks/use-analytics-scope';
-import { exportRequestOf, oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { exportBlockedReason, exportRequestOf, oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { revisionSelectionLabel } from '../model/links';
 import { ReconciliationTab } from '../tabs/reconciliation-tab';
 import { EconomicBreakdownCard } from './economic-breakdown-card';
 import { LossValueCard } from './loss-value-card';
@@ -108,8 +111,11 @@ function Exports({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useOeeReport(oeeQuery(scope, 'day', 'operational'), env.timezone);
   const provisional = query.data?.isProvisional ?? true;
+  const reason = exportBlockedReason(scope, provisional, revisionSelectionLabel(true));
+  const reasonId = useId();
   return (
     <div className="space-y-3" data-testid="report-exports">
+      <DisabledReason id={reasonId} reason={reason} />
       <p className="text-sm text-muted-foreground">
         Exports contain approved revisions only (the latest approved revision of every period of these units and dates), prepared in the background. CSV: every row names its
         period, revision and approval. PDF: a printable report in the plant calendar, with money in your display currency.
@@ -120,6 +126,8 @@ function Exports({ scope }: { scope: AnalyticsScope }) {
             <ScopeExport
               key={format}
               request={exportRequestOf(scope, entry.reportType, provisional)}
+              disabledReason={reason}
+              reasonShownAt={reasonId}
               label={entry.label}
               format={format}
               timezone={env.timezone}

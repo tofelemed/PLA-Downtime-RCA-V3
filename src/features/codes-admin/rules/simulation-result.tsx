@@ -5,6 +5,7 @@ import { usePlantDates } from '../hooks/use-plant-dates';
 import { useRuleValueText } from '../hooks/use-rule-value-text';
 import type { ValueText } from '../model/rule-describe';
 import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural, pluralNoun } from '@/features/ux-kit/format/plural';
 
 type Distribution = RuleSimulationView['fields'][string];
 type Sample = RuleSimulationView['samples'][number];
@@ -47,10 +48,10 @@ export function SimulationResult({ result, schema }: { result: RuleSimulationVie
   return (
     <div className="space-y-4 text-sm" data-testid="sim-result" data-evaluated={result.evaluated} data-matched={result.matched} data-changed={result.changed} data-version={result.version ?? 'draft'}>
       <p>
-        {result.version === null ? 'Draft' : `Version ${result.version}`} over {dates.validity(result.scope.from, result.scope.to)}: <strong>{number(result.evaluated)}</strong> event(s) evaluated,{' '}
+        {result.version === null ? 'Draft' : `Version ${result.version}`} over {dates.validity(result.scope.from, result.scope.to)}: <strong>{number(result.evaluated)}</strong> {pluralNoun(result.evaluated, 'event', 'events')} evaluated,{' '}
         <strong>{number(result.matched)}</strong> matched, <strong>{number(result.changed)}</strong> would change.
         {result.truncated && ' Only the latest events were evaluated (sample limit).'}
-        {result.budgetExceeded > 0 && ` ${number(result.budgetExceeded)} evaluation(s) were too complex to finish and did not match.`}
+        {result.budgetExceeded > 0 && ` ${plural(result.budgetExceeded, 'evaluation was', 'evaluations were', number)} too complex to finish and did not match.`}
       </p>
       {fieldRows.length > 0 && <DataTable caption="Field values before and after" columns={fieldColumns} rows={fieldRows} getRowKey={(row) => row.field} pager="none" density="compact" />}
       {Object.keys(result.flags).length > 0 && <p data-testid="sim-flags">Flags: {Object.entries(result.flags).map(([flag, count]) => `${flag}: ${number(count)}`).join(', ')}</p>}

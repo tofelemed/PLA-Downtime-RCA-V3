@@ -71,7 +71,7 @@ function ListScreen() {
     <div data-testid="rca-v2">
       <Page width="wide">
         <PageHeader
-          title="Root cause analysis"
+          title="RCA Analysis"
           description="Investigations of this plant. Triggers only recommend an investigation; a person opens and closes it."
           actions={actions}
           meta={<CaseSummary filters={filters} onPick={(chip) => setFilters(filtersOfChip(chip))} />}

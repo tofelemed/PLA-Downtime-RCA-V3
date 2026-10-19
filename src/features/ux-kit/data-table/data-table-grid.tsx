@@ -18,6 +18,7 @@ export interface DataTableGridProps<T> {
   onRowClick?: (row: T) => void;
   rowLabel?: (row: T) => string;
   rowsHaveLink?: boolean;
+  scrollable?: boolean;
 }
 
 function GridHeader<T>({ columns, density, sticky }: { columns: ReadonlyArray<DataTableColumn<T>>; density: DataTableDensity; sticky: boolean }) {
@@ -62,7 +63,8 @@ function GridRows<T>(props: DataTableGridProps<T>) {
  * wrapper is rendered here with `maxHeight`).
  */
 export function DataTableGrid<T>(props: DataTableGridProps<T>) {
-  const { caption, columns, rows, density, stickyHeader, maxHeight, isLoading, empty } = props;
+  const { caption, columns, rows, density, stickyHeader, maxHeight, isLoading, empty, scrollable } = props;
+  const region = scrollable ? { role: 'region', tabIndex: 0, 'aria-label': `${caption} (scrolls sideways)` } : {};
   const body = isLoading ? (
     <SkeletonRows columnCount={columns.length} />
   ) : rows.length === 0 ? (
@@ -71,7 +73,7 @@ export function DataTableGrid<T>(props: DataTableGridProps<T>) {
     <GridRows {...props} />
   );
   return (
-    <div className="relative w-full overflow-auto" style={{ maxHeight }} data-sticky-header={stickyHeader || undefined}>
+    <div className="relative w-full overflow-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" style={{ maxHeight }} data-sticky-header={stickyHeader || undefined} {...region}>
       <table className="w-full caption-bottom text-sm" aria-busy={isLoading || undefined}>
         <caption className="sr-only">{caption}</caption>
         <GridHeader columns={columns} density={density} sticky={stickyHeader} />

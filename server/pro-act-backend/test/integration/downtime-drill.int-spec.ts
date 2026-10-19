@@ -253,6 +253,36 @@ describe('Downtime report drill-down and summary (plan 3.3)', () => {
       .expect(422);
   });
 
+  it('bundle summary follows the schedule class (owner decision 2026-10-19), equal to the class trend', async () => {
+    const bundle = async (scheduleClass: string) =>
+      (
+        await env
+          .get(
+            `reports/downtime-bundle?${window}&unitIds=${env.world.unitA3}` +
+              `&views=${encodeURIComponent(`day:duration:${scheduleClass}`)}&scheduleClass=${scheduleClass}`,
+          )
+          .expect(200)
+      ).body as BundleBody & { data: { scheduleClass: string | null } };
+    const unplanned = await bundle('unplanned');
+    const metric = (body: BundleBody, name: string) =>
+      body.data.summary.find((s) => s.metric === name);
+    expect(unplanned.data.scheduleClass).toBe('unplanned');
+    expect(metric(unplanned, 'downtime_total')?.value).toBe('7200');
+    expect(metric(unplanned, 'downtime_total')?.value).toBe(
+      unplanned.data.views[0].total,
+    );
+    expect(metric(unplanned, 'stop_count')?.value).toBe('3');
+    expect(metric(unplanned, 'downtime_unplanned')?.value).toBe('7200');
+    expect(metric(unplanned, 'scheduled_availability')).toMatchObject({
+      value: null,
+      reason: 'not_by_schedule_class',
+    });
+    const planned = await bundle('planned');
+    expect(metric(planned, 'downtime_total')?.value).toBe('0');
+    expect(metric(planned, 'stop_count')?.value).toBe('0');
+    expect(metric(planned, 'downtime_planned')?.value).toBe('0');
+  });
+
   it('422: reasonChild without a parent, a parent with a non-reason grouping, a foreign parent', async () => {
     expect((await refused('groupBy=reasonChild')).code).toBe(
       'PARENT_REASON_REQUIRED',

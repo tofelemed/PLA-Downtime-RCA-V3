@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCalendarPreview } from '@/api/v2/queries/calendars';
 import type { CalendarPreviewView } from '@/api/v2/types/calendars';
 import { DateInput } from '@/features/ux-kit/date-inputs';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { Section } from '@/features/ux-kit/page-layout';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
@@ -11,7 +12,7 @@ import { FormField } from '../components/form-field';
 import { NativeSelect, type Option } from '../components/native-select';
 import { RefusalNotice } from '../components/refusal-notice';
 import type { PreviewCandidate } from '../hooks/use-calendar-editor';
-import { isDstWarning, warningText } from '../model/calendar-preview';
+import { isDstWarning, previewBlockedReason, warningText } from '../model/calendar-preview';
 import { CalendarPreviewTable } from './calendar-preview-table';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -57,6 +58,8 @@ export function CalendarPreviewPanel({ candidate, request, unitOptions, defaultU
   const [localTo, setLocalTo] = useState('');
   const preview = useCalendarPreview();
   const ready = Boolean(candidate && unitId && localFrom && localTo);
+  const reasonId = useId();
+  const blocked = previewBlockedReason({ candidate: Boolean(candidate), unitId, localFrom, localTo });
   const run = () => {
     if (candidate && ready) preview.submit({ unitId, localFrom, localTo, ...candidate }).catch(() => undefined);
   };
@@ -75,10 +78,11 @@ export function CalendarPreviewPanel({ candidate, request, unitOptions, defaultU
           </FormField>
           <DateInput id="previewFrom" label="First operational date" value={localFrom} onChange={setLocalFrom} />
           <DateInput id="previewTo" label="Last operational date" value={localTo} onChange={setLocalTo} />
-          <Button onClick={run} disabled={!ready || preview.isPending} data-testid="calendar-preview-submit">
+          <Button onClick={run} disabled={!ready || preview.isPending} aria-describedby={blocked ? reasonId : undefined} data-testid="calendar-preview-submit">
             Run preview
           </Button>
         </div>
+        <DisabledReason id={reasonId} reason={blocked} />
         {!candidate && <p className="text-sm text-muted-foreground">Choose “Preview” above to check this version or your unsaved edits.</p>}
         <RefusalNotice error={preview.error} timezone={timezone} />
         {preview.data && <PreviewResult view={preview.data} />}

@@ -19,9 +19,9 @@ interface Gate {
 }
 
 const CONSOLE: Gate = { title: 'Connectivity', requires: 'canReachIntegration' };
-const STATUS_RULES: Gate = { title: 'Source Status Rules', requires: 'canReviewSourceStatusRules' };
-const SOURCE_PRIORITY: Gate = { title: 'Source Priority', requires: 'canReviewSourcePriority' };
-const HISTORIAN: Gate = { title: 'Enhanced Historian', requires: 'canReachIntegration' };
+const STATUS_RULES: Gate = { title: 'Source status rules', requires: 'canReviewSourceStatusRules' };
+const SOURCE_PRIORITY: Gate = { title: 'Source priority', requires: 'canReviewSourcePriority' };
+const HISTORIAN: Gate = { title: 'Enhanced historian', requires: 'canReachIntegration' };
 
 /** A route of the section with its page gate; `requires` is also the route gate. */
 function gated(path: string, page: ReactNode, preload: () => Promise<unknown>, gate: Gate = CONSOLE): AppRoute {

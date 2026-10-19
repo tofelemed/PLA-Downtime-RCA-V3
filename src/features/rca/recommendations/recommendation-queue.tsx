@@ -5,6 +5,7 @@ import type { RcaRecommendationView } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { capitalizedNoun, eventNoun } from '@/features/ux-kit/labels/event-labels';
 import { useCalendarPreference, type DigitSystem } from '@/lib/dates';
 import { DismissRecommendation } from '../components/dismiss-recommendation';
 import { recommendationDetail, recommendationText } from '../model/rca-labels';
@@ -43,7 +44,7 @@ function columnsOf(context: Context): DataTableColumn<RcaRecommendationView>[] {
       header: 'Event',
       cell: (rec) => (
         <Link className="underline" to={`/events/${encodeURIComponent(rec.eventId)}`} data-testid="recommendation-event">
-          Event on {context.unitName(rec.unitId)}
+          {capitalizedNoun(eventNoun(rec.event?.physicalType))} on {context.unitName(rec.unitId)}
         </Link>
       ),
     },

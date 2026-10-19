@@ -92,7 +92,7 @@ describe('actuals adjustments in the period workspace', () => {
     expect(await screen.findByTestId('field-error-adjQuantity')).toBeTruthy();
     fireEvent.change(screen.getByLabelText(/^Change/), { target: { value: '-5' } });
     fireEvent.change(screen.getByLabelText(/^Evidence/), { target: { value: 'WB-1' } });
-    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'weighbridge recount' } });
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: 'weighbridge recount' } });
     fireEvent.click(screen.getByTestId('adjustment-save'));
     await waitFor(() => expect(saved).toHaveBeenCalled());
     const post = calls.find((c) => c.method === 'POST');

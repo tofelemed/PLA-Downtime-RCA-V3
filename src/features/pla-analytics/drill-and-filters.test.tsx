@@ -23,12 +23,12 @@ const { LedgerApprovedToggles } = await import('./components/ledger-approved-tog
 
 const SCOPE = parseScope(new URLSearchParams('from=2026-10-11T00:00:00.000Z&to=2026-10-18T00:00:00.000Z&window=Last 7 days'), 0);
 const wrap = (node: ReactNode) => render(<MemoryRouter initialEntries={['/pla?tab=losses']}>{node}</MemoryRouter>);
-const group = (key: string | null, label: string | null) => ({ key, label, unit: 't', amount: '10', share: '0.5', cumulativeShare: '0.5', lines: 2, status: 'quantity' }) as LossTreeGroupView;
+const group = (key: string | null, label: string | null) => ({ key, label, unit: 't', amount: '10', share: '0.5', cumulativeShare: '0.5', lines: 2, eventLines: 2, status: 'quantity' }) as LossTreeGroupView;
 const bar = (key: string, kind: 'total' | 'step') => ({ key, label: key, kind, delta: kind === 'step' ? '-5' : null, start: '100', end: '95' });
 
 describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
   it('loss-table rows with an event filter are links; rows without one stay text', () => {
-    wrap(<LossTable groups={[group('r1', 'Pump trip'), group(null, null)]} total={undefined} metric="qty" groupTitle="Reason" testId="loss-table" rowLink={(g) => lossGroupLink(SCOPE, 'reason', g.key)} />);
+    wrap(<LossTable groups={[group('r1', 'Pump trip'), group(null, null)]} total={undefined} metric="qty" groupTitle="Reason" testId="loss-table" rowLink={(g) => lossGroupLink(SCOPE, 'reason', g)} />);
     const [coded, notCoded] = screen.getAllByTestId('loss-group');
     expect(coded.tagName).toBe('A');
     expect(coded.getAttribute('href')).toMatch(/^\/events\?.*reasons=r1/);
@@ -37,13 +37,14 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
   });
 
   it('waterfall loss bars are listed as links to their loss events; totals are not', () => {
-    waterfall.data = { ledger: 'plan', bars: [bar('target', 'total'), bar('availability', 'step'), bar('unaccounted', 'step'), bar('actual', 'total')], excluded: [], closes: true, opening: '100', closing: '95', uom: 't' } as unknown as ScopeWaterfallView;
+    waterfall.data = { ledger: 'plan', bars: [bar('target', 'total'), bar('availability', 'step'), bar('quality', 'step'), bar('unaccounted', 'step'), bar('actual', 'total')], excluded: [], closes: true, opening: '100', closing: '95', uom: 't' } as unknown as ScopeWaterfallView;
     wrap(<WaterfallTab scope={SCOPE} />);
     const drills = within(screen.getByTestId('waterfall-drills')).getAllByTestId('waterfall-drill');
-    expect(drills.map((d) => d.getAttribute('data-key'))).toEqual(['availability', 'unaccounted']);
+    expect(drills.map((d) => d.getAttribute('data-key'))).toEqual(['availability', 'quality', 'unaccounted']);
     expect(drills[0].getAttribute('href')).toContain('oee=availability');
     expect(drills[0].getAttribute('href')).toContain('breakdown=loss-events');
-    expect(drills[1].getAttribute('href')).toContain('tab=reconciliation');
+    expect(drills[1].getAttribute('href')).toMatch(/^\/pla-analytics\/reconciliation\?.*periods=quality/);
+    expect(drills[2].getAttribute('href')).toMatch(/^\/pla-analytics\/reconciliation\?/);
   });
 
   it('the window control shows plant dates and holds the presets and the date range together', () => {
@@ -54,6 +55,20 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
     expect(screen.getByLabelText('From')).toHaveValue('2026-10-11');
     fireEvent.click(screen.getByTestId('pla-window-30d'));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ windowLabel: 'Last 30 days' }));
+  });
+
+  it('QA PLA M1: a production day reads as one day, its dates are typed in the plant format, and re-choosing it keeps 06:00–06:00', () => {
+    const onChange = vi.fn();
+    const day = parseScope(new URLSearchParams('from=2026-10-17T02:30:00.000Z&to=2026-10-18T02:30:00.000Z'), 0);
+    wrap(<WindowRangeControl scope={day} timeZone="Asia/Tehran" onChange={onChange} />);
+    expect(screen.getByTestId('pla-window')).toHaveTextContent('Chosen dates · 2026-10-17 (production day 06:00–06:00)');
+    fireEvent.click(screen.getByTestId('pla-window'));
+    const to = screen.getByLabelText('To (inclusive)');
+    expect(to).toHaveAttribute('type', 'text');
+    expect(to).toHaveValue('2026-10-17');
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-16' } });
+    fireEvent.blur(screen.getByLabelText('From'));
+    expect(onChange).toHaveBeenLastCalledWith({ from: '2026-10-16T02:30:00.000Z', to: '2026-10-18T02:30:00.000Z', windowLabel: 'Chosen dates' });
   });
 
   it('ledger and "Approved only" are one segmented row of server filters', () => {

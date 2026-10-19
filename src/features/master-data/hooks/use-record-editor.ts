@@ -76,5 +76,6 @@ export function useRecordEditor<TDraft, TRecord extends Revisioned, TCreate, TCh
     }
   };
 
-  return { draft, patch, errors, save, saving: create.isPending || change.isPending };
+  // dirty: the draft differs from the stored record (QA L4: "Save changes" waits for an edit)
+  return { draft, patch, errors, save, dirty: hasUnsavedChanges(draft, options.initial), saving: create.isPending || change.isPending };
 }

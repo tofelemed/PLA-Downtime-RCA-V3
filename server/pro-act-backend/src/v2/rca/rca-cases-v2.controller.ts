@@ -144,7 +144,8 @@ export class RcaCasesV2Controller {
     summary: 'Change a case (nested content replaced as sent)',
     description:
       `Requires \`If-Match\` (428/412). ${SCOPE} The status is not edited here (422 STATUS_VIA_TRANSITION when ` +
-      'it differs from the current one): use POST /v2/rcas/{id}/transitions.',
+      'it differs from the current one): use POST /v2/rcas/{id}/transitions.' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   update(
@@ -162,7 +163,7 @@ export class RcaCasesV2Controller {
   @ApiOperation({
     summary: 'Delete an open case nothing refers to yet',
     description:
-      `Requires \`If-Match\` (428/412). ${SCOPE} 409 RCA_CASE_IN_USE once the case is closed, linked, has ` +
+      `Requires \`If-Match\` (428/412). ${SCOPE} 409 CASE_CLOSED for a closed case; 409 RCA_CASE_IN_USE once it is linked, has ` +
       'actions or a recommendation or knowledge entry points at it. Analysis records go with the case.',
   })
   @ApiHeader({ name: 'If-Match', required: true })
@@ -179,7 +180,7 @@ export class RcaCasesV2Controller {
   @UseInterceptors(ETagInterceptor)
   @ApiOperation({
     summary: "Replace the logic tree with a fresh copy of the case's template",
-    description: `Requires \`If-Match\` (428/412). ${SCOPE} 422 NO_TEMPLATE for a case opened without a template.`,
+    description: `Requires \`If-Match\` (428/412). ${SCOPE} 422 NO_TEMPLATE for a case opened without a template.${' 409 CASE_CLOSED on a closed investigation (reopen it first).'}`,
   })
   @ApiHeader({ name: 'If-Match', required: true })
   resetLogicTree(

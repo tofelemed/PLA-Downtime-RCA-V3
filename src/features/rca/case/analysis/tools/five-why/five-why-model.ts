@@ -1,4 +1,5 @@
 import type { FiveWhyContent, FiveWhyLevel } from '@/api/v2/types/rca-analyses';
+import { plural } from '@/features/ux-kit/format/plural';
 
 const question = (answer: string) => `Why did "${answer.trim() || 'this'}" happen?`;
 
@@ -76,7 +77,7 @@ export function fiveWhyChecks(content: FiveWhyContent, unsupported: readonly str
 /** CA6 guidance on depth: the server's guideline (e.g. 5) as a prompt, never a gate. */
 export function depthGuidance(levels: number, guideline: number | null): string {
   const base = 'Stop when the evidence supports the chain to a system cause you can act on; do not invent answers.';
-  if (!guideline) return `${levels} level(s). ${base}`;
+  if (!guideline) return `${plural(levels, 'level', 'levels')}. ${base}`;
   return `${levels} of the ${guideline} levels of the guideline. ${base}`;
 }
 

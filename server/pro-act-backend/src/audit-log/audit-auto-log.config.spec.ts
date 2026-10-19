@@ -1,4 +1,6 @@
 import {
+  auditRecordLabel,
+  auditResponseId,
   resolveAuditTarget,
   resolveEntityType,
   shouldSkipAudit,
@@ -93,5 +95,37 @@ describe('resolveAuditTarget (attribution of sub-resource writes)', () => {
         responseId: actionId,
       }),
     ).toEqual({ entityType: 'AppSettings', entityId: actionId });
+  });
+});
+
+describe('audit auto-log: read-only POSTs and record names (QA audit 2026-10-19)', () => {
+  it('skips POSTs that only preview, validate or dry-run', () => {
+    expect(
+      shouldSkipAudit('/api/v2/production-events/bulk-code/preview', 'POST'),
+    ).toBe(true);
+    expect(shouldSkipAudit('/api/v2/rules/validate?x=1', 'POST')).toBe(true);
+    expect(shouldSkipAudit('/api/v2/plans/p1/dry-run', 'POST')).toBe(true);
+    expect(shouldSkipAudit('/api/v2/production-events/bulk-code', 'POST')).toBe(
+      false,
+    );
+    expect(shouldSkipAudit('/api/v2/exports', 'POST')).toBe(false);
+  });
+
+  it('names an export job by its report and format and takes the job id', () => {
+    const accepted = { jobId: 'job-1', statusUrl: '/api/v2/exports/job-1' };
+    const request = { reportType: 'period_summary', format: 'csv' };
+    expect(auditRecordLabel(accepted, request)).toBe('Period summary CSV');
+    expect(auditResponseId(accepted)).toBe('job-1');
+    expect(auditResponseId({ id: 'r-1', jobId: 'job-1' })).toBe('r-1');
+    expect(auditResponseId({})).toBeUndefined();
+  });
+
+  it('prefers a title or name of the answer, then of the request', () => {
+    expect(auditRecordLabel({ name: 'Extruder 1' }, { title: 'x' })).toBe(
+      'Extruder 1',
+    );
+    expect(auditRecordLabel({ title: 'Seal' }, {})).toBe('Seal');
+    expect(auditRecordLabel({}, { fileName: 'rates.csv' })).toBe('rates.csv');
+    expect(auditRecordLabel({}, {})).toBeUndefined();
   });
 });

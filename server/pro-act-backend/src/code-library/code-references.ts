@@ -5,6 +5,7 @@ import {
 import { EntityManager } from 'typeorm';
 import { CodeLibraryKind } from './code-library-kind';
 import { CODE_LIBRARY_DESCRIPTORS, CodeRow } from './code-library.descriptors';
+import { plural } from '../common/helpers/plural';
 
 /** What still points at a code (retire answers 409 with these counts, T18). */
 export interface CodeReferences {
@@ -48,7 +49,7 @@ export async function codeReferences(
 export function codeHasChildren(references: CodeReferences): ConflictException {
   return new ConflictException({
     code: 'CODE_HAS_CHILDREN',
-    message: `The code has ${references.activeChildren} active child code(s); retire or move them first`,
+    message: `The code has ${plural(references.activeChildren, 'active child code', 'active child codes')}; retire or move them first`,
     details: { references },
   });
 }

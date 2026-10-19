@@ -2,6 +2,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { describeError, FieldMessageList, SupportReference, type FieldVocabulary } from '@/features/ux-kit/errors';
 import { StatusIcon } from '@/lib/icons';
 import { adminRefusalOf } from '../model/admin-refusal';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface AdminRefusalAlertProps {
   error: unknown;
@@ -31,7 +32,7 @@ export function AdminRefusalAlert({ error, withFields = true, fields }: AdminRef
         <p>{friendly.message}</p>
         {counts && (
           <p className="text-sm" data-testid="refusal-references">
-            Still used by {counts.activeChildren} active sub-code(s), {counts.events} event(s) and {counts.mappingRules} default mapping version(s).
+            Still used by {plural(counts.activeChildren, 'active sub-code', 'active sub-codes')}, {plural(counts.events, 'event', 'events')} and {plural(counts.mappingRules, 'default mapping version', 'default mapping versions')}.
           </p>
         )}
         {withFields && <FieldMessageList fieldMessages={friendly.fieldMessages} />}

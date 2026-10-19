@@ -11,6 +11,7 @@ import { assertCanUpload } from './action-owner-access';
 import { recordRcaAudit } from './rca-audit';
 import { readEvidence } from './rca-case-json';
 import { findCase, scopeOf } from './rca-scope';
+import { assertCaseNotClosed } from './case-closed';
 
 /** A stored evidence file, ready to be referenced by an evidence item of the case. */
 export interface RcaAttachmentV2View {
@@ -36,7 +37,9 @@ export class RcaAttachmentsService {
   ): Promise<RcaAttachmentV2View> {
     const scope = scopeOf(context);
     try {
-      await findCase(this.dataSource.manager, scope, rcaId);
+      assertCaseNotClosed(
+        await findCase(this.dataSource.manager, scope, rcaId),
+      );
       await assertCanUpload(this.dataSource.manager, context, {
         tenantId: scope.tenantId,
         rcaId,

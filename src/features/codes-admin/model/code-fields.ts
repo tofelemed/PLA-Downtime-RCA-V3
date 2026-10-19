@@ -75,3 +75,6 @@ export function changeBodyOf(spec: LibrarySpec, form: CodeForm): CodeChangeBody 
   if (spec.fields.includes('reportOrder')) body.reportOrder = Number(form.reportOrder) || 0;
   return body;
 }
+
+/** The one empty state of a code library, tree or flat table (QA L6). */
+export const CODE_LIBRARY_EMPTY = { title: 'No codes yet', text: 'Create the first code of this library.' } as const;

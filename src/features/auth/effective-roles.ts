@@ -4,7 +4,7 @@ import type { AuthenticatedUser, SessionScope } from '@/services/api/authApi';
  * Effective roles of the signed-in user in an acting plant, derived exactly the way the server's
  * `RequestContextFactory` derives a request's roles (WF05, decision D06):
  *
- * - the legacy role (`users.role`) and its D06 mapping count only in the home tenant, except
+ * - the legacy role (`users.role`) counts only in the home tenant, except
  *   SuperAdmin everywhere and OrgAdmin inside tenants of its own organization;
  * - plus the roles of the `user_scopes` grants held in the acting tenant.
  *
@@ -80,11 +80,21 @@ export function legacyRoleAppliesIn(user: RoleSubject, acting: ActingPlant): boo
   return organization === null || organization === user.organizationId;
 }
 
+/**
+ * QA audit 2026-10-19 (guide roles only, server `legacyRolesApplying`): the legacy role's D06 scope role is
+ * a fallback that counts only while the user holds no grant in the plant; with any grant the plant roles
+ * are exactly the grants (plus the legacy role name, and the global SuperAdmin / OrgAdmin).
+ */
+export function legacyRolesApplying(legacyRole: string | null | undefined, holdsGrant: boolean): string[] {
+  if (!legacyRole) return [];
+  return holdsGrant ? [legacyRole] : rolesForLegacyRole(legacyRole);
+}
+
 /** Roles held in the acting plant: legacy role (when it applies) + scope roles there, each once. */
 export function effectiveRoles(user: RoleSubject, acting: ActingPlant): string[] {
   const tenantId = acting.tenantId || homeTenantOf(user);
-  const legacy = legacyRoleAppliesIn(user, acting) ? rolesForLegacyRole(user.role) : [];
   const scoped = scopesIn(user, tenantId).map((scope) => scope.role);
+  const legacy = legacyRoleAppliesIn(user, acting) ? legacyRolesApplying(user.role, scoped.length > 0) : [];
   return [...new Set([...legacy, ...scoped])];
 }
 

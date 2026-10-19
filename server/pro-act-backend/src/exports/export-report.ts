@@ -2,6 +2,15 @@ import { ReviewedValuation } from '../reconciliation/reviewed-valuation';
 import { CsvValue } from './csv';
 import { SliceProductLabel } from './entities/export-job-source.entity';
 import { ExportFilters, ExportReportType } from './entities/export-job.entity';
+import { ExportLabels } from './export-labels';
+import {
+  actualsQualityLabel,
+  kindLabel,
+  lineSourceLabel,
+  plantIso,
+  reasonOf,
+  stateLabel,
+} from './export-words';
 import {
   lineValuationCells,
   sliceValuationCells,
@@ -84,6 +93,8 @@ export interface ExportHeader {
   requestedAt: string;
   requestedBy: string;
   sourceCount: number;
+  /** pinned at request time (null for jobs requested before labels were pinned) */
+  labels?: ExportLabels | null;
 }
 
 const SOURCE_COLUMNS = [
@@ -102,6 +113,12 @@ const SOURCE_COLUMNS = [
   'product_name',
 ];
 
+/**
+ * QA audit 2026-10-19: the same instants on the plant clock (ISO 8601 with offset), appended after the
+ * existing columns so files read by position keep working; the `utc_*` / `approved_at` columns stay UTC.
+ */
+const PLANT_TIME_COLUMNS = ['plant_start', 'plant_end', 'approved_at_plant'];
+
 export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
   period_summary: [
     ...SOURCE_COLUMNS,
@@ -118,6 +135,8 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
     'coverage_ratio',
     'flags',
     ...VALUATION_COLUMNS,
+    ...PLANT_TIME_COLUMNS,
+    'actuals_quality_label',
   ],
   loss_lines: [
     ...SOURCE_COLUMNS,
@@ -135,6 +154,12 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
     'cause_event_id',
     'reason',
     ...VALUATION_COLUMNS,
+    ...PLANT_TIME_COLUMNS,
+    'line_source_label',
+    'kind_label',
+    'state_label',
+    'reason_code',
+    'reason_name',
   ],
 };
 
@@ -153,7 +178,9 @@ export function headerRecords(header: ExportHeader): CsvValue[][] {
     ['export_id', header.jobId],
     ['requested_at', header.requestedAt],
     ['requested_by', header.requestedBy],
+    ['requested_by_name', header.labels?.requestedByName ?? null],
     ['timezone', 'UTC'],
+    ['plant_timezone', header.labels?.plantTimezone ?? null],
     ['revision_selector', header.revisionSelector],
     ['filter_from', filters.from],
     ['filter_to', filters.to],
@@ -183,7 +210,37 @@ function sourceCells(source: RenderSource, sliceId: string): CsvValue[] {
   ];
 }
 
-function summaryRows(source: RenderSource): CsvValue[][] {
+function plantTimeCells(
+  source: RenderSource,
+  labels: ExportLabels | null,
+): CsvValue[] {
+  const zone = labels?.plantTimezone ?? null;
+  return [
+    plantIso(source.reviewed.utcStart, zone),
+    plantIso(source.reviewed.utcEnd, zone),
+    plantIso(source.approvedAt, zone),
+  ];
+}
+
+function lineLabelCells(
+  labels: ExportLabels | null,
+  line: { source: string; kind: string | null; state: string },
+  reasonCodeId: string | null,
+): CsvValue[] {
+  const reason = reasonOf(labels, reasonCodeId);
+  return [
+    lineSourceLabel(line.source),
+    kindLabel(line.kind),
+    stateLabel(line.state),
+    reason?.code ?? null,
+    reason?.name ?? null,
+  ];
+}
+
+function summaryRows(
+  source: RenderSource,
+  labels: ExportLabels | null,
+): CsvValue[][] {
   return source.reviewed.slices.map((slice) => {
     const actuals = source.reviewed.actuals.find(
       (a) => a.sliceId === slice.sliceId,
@@ -203,6 +260,8 @@ function summaryRows(source: RenderSource): CsvValue[][] {
       actuals?.coverageRatio ?? null,
       joined(slice.flags),
       ...sliceValuationCells(source.reviewed.valuation, slice.sliceId),
+      ...plantTimeCells(source, labels),
+      actualsQualityLabel(actuals?.qualityState),
     ];
   });
 }
@@ -211,7 +270,10 @@ function uomOf(source: RenderSource, sliceId: string): string | null {
   return source.reviewed.slices.find((s) => s.sliceId === sliceId)?.uom ?? null;
 }
 
-function candidateRows(source: RenderSource): CsvValue[][] {
+function candidateRows(
+  source: RenderSource,
+  labels: ExportLabels | null,
+): CsvValue[][] {
   return source.reviewed.candidates.map((c) => [
     ...sourceCells(source, c.sliceId),
     'candidate',
@@ -231,10 +293,19 @@ function candidateRows(source: RenderSource): CsvValue[][] {
       source: 'candidate',
       id: c.lossLineId,
     }),
+    ...plantTimeCells(source, labels),
+    ...lineLabelCells(
+      labels,
+      { source: 'candidate', kind: c.kind, state: c.state },
+      c.reasonCodeId,
+    ),
   ]);
 }
 
-function ownLineRows(source: RenderSource): CsvValue[][] {
+function ownLineRows(
+  source: RenderSource,
+  labels: ExportLabels | null,
+): CsvValue[][] {
   return source.reviewed.lines
     .filter((l) => OWN_QUANTITY_ACTIONS.has(l.action))
     .map((l) => [
@@ -256,19 +327,31 @@ function ownLineRows(source: RenderSource): CsvValue[][] {
         source: 'line',
         id: l.id,
       }),
+      ...plantTimeCells(source, labels),
+      ...lineLabelCells(
+        labels,
+        { source: l.action, kind: l.kind, state: 'in_force' },
+        l.reasonCodeId,
+      ),
     ]);
 }
 
-function lossRows(source: RenderSource): CsvValue[][] {
-  return [...candidateRows(source), ...ownLineRows(source)];
+function lossRows(
+  source: RenderSource,
+  labels: ExportLabels | null,
+): CsvValue[][] {
+  return [...candidateRows(source, labels), ...ownLineRows(source, labels)];
 }
 
-/** Table rows of one source revision, in snapshot order. */
+/** Table rows of one source revision, in snapshot order, with the job's pinned labels. */
 export function reportRows(
   type: ExportReportType,
   source: RenderSource,
+  labels: ExportLabels | null = null,
 ): CsvValue[][] {
-  return type === 'period_summary' ? summaryRows(source) : lossRows(source);
+  return type === 'period_summary'
+    ? summaryRows(source, labels)
+    : lossRows(source, labels);
 }
 
 /** Narrows a stored snapshot `content` to what the renderer needs (throws on an unexpected shape). */

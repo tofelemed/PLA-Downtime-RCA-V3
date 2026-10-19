@@ -1,15 +1,10 @@
 import { Input } from '@/components/ui/input';
 import { Field } from '../../components/field';
 import { NativeSelect } from '../../components/native-select';
-import { IDENTITY_STRATEGIES, PROFILE_KINDS, PROFILE_PRESETS, type ProfileKind } from '../model/mqtt-form';
+import { type IdentityStrategy, PROFILE_KINDS, PROFILE_PRESETS, type ProfileKind } from '../model/mqtt-form';
+import { IDENTITY_STRATEGY_OPTIONS } from '../model/profile-labels';
 import { parseTopicTemplate } from '../model/topic-rules';
 import type { StepProps } from './step-props';
-
-const IDENTITY_LABELS: Record<(typeof IDENTITY_STRATEGIES)[number], string> = {
-  seq_boot: 'boot_id + seq (delivery identity; samples, state, availability)',
-  event_id: 'event_id + revision (events)',
-  payload_hash: 'payload hash + event time (no ids from the source)',
-};
 
 /**
  * Step 1 — payload profile: which decoder reads the messages, the topic template whose captures
@@ -46,8 +41,8 @@ export function ProfileStep({ form, errors, onChange }: StepProps) {
           id="mqtt-identity"
           testId="mqtt-identity"
           value={form.identityStrategy}
-          options={IDENTITY_STRATEGIES.map((strategy) => ({ value: strategy, label: IDENTITY_LABELS[strategy] }))}
-          onChange={(strategy) => onChange({ identityStrategy: strategy as (typeof IDENTITY_STRATEGIES)[number] })}
+          options={IDENTITY_STRATEGY_OPTIONS}
+          onChange={(strategy) => onChange({ identityStrategy: strategy as IdentityStrategy })}
         />
       </Field>
       <p className="text-xs text-muted-foreground">Field overrides and value maps are edited on the connection's Payload profile tab once it exists.</p>

@@ -9,6 +9,7 @@ import { Quantity } from '@/features/ux-kit/quantity';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { AttributedValueText } from './attributed-value-text';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PeriodLink } from './period-link';
 
 /** Approved = the published revision's lines (success); provisional = an open revision's proposals (warning, §5.8). */
@@ -24,6 +25,8 @@ function AttributedPeriodRow({ item }: { item: AttributedPeriodView }) {
   const preference = useCalendarPreference();
   const { currency } = useDisplayCurrency();
   const values = entriesInCurrency(item.values, (value) => value.currency, currency);
+  // owner 19 Oct 2026 (QA audit): no money for operators
+  const { canViewMoney } = useCapabilities();
   return (
     <li className="space-y-1 border-b pb-2 text-sm last:border-b-0" data-testid="attributed-period" data-period-id={item.periodId}>
       <div className="flex flex-wrap items-center gap-2">
@@ -42,7 +45,7 @@ function AttributedPeriodRow({ item }: { item: AttributedPeriodView }) {
           </li>
         ))}
       </ul>
-      {values.length > 0 ? (
+      {!canViewMoney ? null : values.length > 0 ? (
         <ul aria-label="Value">
           {values.map((value) => (
             <li key={value.currency}>

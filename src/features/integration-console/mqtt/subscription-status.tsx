@@ -14,14 +14,16 @@ export interface SubscriptionStatusProps {
   timezone: string;
 }
 
+/** QA L24: the worker's message and persist facts restart with the worker; the last observation is stored. */
+const SINCE_WORKER_NONE = 'none since the worker started';
 const yesNo = (value: boolean | null) => (value === null ? 'unknown' : value ? 'yes' : 'no');
 
 /** Operational health stays visible; protocol and lease details remain available on request. */
 export function SubscriptionStatus({ connection, subscription, timezone }: SubscriptionStatusProps) {
   const { job, health, status, now } = subscription;
-  const ago = (iso: string | null) => {
+  const ago = (iso: string | null, none = 'never') => {
     const seconds = secondsSince(iso, now);
-    return seconds === null ? 'never' : <><PlantTime iso={iso} tz={timezone} withDate /> (<DurationText seconds={seconds} variant="compact" /> ago)</>;
+    return seconds === null ? none : <><PlantTime iso={iso} tz={timezone} withDate /> (<DurationText seconds={seconds} variant="compact" /> ago)</>;
   };
   return (
     <section aria-label="Subscription status" className="min-w-0 space-y-4 rounded-lg border bg-background p-4 text-sm" data-testid="mqtt-status" data-status={status.status} data-job-state={job?.state ?? 'none'}>
@@ -32,8 +34,8 @@ export function SubscriptionStatus({ connection, subscription, timezone }: Subsc
       </div>}
       <dl className="grid min-w-0 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3" aria-label="Operational subscription facts">
         <Fact label="Last observation">{ago(job?.lastObservationAt ?? null)}</Fact>
-        <Fact label="Last message" testId="mqtt-last-message">{ago(health.lastMessageAt)}</Fact>
-        <Fact label="Last persist">{ago(health.lastPersistAt)}</Fact>
+        <Fact label="Last message (since the worker started)" testId="mqtt-last-message">{ago(health.lastMessageAt, SINCE_WORKER_NONE)}</Fact>
+        <Fact label="Last persist (since the worker started)">{ago(health.lastPersistAt, SINCE_WORKER_NONE)}</Fact>
         <Fact label="Heartbeat">{ago(job?.heartbeatAt ?? null)}</Fact>
         <Fact label="In flight">{health.inflight}</Fact>
         <Fact label="Reconnects" testId="mqtt-reconnects">{health.reconnects}</Fact>
@@ -60,7 +62,7 @@ function SubscriptionHeading({ connection, subscription }: HeadingProps) {
   </div>;
 }
 
-function TechnicalDetails({ connection, subscription, ago }: HeadingProps & { ago: (iso: string | null) => ReactNode }) {
+function TechnicalDetails({ connection, subscription, ago }: HeadingProps & { ago: (iso: string | null, none?: string) => ReactNode }) {
   const { job, health } = subscription;
   return <details className="min-w-0 border-t pt-3" data-testid="mqtt-technical-details">
     <summary className="cursor-pointer rounded-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Technical connection details</summary>

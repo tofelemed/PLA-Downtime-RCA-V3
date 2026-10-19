@@ -33,12 +33,12 @@ describe('AppSidebar', () => {
     renderAt('/downtime/causes?units=u1&products=p1');
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     expect(within(nav).getByRole('link', { name: 'Causes & Pareto' })).toHaveAttribute('aria-current', 'page');
-    expect(within(nav).queryByRole('link', { name: 'Downtime Analysis' })).toBeNull();
+    expect(within(nav).queryByRole('link', { name: 'Downtime analysis' })).toBeNull();
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
-    expect(within(nav).getByRole('button', { name: 'Downtime Analysis' })).toHaveAttribute('aria-expanded', 'true');
-    expect(within(nav).getByRole('link', { name: 'Stops & Timeline' })).toHaveAttribute('href', '/downtime/stops?units=u1&products=p1');
+    expect(within(nav).getByRole('button', { name: 'Downtime analysis' })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav).getByRole('link', { name: 'Stops & timeline' })).toHaveAttribute('href', '/downtime/stops?units=u1&products=p1');
     expect(within(nav).getByRole('link', { name: 'Downtime overview' })).not.toHaveAttribute('aria-current');
-    expect(within(nav).getByRole('link', { name: 'Loss Valuation' })).toHaveAttribute('href', '/pla-analytics/valuation?units=u1');
+    expect(within(nav).getByRole('link', { name: 'Loss valuation' })).toHaveAttribute('href', '/pla-analytics/valuation?units=u1');
   });
 
   it('carries the shared analysis context (B-8) from the Event Hub to Downtime, PLA and Reports, not to other modules', async () => {
@@ -63,10 +63,10 @@ describe('AppSidebar', () => {
     expect(within(nav).getByRole('link', { name: 'PLA overview' })).toHaveAttribute('href', '/pla-analytics');
     expect(within(nav).queryByRole('link', { name: 'Overview' })).toBeNull();
     // label in name (WCAG 2.5.3): a short label keeps the fuller name
-    expect(within(nav).getByRole('link', { name: 'PLA Trends' })).toHaveTextContent('Trends');
-    const plans = within(nav).getByRole('link', { name: 'Plans, Profiles & Calendars' });
+    expect(within(nav).getByRole('link', { name: 'PLA trends' })).toHaveTextContent('Trends');
+    const plans = within(nav).getByRole('link', { name: 'Plans, profiles & calendars' });
     expect(plans).toHaveAttribute('aria-current', 'page');
-    expect(plans).toHaveAttribute('title', 'Plans, Profiles & Calendars');
+    expect(plans).toHaveAttribute('title', 'Plans, profiles & calendars');
     expect(plans.querySelector('span')).toHaveClass('line-clamp-2');
     expect(plans.querySelector('span')).not.toHaveClass('truncate');
   });
@@ -76,7 +76,7 @@ describe('AppSidebar', () => {
     renderAt('/pla-analytics/oee?units=u1');
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
-    const pla = within(nav).getByRole('button', { name: 'Production Loss Analysis (PLA)' });
+    const pla = within(nav).getByRole('button', { name: 'Production loss analysis (PLA)' });
     const list = document.getElementById(pla.getAttribute('aria-controls') ?? '');
     expect(within(list as HTMLElement).getByRole('link', { name: 'Period accounting' })).toHaveAttribute('href', '/period-accounting');
   });
@@ -86,7 +86,7 @@ describe('AppSidebar', () => {
     renderAt('/rca-knowledge-base');
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     expect(within(nav).getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
-    expect(within(nav).getByRole('link', { name: 'Knowledge Base' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('link', { name: 'Knowledge base' })).toHaveAttribute('aria-current', 'page');
     expect(within(nav).getByRole('link', { name: 'RCA Analysis' })).not.toHaveAttribute('aria-current');
     expect(within(nav).queryByRole('link', { name: 'Connectivity' })).toBeNull();
   });

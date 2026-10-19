@@ -14,6 +14,11 @@ import { SortSpec } from '../common/sort-spec';
 import { ProductionEventExportQueryDto } from './production-event-export-query.dto';
 import { ProductionEventSortField } from './production-event-list-query.dto';
 import {
+  EXPORT_LABEL_COLUMNS,
+  exportTimezoneOf,
+  labelCells,
+} from './production-events-export-labels';
+import {
   applyKeysetCursor,
   applyProductionEventV2Filters,
 } from './production-event-v2.query';
@@ -48,6 +53,7 @@ export const EXPORT_COLUMNS = [
   'quantity',
   'quantity_uom',
   'cost',
+  ...EXPORT_LABEL_COLUMNS,
 ] as const;
 
 const SELECTED = [
@@ -147,7 +153,11 @@ async function namesOf(
   };
 }
 
-function recordOf(event: ProductionEvent, names: Names): CsvValue[] {
+function recordOf(
+  event: ProductionEvent,
+  names: Names,
+  timezone: string | null,
+): CsvValue[] {
   const start = new Date(event.startTime);
   const end = event.endTime ? new Date(event.endTime) : null;
   const reason = event.reasonCodeId
@@ -175,6 +185,7 @@ function recordOf(event: ProductionEvent, names: Names): CsvValue[] {
     toDecimalString(event.quantity),
     event.quantityUom ?? null,
     toDecimalString(event.cost),
+    ...labelCells(event, timezone),
   ];
 }
 
@@ -202,7 +213,8 @@ async function nextBatch(
 /**
  * CSV of the filtered event list (v1 Event Hub "Export to CSV" parity): the list's scoped query and
  * filters, newest first, read in keyset batches of 1,000 with one name lookup per batch; at most 50,000
- * rows (counted first: 422 EXPORT_TOO_LARGE). Times ISO UTC, decimals as strings, names instead of ids.
+ * rows (counted first: 422 EXPORT_TOO_LARGE). Times ISO UTC, decimals as strings, names instead of ids; then
+ * the plant-clock times and the screen labels of the keys (QA audit L5, `production-events-export-labels.ts`).
  */
 export async function exportEventsCsv(
   repo: Repository<ProductionEvent>,
@@ -217,13 +229,15 @@ export async function exportEventsCsv(
       message: 'More than 50,000 events match; narrow the filters',
     });
   }
+  const timezone = await exportTimezoneOf(repo.manager, tenantId);
   const parts = [CSV_BOM + csvRow(EXPORT_COLUMNS)];
   let last: ProductionEvent | undefined;
   for (let read = 0; read < EXPORT_MAX_ROWS; ) {
     const batch = await nextBatch(repo, context, query, last);
     if (batch.length === 0) break;
     const names = await namesOf(repo, tenantId, batch);
-    for (const event of batch) parts.push(csvRow(recordOf(event, names)));
+    for (const event of batch)
+      parts.push(csvRow(recordOf(event, names, timezone)));
     read += batch.length;
     last = batch[batch.length - 1];
     if (batch.length < BATCH) break;

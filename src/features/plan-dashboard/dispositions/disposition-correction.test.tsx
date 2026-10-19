@@ -61,9 +61,9 @@ describe('correcting an approved disposition (Marun E2E)', () => {
     open('/plans/plan1/periods/p1/actuals?keep=scope');
     fireEvent.click(await screen.findByTestId('disposition-correct'));
     expect(await screen.findByRole('heading', { name: 'Correct a product disposition' })).toBeTruthy();
-    const lot = (await screen.findByLabelText('Lot number')) as HTMLInputElement;
+    const lot = (await screen.findByLabelText(/^Lot number/)) as HTMLInputElement;
     expect(lot.value).toBe('HD5502-20261017-A01');
-    fireEvent.change(screen.getByLabelText('Quantity (t)'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText(/^Quantity \(t\)/), { target: { value: '3' } });
     fireEvent.click(screen.getByRole('button', { name: 'Propose the correction' }));
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0].path).toMatch(/\/v2\/lot-dispositions$/);

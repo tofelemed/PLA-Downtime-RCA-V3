@@ -1,6 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { invalid } from '../../profiles/profile-errors';
 import { AnalyticsResponse } from '../common/response';
+import { classSummary } from './downtime-class-summary';
 import { breakdownSpec, groupViews, PLANS, summaryOf } from './downtime-report';
 import {
   BUNDLE_VIEW_PATTERN,
@@ -83,7 +84,8 @@ async function bundleItem(
  * `GET /reports/downtime-bundle` (T24): the breakdowns of the Downtime Analysis page from one scope
  * resolution and one run selection. Each view runs the same breakdown query as `/reports/downtime` with
  * that grouping, metric and class (no reason subtree), so its groups and total equal the single report;
- * the period summary, run ids and policy versions are read once. Views run one after the other.
+ * the period summary, run ids and policy versions are read once. Views run one after the other. With
+ * `scheduleClass` the summary is the class's (`classSummary`, owner decision 2026-10-19).
  */
 export async function downtimeBundleReport(
   manager: EntityManager,
@@ -93,13 +95,17 @@ export async function downtimeBundleReport(
   const specs = parseBundleViews(query.views);
   const includeMicroStops = query.includeMicroStops ?? false;
   const stats = await periodStats(manager, scope);
-  const summary = await summaryOf(manager, scope);
+  const scheduleClass = query.scheduleClass ?? null;
+  const summary = scheduleClass
+    ? await classSummary(manager, scope, { scheduleClass, includeMicroStops })
+    : await summaryOf(manager, scope);
   const views: DowntimeBundleItemView[] = [];
   for (const spec of specs) {
     views.push(await bundleItem(manager, scope, spec, includeMicroStops));
   }
   const data: DowntimeBundleView = {
     includeMicroStops,
+    scheduleClass,
     summary,
     views,
     calculationRunIds: stats.runIds,

@@ -18,6 +18,7 @@ export function exportHeaderOf(job: ExportJob): ExportHeader {
     requestedAt: job.createdAt.toISOString(),
     requestedBy: job.requestedBy,
     sourceCount: job.counts.accepted,
+    labels: job.labels ?? null,
   };
 }
 
@@ -40,7 +41,7 @@ export function pdfDocumentOf(
   }
   const presentation = drawnPresentation(job.presentation, fonts);
   const sections = sources.map((s) =>
-    sourceSection(job.reportType, s, presentation),
+    sourceSection(job.reportType, s, presentation, job.labels ?? null),
   );
   const model = layoutDocument({
     header: exportHeaderOf(job),

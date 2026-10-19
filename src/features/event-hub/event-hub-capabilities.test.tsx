@@ -13,6 +13,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 
 const { ReviewItemsList } = await import('./components/review-items-list');
 const { CurrentStopsPanel } = await import('./components/current-stops-panel');
+const { EventsReadOnlyHint } = await import('./components/events-read-only-hint');
 
 const ENV: EventHubEnv = {
   tenantId: 'tenant-a', timezone: 'UTC', timezoneIsFallback: false, units: [], unitsLoading: false, reasonCodes: [],
@@ -26,7 +27,7 @@ const STOP = {
   classification: { physicalType: 'downtime' }, states: { physical: 'open', coding: 'uncoded', rca: 'none' }, reasonCodeId: null, rowVersion: 1,
 };
 
-describe('Event Hub v2: event commands for every non-viewer member (canWriteEvents)', () => {
+describe('Event Hub v2: event commands for the event writers (canWriteEvents)', () => {
   let client: QueryClient;
   const wrap = (node: ReactNode) =>
     render(
@@ -57,6 +58,19 @@ describe('Event Hub v2: event commands for every non-viewer member (canWriteEven
     wrap(<ReviewItemsList event={EVENT} items={[ITEM]} />);
     expect(screen.getByTestId('review-items')).toBeTruthy();
     expect(screen.queryByText('Keep my value')).toBeNull();
+  });
+
+  it('owner decision 2026-10-19: the production accountant reads stops and review items but cannot code or decide', async () => {
+    actAs('production_accountant');
+    const items = wrap(<ReviewItemsList event={EVENT} items={[ITEM]} />);
+    expect(screen.queryByText('Keep my value')).toBeNull();
+    items.unmount();
+    const stops = wrap(<CurrentStopsPanel unitIds={[]} onClose={() => undefined} onCode={() => undefined} />);
+    await waitFor(() => expect(screen.getByTestId('current-stop')).toBeTruthy());
+    expect(screen.queryByTestId('current-stop-close')).toBeNull();
+    stops.unmount();
+    wrap(<EventsReadOnlyHint />);
+    expect(screen.getByTestId('events-read-only-hint')).toHaveTextContent('read-only for your role');
   });
 
   it('an engineer can close a running stop; a viewer only opens it', async () => {

@@ -1,4 +1,4 @@
-import { rolesForLegacyRole } from '../roles/role-model';
+import { legacyRolesApplying } from '../roles/role-model';
 
 /** A grant as the rules see it: a role on the tenant, a site or a unit of one tenant. */
 export interface GrantRef {
@@ -21,7 +21,8 @@ export interface DelegatedScope {
 export const MAX_DELEGATION_DAYS = 90;
 
 /**
- * Whether `grants` (own scope grants of the delegator) or the delegator's legacy home-plant role cover the
+ * Whether `grants` (own scope grants of the delegator) or the delegator's legacy home-plant role (its D06
+ * mapping only while the delegator holds no own grant in that plant) cover the
  * delegated role on the delegated scope: a tenant grant covers everything, a site grant its site and the
  * site's units, a unit grant only that unit. Delegated grants never count (a delegate cannot pass a role on).
  */
@@ -30,9 +31,10 @@ export function holdsForScope(
   legacy: { role: string | null; tenantId: string | null },
   target: DelegatedScope,
 ): boolean {
+  const ownGrantInPlant = grants.some((g) => g.tenantId === target.tenantId);
   if (
     legacy.tenantId === target.tenantId &&
-    rolesForLegacyRole(legacy.role).includes(target.role)
+    legacyRolesApplying(legacy.role, ownGrantInPlant).includes(target.role)
   ) {
     return true;
   }

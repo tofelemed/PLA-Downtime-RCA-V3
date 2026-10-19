@@ -158,9 +158,9 @@ describe('G-2(b) attributed losses of an event', () => {
     expect(approved.getByTestId('attributed-status')).toHaveTextContent('Approved');
     expect(approved.getByTestId('attributed-status')).toHaveAttribute('data-tone', 'success');
     expect(approved.getByTestId('attributed-period-link')).toHaveAttribute('href', '/plans/plan-1/periods/p1?view=approved');
-    expect(approved.getByTestId('attributed-quantity')).toHaveTextContent('Availability: 12.50t');
+    expect(approved.getByTestId('attributed-quantity')).toHaveTextContent('Availability: 12.50 t');
     expect(approved.getAllByTestId('attributed-value')).toHaveLength(1);
-    expect(approved.getByTestId('attributed-value')).toHaveTextContent('1,500.00USD');
+    expect(approved.getByTestId('attributed-value')).toHaveTextContent('1,500.00 USD');
     const provisional = within(rows[1]);
     expect(provisional.getByTestId('attributed-status')).toHaveAttribute('data-tone', 'warning');
     expect(provisional.queryByTestId('attributed-period-link')).toBeNull();
@@ -173,8 +173,8 @@ describe('G-2(b) attributed losses of an event', () => {
     losses.query = stub(LOSSES);
     wrap(<AttributedLossesCard eventId="e1" />, 'IRR');
     const first = within(screen.getAllByTestId('attributed-period')[0]);
-    expect(first.getByTestId('attributed-value')).toHaveTextContent('63,000,000IRR');
-    expect(first.getByTestId('attributed-fx-provisional')).toHaveTextContent('provisional exchange rate on 2 line(s)');
+    expect(first.getByTestId('attributed-value')).toHaveTextContent('63,000,000 IRR');
+    expect(first.getByTestId('attributed-fx-provisional')).toHaveTextContent('provisional exchange rate on 2 lines');
   });
 
   it('says when nothing is valued and when the list was cut by the server', () => {
@@ -294,6 +294,20 @@ describe('bulk coding: asset and investigation pending', () => {
     const preview = { count: 1, items: [{ eventId: 'e1', before: snapshot, after: { ...snapshot, investigationPending: false } }], exclusions: [], affectedWindows: [] };
     wrap(<BulkPreviewTable preview={preview} events={targets} show={{ asset: false, investigation: true }} />);
     expect(screen.getByText('Investigation pending → No')).toBeInTheDocument();
+  });
+
+  it('QA audit F5: counts only events whose coding changes and lists the windows apart', () => {
+    const snapshot = { reasonCodeId: null, impactCodeId: null, scheduleClass: 'unplanned', oeeComponent: 'availability', codingState: 'uncoded', assetId: null, investigationPending: false };
+    const windows = [
+      { unitId: 'u1', from: '2026-10-17T08:00:00.000Z', to: '2026-10-17T09:00:00.000Z' },
+      { unitId: 'u1', from: '2026-10-18T02:00:00.000Z', to: '2026-10-18T02:30:00.000Z' },
+    ];
+    const items = [{ eventId: 'e1', before: snapshot, after: snapshot, changed: false }, { eventId: 'e2', before: snapshot, after: snapshot, changed: false }];
+    wrap(<BulkPreviewTable preview={{ count: 2, changedCount: 0, items, exclusions: [], affectedWindows: windows }} events={targets} />);
+    expect(screen.getByTestId('bulk-preview-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('bulk-preview-unchanged')).toHaveTextContent('2');
+    expect(screen.getAllByText(/· no change$/)).toHaveLength(2);
+    expect(within(screen.getByRole('list', { name: 'Recalculates:' })).getAllByRole('listitem')).toHaveLength(2);
   });
 });
 

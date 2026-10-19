@@ -1,5 +1,6 @@
 import { type KeyboardEvent, useEffect, useId, useState } from 'react';
 import { Input } from '@/components/ui/input';
+import type { CalendarSystem } from '@/lib/dates';
 import { boundsError, dateToText, parseDateText } from './date-input-model';
 import { describedBy } from './described-by';
 import { FieldMessages } from './field-messages';
@@ -16,29 +17,32 @@ export interface PersianDateFieldProps {
   required?: boolean;
   /** an error owned by the caller (e.g. a range out of order) */
   error?: string | null;
+  /** `persian` (default) or `gregorian`: typed in the plant date format instead of the browser's picker */
+  calendar?: CalendarSystem;
 }
 
 /**
- * Jalali text entry `YYYY/MM/DD` (Latin or Persian digits, `/` or `-`). Parses on blur and Enter,
- * keeps unreadable text visible with an inline error, and shows the Gregorian equivalent as a hint.
+ * Text entry in the plant date format: Jalali `YYYY/MM/DD` (Latin or Persian digits, `/` or `-`) with the
+ * Gregorian equivalent as a hint, or Gregorian `YYYY-MM-DD`. Parses on blur and Enter and keeps unreadable
+ * text visible with an inline error.
  */
-export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error }: PersianDateFieldProps) {
-  const [text, setText] = useState(() => dateToText(value, 'persian'));
+export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error, calendar = 'persian' }: PersianDateFieldProps) {
+  const [text, setText] = useState(() => dateToText(value, calendar));
   const [ownError, setOwnError] = useState<string | null>(null);
   const hintId = useId();
   const errorId = useId();
 
   useEffect(() => {
-    setText(dateToText(value, 'persian'));
+    setText(dateToText(value, calendar));
     setOwnError(null);
-  }, [value]);
+  }, [value, calendar]);
 
   const commit = () => {
-    const parsed = parseDateText(text, 'persian');
-    const problem = parsed.error ?? boundsError(parsed.value, 'persian', min, max);
+    const parsed = parseDateText(text, calendar);
+    const problem = parsed.error ?? boundsError(parsed.value, calendar, min, max);
     setOwnError(problem);
     if (problem) return;
-    setText(dateToText(parsed.value, 'persian'));
+    setText(dateToText(parsed.value, calendar));
     if (parsed.value !== value) onChange(parsed.value);
   };
 
@@ -50,7 +54,7 @@ export function PersianDateField({ id, value, onChange, ariaLabel, min, max, dis
   };
 
   const shownError = ownError ?? error ?? null;
-  const hint = value && !ownError ? `Gregorian ${value}` : null;
+  const hint = calendar === 'persian' && value && !ownError ? `Gregorian ${value}` : null;
   const messages = { hintId, hint, errorId, error: shownError };
   return (
     <div>
@@ -59,7 +63,7 @@ export function PersianDateField({ id, value, onChange, ariaLabel, min, max, dis
         type="text"
         inputMode="numeric"
         autoComplete="off"
-        placeholder="YYYY/MM/DD"
+        placeholder={calendar === 'persian' ? 'YYYY/MM/DD' : 'YYYY-MM-DD'}
         dir="ltr"
         value={text}
         aria-label={ariaLabel}

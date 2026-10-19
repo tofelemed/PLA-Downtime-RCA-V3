@@ -1,4 +1,4 @@
-import type { GridWorkflowState, ResidualState } from '@/api/v2/types/period-overview';
+import type { GridWorkflowState, ResidualState, RevisionSelector } from '@/api/v2/types/period-overview';
 import { datesFromRange } from '@/features/ux-kit/date-inputs';
 import { startOfPlantDayUtc } from '@/lib/dates';
 import type { PlanWindow } from './period-neighbours';
@@ -13,7 +13,7 @@ export const RESIDUAL_FILTERS = {
 } as const satisfies Record<string, { label: string; states: readonly ResidualState[] }>;
 
 export type ResidualFilter = keyof typeof RESIDUAL_FILTERS;
-export type GridParamKey = 'state' | 'date' | 'residual';
+export type GridParamKey = 'state' | 'date' | 'residual' | 'view';
 
 const isResidualFilter = (value: string): value is ResidualFilter => Object.prototype.hasOwnProperty.call(RESIDUAL_FILTERS, value);
 
@@ -24,12 +24,14 @@ export function residualStatesOf(filter: ResidualFilter | ''): ResidualState[] {
 
 /**
  * The grid's URL filters: `state` (workflow state of the shown revision), `date` (go to a plant date) and
- * `residual` (plan-ledger residual state of the shown revision).
+ * `residual` (plan-ledger residual state of the shown revision) and `view=approved` ("Figures of" the
+ * approved revision only; absent = the current revision), so a reload or a shared link keeps them all.
  */
 export interface GridParams {
   workflow: GridWorkflowState | '';
   date: string;
   residual: ResidualFilter | '';
+  view: RevisionSelector;
 }
 
 export function parseGridParams(search: URLSearchParams): GridParams {
@@ -40,6 +42,7 @@ export function parseGridParams(search: URLSearchParams): GridParams {
     workflow: (GRID_STATES as readonly string[]).includes(state) ? (state as GridWorkflowState) : '',
     date: DATE.test(date) ? date : '',
     residual: isResidualFilter(residual) ? residual : '',
+    view: search.get('view') === 'approved' ? 'approved' : 'current',
   };
 }
 

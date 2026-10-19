@@ -13,10 +13,20 @@ export async function casePolicy(
   rca: Pick<RCA, 'tenantId' | 'unitId'>,
   at: Date,
 ): Promise<RcaPolicy> {
+  return (await casePolicyVersion(manager, policies, rca, at)).policy;
+}
+
+/** `casePolicy` with the version number it came from (frozen with an action's criteria, QA L11). */
+export async function casePolicyVersion(
+  manager: EntityManager,
+  policies: AccountingPoliciesService,
+  rca: Pick<RCA, 'tenantId' | 'unitId'>,
+  at: Date,
+): Promise<{ policy: RcaPolicy; version: number }> {
   const found = await policies.rcaPolicyInForce(
     manager,
     { tenantId: rca.tenantId ?? '', unitId: rca.unitId ?? null },
     at,
   );
-  return parseRcaPolicy(found.body);
+  return { policy: parseRcaPolicy(found.body), version: found.version };
 }

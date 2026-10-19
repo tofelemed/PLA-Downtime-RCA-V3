@@ -36,7 +36,8 @@ import {
 const RULES =
   'Writers: reliability engineer or manager approver, in the case scope. Locked once closure is requested ' +
   '(Closure Review, Closed: 422 CAUSES_LOCKED). A retired catalogue cause cannot be newly assigned (422 ' +
-  'CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).';
+  'CAUSE_CODE_RETIRED); evidenceIds / nodeIds must be items of the case (422 INVALID_REFERENCE).' +
+  ' 409 CASE_CLOSED on a closed investigation (reopen it first).';
 
 /** Typed causes of a case (item 7), linked to the cause catalogue. */
 @ApiTags('v2 · RCA')

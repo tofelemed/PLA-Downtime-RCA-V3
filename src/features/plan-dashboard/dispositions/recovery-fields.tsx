@@ -1,6 +1,7 @@
 import { Label } from '@/components/ui/label';
 import { useLotDispositions } from '@/api/v2/queries/lot-dispositions';
 import { DISPOSITION_CLASS_LABELS, RECOVERABLE_CLASSES } from '@/features/ux-kit/disposition-labels';
+import { RequiredMarker } from '@/features/ux-kit/form-field';
 import { labelOf } from '@/features/ux-kit/labels';
 import type { DispositionFormValues } from '../model/disposition-form';
 
@@ -25,8 +26,11 @@ export function RecoveryFields({ unitId, before, values, error, set }: RecoveryF
   return (
     <>
       <div className="space-y-1">
-        <Label htmlFor="dispRecoveryOf">Recovers</Label>
-        <select id="dispRecoveryOf" className={SELECT} value={values.recoveryOfId} onChange={(e) => set('recoveryOfId', e.target.value)}>
+        <Label htmlFor="dispRecoveryOf">
+          Recovers
+          <RequiredMarker />
+        </Label>
+        <select id="dispRecoveryOf" required className={SELECT} value={values.recoveryOfId} onChange={(e) => set('recoveryOfId', e.target.value)}>
           <option value="">— choose the original disposition —</option>
           {options.map((d) => (
             <option key={d.id} value={d.id}>{`${d.lotCode} · ${labelOf(DISPOSITION_CLASS_LABELS, d.dispositionClass)} · ${d.quantity} ${d.uom}`}</option>

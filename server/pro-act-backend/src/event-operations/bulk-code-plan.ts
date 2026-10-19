@@ -163,6 +163,16 @@ export function codingPatch(
   return columns;
 }
 
+/** True when the bulk coding changes anything of the event's coding (QA audit F5: "events change"). */
+export function codingChanged(
+  before: CodingSnapshot,
+  after: CodingSnapshot,
+): boolean {
+  return (Object.keys(before) as Array<keyof CodingSnapshot>).some(
+    (key) => before[key] !== after[key],
+  );
+}
+
 export function codingSnapshot(
   event: Partial<ProductionEvent>,
 ): CodingSnapshot {

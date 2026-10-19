@@ -26,6 +26,7 @@ import {
   ExportReportType,
   ExportSelector,
 } from './entities/export-job.entity';
+import { pinnedLabelsOf } from './export-labels';
 import { presentationOf } from './export-presentation';
 import { ExportReadsService } from './export-reads.service';
 import { namedRevisionUnits, pinNamed, pinPublished } from './export-sources';
@@ -124,7 +125,10 @@ export class ExportRequestsService {
       );
       const accepted = await plan.pin(manager, { tenantId, jobId: job.id });
       assertExportSize(body.format, accepted);
-      await manager.update(ExportJob, job.id, { counts: countsOf(accepted) });
+      await manager.update(ExportJob, job.id, {
+        counts: countsOf(accepted),
+        labels: await pinnedLabelsOf(manager, job),
+      });
       await this.audit(manager, job, context, 'export.requested');
       return manager.findOneByOrFail(ExportJob, { id: job.id });
     });

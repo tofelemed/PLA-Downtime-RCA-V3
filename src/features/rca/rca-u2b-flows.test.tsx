@@ -51,7 +51,7 @@ describe('RCA UX remediation flows (U2b)', () => {
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <CaseWorkspaceContext.Provider value={{ rca: CASE, readOnly: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
+          <CaseWorkspaceContext.Provider value={{ rca: CASE, readOnly: false, canWrite: true, closed: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -183,7 +183,7 @@ describe('RCA UX remediation flows (U2b)', () => {
     wrap(<CaseTrace />);
     const trigger = await screen.findByTestId('case-trigger');
     expect(within(trigger).getByRole('link')).toHaveAttribute('href', '/events/e1');
-    expect(trigger.textContent).toContain('Downtime from');
+    expect(trigger.textContent).toContain('Stop from');
     const loss = await screen.findByTestId('case-approved-loss');
     expect(loss.textContent).toContain('412');
     expect(loss.textContent).toContain('t');

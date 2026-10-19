@@ -72,6 +72,19 @@ export const RCA_ACTION_STATUS_TONES: Readonly<Record<string, StatusTone>> = {
   cancelled: 'neutral',
 };
 
+/** Recommendation of an investigation: the same tone as an action in the same state (QA L3). */
+export const RCA_RECOMMENDATION_STATUS_TONES: Readonly<Record<string, StatusTone>> = {
+  Open: 'neutral',
+  open: 'neutral',
+  Planned: 'info',
+  'In Progress': 'info',
+  in_progress: 'info',
+  Completed: 'success',
+  done: 'success',
+  Cancelled: 'neutral',
+  cancelled: 'neutral',
+};
+
 /** Integration console health (`ok / busy / idle / warning / error`, model/job-states). */
 export const INTEGRATION_TONES: Readonly<Record<string, StatusTone>> = {
   ok: 'success',

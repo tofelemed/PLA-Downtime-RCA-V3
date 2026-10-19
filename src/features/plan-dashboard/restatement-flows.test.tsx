@@ -65,8 +65,53 @@ describe('restatement delta and posting (SME R5)', () => {
     wrap();
     fireEvent.change(await screen.findByTestId('posting-date'), { target: { value: '2026-11-03' } });
     fireEvent.click(screen.getByTestId('posting-save'));
+    expect(posts).toHaveLength(0);
+    fireEvent.click(await screen.findByRole('button', { name: 'Save posting' }));
     await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0].url.pathname).toMatch(/\/v2\/production-periods\/p1\/revisions\/2\/posting$/);
     expect(posts[0].body).toEqual({ postingDate: '2026-11-03', treatment: 'correction' });
+  });
+
+  it('a decided posting is read-only and says who decided it and when', async () => {
+    actAs('finance_approver', 'f1');
+    const decided: RestatementView = {
+      ...DELTA,
+      posting: { postingDate: '2026-11-03', treatment: 'correction', note: null, decidedBy: 'f2', decidedByName: 'Kamran', decidedAt: '2026-11-03T08:00:00.000Z' },
+    };
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, decided)));
+    wrap();
+    const text = await screen.findByTestId('posting-decided');
+    expect(text.textContent).toContain('decided by Kamran');
+    expect(text.textContent).toContain('a correction');
+    expect(screen.queryByTestId('posting-form')).toBeNull();
+    expect(screen.queryByTestId('posting-save')).toBeNull();
+    expect(screen.getByTestId('posting-final').textContent).toContain('propose a correction');
+  });
+
+  it('a value-only restatement shows the loss value before and after (default view per side)', async () => {
+    actAs('manager_approver', 'm1');
+    const valueOnly: RestatementView = {
+      ...DELTA,
+      totals: [{ uom: 't', figures: { actual: { old: '189', new: '189', delta: '0' } } }],
+      actuals: [],
+      lines: [],
+      values: {
+        oldView: 'economic_impact',
+        newView: 'contribution_margin',
+        viewChanged: true,
+        currencies: [
+          { currency: 'USD', old: '5040', new: '5250', delta: '210' },
+          { currency: 'IRR', old: '3024000000', new: '3150000000', delta: '126000000' },
+        ],
+      },
+    };
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, valueOnly)));
+    wrap();
+    const rows = await screen.findAllByTestId('restatement-value');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('Loss value (Economic impact (lost sales + incremental costs) → Contribution margin)');
+    expect(rows[0].textContent).toContain('5,040.00 USD');
+    expect(rows[0].textContent).toContain('5,250.00 USD');
+    expect(rows[0].textContent).toContain('210.00 USD');
   });
 });

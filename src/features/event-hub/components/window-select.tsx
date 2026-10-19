@@ -5,7 +5,8 @@ import { presetWindow, WINDOW_PRESETS } from '../model/event-filters';
 import type { RelativeWindowKey } from '../model/relative-window';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useShiftWindows } from '../hooks/use-shift-windows';
-import { CustomRangePopover, type InstantBounds } from './custom-range-popover';
+import type { InstantBounds } from '../model/custom-range';
+import { CustomRangePopover } from './custom-range-popover';
 
 export interface ChosenWindow {
   from: string;

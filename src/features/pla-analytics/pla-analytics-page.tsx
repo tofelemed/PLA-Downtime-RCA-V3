@@ -55,7 +55,7 @@ function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="pla-analytics-v2" data-view={view}>
-        <AnalyticsHeader scope={scope} title={`Production Loss Analysis · ${page.label}`} description={page.description} overview={view === 'overview'} />
+        <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} description={page.description} overview={view === 'overview'} />
         <AnalysisPageNav label="Production loss analysis pages" pages={PLA_PAGES} />
         <AnalyticsFilters scope={scope} onChange={change} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />
         <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>

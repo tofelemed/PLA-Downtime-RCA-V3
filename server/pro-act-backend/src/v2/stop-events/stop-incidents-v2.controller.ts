@@ -23,6 +23,8 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { EVENT_WRITERS } from '../production-events/event-write-roles';
 import { listResponse, ListResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
@@ -74,6 +76,7 @@ export class StopIncidentsV2Controller {
   }
 
   @Post('new-failure-marks')
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @ApiOperation({
     summary: 'Mark a stop as a new failure (function restored before it)',
@@ -99,6 +102,7 @@ export class StopIncidentsV2Controller {
   }
 
   @Delete('new-failure-marks/:occurrenceId')
+  @Roles(...EVENT_WRITERS)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary:

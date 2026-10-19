@@ -38,6 +38,8 @@ interface MonthCloseBody {
     pendingCount: number;
     pending: Array<{ periodId: string; workflow: string }>;
     missingPeriodCount: number;
+    uncoveredDayCount: number;
+    uncoveredDays: Array<{ unitName: string | null; shifts: number }>;
     monthEnded: boolean;
     monthEndsAt: string;
     openProposalCount: number;
@@ -189,10 +191,37 @@ describe('month close (SME R1 / R4)', () => {
     ).toBe(3);
   });
 
-  it('a scheduled shift of the month without a production period blocks the close', async () => {
+  it('a scheduled shift no approved plan covers is information; a planned shift without a production period blocks the close', async () => {
+    // owner decision 2026-10-19: the world's plan covers 1 Mar 2027 only — the other scheduled days wait for a plan
+    const unplanned = await month();
+    expect(unplanned.prerequisites).toMatchObject({
+      monthEnded: true,
+      missingPeriodCount: 0,
+      periods: 3,
+    });
+    expect(unplanned.prerequisites.uncoveredDayCount).toBeGreaterThan(0);
+    expect(unplanned.prerequisites.uncoveredDays[0]).toMatchObject({
+      unitName: expect.any(String) as string,
+      shifts: expect.any(Number) as number,
+    });
+    // an approved plan version now covers one of those shifts: it is expected and blocks the close
+    await env.rows(
+      `INSERT INTO plan_periods (tenant_id, row_version, plan_version_id, slice_id, unit_id, shift_instance_id,
+              calendar_version_id, utc_start, utc_end, local_date, shift_name, scheduled_seconds, target,
+              quantity_uom, profile_id, is_excluded)
+       SELECT pp.tenant_id, 1, pp.plan_version_id, pp.slice_id, pp.unit_id, si.id, pp.calendar_version_id,
+              si.utc_start, si.utc_end, si.local_date, si.shift_name, pp.scheduled_seconds, pp.target,
+              pp.quantity_uom, pp.profile_id, false
+         FROM plan_periods pp
+         JOIN shift_instances si ON si.tenant_id = pp.tenant_id AND si.unit_id = pp.unit_id
+        WHERE pp.tenant_id = $1 AND NOT si.is_excluded AND si.local_date >= '2027-02-20' AND si.local_date < '2027-03-21'
+          AND NOT EXISTS (SELECT 1 FROM production_periods p WHERE p.unit_id = si.unit_id
+                AND tstzrange(p.utc_start, p.utc_end, '[)') && tstzrange(si.utc_start, si.utc_end, '[)'))
+        ORDER BY si.utc_start LIMIT 1`,
+      [env.world.tenantA],
+    );
     const body = await month();
-    expect(body.prerequisites.monthEnded).toBe(true);
-    expect(body.prerequisites.missingPeriodCount).toBeGreaterThan(0);
+    expect(body.prerequisites.missingPeriodCount).toBe(1);
     const refused = await step('close-quantities', env.approver).expect(422);
     expect(refused.body).toMatchObject({
       code: 'CLOSE_PREREQUISITES',
@@ -205,7 +234,12 @@ describe('month close (SME R1 / R4)', () => {
             AND tstzrange(p.utc_start, p.utc_end, '[)') && tstzrange(si.utc_start, si.utc_end, '[)'))`,
       [env.world.tenantA],
     );
-    expect((await month()).prerequisites.missingPeriodCount).toBe(0);
+    // the planned copy of the deleted shift stays frozen in its plan version; nothing is scheduled there now
+    const cleared = await month();
+    expect(cleared.prerequisites).toMatchObject({
+      missingPeriodCount: 0,
+      uncoveredDayCount: 0,
+    });
   });
 
   it('materiality routing: an adjustment at the policy threshold needs the extra review', async () => {

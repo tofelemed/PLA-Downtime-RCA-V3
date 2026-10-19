@@ -16,6 +16,8 @@ import {
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { EVENT_WRITERS } from '../production-events/event-write-roles';
 import { EventRevisionService } from '../../production-event/revisions/event-revision.service';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
@@ -32,6 +34,7 @@ export class EventReviewItemsV2Controller {
   constructor(private readonly revisions: EventRevisionService) {}
 
   @Post(':id/resolve')
+  @Roles(...EVENT_WRITERS)
   @Idempotent()
   @HttpCode(200)
   @ApiOperation({

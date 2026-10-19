@@ -28,6 +28,7 @@ function fixture() {
     },
     detail: { reason: 'loss_event_changed' },
     manual: null,
+    valueAfter: null,
     affectedReports: [],
     resolvedBy: null,
     resolvedAt: null,

@@ -37,6 +37,7 @@ function AssetEditor({ asset, unitId }: { asset: MasterAssetView | null; unitId?
       onChange={editor.patch}
       onSave={() => void editor.save()}
       saving={editor.saving}
+      dirty={editor.dirty}
       isNew={asset === null}
       readOnly={!canWrite || asset?.retiredAt != null}
     />

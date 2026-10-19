@@ -18,8 +18,9 @@ const NotFound = ({ embedded = false }: NotFoundProps) => {
   return (
     <Frame className={embedded ? 'flex min-h-[50vh] items-center justify-center' : 'flex min-h-screen items-center justify-center bg-background p-4'}>
       <div className="max-w-md space-y-3 text-center">
-        <h1 className="text-4xl font-bold">404</h1>
-        <p className="text-lg text-muted-foreground">This page does not exist.</p>
+        <p className="text-4xl font-bold text-muted-foreground" aria-hidden="true">404</p>
+        <h1 className="text-2xl font-semibold">Page not found</h1>
+        <p className="text-muted-foreground">This page does not exist.</p>
         <p className="break-all font-mono text-sm text-muted-foreground">{location.pathname}</p>
         <Button asChild>
           <Link to="/dashboard">Go to the dashboard</Link>

@@ -67,15 +67,15 @@ export function MyOverdueActionsTile() {
   );
 }
 
-/** Records waiting for the caller's approval roles: opens the inbox, or the one record's approval page when only one waits. */
+/** Records the caller can decide: opens the inbox, or the one record's approval page when only one waits. */
 export function ApprovalsTile() {
-  const inbox = useApprovalInbox();
+  const inbox = useApprovalInbox(undefined, true);
   const first = inbox.query.data?.pages[0];
   const retry = inbox.status.onRetry;
   const count = usePageCount(first);
   const to = pendingApprovalsHref(first);
   return (
-    <ForYouTile testId="for-you-approvals" title="Pending approvals" note="Waiting for your approval roles" to={to} openLabel={to === '/approvals' ? undefined : 'open it'}
+    <ForYouTile testId="for-you-approvals" title="Pending approvals" note="Waiting for your decision" to={to} openLabel={to === '/approvals' ? undefined : 'open it'}
       count={count} loading={inbox.status.isLoading} failed={inbox.status.isError} onRetry={retry} />
   );
 }

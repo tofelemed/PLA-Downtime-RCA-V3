@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCodeRoots } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { LIBRARIES } from '../model/code-fields';
+import { CODE_LIBRARY_EMPTY, LIBRARIES } from '../model/code-fields';
 import { CodeStatusBadge } from './code-status-badge';
 
 export interface CodeFlatTableProps {
@@ -35,7 +35,7 @@ export function CodeFlatTable({ library, includeRetired }: CodeFlatTableProps) {
       getRowKey={(code) => code.id}
       pager={codes.pager}
       status={codes.status}
-      empty={{ title: 'No codes yet', text: 'Create the first code of this library.' }}
+      empty={CODE_LIBRARY_EMPTY}
       onRowClick={(code) => navigate(`/master-data/codes-rules/${library}/${code.id}`)}
       rowLabel={(code) => `${code.code} ${code.name}`}
     />

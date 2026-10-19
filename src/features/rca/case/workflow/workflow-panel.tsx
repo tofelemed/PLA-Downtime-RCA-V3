@@ -41,7 +41,7 @@ function ApproverNote({ readiness }: { readiness: RcaCaseReadinessView }) {
  * advice, the effectiveness verdict, the closure request and approval and the same-problem events.
  */
 export function WorkflowPanel() {
-  const { rca, readOnly, basePath } = useCaseWorkspace();
+  const { rca, canWrite, basePath } = useCaseWorkspace();
   const readiness = useRcaReadiness(rca.id);
   return (
     <Section id="rca-workflow" title="Workflow" description="Investigation → monitoring of the actions → closure approval. SuperAdmin may approve their own investigation; other approvers must be independent.">
@@ -57,7 +57,7 @@ export function WorkflowPanel() {
             <WorkflowFacts rca={rca} readiness={readiness.data} />
             <Gates readiness={readiness.data} causesPath={`${basePath}/analysis#${CAUSES_ANCHOR}`} />
             <ApproverNote readiness={readiness.data} />
-            {!readOnly && <MoveControls key={`${rca.id}:${rca.rowVersion}`} readiness={readiness.data} />}
+            {canWrite && <MoveControls key={`${rca.id}:${rca.rowVersion}`} readiness={readiness.data} />}
           </div>
         )}
       </DataState>

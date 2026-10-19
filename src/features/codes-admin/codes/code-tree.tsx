@@ -4,6 +4,8 @@ import type { CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { ListPager } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { EmptyMessage } from '@/features/ux-kit/data-table/data-table-states';
+import { CODE_LIBRARY_EMPTY } from '../model/code-fields';
 import { CodeTreeNode, type CodeTreeContext } from './code-tree-node';
 
 export interface CodeTreeProps {
@@ -30,9 +32,16 @@ export function CodeTree({ library, includeRetired }: CodeTreeProps) {
     [],
   );
   const tree: CodeTreeContext = { library, includeRetired, isExpanded: (id) => expanded.has(id), toggle, seed: (code) => seedCode(library, code) };
-  const state = dataStateOf(roots.status, { isEmpty: !roots.status.isLoading && roots.rows.length === 0 });
+  const state = dataStateOf(roots.status, { isEmpty: false });
+  if (state === 'ready' && roots.rows.length === 0) {
+    return (
+      <div className="rounded-md border p-6" data-testid="code-tree-empty">
+        <EmptyMessage empty={CODE_LIBRARY_EMPTY} />
+      </div>
+    );
+  }
   return (
-    <DataState state={state} error={roots.status.error} onRetry={roots.status.onRetry} detail="No codes yet in this library.">
+    <DataState state={state} error={roots.status.error} onRetry={roots.status.onRetry}>
       <div className="space-y-3">
         <ul aria-label="Codes" className="rounded-md border p-1" data-testid="code-tree">
           {roots.rows.map((code) => (

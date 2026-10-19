@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { WINDOW_PRESETS } from '@/features/downtime-analysis/model/downtime-filters';
 import { useCalendarPreference } from '@/lib/dates';
 import { UiIcon } from '@/lib/icons';
-import { presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
+import { CHOSEN_DATES, presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
 import { windowRangeText } from '../model/window-range';
+import { PlantDaysInput } from './plant-days-input';
 
 export interface WindowRangeControlProps {
   scope: AnalyticsScope;
@@ -42,9 +42,7 @@ export function WindowRangeControl({ scope, timeZone, onChange }: WindowRangeCon
             </Button>
           ))}
         </div>
-        <DateRangeInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={timeZone} onChange={(range) => {
-          if (range.from && range.to) onChange({ from: range.from, to: range.to, windowLabel: 'Chosen dates' });
-        }} />
+        <PlantDaysInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={timeZone} onChange={(range) => onChange({ ...range, windowLabel: CHOSEN_DATES })} />
       </PopoverContent>
     </Popover>
   );

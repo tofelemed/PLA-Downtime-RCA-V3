@@ -19,15 +19,26 @@ export interface GrantHolder {
   tenantId: string | null;
   organizationId: string | null;
   isActive: boolean;
+  /** roles of the holder's plant-wide grants in its home plant (unknown = treat the mirror as the only one) */
+  homePlantRoles?: readonly string[];
 }
 
-/** The grant mirrors the user's legacy role in its home plant (changed through the role, not here). */
+/**
+ * The grant mirrors the user's legacy role in its home plant and is the user's only plant role there
+ * (changed through the role, not here). QA audit 2026-10-19: once the user holds another role in the plant,
+ * plant-wide, the mirror is an ordinary grant and may be revoked, so a user can hold exactly the guide's role; the
+ * D06 mapping does not come back while any own grant remains (`legacyRolesApplying`).
+ */
 export function isHomeScope(scope: UserScope, holder: GrantHolder): boolean {
-  return (
+  const mirror =
     scope.scopeKind === 'tenant' &&
     scope.scopeId === holder.tenantId &&
-    scope.role === mapLegacyRole(holder.role)
+    scope.role === mapLegacyRole(holder.role);
+  if (!mirror) return false;
+  const others = (holder.homePlantRoles ?? []).filter(
+    (role) => role !== scope.role,
   );
+  return others.length === 0;
 }
 
 /** A non-SuperAdmin manages only holders ranked strictly below itself (no peers, no superiors). */

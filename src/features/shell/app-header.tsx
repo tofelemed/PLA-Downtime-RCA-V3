@@ -54,7 +54,7 @@ export function AppHeader({ branding, navigation }: AppHeaderProps) {
       {navigation && <MenuButton open={navigation.open} onOpen={navigation.onOpen} />}
       <div className="flex min-w-0 items-center gap-2">
         <BrandMark branding={branding} />
-        <div className="hidden min-w-0 leading-tight sm:block">
+        <div className="hidden min-w-0 leading-tight lg:block">
           <div className="truncate text-sm font-semibold">{branding?.appName || DEFAULT_NAME}</div>
           {branding?.appSubtitle && <div className="hidden truncate text-xs text-muted-foreground xl:block">{branding.appSubtitle}</div>}
         </div>

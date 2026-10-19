@@ -4,10 +4,11 @@ import { labelOf, SAMPLE_QUALITY_LABELS } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Field } from '../components/field';
 import { NativeSelect } from '../components/native-select';
-import { sampleValue, type SignalSample } from './historian-model';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { sampleDisplayValue, type SignalSample } from './historian-model';
 
 export interface SamplesTableProps {
-  series: ReadonlyArray<{ id: string; name: string; samples: readonly SignalSample[] }>;
+  series: ReadonlyArray<{ id: string; name: string; samples: readonly SignalSample[]; /** canonical unit of measure */ uom?: string | null }>;
   timezone: string;
 }
 
@@ -16,14 +17,16 @@ export function SamplesTable({ series, timezone }: SamplesTableProps) {
   const [chosen, setChosen] = useState('');
   const shown = series.find((entry) => entry.id === chosen) ?? series[0];
   const rows = useMemo(() => (shown ? shown.samples.filter((sample) => sample.inWindow) : []), [shown]);
+  const { digits } = useNumberFormat();
+  const uom = shown?.uom ?? null;
   const columns = useMemo<DataTableColumn<SignalSample>[]>(
     () => [
       { id: 'time', header: 'Time', nowrap: true, cell: (sample) => <PlantTime iso={sample.observedAt} tz={timezone} withDate /> },
-      { id: 'value', header: 'Value', align: 'right', nowrap: true, cell: sampleValue },
+      { id: 'value', header: uom ? `Value (${uom})` : 'Value', align: 'right', nowrap: true, cell: (sample) => sampleDisplayValue(sample, digits) },
       { id: 'quality', header: 'Quality', nowrap: true, cell: (sample) => labelOf(SAMPLE_QUALITY_LABELS, sample.quality) },
       { id: 'revisions', header: 'Revisions', align: 'right', nowrap: true, cell: (sample) => sample.revisions },
     ],
-    [timezone],
+    [timezone, uom, digits],
   );
   if (!shown) return null;
   return (

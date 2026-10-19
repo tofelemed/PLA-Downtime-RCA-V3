@@ -6,6 +6,18 @@ export type ConsequenceClass = (typeof CONSEQUENCE_CLASSES)[number];
 /** Analysis method keys the server accepts in method groups (backend `ANALYSIS_METHODS`). */
 export const ANALYSIS_METHOD_KEYS = ['timeline', 'five_why', 'fishbone', 'logic_tree', 'fault_tree', 'fmea', 'barrier', 'change'] as const;
 
+/** Analysis methods in words (QA L9: never `five_why` / `logic_tree` on screen). */
+export const ANALYSIS_METHOD_LABELS: Readonly<Record<string, string>> = {
+  timeline: 'Timeline',
+  five_why: '5-Why',
+  fishbone: 'Fishbone',
+  logic_tree: 'Logic tree',
+  fault_tree: 'Fault tree',
+  fmea: 'FMEA',
+  barrier: 'Barrier analysis',
+  change: 'Change analysis',
+};
+
 /** The workflow rule sections as typed (SME CA2–CA7); the server parser re-validates every value. */
 export interface RcaRulesDraft {
   baselineLookbackDays: string;
@@ -80,6 +92,12 @@ const percentOf = (value: string, allowZero: boolean): number | null => {
   const parsed = Number(trimmed);
   return (allowZero ? parsed >= 0 : parsed > 0) && parsed <= 100 ? parsed : null;
 };
+
+/** Inline error of a typed percent (QA L9: an out-of-range value says why Save is disabled), null when valid. */
+export function percentError(value: string, allowZero: boolean): string | null {
+  if (percentOf(value, allowZero) !== null) return null;
+  return allowZero ? 'Enter a percentage from 0 to 100.' : 'Enter a percentage above 0, up to 100.';
+}
 
 function effectivenessOf(draft: RcaRulesDraft): RcaPolicyRules['effectiveness'] | null {
   const baselineLookbackDays = whole(draft.baselineLookbackDays, 1);

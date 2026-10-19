@@ -1,6 +1,12 @@
 import { type DigitSystem, localizeNumber } from '@/lib/dates';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { labelOf } from '@/features/ux-kit/labels';
+import { RCA_CONSEQUENCE_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import type { RcaPolicyVersion, RcaRepeatMatch } from './rca-policy-api';
+import { ANALYSIS_METHOD_LABELS } from './rca-policy-rules-draft';
+
+/** The server's coverage default for versions written before the rule existed. */
+const DEFAULT_MINIMUM_COVERAGE = 0.95;
 
 export const REPEAT_MATCH_LABELS: Readonly<Record<RcaRepeatMatch, string>> = {
   asset: 'the same asset (any failure mode)',
@@ -46,13 +52,15 @@ export function overrideText(policy: RcaPolicyVersion, digits?: DigitSystem): st
 /** The workflow rules of the version (read-only on this page; SME CA2–CA7). */
 export function ruleFacts(policy: RcaPolicyVersion, digits?: DigitSystem): Array<{ label: string; value: string }> {
   const { effectiveness, fmea, fiveWhy, investigation } = policy;
+  const method = (key: string) => labelOf(ANALYSIS_METHOD_LABELS, key);
   const tiers = Object.entries(investigation)
-    .map(([name, tier]) => `${name}: ${tier.methodGroups.map((group) => group.join(' or ')).join(' + ')} (team ≥ ${number(tier.minTeamMembers, digits)})`)
+    .map(([name, tier]) => `${labelOf(RCA_CONSEQUENCE_LABELS, name)}: ${tier.methodGroups.map((group) => group.map(method).join(' or ')).join(' + ')} (team ≥ ${number(tier.minTeamMembers, digits)})`)
     .join('; ');
+  const coverage = effectiveness.minimumCoverage ?? DEFAULT_MINIMUM_COVERAGE;
   return [
     {
       label: 'Effectiveness',
-      value: `baseline ${number(effectiveness.baselineLookbackDays, digits)} days before the action; at least ${number(effectiveness.minExposureHours, digits)} run hours after; ${percent(effectiveness.requiredReduction, digits)} fewer same-mode incidents per run hour; review after ${number(effectiveness.reviewDays, digits)} days`,
+      value: `baseline ${number(effectiveness.baselineLookbackDays, digits)} days before the action; at least ${number(effectiveness.minExposureHours, digits)} run hours after; ${percent(effectiveness.requiredReduction, digits)} fewer same-mode incidents per run hour; a verdict needs at least ${percent(coverage, digits)} state-data coverage; review after ${number(effectiveness.reviewDays, digits)} days`,
     },
     {
       label: 'FMEA',

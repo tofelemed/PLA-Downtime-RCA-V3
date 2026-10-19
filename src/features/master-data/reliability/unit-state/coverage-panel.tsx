@@ -32,11 +32,17 @@ function CoverageFacts({ coverage, format }: { coverage: StateCoverage; format: 
 }
 
 function CoverageResult({ view, format }: { view: UnitStateCoverageView; format: ReliabilityFormat }) {
-  if (!view.coverage) return <p className="text-sm text-muted-foreground">The unit has no state mapping at the start of this window.</p>;
+  if (!view.coverage) return <p className="text-sm text-muted-foreground">The unit has no state mapping in this window.</p>;
+  const startsAt = view.coverageStartsAt ?? null;
   return (
     <div className="space-y-3">
+      {startsAt && (
+        <p className="text-sm text-muted-foreground" data-testid="coverage-starts-at">
+          Coverage starts at {format.dateTime(startsAt)}, when the first state mapping came into force.
+        </p>
+      )}
       <CoverageFacts coverage={view.coverage} format={format} />
-      <StateTimeline segments={view.segments} from={view.from} to={view.to} format={format} />
+      <StateTimeline segments={view.segments} from={startsAt ?? view.from} to={view.to} format={format} />
       {view.truncated && <p className="text-xs text-muted-foreground">The timeline shows the first segments only; the figures count them all.</p>}
     </div>
   );

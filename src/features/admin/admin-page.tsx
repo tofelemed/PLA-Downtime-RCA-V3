@@ -4,9 +4,11 @@ import { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { StatusRulesMoved } from '@/features/codes-admin/status-rules-moved';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { adminPanelDescription } from './admin-panel-description';
 import { PageGate } from './shared/page-gate';
 
 const PlantsSection = lazy(() => import('./plants/plants-section').then((m) => ({ default: m.PlantsSection })));
@@ -49,7 +51,7 @@ export function AdminPage() {
   const [params] = useSearchParams();
   const mayReadSettings = params.get('tab') === 'settings' && canViewOperations;
   return (
-    <PageGate title="Admin panel" allowed={canUseAdminPanel || mayReadSettings} deniedText="You don't have permission to access the admin panel.">
+    <PageGate title={pageNameOf('/admin')} allowed={canUseAdminPanel || mayReadSettings} deniedText="You don't have permission to access the admin panel.">
       <AdminScreen />
     </PageGate>
   );
@@ -70,7 +72,7 @@ function AdminScreen() {
     });
   return (
     <Page width="wide">
-      <PageHeader title="Admin panel" description="Plants and organizations, custom attributes, branding and plant settings." actions={canUseUserManagement && <Button asChild variant="outline"><Link to="/users">User management</Link></Button>} />
+      <PageHeader title={pageNameOf('/admin')} description={adminPanelDescription(tabs.map((tab) => tab.value))} actions={canUseUserManagement && <Button asChild variant="outline"><Link to="/users">User management</Link></Button>} />
       <Tabs value={active} onValueChange={select}>
         <TabsList className="h-auto flex-wrap justify-start">
           {tabs.map((tab) => (

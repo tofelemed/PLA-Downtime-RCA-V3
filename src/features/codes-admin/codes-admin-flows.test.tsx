@@ -120,7 +120,7 @@ describe('codes & rules flows (plan 3.8)', () => {
     expect(refusal).toHaveAttribute('data-status', '409');
     expect(refusal.textContent).toContain('This code has sub-codes');
     expect(refusal.textContent).not.toMatch(/CODE_HAS_CHILDREN|c9|409/);
-    expect(screen.getByTestId('refusal-references').textContent).toContain('1 active sub-code(s), 4 event(s) and 2 default mapping version(s)');
+    expect(screen.getByTestId('refusal-references').textContent).toContain('1 active sub-code, 4 events and 2 default mapping versions');
     expect(calls.find((call) => call.method === 'POST')?.url.pathname).toBe('/api/v2/reason-codes/r1/retire');
   });
 
@@ -139,6 +139,14 @@ describe('codes & rules flows (plan 3.8)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show sub-codes of MECH' }));
     expect(await screen.findByText('MECH-BRG')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Hide sub-codes of MECH' })).toHaveAttribute('aria-expanded', 'true');
+    // QA M8 (axe `listitem`): every code row, nested ones too, sits directly in a list that keeps list semantics
+    const rows = screen.getAllByTestId('code-row');
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row.parentElement?.tagName).toBe('UL');
+      expect(row.parentElement?.getAttribute('role') ?? 'list').toBe('list');
+    }
+    expect(screen.getByRole('list', { name: 'Sub-codes of MECH' })).toBeTruthy();
   });
 
   it('search finds codes at any depth and says where they sit (lookup follows every page)', async () => {

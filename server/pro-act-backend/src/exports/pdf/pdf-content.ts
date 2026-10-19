@@ -1,5 +1,13 @@
 import { ExportReportType } from '../entities/export-job.entity';
+import { ExportLabels } from '../export-labels';
 import { ExportHeader, RenderSource } from '../export-report';
+import {
+  actualsQualityLabel,
+  kindLabel,
+  lineSourceLabel,
+  reasonText,
+  stateLabel,
+} from '../export-words';
 import { ExportPresentation, PdfColumn } from './pdf-model';
 import { lineValue, PrintedValue, sliceValue } from './pdf-value';
 import {
@@ -41,7 +49,7 @@ export const PDF_COLUMNS: Record<ExportReportType, readonly PdfColumn[]> = {
     col('Actual', 10),
     col('Gap', 10),
     col('Attributed', 10),
-    col('Residual', 10),
+    col('Unaccounted', 10),
     col('Loss value', 16),
     col('Actuals', 12, 'left'),
   ],
@@ -54,7 +62,7 @@ export const PDF_COLUMNS: Record<ExportReportType, readonly PdfColumn[]> = {
     col('UoM', 6, 'left'),
     col('Basis', 12, 'left'),
     col('Loss value', 14),
-    col('Note', 12, 'left'),
+    col('Reason', 12, 'left'),
   ],
 };
 
@@ -150,6 +158,7 @@ export function coverFacts(
     selectionFact(filters, f),
     ['Period revisions', plantNumber(String(header.sourceCount), 0, p.digits)],
     ['Requested', plantDateTime(header.requestedAt, f)],
+    ['Requested by', header.labels?.requestedByName ?? NO_VALUE],
     ['Time zone', p.timezone ?? 'UTC'],
     ['Money shown in', p.currency],
     ['Export id', header.jobId],
@@ -178,7 +187,7 @@ function summaryRows(source: RenderSource, p: ExportPresentation) {
       qty(slice.attributed, p),
       qty(slice.residual, p),
       valueCell(value),
-      actuals?.qualityState ?? NO_VALUE,
+      actualsQualityLabel(actuals?.qualityState) ?? NO_VALUE,
     ];
   });
   return { rows, values };
@@ -186,7 +195,13 @@ function summaryRows(source: RenderSource, p: ExportPresentation) {
 
 const OWN_QUANTITY_ACTIONS = new Set(['manual', 'replace', 'tolerance']);
 
-function lossRows(source: RenderSource, p: ExportPresentation) {
+const word = (text: string | null) => text ?? NO_VALUE;
+
+function lossRows(
+  source: RenderSource,
+  p: ExportPresentation,
+  labels: ExportLabels | null,
+) {
   const { reviewed } = source;
   const uomOf = (sliceId: string) =>
     reviewed.slices.find((s) => s.sliceId === sliceId)?.uom ?? NO_VALUE;
@@ -197,9 +212,9 @@ function lossRows(source: RenderSource, p: ExportPresentation) {
   };
   const candidates = reviewed.candidates.map((c) => [
     productOf(source, c.sliceId),
-    'calculated',
-    c.kind,
-    c.state,
+    word(lineSourceLabel('candidate')),
+    word(kindLabel(c.kind)),
+    word(stateLabel(c.state)),
     qty(c.effectiveQuantity ?? c.quantity, p),
     uomOf(c.sliceId),
     basisWords(c.basis),
@@ -211,15 +226,15 @@ function lossRows(source: RenderSource, p: ExportPresentation) {
         p.digits,
       ),
     ),
-    NO_VALUE,
+    word(reasonText(labels, c)),
   ]);
   const own = reviewed.lines
     .filter((l) => OWN_QUANTITY_ACTIONS.has(l.action))
     .map((l) => [
       productOf(source, l.sliceId),
-      l.action,
-      l.kind ?? NO_VALUE,
-      'in force',
+      word(lineSourceLabel(l.action)),
+      word(kindLabel(l.kind)),
+      word(stateLabel('in_force')),
       qty(l.quantity, p),
       l.uom ?? uomOf(l.sliceId),
       basisWords(l.basis),
@@ -231,7 +246,7 @@ function lossRows(source: RenderSource, p: ExportPresentation) {
           p.digits,
         ),
       ),
-      l.reason ?? NO_VALUE,
+      word(reasonText(labels, l)),
     ]);
   return { rows: [...candidates, ...own], values };
 }
@@ -241,10 +256,13 @@ export function sourceSection(
   type: ExportReportType,
   source: RenderSource,
   p: ExportPresentation,
+  labels: ExportLabels | null = null,
 ): PdfSection {
   const f = formatOf(p);
   const { rows, values } =
-    type === 'period_summary' ? summaryRows(source, p) : lossRows(source, p);
+    type === 'period_summary'
+      ? summaryRows(source, p)
+      : lossRows(source, p, labels);
   const provisional = values.some((v) => v.provisional);
   const unit = source.unitName ?? source.unitId;
   return {

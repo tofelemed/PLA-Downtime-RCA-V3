@@ -71,6 +71,14 @@ describe('My work page (UX audit §5.7)', () => {
     expect(calls.every((call) => call.url.pathname.endsWith('/reconciliation-queue'))).toBe(true);
   });
 
+  it('QA P-0: a row without its plan says no approved plan covers it and leads to Plans, not a dead end', async () => {
+    stubV2Fetch((call) => (call.url.pathname.endsWith('/reconciliation-queue') ? jsonResponse(200, listPage([{ ...base, planId: null }])) : undefined));
+    open();
+    const table = await screen.findByRole('table', { name: 'My reconciliation queue: Overdue' });
+    expect(within(table).getByTestId('no-plan')).toHaveTextContent('No approved plan covers this period');
+    expect(within(table).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning?tab=plans');
+  });
+
   it('RCA actions: embeds the user\'s own actions list', async () => {
     stubV2Fetch(reply);
     open('/my-queue?tab=rca-actions');

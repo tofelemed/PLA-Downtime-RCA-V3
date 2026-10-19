@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { ActionIcon } from '@/lib/icons';
 import { CurrentStopsPanel } from './components/current-stops-panel';
 import { EventFiltersBar } from './components/event-filters-bar';
 import { EventListDialogs } from './components/event-list-dialogs';
 import { EventTable } from './components/event-table';
+import { EventsReadOnlyHint } from './components/events-read-only-hint';
 import { ExportEventsButton } from './components/export-events-button';
 import { QuickStats } from './components/quick-stats';
 import { RcaTriggerSettingsLink } from './components/rca-trigger-settings-link';
@@ -58,7 +58,7 @@ function HeaderActions({ hub }: { hub: EventHubState }) {
           </Link>
         </Button>
       ) : (
-        <ReadOnlyHint />
+        <EventsReadOnlyHint />
       )}
     </>
   );

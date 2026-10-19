@@ -184,8 +184,10 @@ export interface UnitStateCoverageView {
   unitId: string;
   from: string;
   to: string;
-  /** null = the unit has no state mapping at `from` */
+  /** null = the unit has no state mapping in the window */
   coverage: StateCoverage | null;
+  /** set when the window starts before the first state mapping: coverage counts from this instant (QA M3) */
+  coverageStartsAt?: string | null;
   segments: StateSegmentView[];
   truncated: boolean;
 }

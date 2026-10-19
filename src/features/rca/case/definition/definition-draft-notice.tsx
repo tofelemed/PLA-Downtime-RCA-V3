@@ -12,7 +12,7 @@ export function DefinitionDraftNotice({ draft }: { draft: DefinitionEditorDraft 
       </div>
     </div>}
     {(draft.dirty || draft.pending) && draft.changed && <p role="status" className="rounded border border-warning/40 p-3 text-sm">
-      The case or plant timezone changed after these edits began. The draft keeps its original version and date basis; a conflicting save will be refused. Discard the draft to load the latest definition.
+      The investigation or plant timezone changed after these edits began. The draft keeps its original version and date basis; a conflicting save will be refused. Discard the draft to load the latest definition.
     </p>}
     {draft.dirty && <p role="status" className="text-sm text-muted-foreground">Unsaved definition changes. You can leave and restore them during this session; confirming a reload or closing this tab loses them.</p>}
     {draft.atCapacity && <div role="status" className="space-y-2 rounded border p-3 text-sm">

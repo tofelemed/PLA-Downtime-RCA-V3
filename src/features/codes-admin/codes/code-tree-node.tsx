@@ -35,7 +35,7 @@ function CodeTreeChildren({ code, depth, tree }: NodeProps) {
   }
   return (
     <DataState state={state} error={children.error} onRetry={() => void children.refetch()}>
-      <ul role="group" aria-label={`Sub-codes of ${code.code}`}>
+      <ul aria-label={`Sub-codes of ${code.code}`}>
         {children.items.map((child) => (
           <CodeTreeNode key={child.id} code={child} depth={depth + 1} tree={tree} />
         ))}

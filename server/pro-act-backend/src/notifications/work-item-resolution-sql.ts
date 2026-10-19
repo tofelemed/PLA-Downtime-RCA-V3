@@ -111,7 +111,7 @@ const REFRESH_UNCODED_BACKLOG = `UPDATE "user_notifications" n
     SET "detail" = n."detail" || jsonb_build_object(
           'stops', c."stops", 'uncodedSeconds', c."uncoded_seconds",
           'oldestEndedAt', to_char(c."oldest_end" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
-          'message', c."stops" || ' uncoded stop(s) waiting for a reason',
+          'message', c."stops" || CASE WHEN c."stops" = 1 THEN ' uncoded stop' ELSE ' uncoded stops' END || ' waiting for a reason',
           'countedAt', to_char($2::timestamptz AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),
         "updated_at" = $2, "row_version" = n."row_version" + 1
    FROM (SELECT n2."id", agg."stops", agg."uncoded_seconds", agg."oldest_end"

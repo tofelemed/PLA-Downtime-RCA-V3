@@ -11,6 +11,8 @@ export interface UnitFormProps {
   onChange: (patch: Partial<UnitDraft>) => void;
   onSave: () => void;
   saving: boolean;
+  /** the draft has unsaved edits */
+  dirty?: boolean;
   isNew: boolean;
   /** read-only users and retired units: fields are shown, not editable */
   readOnly: boolean;
@@ -18,7 +20,7 @@ export interface UnitFormProps {
 }
 
 /** Name, code, plant (the selected one), description, unit of measure and the folded legacy values. */
-export function UnitForm({ draft, errors, onChange, onSave, saving, isNew, readOnly, plantName }: UnitFormProps) {
+export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly, plantName }: UnitFormProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSave();
@@ -65,7 +67,7 @@ export function UnitForm({ draft, errors, onChange, onSave, saving, isNew, readO
           disabled={readOnly}
         />
       </LegacyValues>
-      {!readOnly && <FormActions isNew={isNew} saving={saving} cancelTo="/master-data/units" />}
+      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo="/master-data/units" />}
     </form>
   );
 }

@@ -59,7 +59,7 @@ function EditTask({ id }: { id: string }) {
     return (
       <Page>
         <PageHeader title="Task" back={BACK} />
-        <DataState state={dataStateOf(task)} error={task.error} onRetry={() => void task.refetch()} />
+        <DataState state={dataStateOf(task)} error={task.error} onRetry={() => void task.refetch()} back={BACK} />
       </Page>
     );
   }
@@ -68,7 +68,7 @@ function EditTask({ id }: { id: string }) {
 
 function TaskDetail({ task }: { task: TaskView }) {
   const navigate = useNavigate();
-  const { canWriteEvents } = useCapabilities();
+  const { canWriteTasks } = useCapabilities();
   const dates = usePlantDates();
   const update = useUpdateTask();
   const feedback = useCommandFeedback();
@@ -85,11 +85,11 @@ function TaskDetail({ task }: { task: TaskView }) {
         title={task.title}
         back={BACK}
         description={`Assigned by ${resolvedActorText(task.assignedById, task.assignedByName)} · created ${dates.date(task.createdAt)}`}
-        actions={canWriteEvents && <TaskActions task={task} />}
+        actions={canWriteTasks && <TaskActions task={task} />}
         meta={target && <Link to={target} className="underline-offset-2 hover:underline">Open the linked investigation</Link>}
       />
       <Section title="Details">
-        <TaskForm key={task.updatedAt} initial={original} assigneeName={task.assigneeName} readOnly={!canWriteEvents} submitLabel="Save changes" onSubmit={submit} onCancel={() => navigate(BACK.to)} />
+        <TaskForm key={task.updatedAt} initial={original} assigneeName={task.assigneeName} readOnly={!canWriteTasks} submitLabel="Save changes" onSubmit={submit} onCancel={() => navigate(BACK.to)} />
       </Section>
     </Page>
   );

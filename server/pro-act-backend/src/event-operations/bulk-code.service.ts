@@ -20,6 +20,7 @@ import {
   affectedWindows,
   assertAssetUnit,
   classifyItems,
+  codingChanged,
   codingPatch,
   codingSnapshot,
   rejectExclusions,
@@ -69,16 +70,22 @@ export class BulkCodeService {
       targets,
     );
     const defaults = await this.defaultsFor(tenantId, command.codes, targets);
-    const items = targets.map((event) => ({
-      eventId: event.id,
-      before: codingSnapshot(event),
-      after: codingSnapshot({
+    const items = targets.map((event) => {
+      const before = codingSnapshot(event);
+      const after = codingSnapshot({
         ...event,
         ...codingPatch(event, command.codes, defaults.get(event.id) ?? {}),
-      }),
-    }));
+      });
+      return {
+        eventId: event.id,
+        before,
+        after,
+        changed: codingChanged(before, after),
+      };
+    });
     return {
       count: items.length,
+      changedCount: items.filter((item) => item.changed).length,
       items,
       exclusions,
       affectedWindows: affectedWindows(targets),

@@ -129,3 +129,17 @@ export function rolesForLegacyRole(legacyRole: string | null): string[] {
   }
   return [...new Set([legacyRole, mapLegacyRole(legacyRole)])];
 }
+
+/**
+ * QA audit 2026-10-19 (guide roles only): the legacy role is login / display compatibility. Its D06
+ * scope role is a fallback that applies in a plant only while the user holds no explicit grant of
+ * their own there; with any explicit grant the plant roles are exactly the grants (plus the legacy
+ * role name itself, and SuperAdmin / OrgAdmin, which stay global).
+ */
+export function legacyRolesApplying(
+  legacyRole: string | null,
+  holdsExplicitGrant: boolean,
+): string[] {
+  if (!legacyRole) return [];
+  return holdsExplicitGrant ? [legacyRole] : rolesForLegacyRole(legacyRole);
+}

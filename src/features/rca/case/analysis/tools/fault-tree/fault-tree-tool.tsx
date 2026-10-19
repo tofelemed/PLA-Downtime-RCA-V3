@@ -12,6 +12,7 @@ import { buildFaultTree } from './fault-tree-model';
 import { FaultTreeNodeItem, type FaultTreeActions } from './fault-tree-node-item';
 import { TopEventProbability } from './top-event-probability';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 function Editor({ record, save }: { record: ToolRecord<'faultTree'>; save: (body: FaultTreeContent) => Promise<unknown> }) {
   const { rca, readOnly } = useCaseWorkspace();
@@ -54,7 +55,7 @@ function Editor({ record, save }: { record: ToolRecord<'faultTree'>; save: (body
           open
           onOpenChange={(open) => !open && setRemoving(null)}
           title="Remove this node?"
-          description={`It has ${number(removing.children)} node(s) below it; they move up to sit directly under the top event. Nothing is saved until you save the fault tree.`}
+          description={`It has ${plural(removing.children, 'node', 'nodes', number)} below it; they move up to sit directly under the top event. Nothing is saved until you save the fault tree.`}
           confirmLabel="Remove node"
           destructive
           onConfirm={() => removeNow(removing.id)}

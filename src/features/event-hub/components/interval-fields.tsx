@@ -6,7 +6,8 @@ import { DurationText } from '@/features/ux-kit/duration-text';
 import { FormField } from '@/features/ux-kit/form-field';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { DURATION_INPUT_HINT } from '../model/duration-input';
-import type { IntervalMode } from '../model/event-form';
+import { endBeforeStartError, type IntervalMode } from '../model/event-form';
+import { useEventHubEnv } from '../use-event-hub-env';
 import type { EventFormState } from '../hooks/use-event-form';
 import { PlantTimeField } from './plant-time-field';
 
@@ -74,6 +75,12 @@ function IntervalModeChoice({ value, onChange }: { value: IntervalMode; onChange
   );
 }
 
+/** QA audit F3: an end at or before the start is said at the End field while typing, not only on Save. */
+function withEndOrder(form: IntervalFieldsProps['form'], timezone: string): IntervalFieldsProps['form'] {
+  const order = endBeforeStartError(form.values, timezone);
+  return order && !form.errors.endLocal ? { ...form, errors: { ...form.errors, endLocal: order } } : form;
+}
+
 /**
  * Start, and the end given **either** as an end time **or** as a duration from the start (E-4): an
  * explicit choice, so typing a duration never clears an end behind the user's back. Durations read
@@ -81,6 +88,7 @@ function IntervalModeChoice({ value, onChange }: { value: IntervalMode; onChange
  */
 export function IntervalFields({ form, mode, event, sourceName = null }: IntervalFieldsProps) {
   const { values, errors, setField } = form;
+  const { timezone } = useEventHubEnv();
   if (mode === 'edit' && event && sourceName) {
     return (
       <>
@@ -105,7 +113,7 @@ export function IntervalFields({ form, mode, event, sourceName = null }: Interva
           <Input id="durationMinutes" value={values.durationMinutes} onChange={(e) => setField('durationMinutes', e.target.value)} />
         </FormField>
       ) : (
-        <PlantTimeField field="endLocal" label="End (empty = still ongoing)" form={form} />
+        <PlantTimeField field="endLocal" label="End (empty = still ongoing)" form={withEndOrder(form, timezone)} />
       )}
       {mode === 'edit' && event && <ServerDuration event={event} />}
     </>

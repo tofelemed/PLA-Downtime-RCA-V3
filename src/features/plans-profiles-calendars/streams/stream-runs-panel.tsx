@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useStreamRuns } from '@/api/v2/queries/plant-model';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { StreamRunView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ActionIcon } from '@/lib/icons';
 import type { Option } from '../components/native-select';
@@ -40,15 +41,20 @@ function columnsOf(refs: PlanningRefs, canWrite: boolean): DataTableColumn<Strea
 export function StreamRunsPanel({ unitId, refs, streamOptions, canWrite }: StreamRunsPanelProps) {
   const [adding, setAdding] = useState(false);
   const runs = useStreamRuns(unitId);
+  const reasonId = useId();
+  const noStream = streamOptions.length === 0;
   return (
     <section className="space-y-2" data-testid="stream-runs-panel">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Stream runs</h3>
         {canWrite && !adding && (
-          <Button size="sm" variant="outline" onClick={() => setAdding(true)} disabled={streamOptions.length === 0}>
-            <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
-            Record run
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button size="sm" variant="outline" onClick={() => setAdding(true)} disabled={noStream} aria-describedby={noStream ? reasonId : undefined}>
+              <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+              Record run
+            </Button>
+            <DisabledReason id={reasonId} reason={noStream ? 'Add a stream first: a run says which stream ran the product.' : null} />
+          </div>
         )}
       </div>
       {adding && <StreamRunForm unitId={unitId} streamOptions={streamOptions} productOptions={refs.productOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}

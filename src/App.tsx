@@ -13,6 +13,7 @@ import { CalendarPreferenceProvider } from "@/features/settings/calendar-prefere
 import { createAppQueryClient } from "./app/query-client";
 import { PROTECTED_ROUTES } from "./app/routes";
 import { RouteCapabilityGate } from "./app/routes/route-capability-gate";
+import { CrumbReachFromRoutes } from "./app/routes/crumb-reach-from-routes";
 import { V2SessionBridge } from "./features/v2-foundation/v2-session-bridge";
 import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
 import { SessionRecovery } from "./features/auth/session-recovery";
@@ -105,7 +106,9 @@ const App = () => (
               <RcaDraftBoundary />
               <RealtimeBridge />
               <BrowserRouter>
-                <AppRoutes />
+                <CrumbReachFromRoutes routes={PROTECTED_ROUTES}>
+                  <AppRoutes />
+                </CrumbReachFromRoutes>
               </BrowserRouter>
             </CalendarPreferenceProvider>
           </DisplayCurrencyProvider>

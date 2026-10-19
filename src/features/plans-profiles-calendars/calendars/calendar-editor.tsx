@@ -1,9 +1,11 @@
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { CalendarVersionView } from '@/api/v2/types/calendars';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { FormField } from '../components/form-field';
 import { RefusalNotice } from '../components/refusal-notice';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
@@ -27,18 +29,20 @@ export interface CalendarEditorProps {
 
 type Editor = ReturnType<typeof useCalendarEditor>;
 
+const CALENDAR_LIST = '/planning?tab=calendars';
+
 function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
   const { draft, errors } = editor;
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <FormField id="calTimezone" label="Time zone" error={errors.timezone}>
+      <FormField id="calTimezone" label="Time zone" error={errors.timezone} required={!readOnly}>
         <TimezoneInput id="calTimezone" value={draft.timezone} disabled={readOnly} onChange={(v) => set('timezone', v)} />
       </FormField>
-      <FormField id="calDayStart" label="Operational day starts at" error={errors.operationalDayStart}>
+      <FormField id="calDayStart" label="Operational day starts at" error={errors.operationalDayStart} required={!readOnly}>
         <Input id="calDayStart" value={draft.operationalDayStart} placeholder="06:00" disabled={readOnly} onChange={(e) => set('operationalDayStart', e.target.value)} />
       </FormField>
-      <DateInput id="calFrom" label="Effective from (operational date)" value={draft.effectiveFrom} disabled={readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
+      <DateInput id="calFrom" label="Effective from (operational date)" value={draft.effectiveFrom} disabled={readOnly} required={!readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
       <DateInput id="calTo" label="Effective to (exclusive, optional)" value={draft.effectiveTo} disabled={readOnly} error={errors.effectiveTo} onChange={(v) => set('effectiveTo', v)} />
     </div>
   );
@@ -74,6 +78,11 @@ function EditorButtons({ editor, version, readOnly, props }: { editor: Editor; v
           New version from this
         </Button>
       )}
+      <Button asChild variant="outline">
+        <Link to={CALENDAR_LIST} data-testid="calendar-cancel">
+          {readOnly ? 'Back to calendars' : 'Cancel'}
+        </Link>
+      </Button>
     </div>
   );
 }
@@ -86,6 +95,7 @@ export function CalendarEditor(props: CalendarEditorProps) {
   const { draft, errors } = editor;
   /** published versions are immutable; users who are not calendar writers only view and preview */
   const readOnly = editor.readOnly || !canWriteCalendars;
+  useUnsavedChangesGuard(editor.edited && canWriteCalendars);
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
   return (
     <div className="space-y-6" data-testid="calendar-editor" data-state={version?.state ?? 'new'}>
@@ -94,6 +104,11 @@ export function CalendarEditor(props: CalendarEditorProps) {
           {editor.readOnly && (
             <p className="text-sm text-muted-foreground" data-testid="calendar-immutable">
               Published versions cannot be changed; changes are a new version.
+            </p>
+          )}
+          {!editor.readOnly && !canWriteCalendars && (
+            <p className="text-sm text-muted-foreground" data-testid="calendar-view-only">
+              Your roles in this plant do not include calendar editing: you can view and preview this version.
             </p>
           )}
           <BasicsFields editor={editor} readOnly={readOnly} />

@@ -15,50 +15,51 @@ const ADMINS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'];
 const PREVIOUS_MENU: Record<string, string[]> = {
   // Overview
   Dashboard: ALL,
-  'Pending Approvals': ALL,
+  'Pending approvals': ALL,
   Reports: NOT_OPERATOR,
   // Production
   'Event Hub': ALL,
-  'Plans, Profiles & Calendars': NOT_OPERATOR,
+  'Plans, profiles & calendars': NOT_OPERATOR,
   // EXPERT_REVIEW Area 3: my reconciliation queue (period writers, R-C) and month close (analysis roles, R-B)
   // Marun E2E: operators own RCA actions and tasks, so they reach My work and RCA Analysis
   'My work': ALL,
-  'Month Close': NOT_OPERATOR,
+  'Month close': NOT_OPERATOR,
   // SME E4 uncertainty budgets: read by every analysis role
-  'Measurement Uncertainty': NOT_OPERATOR,
+  'Measurement uncertainty': NOT_OPERATOR,
   // Focused analysis pages use the same read capability as the original two pages.
-  'Downtime Analysis': ALL,
-  'Stops & Timeline': ALL,
+  'Downtime analysis': ALL,
+  'Stops & timeline': ALL,
   'Causes & Pareto': ALL,
-  'Trends & Comparisons': ALL,
-  'Downtime Reliability': ALL,
-  'Production Loss Analysis': ALL,
-  'Loss Breakdown': ALL,
-  'PLA Trends': ALL,
+  'Trends & comparisons': ALL,
+  'Reliability (MTBF/MTTR)': ALL,
+  'Production loss analysis': ALL,
+  'Loss breakdown': ALL,
+  'PLA trends': ALL,
   OEE: ALL,
-  'Reconciliation & Data Quality': ALL,
-  'Loss Valuation': ALL,
+  'Reconciliation & data quality': ALL,
+  // owner 19 Oct 2026 (QA audit): no money for operators (canViewMoney)
+  'Loss valuation': NOT_OPERATOR,
   // UX audit B-5: the period grid, gated like Plans, Profiles & Calendars
   'Period accounting': NOT_OPERATOR,
   // Reliability
   'RCA Analysis': ALL,
-  'Bad Actors': NOT_OPERATOR,
-  'Knowledge Base': NOT_OPERATOR,
+  'Bad actors': NOT_OPERATOR,
+  'Knowledge base': NOT_OPERATOR,
   Tasks: ALL,
   // Integration: owner 18 Oct 2026, SuperAdmin only (approvers reach their two review pages from the inbox)
   Connectivity: ['SuperAdmin'],
-  'Source Status Rules': ['SuperAdmin'],
-  'Source Priority': ['SuperAdmin'],
-  'Enhanced Historian': ['SuperAdmin'],
+  'Source status rules': ['SuperAdmin'],
+  'Source priority': ['SuperAdmin'],
+  'Enhanced historian': ['SuperAdmin'],
   // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
   // stop and plan policy; Operator = operator: standby log); they see only those pages' links
-  'Equipment Setup Guide': ALL,
-  'Master Data': ALL,
+  'Equipment setup guide': ALL,
+  'Master data': ALL,
   Finance: NOT_OPERATOR,
-  'User Management': [...ADMINS, 'Manager'],
+  'User management': [...ADMINS, 'Manager'],
   // SME R1 / R6: administrators for anyone, approval-role holders (Manager = manager_approver) for themselves
-  'Admin Panel': [...ADMINS, 'Manager'],
-  'Audit Logs': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
+  'Admin panel': [...ADMINS, 'Manager'],
+  'Audit log': ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager'],
 };
 
 const FLAGS_ON: Partial<Record<FeatureFlagKey, boolean>> = {
@@ -91,7 +92,7 @@ describe('navigation items by capability', () => {
 
   it('Codes & Rules and Finance are v2 only: listed without any feature flag', () => {
     const names = visibleNavigationItems(capabilitiesOf(['SuperAdmin']), {}).map((item) => item.name);
-    expect(names).toContain('Master Data');
+    expect(names).toContain('Master data');
     expect(names).not.toContain('Codes & Rules');
     expect(names).toContain('Finance');
     expect(names).toContain('Dashboard');
@@ -122,7 +123,7 @@ describe('navigation items by capability', () => {
 
   it('Master Data is listed for master-data admins and for every writer of one of its reliability pages', () => {
     const roleSets = [['master_data_admin'], ['manager_approver'], ['reliability_engineer'], ['operator'], ['integration_admin'], ['production_engineer'], ['viewer']];
-    const listed = roleSets.map((roles) => visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON).some((item) => item.name === 'Master Data'));
+    const listed = roleSets.map((roles) => visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON).some((item) => item.name === 'Master data'));
     expect(listed).toEqual([true, true, true, true, true, true, true]);
     for (const roles of roleSets) {
       const c = capabilitiesOf(roles);
@@ -131,10 +132,10 @@ describe('navigation items by capability', () => {
   });
 
   it.each([
-    ['Equipment Setup Guide', 'canReachMasterData'],
-    ['Enhanced Historian', 'canReachIntegration'],
-    ['Admin Panel', 'canUseAdminPanel'],
-    ['Audit Logs', 'canViewAuditLogs'],
+    ['Equipment setup guide', 'canReachMasterData'],
+    ['Enhanced historian', 'canReachIntegration'],
+    ['Admin panel', 'canUseAdminPanel'],
+    ['Audit log', 'canViewAuditLogs'],
   ] as const)('%s is listed exactly when its page gate (%s) admits the user', (name, gate) => {
     const roleSets = [
       ...ALL.map((role) => effectiveRoles(legacyUser(role), { tenantId: HOME })),
@@ -152,10 +153,10 @@ describe('navigation items by capability', () => {
 
   it('a reliability engineer sees neither the historian (Integration is SuperAdmin-only) nor the audit trail (server: FORBIDDEN_ROLE)', () => {
     const amara: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'reliability_engineer' }] };
-    expect(menuFor(amara)).not.toContain('Audit Logs');
-    expect(menuFor(amara)).not.toContain('Enhanced Historian');
+    expect(menuFor(amara)).not.toContain('Audit log');
+    expect(menuFor(amara)).not.toContain('Enhanced historian');
     // standby log and CMMS work orders
-    expect(menuFor(amara)).toContain('Master Data');
+    expect(menuFor(amara)).toContain('Master data');
   });
 
   it('a viewer in another plant sees the read screens only', () => {

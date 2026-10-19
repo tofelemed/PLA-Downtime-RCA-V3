@@ -86,7 +86,7 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/master-data/codes-rules/rules/:ruleId', element: <RuleDetail />, preload: RuleDetail.preload },
   { path: '/master-data/codes-rules/:library/:codeId', element: <CodeDetail />, preload: CodeDetail.preload },
   { path: '/finance', element: <Finance />, preload: Finance.preload },
-  { path: '/finance/policies/new', element: <PolicyNew />, preload: PolicyNew.preload },
+  { path: '/finance/policies/new', element: <PolicyNew />, preload: PolicyNew.preload, requires: 'canMaintainValuation', gateTitle: 'New valuation policy version' },
   { path: '/finance/policies/:policyId', element: <PolicyDetail />, preload: PolicyDetail.preload },
   { path: '/finance/fx/:fxId', element: <FxRateDetail />, preload: FxRateDetail.preload },
   { path: '/users', element: <Users />, preload: Users.preload },

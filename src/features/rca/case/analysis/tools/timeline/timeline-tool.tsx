@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { IconButton } from '@/features/ux-kit/icon-button';
+import { plural } from '@/features/ux-kit/format/plural';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ActionIcon } from '@/lib/icons';
 import { toggleEvidenceLink } from '../../../../model/logic-tree';
 import { timelineOf, type TimelineEntry } from '../../../../model/timeline';
@@ -16,6 +18,10 @@ import { EventDialog, type EventFields } from '../event-diagram/event-dialog';
 import { EvidenceLinkPopover } from '../evidence-link-popover';
 
 type Editing = { mode: 'add' } | { mode: 'edit'; id: string } | null;
+
+/** QA L5: "No evidence linked" / "1 evidence item" / "3 evidence items" (the count links to this entry). */
+const evidenceCountText = (count: number, number: (value: number) => string): string =>
+  count === 0 ? 'No evidence linked' : plural(count, 'evidence item', 'evidence items', number);
 
 function EntryActions({ entry, onEdit }: { entry: TimelineEntry; onEdit: () => void }) {
   const { rca } = useCaseWorkspace();
@@ -52,6 +58,7 @@ export function TimelineTool() {
   const links = useRcaLinks(rca.id);
   const patch = useCasePatch();
   const { dateTime } = useRcaFormat();
+  const { number } = useNumberFormat();
   const [editing, setEditing] = useState<Editing>(null);
   const entries = timelineOf(rca.eventDiagram.nodes, links.data ?? [], rca.evidence);
   const save = async (fields: EventFields) => {
@@ -78,7 +85,7 @@ export function TimelineTool() {
                 <Badge variant="secondary">{entry.type ?? 'Event'}</Badge>
                 {entry.severity && <Badge variant="outline">{entry.severity}</Badge>}
                 {entry.asset && <Badge variant="outline">{entry.asset}</Badge>}
-                <Badge variant="outline">{entry.evidence} evidence</Badge>
+                <Badge variant="outline">{evidenceCountText(entry.evidence, number)}</Badge>
               </div>
               {entry.description && <p className="text-muted-foreground">{entry.description}</p>}
             </div>

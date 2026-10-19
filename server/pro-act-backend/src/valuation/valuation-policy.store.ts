@@ -11,7 +11,7 @@ import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 
 const KIND = 'valuation_basis';
 const FIRST_USE_NOTE =
-  'Seeded on first use with the SME V1-V8 pilot settings of 2026-10-14 (IRR and USD, economic view by default); unapproved until a finance approver records the sign-off (V1).';
+  'Built-in default (IRR and USD, economic view); not approved until a finance approver records the sign-off.';
 
 /**
  * A tenant without any `valuation_basis` version gets version 1 with the SME V1–V8 body (v3 defaults: IRR

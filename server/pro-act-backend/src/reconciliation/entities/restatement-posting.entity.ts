@@ -15,7 +15,7 @@ export type PostingTreatment = (typeof POSTING_TREATMENTS)[number];
 /**
  * Finance's decision on a restated revision (SME R5): the operational effective date (the production
  * period's date — what the figures describe) kept apart from the financial posting date finance chooses,
- * and the treatment. One row per restated revision; a later decision replaces it (audited).
+ * and the treatment. One row per restated revision, decided once (409 POSTING_DECIDED afterwards; owner decision 2026-10-19).
  */
 @Entity('restatement_postings')
 @Index('UQ_restatement_postings_revision', ['revisionId'], { unique: true })

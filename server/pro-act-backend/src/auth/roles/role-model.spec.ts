@@ -1,5 +1,6 @@
 import {
   canGrantRole,
+  legacyRolesApplying,
   mapLegacyRole,
   rolesForLegacyRole,
   satisfiesRole,
@@ -42,5 +43,15 @@ describe('role model (§13.2, D06)', () => {
       canGrantRole(['TenantAdmin', 'manager_approver'], 'SuperAdmin'),
     ).toBe(false);
     expect(canGrantRole(['SuperAdmin'], 'made_up')).toBe(false);
+  });
+
+  it('the legacy mapping is a fallback: dropped once the user holds an own grant (QA audit 2026-10-19)', () => {
+    expect(legacyRolesApplying('Analyst', false)).toEqual([
+      'Analyst',
+      'production_engineer',
+    ]);
+    expect(legacyRolesApplying('Analyst', true)).toEqual(['Analyst']);
+    expect(legacyRolesApplying('SuperAdmin', true)).toEqual(['SuperAdmin']);
+    expect(legacyRolesApplying(null, false)).toEqual([]);
   });
 });

@@ -57,7 +57,7 @@ const LEGACY_IMPORT_STATUSES: SourceStatusEntry[] = [
 ];
 
 const LEGACY_NOTE =
-  'Seeded on first use from the former EXTERNAL_REPORT_CERTIFIED_STATUSES default — the source owner confirms or replaces it (SME R13).';
+  'Built-in default; the source owner confirms it or replaces it by recording a new version.';
 
 /**
  * Per-source status mappings (SME R13): drafts by source maintainers, approval by the source owner (never

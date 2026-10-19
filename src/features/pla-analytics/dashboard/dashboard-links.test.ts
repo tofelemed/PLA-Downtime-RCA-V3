@@ -36,11 +36,12 @@ describe('dashboard deep links (UX audit G-6 / B-8)', () => {
     expect([filters.physicalTypes, filters.codingStates, filters.relativeWindow]).toEqual([['downtime'], ['uncoded'], '30d']);
   });
 
-  it('PLA and Reports links open with the dashboard window, keeping the hash and view', () => {
-    const href = plaHref(scope, '/pla-analytics/losses', '#repeat-causes');
+  it('PLA and Reports links open with the dashboard window, keeping the breakdown and view', () => {
+    const href = plaHref(scope, '/pla-analytics/losses', { breakdown: 'repeat-causes' });
     expect(href.startsWith('/pla-analytics/losses?')).toBe(true);
-    expect(href.endsWith('#repeat-causes')).toBe(true);
-    const pla = parseScope(paramsOf(href.split('#')[0]), NOW);
+    expect(href).not.toContain('#');
+    expect(paramsOf(href).get('breakdown')).toBe('repeat-causes');
+    const pla = parseScope(paramsOf(href), NOW);
     expect([pla.from, pla.to, pla.windowLabel]).toEqual([scope.from, scope.to, scope.windowLabel]);
     expect(paramsOf(href).get('tab')).toBeNull();
     expect(reportsHref(scope, 'production')).toBe('/reports?view=production&window=30d');

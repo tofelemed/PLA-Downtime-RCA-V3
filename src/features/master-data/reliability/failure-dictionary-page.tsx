@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { DictionaryEntryForm } from './dictionary-entry-form';
+import { dictionaryEntryName } from './dictionary-entry-name';
 import { DictionaryImportPanel } from './dictionary-import-panel';
 
 const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
@@ -23,7 +24,7 @@ function columnsOf(canWrite: boolean, onRetire: (entry: FailureDictionaryEntryVi
     { id: 'kind', header: 'List', cell: (e) => DICTIONARY_KIND_LABELS[e.kind], nowrap: true },
     { id: 'class', header: 'Equipment class', cell: (e) => (e.kind === 'equipment_class' ? '—' : e.equipmentClass || 'Every class') },
     { id: 'code', header: 'Code', cell: (e) => e.code, nowrap: true },
-    { id: 'name', header: 'Name', cell: (e) => `${e.name}${e.isPending ? ' (pending)' : ''}` },
+    { id: 'name', header: 'Name', cell: dictionaryEntryName },
     { id: 'detail', header: 'Asset types / category', cell: (e) => (e.assetTypes.length ? e.assetTypes.join(', ') : (e.category ?? '—')) },
     { id: 'from', header: 'In force since', cell: (e) => date(e.effectiveFrom), nowrap: true },
     ...(canWrite

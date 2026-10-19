@@ -149,6 +149,40 @@ describe('bulk coding and jobs (plan 1.4)', () => {
     ).toBe(0);
   });
 
+  it('preview counts only real changes (QA audit F5); the production accountant may not code (owner 2026-10-19)', async () => {
+    const items = await events('2026-09-12', 2);
+    const first = json<PreviewBody & { changedCount: number }>(
+      await api.bulkCode(command(items, true)).expect(200),
+    );
+    expect(first).toMatchObject({ count: 2, changedCount: 2 });
+    expect(first.items.map((item) => item.changed)).toEqual([true, true]);
+    await api.bulkCode(command(items, false)).expect(200);
+    const again = items.map((item) => ({ ...item, expectedVersion: 2 }));
+    const same = json<PreviewBody & { changedCount: number }>(
+      await api.bulkCode(command(again, true)).expect(200),
+    );
+    expect(same).toMatchObject({ count: 2, changedCount: 0 });
+    const accountant = new V2EventClient(
+      app,
+      signToken(app, {
+        userId: randomUUID(),
+        tenantId: world.tenantA,
+        role: 'production_accountant',
+      }),
+    );
+    const refused = await accountant.bulkCode(command(again, true)).expect(403);
+    expect(json<ErrorBody>(refused).code).toBe('FORBIDDEN_ROLE');
+    const operator = new V2EventClient(
+      app,
+      signToken(app, {
+        userId: randomUUID(),
+        tenantId: world.tenantA,
+        role: 'Operator',
+      }),
+    );
+    await operator.bulkCode(command(again, true)).expect(200);
+  });
+
   it('500 events apply atomically: an injected failure leaves all 500 unchanged', async () => {
     const items = await events('2026-09-12', 500);
     await harness.dataSource.query(

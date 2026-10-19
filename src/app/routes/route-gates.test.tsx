@@ -5,7 +5,7 @@ import { capabilitiesOf, type Capabilities } from '@/features/auth/capabilities'
 import { NAVIGATION_ITEMS } from '@/features/auth/navigation-items';
 import { RouteCapabilityGate } from './route-capability-gate';
 import { INTEGRATION_ROUTES } from './integration';
-import { withMenuGates } from './route-gates';
+import { canReachPath, routeOfPath, withMenuGates } from './route-gates';
 
 let capabilities: Capabilities = capabilitiesOf([]);
 vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => capabilities }));
@@ -18,9 +18,9 @@ describe('withMenuGates', () => {
     const gated = withMenuGates([route('/finance/policies/:policyId'), route('/plans/:planId/periods/:periodId/*'), route('/connectivity/source-status'), route('/month-close'), route('/period-accounting')]);
     expect(gated.map((r) => [r.requires, r.gateTitle])).toEqual([
       ['canViewAnalysis', 'Finance'],
-      ['canViewAnalysis', 'Plans, Profiles & Calendars'],
-      ['canReachIntegration', 'Source Status Rules'],
-      ['canViewAnalysis', 'Month Close'],
+      ['canViewAnalysis', 'Plans, profiles & calendars'],
+      ['canReachIntegration', 'Source status rules'],
+      ['canViewAnalysis', 'Month close'],
       ['canViewAnalysis', 'Period accounting'],
     ]);
   });
@@ -34,6 +34,20 @@ describe('withMenuGates', () => {
   it('every menu item is reachable: its own route needs exactly the capability that lists it', () => {
     const gated = withMenuGates(NAVIGATION_ITEMS.map((item) => route(item.href)));
     expect(gated.map((r) => r.requires)).toEqual(NAVIGATION_ITEMS.map((item) => item.capability));
+  });
+});
+
+describe('canReachPath (breadcrumb targets, QA_MASTERDATA L23)', () => {
+  const routes = withMenuGates(INTEGRATION_ROUTES);
+  it('a production accountant reaches Source priority but not the Connectivity console it sits under', () => {
+    const accountant = capabilitiesOf(['production_accountant']);
+    expect(canReachPath('/connectivity', accountant, routes)).toBe(false);
+    expect(canReachPath('/connectivity/source-authority?unitId=u1', accountant, routes)).toBe(true);
+    expect(canReachPath('/somewhere-else', accountant, routes)).toBe(true);
+    expect(canReachPath('/connectivity#jobs', capabilitiesOf(['SuperAdmin']), routes)).toBe(true);
+  });
+  it('a static segment wins over a parameter', () => {
+    expect(routeOfPath('/connectivity/connections/new', routes)?.path).toBe('/connectivity/connections/new');
   });
 });
 
@@ -53,7 +67,7 @@ describe('Integration routes (owner 18 Oct 2026: SuperAdmin only)', () => {
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path="/connectivity" element={<RouteCapabilityGate requires="canReachIntegration" title="Connectivity"><p>Console</p></RouteCapabilityGate>} />
-            <Route path="/connectivity/source-authority" element={<RouteCapabilityGate requires="canReviewSourcePriority" title="Source Priority"><p>Priority</p></RouteCapabilityGate>} />
+            <Route path="/connectivity/source-authority" element={<RouteCapabilityGate requires="canReviewSourcePriority" title="Source priority"><p>Priority</p></RouteCapabilityGate>} />
           </Routes>
         </MemoryRouter>,
       );

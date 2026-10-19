@@ -53,7 +53,7 @@ export function DashboardDowntime({ scope }: { scope: AnalyticsScope }) {
     </div>
   );
   return (
-    <AnalyticsCard title="Downtime" testId="dashboard-downtime" query={query} response={query.data} actions={actions}>
+    <AnalyticsCard title="Downtime totals" testId="dashboard-downtime" query={query} response={query.data} actions={actions}>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((tile) => (
           <DowntimeTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
@@ -86,7 +86,7 @@ export function DashboardTopAssets({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useDowntimeReport(repeatQuery(scope, 'asset'), env.timezone);
   const groups = query.data?.data.groups ?? [];
-  const link = plaHref(scope, '/pla-analytics/losses', '#repeat-causes');
+  const link = plaHref(scope, '/pla-analytics/losses', { breakdown: 'repeat-causes' });
   return (
     <AnalyticsCard
       title={`Most stopped assets (top ${TOP})`}

@@ -41,8 +41,12 @@ export interface AffectedWindowView {
 
 /** `bulk-code` with `preview: true`. */
 export interface BulkCodePreviewView {
+  /** eligible events (not excluded) */
   count: number;
-  items: Array<{ eventId: string; before: CodingSnapshotView; after: CodingSnapshotView }>;
+  /** eligible events whose coding actually changes (QA audit F5); absent from older servers */
+  changedCount?: number;
+  /** `changed`: the coding after differs from before */
+  items: Array<{ eventId: string; before: CodingSnapshotView; after: CodingSnapshotView; changed?: boolean }>;
   exclusions: BulkExclusionView[];
   affectedWindows: AffectedWindowView[];
 }

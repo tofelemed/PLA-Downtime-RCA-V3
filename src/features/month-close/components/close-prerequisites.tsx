@@ -4,6 +4,7 @@ import { DataTable } from '@/features/ux-kit/data-table';
 import { Section } from '@/features/ux-kit/page-layout';
 import { useCalendarPreference } from '@/lib/dates';
 import type { CloseSection } from '../model/close-section';
+import { UncoveredDays as DaysWithoutPlan } from './no-plan-notice';
 import { dayColumns, pendingColumns, proposalColumns } from './prerequisite-columns';
 
 function SampleDisclosure({ shown, total }: { shown: number; total: number }) {
@@ -21,6 +22,7 @@ function PendingPeriods({ view }: { view: MonthCloseView }) {
         <DataTable caption="Periods not approved" columns={pendingColumns(pref)} rows={pending} getRowKey={(p) => p.periodId}
           pager="none" maxHeight="30rem" empty={{ title: 'Sample unavailable', text: 'The server reported pending periods without sample rows.' }} />
       </>}
+      <DaysWithoutPlan view={view} />
       <p className="text-sm"><Link to="/my-queue" className="underline underline-offset-2">Open my queue</Link> for your recent assigned work. It is not a complete list of this month's periods.</p>
     </div>
   </Section>;
@@ -38,6 +40,7 @@ function UncertifiedDays({ view }: { view: MonthCloseView }) {
         <DataTable caption="Days not certified" columns={dayColumns(pref)} rows={uncertifiedDays} getRowKey={(d) => `${d.unitId}-${d.localDate}`}
           pager="none" maxHeight="30rem" empty={{ title: 'Sample unavailable', text: 'The server reported uncertified days without sample rows.' }} />
       </>}
+      <DaysWithoutPlan view={view} />
     </div>
   </Section>;
 }

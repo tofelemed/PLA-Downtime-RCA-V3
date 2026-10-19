@@ -178,7 +178,7 @@ test.describe('Master data admin — Master Data screen and user lists', () => {
     await expect(page.locator('nav a[href="/dashboard"]')).toBeVisible();
     await expect(page.locator('nav a[href="/master-data"]')).toHaveCount(0);
     await page.goto('/master-data');
-    await expect(page.getByText("You don't have permission to access master data management.")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('No access', { exact: true })).toBeVisible({ timeout: 30_000 });
     await page.screenshot({ path: test.info().outputPath('mda-01d-engineer-refused.png') });
     const noah = await sessionOf(NOAH);
     const refused = await api<{ code: string }>(noah.token, 'POST', '/units', { name: `${PREFIX}refused ${suffix}`, code: `${PREFIX}REFUSED-${suffix}`, tenantId: noah.tenantId });

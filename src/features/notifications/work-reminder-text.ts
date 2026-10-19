@@ -1,4 +1,5 @@
 import type { NotificationView } from '@/api/v2/types/notifications';
+import { plural } from '@/features/ux-kit/format/plural';
 import { formatOperationalDate, toDigits, type CalendarDisplayOptions } from '@/lib/dates';
 
 /** Same shape as `NotificationText` in `notification-text.ts` (kept separate to avoid an import cycle). */
@@ -11,7 +12,8 @@ interface ReminderText {
 export const WORK_REMINDER_KINDS = ['rca_action_due', 'rca_action_overdue', 'task_due', 'task_overdue', 'uncoded_backlog', 'long_open_stop'] as const;
 
 const text = (value: unknown): string | null => (typeof value === 'string' && value.trim() !== '' ? value : null);
-const count = (value: unknown, pref: CalendarDisplayOptions) => toDigits(String(typeof value === 'number' ? value : 0), pref.digits);
+const countOf = (value: unknown) => (typeof value === 'number' ? value : 0);
+const stopsText = (value: unknown, pref: CalendarDisplayOptions) => plural(countOf(value), 'stop', 'stops', (n) => toDigits(String(n), pref.digits));
 
 const levelOf = (detail: Record<string, unknown>) => (typeof detail.level === 'number' ? detail.level : 0);
 
@@ -48,7 +50,7 @@ function backlogText(n: NotificationView, pref: CalendarDisplayOptions): Reminde
   const unitId = text(d.unitId) ?? n.entityId;
   return {
     title: levelOf(d) > 1 ? 'Uncoded stops still waiting (escalated)' : 'Uncoded stops waiting',
-    body: `${where}: ${count(d.stops, pref)} stop(s) waiting for a reason`,
+    body: `${where}: ${stopsText(d.stops, pref)} waiting for a reason`,
     href: `/events?units=${encodeURIComponent(unitId)}&coding=uncoded`,
   };
 }

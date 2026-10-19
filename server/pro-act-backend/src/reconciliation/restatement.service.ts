@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager } from 'typeorm';
 import { AccountingRevision } from '../accounting/entities/accounting-revision.entity';
@@ -16,7 +16,9 @@ import {
   PostingTreatment,
   RestatementPosting,
 } from './entities/restatement-posting.entity';
+import { approvedValuesPart } from './proposal-values';
 import { figuresOf } from './restatement-figures';
+import { restatementValues, RestatementValues } from './restatement-values';
 import { assertPostingIndependent } from './posting-independence';
 import {
   latestRevision,
@@ -32,7 +34,11 @@ export interface Restatement {
   revision: AccountingRevision;
   superseded: AccountingRevision;
   delta: RestatementDelta;
+  /** loss value per currency, each side in its own default valuation view (QA audit P-2) */
+  values: RestatementValues | null;
   posting: RestatementPosting | null;
+  /** display name of the finance approver who decided the posting */
+  decidedByName: string | null;
 }
 
 export interface PostingDecision {
@@ -42,10 +48,35 @@ export interface PostingDecision {
 }
 
 /**
+ * Owner decision 2026-10-19 (closed records are frozen): a decided posting is final — 409 POSTING_DECIDED.
+ * The correction path is a new restatement: propose a correction of the period, whose new approved revision
+ * gets its own posting decision; the decided row is never overwritten.
+ */
+function assertPostingOpen(posting: RestatementPosting | null): void {
+  if (!posting) return;
+  throw new ConflictException({
+    code: 'POSTING_DECIDED',
+    message:
+      'finance has already decided the posting of this restatement; correct it through a new restatement (propose a correction of the period)',
+  });
+}
+
+async function nameOf(
+  manager: EntityManager,
+  userId: string,
+): Promise<string | null> {
+  const rows: Array<{ name: string }> = await manager.query(
+    'SELECT "name" FROM "users" WHERE "id" = $1::uuid',
+    [userId],
+  );
+  return rows[0]?.name ?? null;
+}
+
+/**
  * Restatements of approved periods (SME R5, phase R-D): the delta of a revision against the approved
  * revision it supersedes (old vs new totals, actuals and lines, both from the reviewed content), and
  * finance's posting decision — a financial posting date and treatment kept apart from the operational
- * effective date (the period's date), never by the proposer of the correction behind it. The original
+ * effective date (the period's date), never by the proposer of the correction behind it, decided once. The original
  * approved revision stays as it was.
  */
 @Injectable()
@@ -82,6 +113,7 @@ export class RestatementService {
       );
       await lockPeriod(manager, period.id);
       const current = await this.restatementOf(manager, period, revisionNumber);
+      assertPostingOpen(current.posting);
       await assertPostingIndependent(manager, context, current.revision);
       const values = {
         operationalEffectiveDate: period.localDate,
@@ -92,17 +124,13 @@ export class RestatementService {
         decidedAt: new Date(),
         updatedBy: actor,
       };
-      if (current.posting) {
-        await manager.update(RestatementPosting, current.posting.id, values);
-      } else {
-        await manager.insert(RestatementPosting, {
-          ...values,
-          tenantId: period.tenantId,
-          revisionId: current.revision.id,
-          periodId: period.id,
-          createdBy: actor,
-        });
-      }
+      await manager.insert(RestatementPosting, {
+        ...values,
+        tenantId: period.tenantId,
+        revisionId: current.revision.id,
+        periodId: period.id,
+        createdBy: actor,
+      });
       await appendAudit(manager, [
         {
           tenantId: period.tenantId,
@@ -163,7 +191,12 @@ export class RestatementService {
       revision,
       superseded,
       delta: restatementDelta(figuresOf(before), figuresOf(after)),
+      values: restatementValues(
+        approvedValuesPart(before).values,
+        approvedValuesPart(after).values,
+      ),
       posting,
+      decidedByName: posting ? await nameOf(manager, posting.decidedBy) : null,
     };
   }
 }

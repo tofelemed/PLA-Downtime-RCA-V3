@@ -5,6 +5,7 @@ import {
 import { EntityManager } from 'typeorm';
 import { RcaAction } from '../rca/entities/rca-action.entity';
 import { childAudit, recordRcaAudit } from './rca-audit';
+import { assertCaseNotClosed } from './case-closed';
 
 /** The task that carries out an action (item 5): the open one, else the latest. */
 export interface RcaActionTaskV2View {
@@ -92,6 +93,29 @@ export async function assertActionTask(
     [link.tenantId, link.actionId, link.taskId ?? null],
   );
   if (open.length > 0) throw actionTaskExists();
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * 409 CASE_CLOSED for a new or relinked task of a closed investigation ("Create investigation task",
+ * "Create task from recommendation"): a closed investigation is frozen (QA H1). A missing case is left to
+ * the other checks (the link itself is not validated here).
+ */
+export async function assertCaseTaskAllowed(
+  manager: EntityManager,
+  link: { tenantId: string; rcaId: string | null },
+): Promise<void> {
+  if (!link.rcaId || !UUID.test(link.rcaId)) return;
+  const rows: Array<{ status: string | null }> = await manager.query(
+    `SELECT "status" FROM "rcas" WHERE "id" = $1::uuid AND "tenant_id" = $2`,
+    [link.rcaId, link.tenantId],
+  );
+  if (rows[0])
+    assertCaseNotClosed(
+      rows[0],
+      'The investigation is closed; reopen it to add a task',
+    );
 }
 
 export function actionTaskExists(): ConflictException {

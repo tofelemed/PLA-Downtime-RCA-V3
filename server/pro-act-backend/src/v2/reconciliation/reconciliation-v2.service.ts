@@ -31,6 +31,7 @@ import {
 } from './candidate-derivation';
 import { loadEventRca, rcaEventIdsOf } from './event-rca';
 import { monthCloseStateOf } from './month-close-state';
+import { proposalAfterValues } from './proposal-after-values';
 import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
   ReconciliationQueryDto,
@@ -123,8 +124,9 @@ export class ReconciliationV2Service {
       limit: query.limit,
       focus: query.focus,
     });
+    const after = await proposalAfterValues(manager, this.policies, page.items);
     return listResponse(
-      page.items.map(toProposalView),
+      page.items.map((p) => toProposalView(p, after.get(p.id) ?? null)),
       page.nextCursor,
       this.scope(context, period),
     );
@@ -168,7 +170,12 @@ export class ReconciliationV2Service {
       .andWhere('cp.id = :proposalId', { proposalId })
       .getOne();
     if (!found) throw notFound('Change proposal');
-    return toProposalView(found);
+    const after = await proposalAfterValues(
+      this.periods.manager,
+      this.policies,
+      [found],
+    );
+    return toProposalView(found, after.get(found.id) ?? null);
   }
 
   private async render(

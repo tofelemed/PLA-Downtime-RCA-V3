@@ -6,13 +6,14 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { useReliabilityFormat, type ReliabilityFormat } from '../shared/use-reliability-format';
 import { WorkOrderTable } from './work-order-table';
+import { plural } from '@/features/ux-kit/format/plural';
 
 function EvidenceFacts({ evidence, format }: { evidence: RepairEvidenceView; format: ReliabilityFormat }) {
   if (evidence.reason === 'no_operations') {
     return <p className="text-sm text-muted-foreground">No diagnosis, repair or test operation from the CMMS is linked to this stop, so it gives no active repair time; its restore time is the stop itself.</p>;
   }
   if (evidence.reason === 'operation_open') {
-    return <p className="text-sm text-muted-foreground">{format.number(evidence.openOperations)} operation(s) still running: the active repair time is known once they end.</p>;
+    return <p className="text-sm text-muted-foreground">{plural(evidence.openOperations, 'operation', 'operations', format.number)} still running: the active repair time is known once they end.</p>;
   }
   return (
     <dl className="grid grid-cols-[12rem_1fr] gap-x-3 gap-y-1 text-sm" data-testid="repair-evidence">

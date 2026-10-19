@@ -10,6 +10,9 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { humanize } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
+import { actionLabel, entityLabel } from './components/audit-columns';
+import { labelledCounts, type LabelledCount } from './model/audit-counts';
 
 const SeriesChart = lazy(() => import('@/features/pla-analytics/charts/series-chart').then((m) => ({ default: m.SeriesChart })));
 
@@ -59,19 +62,19 @@ function WorkItems({ title, testId, summary, overdueLabel }: { title: string; te
   );
 }
 
-const COUNT_COLUMNS = (title: string): Array<DataTableColumn<ActivityCountView>> => [
-  { id: 'key', header: title, cell: (row) => humanize(row.key) },
+const COUNT_COLUMNS = (title: string): Array<DataTableColumn<LabelledCount>> => [
+  { id: 'key', header: title, cell: (row) => row.label },
   { id: 'count', header: 'Entries', align: 'right', cell: (row) => row.count },
 ];
 
 function AuditActivity({ audit }: { audit: AuditActivitySummaryView }) {
   const { number } = useNumberFormat();
   return (
-    <SummaryCard title={`Audit activity (${number(audit.total)} entries)`} testId="report-audit-activity">
+    <SummaryCard title={`Audit activity (${plural(audit.total, 'entry', 'entries', number)})`} testId="report-audit-activity">
       <DayChart days={audit.byDay} label="Entries" />
       <div className="grid gap-4 lg:grid-cols-2">
-        <DataTable caption="Audit entries by action" columns={COUNT_COLUMNS('Action')} rows={audit.byAction} getRowKey={(row) => row.key} density="compact" />
-        <DataTable caption="Audit entries by record type" columns={COUNT_COLUMNS('Record type')} rows={audit.byEntityType} getRowKey={(row) => row.key} density="compact" />
+        <DataTable caption="Audit entries by action" columns={COUNT_COLUMNS('Action')} rows={labelledCounts(audit.byAction, actionLabel)} getRowKey={(row) => row.label} density="compact" />
+        <DataTable caption="Audit entries by record type" columns={COUNT_COLUMNS('Record type')} rows={labelledCounts(audit.byEntityType, entityLabel)} getRowKey={(row) => row.label} density="compact" />
       </div>
     </SummaryCard>
   );

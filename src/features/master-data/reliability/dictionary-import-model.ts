@@ -1,5 +1,6 @@
 import { V2ApiError } from '@/api/v2/errors';
 import type { FailureDictionaryImportResult } from '@/api/v2/types/failure-dictionary';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export const CSV_HEADER = 'kind,equipmentClass,code,name,description,category,assetTypes,isPending';
 
@@ -16,4 +17,4 @@ export function importErrorsOf(error: unknown): RowError[] {
 }
 
 export const importSummaryOf = (r: FailureDictionaryImportResult) =>
-  `${r.dryRun ? 'Check' : 'Import'}: ${r.total} row(s) — ${r.created} new, ${r.superseded} changed (new version), ${r.unchanged} unchanged.`;
+  `${r.dryRun ? 'Check' : 'Import'}: ${plural(r.total, 'row', 'rows')} — ${r.created} new, ${r.superseded} changed (new version), ${r.unchanged} unchanged.`;

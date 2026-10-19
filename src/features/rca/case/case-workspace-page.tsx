@@ -7,11 +7,14 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page } from '@/features/ux-kit/page-layout';
 import { CaseWorkspaceContext, useCaseWorkspace, type CaseWorkspaceValue } from './case-context';
+import { ClosedCaseNotice } from './closed-case-notice';
+import { workspaceOf } from './workspace-of';
 import { normalizeCase } from '../model/normalize-case';
 import { CaseHeader } from './case-header';
 import { CaseNav } from './case-nav';
 import { OverviewPage } from './overview/overview-page';
 import { useRcaDraftOwner } from './definition/use-definition-draft';
+import { PendingDraftNotice } from './definition/pending-draft-notice';
 
 const named = <T,>(load: () => Promise<T>, name: keyof T) =>
   lazy(async () => ({ default: (await load())[name] as unknown as ComponentType }));
@@ -55,10 +58,7 @@ function Workspace({ caseId }: { caseId: string }) {
   const detail = useRcaCase(caseId);
   const { canWriteRca } = useCapabilities();
   const rca = detail.data;
-  const value = useMemo<CaseWorkspaceValue | null>(
-    () => (rca ? { rca: normalizeCase(rca), readOnly: !canWriteRca, basePath: `/rca/${rca.id}` } : null),
-    [rca, canWriteRca],
-  );
+  const value = useMemo<CaseWorkspaceValue | null>(() => (rca ? workspaceOf(normalizeCase(rca), canWriteRca) : null), [rca, canWriteRca]);
   return (
     <DataState state={dataStateOf(detail)} error={detail.error} onRetry={() => detail.refetch()}>
       {value && (
@@ -67,6 +67,8 @@ function Workspace({ caseId }: { caseId: string }) {
             <div className="space-y-3" data-testid="case-detail">
               <CaseHeader />
               <CaseNav />
+              <ClosedCaseNotice />
+              <PendingDraftNotice />
             </div>
             <CaseRoutes />
           </Page>

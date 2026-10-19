@@ -147,7 +147,16 @@ describe('restatement posting independence from the correction proposer', () => 
   });
 
   it('SuperAdmin may post a restatement of its own correction', async () => {
+    // a decided posting is final (409 POSTING_DECIDED): clear the previous test's decision to start fresh
+    await env.rows('DELETE FROM restatement_postings WHERE revision_id = $1', [
+      revisionId,
+    ]);
     await markManual(userOf(superAdmin));
-    await post(superAdmin).expect(200);
+    const decided = await post(superAdmin).expect(200);
+    expect(
+      (decided.body as { posting: { decidedByName: string | null } }).posting,
+    ).toMatchObject({ decidedByName: 'Posting SuperAdmin' });
+    const again = await post(superAdmin).expect(409);
+    expect((again.body as ApiError).code).toBe('POSTING_DECIDED');
   });
 });

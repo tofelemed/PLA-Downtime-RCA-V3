@@ -1,7 +1,10 @@
 import type { SourceAuthorityPolicyView, SourceAuthorityVersionView } from '@/api/v2/types/source-authority';
 import { Badge } from '@/components/ui/badge';
 import { actorText, useUserNames } from '@/features/ux-kit/labels';
+import { EffectiveFrom } from '@/features/ux-kit/effective-from';
+import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { ACTUALS_SOURCE_LABELS } from '@/features/plan-dashboard/model/actuals-labels';
 import { VersionActions } from './version-actions';
 
 const STATE_LABELS: Readonly<Record<string, string>> = {
@@ -10,16 +13,18 @@ const STATE_LABELS: Readonly<Record<string, string>> = {
   rejected: 'Rejected',
 };
 
+const sourceLabel = (source: string): string => ACTUALS_SOURCE_LABELS[source] ?? source;
+
 /** The ranked sources of a version, or its primary / fallback when it has no hierarchy. */
 export function PolicySources({ policy }: { policy: SourceAuthorityPolicyView }) {
   const entries = policy.measurementHierarchy?.entries ?? [];
   if (entries.length === 0) {
     return (
       <p data-testid="authority-sources">
-        Primary <code>{policy.primarySource}</code>
+        Primary {sourceLabel(policy.primarySource)}
         {policy.fallback && (
           <>
-            , fallback <code>{policy.fallback.source}</code>
+            , fallback {sourceLabel(policy.fallback.source)}
           </>
         )}
       </p>
@@ -31,7 +36,7 @@ export function PolicySources({ policy }: { policy: SourceAuthorityPolicyView })
         .sort((a, b) => a.rank - b.rank)
         .map((entry) => (
           <li key={entry.rank}>
-            <code>{entry.source}</code>
+            {sourceLabel(entry.source)}
             {entry.signalSourceKey && <> · {entry.signalSourceKey}</>}
             {entry.sourceClass && <span className="text-muted-foreground"> ({entry.sourceClass.replace(/_/g, ' ')})</span>}
           </li>
@@ -65,7 +70,7 @@ export function VersionCard({ version, timezone }: { version: SourceAuthorityVer
         <Badge variant={version.inForce ? 'default' : 'outline'}>{version.inForce ? 'In force' : (STATE_LABELS[version.state] ?? version.state)}</Badge>
         {version.state === 'approved' && (
           <span className="text-xs text-muted-foreground">
-            From <PlantTime iso={version.effectiveFrom} tz={timezone} withDate />
+            <EffectiveFrom iso={version.effectiveFrom} tz={timezone} prefix="From" />
             {version.effectiveTo && (
               <>
                 {' '}
@@ -83,7 +88,7 @@ export function VersionCard({ version, timezone }: { version: SourceAuthorityVer
           {version.backdateReason && `: ${version.backdateReason}`}
         </p>
       )}
-      {version.notes && <p className="text-xs">{version.notes}</p>}
+      {version.notes && <p className="text-xs">{policyNoteText(version.notes)}</p>}
       <VersionActions version={version} />
     </article>
   );

@@ -9,6 +9,7 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useWindowRangeText } from '@/features/event-hub/hooks/use-window-range-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { ActionIcon } from '@/lib/icons';
+import { useActiveFiltersText } from '../hooks/use-active-filters-text';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { hasPeriodSelection, reportBase, type DowntimeFilters } from '../model/downtime-filters';
 
@@ -27,9 +28,11 @@ function DowntimeMetadata({ filters, bundle, snapshot }: DowntimeHeaderProps & {
   const env = useEventHubEnv();
   const { number } = useNumberFormat();
   const rangeText = useWindowRangeText();
+  const activeFilters = useActiveFiltersText(filters);
   const scope = filters.unitIds.length === 0 ? 'All units in your scope' : filters.unitIds.map(env.unitName).join(', ');
+  const windowText = rangeText({ label: filters.windowLabel, from: filters.from, to: filters.to, relative: filters.relativeWindow !== null });
   return <div className="space-y-1">
-    <ScopeHeader scopeLabel={`${scope} · ${rangeText({ label: filters.windowLabel, from: filters.from, to: filters.to })}`} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
+    <ScopeHeader scopeLabel={[scope, windowText, activeFilters].filter(Boolean).join(' · ')} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
       uom="time in h:mm" isProvisional={bundle.data?.isProvisional} asOf={bundle.data?.asOf ?? null} />
     {snapshot && <p className="text-xs" data-testid="snapshot-runs" data-run-ids={snapshot.calculationRunIds.join(',')}>
       Historical downtime summary and breakdowns use {snapshot.calculationRunIds.length === 1 ? 'the same calculation run' : `the same ${number(snapshot.calculationRunIds.length)} calculation runs`}.

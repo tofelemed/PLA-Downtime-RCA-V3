@@ -41,6 +41,7 @@ function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
       onChange={editor.patch}
       onSave={() => void editor.save()}
       saving={editor.saving}
+      dirty={editor.dirty}
       isNew={unit === null}
       readOnly={!canWrite || retired}
       plantName={selection?.tenant?.name ?? 'The selected plant'}

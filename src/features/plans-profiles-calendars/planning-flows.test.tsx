@@ -74,10 +74,10 @@ describe('plans, profiles, calendars — forms and commands (plan 3.4)', () => {
   it('a 422 field error from the API lands on the profile input it names', async () => {
     reply = () => json(422, refusal('VALIDATION_FAILED', { fieldErrors: [{ field: 'quantityUom', message: 'quantityUom must be shorter than or equal to 50 characters' }] }));
     wrap(<ProfileEditor profile={null} refs={REFS} cancelTo="/planning" onSaved={() => undefined} />);
-    fireEvent.change(screen.getByLabelText('Unit'), { target: { value: 'u1' } });
-    fireEvent.change(screen.getByLabelText('Product'), { target: { value: 'p1' } });
+    fireEvent.change(screen.getByLabelText(/^Unit/), { target: { value: 'u1' } });
+    fireEvent.change(screen.getByLabelText(/^Product/), { target: { value: 'p1' } });
     fireEvent.change(screen.getByLabelText(/Quantity unit/), { target: { value: 'x'.repeat(60) } });
-    fireEvent.change(screen.getByLabelText('Rate timebase'), { target: { value: 'h' } });
+    fireEvent.change(screen.getByLabelText(/^Rate timebase/), { target: { value: 'h' } });
     fireEvent.change(screen.getByLabelText('Effective from date'), { target: { value: '2026-10-10' } });
     fireEvent.change(screen.getByLabelText('Effective from time'), { target: { value: '06:00' } });
     fireEvent.click(screen.getByTestId('profile-save'));

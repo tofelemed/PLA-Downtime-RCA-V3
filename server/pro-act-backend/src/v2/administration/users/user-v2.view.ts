@@ -22,6 +22,11 @@ export interface UserV2View {
   manageable: boolean;
   /** whether the caller may grant or revoke this user's roles in the acting plant (rank rule) */
   accessManageable: boolean;
+  /**
+   * the user's roles in the acting plant (scope role tokens, or SuperAdmin / OrgAdmin): its grants there,
+   * else the D06 fallback of the legacy role in its home plant; screens show these, not `role` (QA 2026-10-19)
+   */
+  plantRoles: string[];
 }
 
 /** `GET /v2/users/directory` item: what a name resolver or an assignee picker needs. */
@@ -55,6 +60,7 @@ export function toUserView(
   user: DirectoryUser,
   names: PlaceNames,
   permissions: UserPermissions,
+  plantRoles: string[] = [],
 ): UserV2View {
   return {
     id: user.id,
@@ -74,5 +80,6 @@ export function toUserView(
     updatedAt: new Date(user.updatedAt).toISOString(),
     manageable: permissions.manageable,
     accessManageable: permissions.accessManageable,
+    plantRoles,
   };
 }

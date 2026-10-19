@@ -47,7 +47,7 @@ function Loaded<T extends EditableRecord>({ kind, query, save, toSaved }: Loaded
     return (
       <Page>
         <PageHeader title={kind === 'plant' ? 'Edit plant' : 'Edit organization'} back={back} />
-        <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()} />
+        <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()} back={back} />
       </Page>
     );
   }

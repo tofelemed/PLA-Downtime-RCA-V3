@@ -76,7 +76,7 @@ describe('RCA history, recommendation → action → task, typed causes (items 2
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <CaseWorkspaceContext.Provider value={{ rca, readOnly: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
+          <CaseWorkspaceContext.Provider value={{ rca, readOnly: false, canWrite: true, closed: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>,
     );

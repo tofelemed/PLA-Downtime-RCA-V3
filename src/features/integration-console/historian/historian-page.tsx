@@ -36,7 +36,7 @@ export function HistorianPage() {
   if (!canViewAnalysis) {
     return (
       <Page width="wide">
-        <PageHeader title="Enhanced Historian" />
+        <PageHeader title="Enhanced historian" />
         <DataState state="no-permission" />
       </Page>
     );
@@ -56,9 +56,10 @@ function HistorianContent() {
   );
   const results = useSignalSamples(windows);
   const nameOf = (id: string) => catalog.items.find((signal) => signal.id === id)?.name ?? 'Unknown signal';
+  const uomOf = (id: string) => catalog.items.find((signal) => signal.id === id)?.canonicalUom ?? null;
   const loaded = windows.flatMap((window, index) => {
     const data = results[index]?.data;
-    return data ? [{ id: window.signalId, name: nameOf(window.signalId), samples: data.samples }] : [];
+    return data ? [{ id: window.signalId, name: nameOf(window.signalId), uom: uomOf(window.signalId), samples: data.samples }] : [];
   });
   const failed = results.find((result) => result.isError)?.error;
   const loading = results.some((result) => result.isLoading);
@@ -66,7 +67,7 @@ function HistorianContent() {
   return (
     <Page width="wide">
       <PageHeader
-        title="Enhanced Historian"
+        title="Enhanced historian"
         description="Trends of the signals your connections deliver, in plant time."
         actions={loaded.length > 0 ? <Button size="sm" variant="outline" onClick={() => download(samplesCsv(loaded))} data-testid="trend-export"><ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" /> Export CSV</Button> : undefined}
       />

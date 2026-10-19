@@ -20,7 +20,9 @@ import { useEventForm } from './hooks/use-event-form';
 import { useEventFormSubmit } from './hooks/use-event-form-submit';
 import { usePlantFormat } from './hooks/use-plant-format';
 import { editTitleOf } from './model/edit-title';
-import { plantLocalToUtc } from './model/plant-local-time';
+import { eventPageTitle } from './model/event-trail';
+import { useScrollToTop } from './hooks/use-scroll-to-top';
+import { impactedInterval, type EventFormValues } from './model/event-form';
 import { useEventHubEnv } from './use-event-hub-env';
 
 /**
@@ -48,7 +50,9 @@ function EventFormScreen({ eventId }: { eventId: string | null }) {
   const [params] = useSearchParams();
   const listBack = useBackTarget();
   const editTitle = useEditTitle(detail.data);
-  const back = eventId ? { to: `/events/${eventId}`, label: 'Event' } : listBack;
+  const env = useEventHubEnv();
+  useScrollToTop(eventId ?? 'new');
+  const back = eventId ? { to: `/events/${eventId}`, label: detail.data ? eventPageTitle(detail.data, env.unitName) : 'Event' } : listBack;
   return (
     <Page>
       <PageHeader title={eventId ? editTitle : 'New event'} back={back} description="Times on the plant clock; the server validates the interval and the codes." />
@@ -81,10 +85,9 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
   const form = useEventForm({ userId, tenantId: env.tenantId, event, timezone: env.timezone, defaults: { unitId: defaultUnitId } });
   const save = useEventFormSubmit({ form, event, timezone: env.timezone, onSaved: (saved) => leave(`/events/${saved.id}`) });
   // the preview query follows the typed interval once it stops changing
-  const startLocal = useDebouncedValue(form.values.startLocal, 400);
-  const endLocal = useDebouncedValue(form.values.endLocal, 400);
-  const start = plantLocalToUtc(startLocal, env.timezone);
-  const end = endLocal ? plantLocalToUtc(endLocal, env.timezone) : null;
+  const { intervalMode, startLocal, endLocal, durationMinutes } = form.values;
+  const typed = useDebouncedValue(JSON.stringify({ intervalMode, startLocal, endLocal, durationMinutes }), 400);
+  const interval = impactedInterval(JSON.parse(typed) as Pick<EventFormValues, 'intervalMode' | 'startLocal' | 'endLocal' | 'durationMinutes'>, env.timezone);
   const unitId = event?.unitId ?? form.values.unitId;
   const discard = () => {
     form.discard();
@@ -99,7 +102,7 @@ function EventFormBody({ event, defaultUnitId = '', backTo }: EventFormBodyProps
         <Alert data-testid="server-changed"><AlertDescription>The event changed on the server since you started; saving asks you to review the differences.</AlertDescription></Alert>
       )}
       <EventFormFields form={form} mode={event ? 'edit' : 'create'} event={event} />
-      {unitId && start && <ImpactedPeriodsPreview unitId={unitId} from={start} to={end ?? event?.asOf ?? null} />}
+      {unitId && interval && <ImpactedPeriodsPreview unitId={unitId} from={interval.from} to={interval.to ?? event?.asOf ?? null} />}
       {save.formError && <Alert variant="destructive" role="alert" data-testid="form-error"><AlertDescription>{save.formError}</AlertDescription></Alert>}
       <div className="flex flex-wrap justify-end gap-2">
         <ConfirmDialog

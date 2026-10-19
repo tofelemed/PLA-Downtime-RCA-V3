@@ -48,7 +48,7 @@ describe('RCA UX remediation flows (U1)', () => {
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <CaseWorkspaceContext.Provider value={{ rca, readOnly: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
+          <CaseWorkspaceContext.Provider value={{ rca, readOnly: false, canWrite: true, closed: false, basePath: '/rca/c1' }}>{node}</CaseWorkspaceContext.Provider>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -79,7 +79,7 @@ describe('RCA UX remediation flows (U1)', () => {
     expect(card.textContent).toContain('Extruder E-1');
     expect(card.textContent).toContain('Die plate blockage');
     expect(screen.getByTestId('event-header-time').textContent).toContain('Ongoing');
-    const title = screen.getByLabelText('Title') as HTMLInputElement;
+    const title = screen.getByLabelText(/^Title/) as HTMLInputElement;
     expect(title.value).toMatch(/^Unit 100 · Die plate blockage · /);
     expect((screen.getByLabelText('Problem statement') as HTMLTextAreaElement).value).toMatch(/Stop on Unit 100, Extruder E-1 since .* \(ongoing\)/);
     fireEvent.change(title, { target: { value: 'My own title' } });
@@ -131,7 +131,7 @@ describe('RCA UX remediation flows (U1)', () => {
     wrap(<FaultTreeTool />);
     fireEvent.click(await screen.findByRole('button', { name: 'Remove node 1' }));
     const dialog = await screen.findByRole('alertdialog');
-    expect(dialog.textContent).toContain('1 node(s) below it');
+    expect(dialog.textContent).toContain('1 node below it');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remove node' }));
     await waitFor(() => expect(screen.getAllByTestId('fault-tree-node')).toHaveLength(1));
   });

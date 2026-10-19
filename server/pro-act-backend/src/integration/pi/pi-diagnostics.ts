@@ -3,6 +3,7 @@ import * as tls from 'tls';
 import { isIP } from 'net';
 import { withTimeout } from '../../common/helpers/time-bounds';
 import { PiHttpClient, PiRequestError } from './pi-http-client';
+import { plural } from '../../common/helpers/plural';
 
 export type CheckStatus = 'ok' | 'failed' | 'skipped' | 'not_applicable';
 
@@ -57,7 +58,7 @@ export async function diagnosePiEndpoint(
       viaClient(
         () => client.get('assetservers'),
         (reply) => {
-          return `${itemsOf(reply).length} asset server(s) visible`;
+          return `${plural(itemsOf(reply).length, 'asset server', 'asset servers')} visible`;
         },
       ),
     read: () => checkRead(client),
@@ -142,7 +143,10 @@ async function checkRead(client: PiHttpClient): Promise<DiagnosticCheck> {
         `assetservers/${encodeURIComponent(first.WebId)}/assetdatabases`,
       ),
     );
-    return { status: 'ok', detail: `${databases.length} AF database(s)` };
+    return {
+      status: 'ok',
+      detail: plural(databases.length, 'AF database', 'AF databases'),
+    };
   } catch (error) {
     return { status: 'failed', detail: describe(error) };
   }

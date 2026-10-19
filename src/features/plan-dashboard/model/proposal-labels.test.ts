@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { proposalCodingChangesOf, proposalFieldChangeText, proposalTriggersText, proposalTriggerText, proposalValuesOf } from './proposal-labels';
-import { snapshotFigures } from './snapshot-figures';
+import { proposalComparison } from './snapshot-figures';
 
 describe('change proposal labels (Marun E2E)', () => {
   it('a valuation change names the input that changed; other triggers keep their words', () => {
@@ -21,7 +21,7 @@ describe('change proposal labels (Marun E2E)', () => {
     });
     expect(proposalValuesOf({ revision: 1 })).toBeNull();
     expect(proposalValuesOf(null)).toBeNull();
-    expect(snapshotFigures(before).map((f) => f.label)).toEqual(['Revision']);
+    expect(proposalComparison(before, null)).toEqual([]);
   });
 
   it('a reused proposal lists every cause, oldest first', () => {
@@ -37,7 +37,7 @@ describe('change proposal labels (Marun E2E)', () => {
     const after = { inputHash: 'h', codingChanges: [{ autoKey: 'k', sliceId: 's', kind: 'availability', quantity: '14', before: 'speed-loss', after: null }, { bad: true }] };
     expect(proposalCodingChangesOf(after)).toEqual([{ autoKey: 'k', kind: 'availability', quantity: '14', before: 'speed-loss', after: null, fields: [] }]);
     expect(proposalCodingChangesOf(null)).toEqual([]);
-    expect(snapshotFigures(after)).toEqual([]);
+    expect(proposalComparison(after, after)).toEqual([]);
   });
 
   it('names a changed cause classification with labels (Marun regression R3)', () => {

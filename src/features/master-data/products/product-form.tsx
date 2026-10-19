@@ -15,6 +15,8 @@ export interface ProductFormProps {
   onChange: (patch: Partial<ProductDraft>) => void;
   onSave: () => void;
   saving: boolean;
+  /** the draft has unsaved edits */
+  dirty?: boolean;
   isNew: boolean;
   readOnly: boolean;
 }
@@ -53,7 +55,7 @@ function AvailabilityField({ value, onChange, isNew }: { value: ProductAvailabil
 }
 
 /** Name, code, unit of measure, description, who can use it, and the folded legacy standard cost. */
-export function ProductForm({ draft, errors, onChange, onSave, saving, isNew, readOnly }: ProductFormProps) {
+export function ProductForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly }: ProductFormProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSave();
@@ -78,7 +80,7 @@ export function ProductForm({ draft, errors, onChange, onSave, saving, isNew, re
           disabled={readOnly}
         />
       </LegacyValues>
-      {!readOnly && <FormActions isNew={isNew} saving={saving} cancelTo="/master-data/products" />}
+      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo="/master-data/products" />}
     </form>
   );
 }

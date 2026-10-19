@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { useScopeWaterfall } from '@/api/v2/queries/pla-analytics';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { PageHeader } from '@/features/ux-kit/page-layout';
-import { exportRequestOf, scopeToParams, waterfallQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { exportBlockedReason, exportRequestOf, scopeToParams, waterfallQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { unitsLabel } from '../model/links';
 import { ScopeExport } from './scope-export';
 import { SnapshotStatus } from './snapshot-status';
@@ -30,8 +31,12 @@ interface HeaderDetailsProps { scope: AnalyticsScope; overview: boolean; query: 
 
 function HeaderActions({ scope, overview, query }: HeaderDetailsProps) {
   const env = useEventHubEnv();
+  const { canViewMoney } = useCapabilities();
+  // QA PLA Q1 / owner 19 Oct 2026: no Reports link and no value export for roles without money (operators)
+  if (!canViewMoney) return null;
   if (!overview) return <Link className="text-sm font-medium text-primary underline" to={`/reports?${scopeToParams(scope)}&view=exports`}>Reports & exports</Link>;
-  return <ScopeExport request={exportRequestOf(scope, 'period_summary', query.data?.isProvisional ?? true)} label="Export period summary" timezone={env.timezone} />;
+  const provisional = query.data?.isProvisional ?? true;
+  return <ScopeExport request={exportRequestOf(scope, 'period_summary', provisional)} disabledReason={exportBlockedReason(scope, provisional, 'Approved only')} label="Export period summary" timezone={env.timezone} />;
 }
 
 function HeaderMetadata({ scope, overview, query }: HeaderDetailsProps) {
@@ -39,7 +44,7 @@ function HeaderMetadata({ scope, overview, query }: HeaderDetailsProps) {
   const label = `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`;
   return <div className="space-y-1">
     {overview ? <SnapshotStatus scopeLabel={label} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
-      uom={query.data?.data.uom ?? null} baseline={scope.ledger === 'plan' ? 'approved plan (plan ledger)' : 'sustained rate (capacity ledger)'} response={query.data} isError={query.isError} />
+      uom={query.data?.data.uom ?? null} baseline={scope.ledger === 'plan' ? 'approved plan (plan ledger)' : 'sustained rate (capacity ledger)'} response={query.data} isError={query.isError} approvedOnly={scope.approvedOnly} />
       : <ScopeHeader scopeLabel={label} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback} />}
     <p className="text-xs">Periods are grouped by the plant’s operational date and shift; several sites are compared on their own local days.</p>
   </div>;

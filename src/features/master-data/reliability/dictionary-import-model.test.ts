@@ -6,7 +6,7 @@ describe('failure dictionary import (SME D11)', () => {
   it('reads the row problems of a refused import', () => {
     const error = new V2ApiError(422, {
       code: 'DICTIONARY_IMPORT_INVALID',
-      message: 'The import has 1 invalid row(s); nothing was stored',
+      message: 'The import has 1 invalid row; nothing was stored',
       correlationId: null,
       retryable: false,
       details: { errors: [{ line: 3, message: 'code and name are required' }] },

@@ -11,16 +11,17 @@ import { EditorProblem } from '../editor/editor-problem';
 import { useCommandProblem } from '../hooks/use-command-problem';
 import { periodRefOf } from '../hooks/use-draft-editor';
 import { proposalTriggersText } from '../model/proposal-labels';
-import { snapshotFigures } from '../model/snapshot-figures';
 import { EVIDENCE_LABELS } from '../model/line-evidence';
 import { ProposeCorrectionDialog, type CorrectionDraft } from './propose-correction-dialog';
 import { ProposalCodingChanges } from './proposal-coding-changes';
+import { ProposalComparison } from './proposal-comparison';
 import { ProposalValues } from './proposal-values';
 import { ReasonConfirm } from './reason-confirm';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { pageListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface ChangeProposalsPanelProps {
   view: ReconciliationView;
@@ -28,24 +29,6 @@ export interface ChangeProposalsPanelProps {
 }
 
 const STATE_LABELS: Readonly<Record<string, string>> = { open: 'Open', accepted: 'Accepted', dismissed: 'Dismissed', superseded: 'Superseded' };
-
-function Snapshot({ label, value }: { label: string; value: Record<string, unknown> | null }) {
-  const figures = value ? snapshotFigures(value) : [];
-  return (
-    <details className="text-xs">
-      <summary className="cursor-pointer">{label}</summary>
-      {value === null && <p>Calculated when the proposal is accepted.</p>}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 sm:grid-cols-3">
-        {figures.map((f) => (
-          <div key={f.label}>
-            <dt className="text-muted-foreground">{f.label}</dt>
-            <dd>{f.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </details>
-  );
-}
 
 function ManualDetail({ p }: { p: ChangeProposalView }) {
   if (!p.manual) return null;
@@ -70,9 +53,8 @@ export function ChangeProposalCard({ p, timezone, decide }: { p: ChangeProposalV
       <ManualDetail p={p} />
       <ProposalValues p={p} />
       <ProposalCodingChanges p={p} />
-      <Snapshot label="Before (approved)" value={p.before} />
-      <Snapshot label="After (with the approved decisions)" value={p.after} />
-      {p.affectedReports.length > 0 && <p className="text-xs">Affects {number(p.affectedReports.length)} earlier export(s) of the approved figures.</p>}
+      <ProposalComparison p={p} />
+      {p.affectedReports.length > 0 && <p className="text-xs">Affects {plural(p.affectedReports.length, 'earlier export', 'earlier exports', number)} of the approved figures.</p>}
       {p.state === 'open' && !decide && p.manual && <p className="text-xs text-muted-foreground">Waiting for another approver to decide.</p>}
       {p.state === 'open' && decide && (
         <div className="flex flex-wrap gap-2">

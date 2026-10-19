@@ -3,6 +3,7 @@ import {
   TotalsDelta,
 } from '../../domain/reconciliation/restatement-delta';
 import { Restatement } from '../../reconciliation/restatement.service';
+import { RestatementValues } from '../../reconciliation/restatement-values';
 
 /** `GET /v2/production-periods/:id/restatement` (SME R5). */
 export interface RestatementV2View {
@@ -18,8 +19,12 @@ export interface RestatementV2View {
     treatment: string;
     note: string | null;
     decidedBy: string;
+    /** display name of the finance approver who decided (null when the user is gone) */
+    decidedByName: string | null;
     decidedAt: string;
   } | null;
+  /** loss value per currency, old and new each in its own default valuation view; null when not valued */
+  values: RestatementValues | null;
   totals: TotalsDelta[];
   actuals: TotalsDelta[];
   lines: LineDelta[];
@@ -39,9 +44,11 @@ export function toRestatementView(r: Restatement): RestatementV2View {
           treatment: r.posting.treatment,
           note: r.posting.note,
           decidedBy: r.posting.decidedBy,
+          decidedByName: r.decidedByName,
           decidedAt: r.posting.decidedAt.toISOString(),
         }
       : null,
+    values: r.values,
     totals: r.delta.totals,
     actuals: r.delta.actuals,
     lines: r.delta.lines,

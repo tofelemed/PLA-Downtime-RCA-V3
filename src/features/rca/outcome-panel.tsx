@@ -7,6 +7,7 @@ import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_BASELINE_METRIC_LABELS, RCA_VERDICT_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ApprovedImpact } from './components/approved-impact';
+import { plural } from '@/features/ux-kit/format/plural';
 
 /**
  * RCA03 outcome: approved historical loss (ledger), claimed avoided loss (owners) and realized difference
@@ -32,7 +33,7 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
               <ul className="text-sm">
                 {data.claimedAvoided.map((claim) => (
                   <li key={claim.currency}>
-                    <Quantity value={claim.amount} uom={claim.currency} fractionDigits={currencyDigits(claim.currency)} /> ({claim.actions} action(s))
+                    <Quantity value={claim.amount} uom={claim.currency} fractionDigits={currencyDigits(claim.currency)} /> ({plural(claim.actions, 'action', 'actions')})
                   </li>
                 ))}
               </ul>

@@ -20,7 +20,7 @@ import { UnitStreamForm } from './unit-stream-form';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
-import { useSearchParams } from 'react-router-dom';
+import { useUnitParam } from '../hooks/use-unit-param';
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<UnitStreamView>[] {
   return [
@@ -50,9 +50,8 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<UnitStreamView>[] {
 export function UnitStreamsTab() {
   const { canWriteProfiles, canWritePeriods } = useCapabilities();
   const refs = usePlanningRefs();
-  const [searchParams] = useSearchParams();
-  // a deep link names the unit of the linked row (`?unitId=…#…`)
-  const [unitId, setUnitId] = useState(() => searchParams.get('unitId') ?? '');
+  // a deep link names the unit of the linked row (`?unitId=…#…`); the choice stays in the URL
+  const [unitId, setUnitId] = useUnitParam();
   const [adding, setAdding] = useState(false);
   const anchor = useAnchorFocus('unit-stream-');
   const streams = useUnitStreams(unitId, anchor.focus);

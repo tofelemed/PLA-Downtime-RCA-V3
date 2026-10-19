@@ -91,7 +91,8 @@ export class RcaActionsV2Controller {
     summary: 'Add an action',
     description:
       'Requires `Idempotency-Key`. A baseline without value is counted from history over its windowDays before ' +
-      'the verification window (422 BASELINE_NEEDS_WINDOW without one); a claim needs its currency.',
+      'the verification window (422 BASELINE_NEEDS_WINDOW without one); a claim needs its currency.' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   create(
@@ -109,7 +110,8 @@ export class RcaActionsV2Controller {
       'Requires `If-Match` (428/412). RCA writers change any field. The owner of the action who is not an RCA ' +
       'writer may only set the status to open / in progress and record the completion evidence (403 FORBIDDEN_ROLE ' +
       'for other fields or other actions, 403 SEPARATION_OF_DUTIES for done, 409 ACTION_FINISHED on a done or ' +
-      'cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED).',
+      'cancelled action). The verification window is fixed once the action is done (409 VERIFICATION_WINDOW_LOCKED).' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   update(
@@ -129,7 +131,8 @@ export class RcaActionsV2Controller {
     summary:
       'Verify now (the worker also does it hourly once the window has ended)',
     description:
-      'Requires `Idempotency-Key` and `If-Match`. 409 VERIFICATION_WINDOW_OPEN / VERIFICATION_NOT_PLANNED.',
+      'Requires `Idempotency-Key` and `If-Match`. 409 VERIFICATION_WINDOW_OPEN / VERIFICATION_NOT_PLANNED.' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   @ApiHeader({ name: 'If-Match', required: true })
@@ -149,7 +152,8 @@ export class RcaActionsV2Controller {
       'Propose a correction of the computed baseline, with its reason (SME CA3)',
     description:
       'Requires `If-Match`. The counted baseline is kept; the correction counts once someone else approves it. ' +
-      '409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan.',
+      '409 BASELINE_NOT_COMPUTED for a baseline typed before CA3 or without a verification plan.' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   proposeCorrection(
@@ -169,7 +173,8 @@ export class RcaActionsV2Controller {
     description:
       'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `If-Match`. Manager approver other than the proposer (403 SEPARATION_OF_DUTIES); 409 ' +
-      'NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.',
+      'NO_PENDING_CORRECTION. Approving clears the verification result so the action is evaluated again.' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   @ApiHeader({ name: 'If-Match', required: true })
   decideCorrection(

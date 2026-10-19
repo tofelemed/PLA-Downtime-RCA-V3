@@ -1,7 +1,12 @@
+import { labelOf } from '@/features/ux-kit/labels';
+import { RCA_RECOMMENDATION_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import type { RcaRecommendationItem } from '@/api/v2/types/rca';
 import { plantDayOf, plantDayStart } from './plant-day';
 
 export const RECOMMENDATION_STATUSES = ['Open', 'Planned', 'In Progress', 'Completed', 'Cancelled'] as const;
+
+/** Status choices in words (QA L2 / L3: sentence case, "Done" like an action); the stored values are unchanged. */
+export const RECOMMENDATION_STATUS_OPTIONS = RECOMMENDATION_STATUSES.map((value) => ({ value, label: labelOf(RCA_RECOMMENDATION_STATUS_LABELS, value) }));
 export const RECOMMENDATION_PRIORITIES = ['Low', 'Medium', 'High'] as const;
 
 /** The recommendation page form; text fields hold '' for "not stated". */

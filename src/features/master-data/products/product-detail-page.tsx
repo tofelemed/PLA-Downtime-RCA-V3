@@ -43,6 +43,7 @@ function ProductEditor({ product }: { product: MasterProductView | null }) {
       onChange={editor.patch}
       onSave={() => void editor.save()}
       saving={editor.saving}
+      dirty={editor.dirty}
       isNew={product === null}
       readOnly={!canWrite || product?.isActive === false}
     />

@@ -7,7 +7,12 @@ interface RestatementBody {
   revision: number;
   supersededRevision: number;
   operationalEffectiveDate: string;
-  posting: { postingDate: string; treatment: string } | null;
+  posting: {
+    postingDate: string;
+    treatment: string;
+    decidedByName: string | null;
+  } | null;
+  values: unknown;
   totals: Array<{
     uom: string | null;
     figures: Record<string, { delta: string | null }>;
@@ -105,6 +110,18 @@ describe('restatement delta, posting date and source status mapping (SME R5 / R1
       )
       .expect(200);
     await env.runActuals();
+    // QA audit P-1: an accepted proposal names the revision it opened (its value, once valued)
+    const accepted = (
+      await env.get(`production-periods/${env.periodA1}/change-proposals`)
+    ).body as {
+      items: Array<{
+        state: string;
+        valueAfter: { revision: number; lifecycle: string } | null;
+      }>;
+    };
+    expect(
+      accepted.items.find((p) => p.state === 'accepted')?.valueAfter,
+    ).toMatchObject({ revision: 2, lifecycle: 'draft' });
     const body = (
       await env
         .get(`production-periods/${env.periodA1}/restatement`)
@@ -116,6 +133,7 @@ describe('restatement delta, posting date and source status mapping (SME R5 / R1
       operationalEffectiveDate: '2027-03-01',
       posting: null,
     });
+    expect(body).toHaveProperty('values');
     expect(body.totals.map((t) => t.uom)).toEqual(['t']);
     const availability = body.lines.find((l) => l.kind === 'availability');
     expect(typeof availability?.old).toBe('string');
@@ -125,7 +143,7 @@ describe('restatement delta, posting date and source status mapping (SME R5 / R1
     ).toBe(true);
   });
 
-  it('finance — not plant management — sets the posting date and treatment; a later decision replaces it', async () => {
+  it('finance — not plant management — sets the posting date and treatment once; a decided posting is read-only', async () => {
     const path = `production-periods/${env.periodA1}/revisions/2/posting`;
     await env
       .post(
@@ -134,31 +152,6 @@ describe('restatement delta, posting date and source status mapping (SME R5 / R1
         env.approver,
       )
       .expect(403);
-    await env
-      .post(
-        path,
-        { postingDate: '2027-04-02', treatment: 'correction' },
-        env.financeApprover,
-      )
-      .expect(200);
-    const replaced = (
-      await env
-        .post(
-          path,
-          {
-            postingDate: '2027-04-05',
-            treatment: 'estimate_change',
-            note: 'lab revision',
-          },
-          env.financeApprover,
-        )
-        .expect(200)
-    ).body as RestatementBody;
-    expect(replaced.posting).toMatchObject({
-      postingDate: '2027-04-05',
-      treatment: 'estimate_change',
-    });
-    expect(replaced.operationalEffectiveDate).toBe('2027-03-01');
     const bad = await env
       .post(
         path,
@@ -167,6 +160,49 @@ describe('restatement delta, posting date and source status mapping (SME R5 / R1
       )
       .expect(422);
     expect((bad.body as ApiError).code).toBeDefined();
+    const decided = (
+      await env
+        .post(
+          path,
+          { postingDate: '2027-04-02', treatment: 'correction' },
+          env.financeApprover,
+        )
+        .expect(200)
+    ).body as RestatementBody;
+    expect(decided.posting).toMatchObject({
+      postingDate: '2027-04-02',
+      treatment: 'correction',
+    });
+    // the test token's user has no users row: the name is null, never the id
+    expect(decided.posting).toHaveProperty('decidedByName', null);
+    expect(decided.operationalEffectiveDate).toBe('2027-03-01');
+    // owner decision 2026-10-19: closed records are frozen — no second decision overwrites the first
+    const refused = await env
+      .post(
+        path,
+        {
+          postingDate: '2027-04-05',
+          treatment: 'estimate_change',
+          note: 'lab revision',
+        },
+        env.financeApprover,
+      )
+      .expect(409);
+    expect((refused.body as ApiError).code).toBe('POSTING_DECIDED');
+    const after = (
+      await env
+        .get(`production-periods/${env.periodA1}/restatement`)
+        .expect(200)
+    ).body as RestatementBody;
+    expect(after.posting).toMatchObject({
+      postingDate: '2027-04-02',
+      treatment: 'correction',
+    });
+    const [row] = await env.rows<{ row_version: number }>(
+      `SELECT row_version FROM restatement_postings WHERE period_id = $1`,
+      [env.periodA1],
+    );
+    expect(Number(row.row_version)).toBe(1);
   });
 
   it('the import source keeps the former default on first use; the mapping version is kept on the record', async () => {

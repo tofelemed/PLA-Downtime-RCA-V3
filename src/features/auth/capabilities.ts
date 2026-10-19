@@ -20,6 +20,11 @@ export interface Capabilities {
    * (operators record lot dispositions, SME E3 / `DISPOSITION_WRITERS`) who see only that section
    */
   canReachPeriodQuality: boolean;
+  /**
+   * owner 19 Oct 2026 (QA audit, no money for operators): loss value and valuation pages, value columns,
+   * value exports and the Reports link; every role but the operations-only (operator) roles
+   */
+  canViewMoney: boolean;
   canManageMasterData: boolean;
   /**
    * the Master data menu entry: code-library readers, master-data administrators, and writers of
@@ -117,8 +122,14 @@ export interface Capabilities {
   /** SME D13: verify stop coding as the unit's supervisor / validate failure detail as maintenance */
   canVerifyStops: boolean;
   canValidateFailures: boolean;
-  /** v2 production events: any member whose role is not read-only (WriteAccessGuard) */
+  /**
+   * v2 production events and stops: create, code, split, merge, bulk code, close, retract, review items and
+   * duplicate-stop decisions (`EVENT_WRITERS`, owner decision 2026-10-19: the production accountant has
+   * read-only coding)
+   */
   canWriteEvents: boolean;
+  /** tasks: any member whose role is not read-only (WriteAccessGuard) */
+  canWriteTasks: boolean;
   /**
    * plant display settings (calendar system, digits): the server's tenant-setting rule
    * (`app-settings-access.policy.ts` canWriteSetting: TenantAdmin or manager_approver in the plant, SuperAdmin)
@@ -135,7 +146,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -182,7 +193,8 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canDelegateApprovals: may(ServerRoles.DELEGATION_WRITERS),
     canVerifyStops: may(ServerRoles.STOP_VERIFIERS),
     canValidateFailures: may(ServerRoles.FAILURE_VALIDATORS),
-    canWriteEvents: !readOnly,
+    canWriteEvents: may(ServerRoles.EVENT_WRITERS),
+    canWriteTasks: !readOnly,
     canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };
 }
@@ -202,6 +214,7 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     canViewOperations: held.length > 0,
     canViewAnalysis,
     canReachPeriodQuality: canViewAnalysis || writes.canWriteDispositions,
+    canViewMoney: canViewAnalysis,
     canManageMasterData,
     canReachMasterData:
       canViewAnalysis || canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,

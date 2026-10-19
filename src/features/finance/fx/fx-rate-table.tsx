@@ -5,6 +5,8 @@ import { DataTable, type DataTableColumn, type DataTableEmpty, type DataTableSta
 import { FX_RATE_TYPE_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { fxRateText } from '../model/fx-rate-text';
 
 export interface FxRateTableProps {
   rates: readonly FxRateView[];
@@ -17,6 +19,7 @@ export interface FxRateTableProps {
 export function FxRateTable({ rates, pager, status, empty }: FxRateTableProps) {
   const navigate = useNavigate();
   const dates = usePlantDates();
+  const { digits } = useNumberFormat();
   const columns: Array<DataTableColumn<FxRateView>> = [
     {
       id: 'pair',
@@ -30,7 +33,7 @@ export function FxRateTable({ rates, pager, status, empty }: FxRateTableProps) {
     },
     { id: 'type', header: 'Rate table', cell: (rate) => <span data-testid="fx-type">{labelOf(FX_RATE_TYPE_LABELS, rate.rateType)}</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (rate) => `Version ${rate.version}` },
-    { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (rate) => <span className="font-mono text-xs" data-testid="fx-rate">1 {rate.fromCurrency} = {rate.rate} {rate.toCurrency}</span> },
+    { id: 'rate', header: 'Rate', align: 'right', nowrap: true, cell: (rate) => <span className="font-mono text-xs" data-testid="fx-rate">{fxRateText(rate, digits)}</span> },
     { id: 'valid', header: 'Valid', nowrap: true, cell: (rate) => dates.validity(rate.effectiveFrom, rate.effectiveTo) },
     { id: 'source', header: 'Source', cell: (rate) => rate.source ?? '—' },
     {

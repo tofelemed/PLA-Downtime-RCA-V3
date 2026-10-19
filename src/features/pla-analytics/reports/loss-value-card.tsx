@@ -1,5 +1,6 @@
 import { useReport } from '@/api/v2/queries/reports';
 import type { LossValueReportView } from '@/api/v2/types/period-overview';
+import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { useCalendarPreference } from '@/lib/dates';
@@ -7,9 +8,13 @@ import { LEDGER_LABELS } from '@/features/ux-kit/labels';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
-import { formatMoney } from '@/features/plan-dashboard/model/display';
 import { AnalyticsCard } from '../components/analytics-card';
 import { lossValueQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { revisionSelectionLabel } from '../model/links';
+import { valueText } from '../model/display';
+
+/** Nothing in this view is valued (e.g. no standard cost in the policy): say so, not "Provisional". */
+const nothingValued = (data: LossValueReportView | undefined) => data !== undefined && data.total.currencies.length > 0 && data.total.currencies.every((c) => c.status === 'unvalued');
 
 type ValueRow = LossValueReportView['groups'][number];
 
@@ -31,7 +36,7 @@ function columnsOf(currencies: readonly string[], unitName: (id: string) => stri
       nowrap: true,
       cell: (row) => {
         const value = row.currencies.find((entry) => entry.currency === currency);
-        return value ? <LocalizedNumber text={formatMoney(value)} /> : '—';
+        return value ? <LocalizedNumber text={valueText(value)} /> : '—';
       },
     })),
   ];
@@ -51,15 +56,18 @@ export function LossValueCard({ scope, metric = 'margin' }: { scope: AnalyticsSc
   const { currency } = useDisplayCurrency();
   const { digits } = useCalendarPreference();
   const currencies = entriesInCurrency(data?.total.currencies.map((c) => c.currency) ?? [], (c) => c, currency);
+  const unvalued = nothingValued(data);
+  const approved = data?.valuationStatus === 'approved';
   return (
     <AnalyticsCard
       title={`Loss value · ${data?.label ?? label} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
       testId="report-loss-value"
       query={query}
-      response={query.data}
+      response={query.data && unvalued && approved ? { ...query.data, isProvisional: false } : query.data}
       isEmpty={data?.groups.length === 0}
       emptyText="Nothing valued in these periods."
-      note="Valued from each period's calculation (approved revision, else the open draft)."
+      note={`Valued from each period's calculation · ${revisionSelectionLabel(scope.approvedOnly).toLowerCase()}.`}
+      actions={unvalued ? <Badge variant="outline" data-testid="report-value-not-valued">Not valued</Badge> : undefined}
     >
       {data && (
         <div className="space-y-2">
@@ -69,7 +77,7 @@ export function LossValueCard({ scope, metric = 'margin' }: { scope: AnalyticsSc
             {currencies
               .map((c) => {
                 const value = data.total.currencies.find((entry) => entry.currency === c);
-                return value ? formatMoney(value, digits) : `— ${c}`;
+                return value ? valueText(value, digits) : `— ${c}`;
               })
               .join(' · ')}
           </p>

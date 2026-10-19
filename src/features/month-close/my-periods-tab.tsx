@@ -11,13 +11,15 @@ import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { type CalendarPreference, formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { NoPlanLink } from './components/no-plan-notice';
 import { groupQueueRows } from './my-queue-groups';
 
 const periodHref = (row: QueueItemView) => (row.planId ? `/plans/${row.planId}/periods/${row.periodId}` : null);
 
 function OpenLink({ row }: { row: QueueItemView }) {
   const href = periodHref(row);
-  if (!href) return null;
+  // the server lists only plan-covered periods; one resolved before its plan's recalculation has no link yet
+  if (!href) return <NoPlanLink />;
   return (
     <Link to={href} className="text-sm underline" onClick={(event) => event.stopPropagation()} data-testid="queue-open">
       Open

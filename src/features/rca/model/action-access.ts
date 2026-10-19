@@ -10,6 +10,9 @@ export interface ActionAccess {
   ownerOnly: boolean;
 }
 
+/** Nothing to do with the action (QA H1: an action of a closed investigation). */
+export const NO_ACTION_ACCESS: ActionAccess = { canPlan: false, canWork: false, ownerOnly: false };
+
 const UNFINISHED = new Set(['open', 'in_progress']);
 
 /**

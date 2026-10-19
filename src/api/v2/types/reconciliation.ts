@@ -330,9 +330,17 @@ export interface ChangeProposalView {
   createdRevisionId: string | null;
   /** SME R4: who proposed a manual correction, its reason and evidence (null for a system proposal) */
   manual: ManualProposalDetail | null;
+  /** the loss value of the revision an acceptance opened (QA audit P-1); absent from older servers */
+  valueAfter?: ProposalAfterValuesView | null;
   createdAt: string;
   updatedAt: string;
   rowVersion: number;
+}
+
+export interface ProposalAfterValuesView {
+  revision: number;
+  lifecycle: string;
+  values: { view: string; policyVersion: number | null; amounts: Array<{ currency: string; amount: string | null; status: string }> } | null;
 }
 
 export interface ManualProposalDetail {

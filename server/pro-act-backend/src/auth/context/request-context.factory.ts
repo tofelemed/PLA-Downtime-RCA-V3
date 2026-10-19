@@ -12,7 +12,7 @@ import {
 import { Tenant } from '../../tenant/tenant.entity';
 import { User } from '../../users/user.entity';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
-import { rolesForLegacyRole } from '../roles/role-model';
+import { legacyRolesApplying } from '../roles/role-model';
 import { AccessDenialAuditService } from '../scopes/access-denial-audit.service';
 import { UserScopesService } from '../scopes/user-scopes.service';
 
@@ -158,10 +158,12 @@ function scopesIn(scopes: ScopeGrant[], tenantId: string | null): ScopeGrant[] {
   return tenantId ? scopes.filter((scope) => scope.tenantId === tenantId) : [];
 }
 
+/** Legacy role + its D06 mapping only while no own grant is held in the plant (`legacyRolesApplying`). */
 function mergeRoles(legacyRole: string | null, scopes: ScopeGrant[]): string[] {
+  const ownGrant = scopes.some((scope) => !scope.delegationId);
   return [
     ...new Set([
-      ...rolesForLegacyRole(legacyRole),
+      ...legacyRolesApplying(legacyRole, ownGrant),
       ...scopes.map((scope) => scope.role),
     ]),
   ];

@@ -4,10 +4,12 @@ import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
-import { POSTING_TREATMENT_LABELS, RESTATEMENT_FIGURE_LABELS } from '../model/restatement-labels';
+import { RESTATEMENT_FIGURE_LABELS } from '../model/restatement-labels';
 import { useReasonCodeName } from '../hooks/use-reason-code-name';
 import { reasonChangesOf } from '../model/reason-changes';
+import { PostingDecisionText } from './posting-decision-text';
 import { PostingForm } from './posting-form';
+import { RestatementValueRows } from './restatement-value-rows';
 
 function Cell({ value, digits }: { value: string | null; digits: ReturnType<typeof useCalendarPreference>['digits'] }) {
   return <td className="px-2 text-right tabular-nums">{value === null ? '—' : formatDecimal(value, 2, digits)}</td>;
@@ -58,6 +60,7 @@ function DeltaTable({ data }: { data: RestatementView }) {
         </tr>
       </thead>
       <tbody>
+        <RestatementValueRows values={data.values} />
         <TotalsRows rows={data.totals} />
         <TotalsRows rows={data.actuals} />
         {changes.map((c) => (
@@ -77,7 +80,8 @@ function DeltaTable({ data }: { data: RestatementView }) {
 
 /**
  * A restatement of an approved period (SME R5): old vs new figures from the server, the operational date
- * the figures describe, and finance's posting date and treatment (finance approvers decide them).
+ * the figures describe, the loss value before / after, and finance's posting date and treatment (finance
+ * approvers decide them once; a decided posting is read-only).
  */
 export function RestatementPanel({ view }: { view: ReconciliationView }) {
   const pref = useCalendarPreference();
@@ -92,13 +96,11 @@ export function RestatementPanel({ view }: { view: ReconciliationView }) {
         {data.afterClose ? ' — correction after month close' : ''}
       </h3>
       <p className="text-sm text-muted-foreground">
-        Operational date {formatOperationalDate(data.operationalEffectiveDate, pref)} ·{' '}
-        {data.posting
-          ? `posted on ${formatOperationalDate(data.posting.postingDate, pref)} as ${POSTING_TREATMENT_LABELS[data.posting.treatment]}`
-          : 'posting not decided by finance yet'}
+        Operational date {formatOperationalDate(data.operationalEffectiveDate, pref)} · <PostingDecisionText data={data} />
       </p>
       <DeltaTable data={data} />
-      {canDecidePosting && <PostingForm data={data} />}
+      {canDecidePosting && !data.posting && <PostingForm data={data} />}
+      {canDecidePosting && data.posting && <p className="text-xs text-muted-foreground" data-testid="posting-final">The posting decision is final. To change it, propose a correction of this period: its new revision gets its own posting.</p>}
     </section>
   );
 }

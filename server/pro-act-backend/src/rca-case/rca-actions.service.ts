@@ -22,12 +22,13 @@ import {
 } from './action-rules';
 import { assertOwnerPatch } from './action-owner-access';
 import { linkedTasks } from './action-tasks';
-import { casePolicy } from './case-policy';
+import { casePolicyVersion } from './case-policy';
 import { childAudit, recordRcaAudit } from './rca-audit';
 import { RcaActionV2View, toActionView } from './rca-action.view';
 import { caseOutcome, RcaOutcomeV2View } from './rca-outcome';
 import { findCase, notFound, RcaScope, scopeOf } from './rca-scope';
 import { RcaVerificationService } from './rca-verification.service';
+import { assertCaseNotClosed } from './case-closed';
 
 export type { RcaOutcomeV2View } from './rca-outcome';
 
@@ -100,6 +101,7 @@ export class RcaActionsService {
     const now = new Date();
     return this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, rcaId, true);
+      assertCaseNotClosed(rca);
       assertRecommendationOf(rca, body.recommendationId);
       const repository = manager.getRepository(RcaAction);
       const action = repository.create({
@@ -240,6 +242,12 @@ export class RcaActionsService {
     input: { rca: RCA; request: BaselineRequest; action: RcaAction; now: Date },
   ) {
     const { rca } = input;
+    const { policy, version } = await casePolicyVersion(
+      manager,
+      this.policies,
+      rca,
+      input.now,
+    );
     return computeBaseline(manager, {
       tenantId: rca.tenantId ?? '',
       rcaId: rca.id,
@@ -248,13 +256,14 @@ export class RcaActionsService {
         windowDays: input.request.windowDays,
       },
       windowStart: input.action.verificationWindowStart,
-      policy: await casePolicy(manager, this.policies, rca, input.now),
+      policy,
+      policyVersion: version,
       consequenceClass: rca.consequenceClass ?? null,
       now: input.now,
     });
   }
 
-  /** An action of the caller's scope, locked, with its case (404 for anything else). */
+  /** An action of the caller's scope, locked, with its open case (404 for anything else, 409 CASE_CLOSED). */
   async lockAction(
     manager: EntityManager,
     scope: RcaScope,
@@ -273,6 +282,7 @@ export class RcaActionsService {
     const rca = await findCase(manager, scope, action.rcaId).catch(() => {
       throw notFound('RCA action');
     });
+    assertCaseNotClosed(rca);
     return { action, rca };
   }
 }

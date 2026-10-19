@@ -22,6 +22,8 @@ import { NewCaseFields } from './new-case-form';
 import { useEventCaseFacts } from './use-event-case-facts';
 import { LossLineFollowUpError } from './loss-line-follow-up-error';
 import { useLossLineFollowUp } from './use-loss-line-follow-up';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
+import { TITLE_REQUIRED_REASON, useNewCaseGuard } from './use-new-case-guard';
 
 type Mode = 'new' | 'existing';
 
@@ -104,11 +106,14 @@ export function EventCaseSection({ eventId, initialMode = 'new', lossLineId = nu
   const [form, setForm] = useState<RcaCaseForm>(() => emptyCaseForm(null));
   const [selected, setSelected] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+  const [touched, setTouched] = useState(false);
   const link = useLinkSubmit(eventId, evidence.data, lossLineId);
+  useNewCaseGuard(touched && !link.isPending);
   const event = evidence.data?.event;
   const facts = useEventCaseFacts(evidence.data);
   usePrefill(facts, setForm);
   const ready = mode === 'existing' ? selected !== null : form.title.trim() !== '';
+  const notReady = ready ? null : mode === 'existing' ? 'Choose the investigation to link to.' : TITLE_REQUIRED_REASON;
   return (
     <>
       <EventFacts evidence={evidence} facts={facts} />
@@ -116,7 +121,7 @@ export function EventCaseSection({ eventId, initialMode = 'new', lossLineId = nu
         <div className="space-y-4" data-testid="link-rca-form">
           <ModeChoice mode={mode} onChange={setMode} />
           {mode === 'new' ? (
-            <NewCaseFields form={form} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))} unitLocked />
+            <NewCaseFields form={form} onChange={(patch) => { setTouched(true); setForm((current) => ({ ...current, ...patch })); }} unitLocked />
           ) : event ? (
             <CaseSearch
               context={{ assetId: event.assetId, reasonCodeId: evidence.data?.causeCodes.reasonCode?.id ?? null, from: event.start, to: event.end ?? event.start }}
@@ -126,21 +131,22 @@ export function EventCaseSection({ eventId, initialMode = 'new', lossLineId = nu
           ) : null}
           <div className="space-y-1">
             <Label htmlFor="link-reason">Why this link (optional)</Label>
-            <Textarea id="link-reason" value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} />
+            <Textarea id="link-reason" value={reason} maxLength={2000} onChange={(e) => { setTouched(true); setReason(e.target.value); }} />
           </div>
           {link.error ? <FriendlyErrorAlert error={link.error} /> : null}
           <LossLineFollowUpError error={link.followUp.error} caseId={link.followUp.unlinkedCaseId} />
           <div className="flex flex-wrap gap-2">
-            <Button disabled={!ready || link.isPending} onClick={() => void link.submit({ mode, form, selected, reason })} data-testid="link-rca-submit">
+            <Button disabled={!ready || link.isPending} aria-describedby={notReady ? 'link-rca-reason' : undefined} onClick={() => void link.submit({ mode, form, selected, reason })} data-testid="link-rca-submit">
               {mode === 'existing' ? 'Link to investigation' : 'Create investigation and link'}
             </Button>
             <Button asChild variant="outline">
               <Link to={`/events/${encodeURIComponent(eventId)}`}>Cancel</Link>
             </Button>
           </div>
+          <DisabledReason id="link-rca-reason" reason={notReady} />
         </div>
       </Section>
-      <Section title="Similar past RCAs" collapsible>
+      <Section title="Similar past investigations" collapsible>
         <SimilarKnowledgePanel eventId={eventId} />
       </Section>
     </>

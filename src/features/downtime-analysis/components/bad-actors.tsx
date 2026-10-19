@@ -35,7 +35,7 @@ const columnsFor = (digits: DigitSystem, filters: DowntimeFilters): DataTableCol
     header: <span className="sr-only">Investigate</span>,
     cell: (row) => {
       const context = assetStartRca(row.group, filters);
-      return context ? <StartRcaLink context={context} label={`Start an RCA for ${row.group.label ?? 'this asset'}`} /> : null;
+      return context ? <StartRcaLink context={context} label={`Start investigation for ${row.group.label ?? 'this asset'}`} /> : null;
     },
   },
 ];

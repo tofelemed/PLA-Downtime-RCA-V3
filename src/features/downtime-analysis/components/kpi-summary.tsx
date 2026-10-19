@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useCalendarPreference } from '@/lib/dates';
 import { DurationText } from '@/features/ux-kit/duration-text';
-import { labelOf } from '@/features/ux-kit/labels';
+import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
 import { ControllableSwitch } from './controllable-switch';
@@ -18,8 +18,9 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
 };
 
 /**
- * KPI summary (KPI05 / KPI06, DT04): the period KPIs of the scope from `GET /reports/downtime` — the
- * server's summed terms, shown with their labels, cohorts and null reasons; nothing is added up here. The
+ * KPI summary (KPI05 / KPI06, DT04): the period KPIs of the scope from `GET /reports/downtime-bundle` — the
+ * server's summed terms (of the filtered schedule class, when one is chosen), shown with their labels, cohorts
+ * and null reasons; nothing is added up here. The
  * switch adds the server's controllable availability (SME D15) beside the headline figures.
  */
 export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundleResult; compact?: boolean }) {
@@ -37,6 +38,7 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
       showMeta={false}
       actions={<ControllableSwitch checked={controllable} onChange={setControllable} />}
     >
+      <ClassNote scheduleClass={bundle.data?.data.scheduleClass ?? null} />
       {hasUnknownTime(summary) && (
         <Alert className="mb-2" data-testid="unknown-lower-bound">
           <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
@@ -51,6 +53,16 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
         <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">{SUMMARY_TILES.filter((tile) => !headline.has(tile.metric)).map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}</dl>
       </details>}
     </ReportCard>
+  );
+}
+
+/** Owner decision 2026-10-19: the summary follows the schedule class filter; the server leaves figures it cannot split empty. */
+function ClassNote({ scheduleClass }: { scheduleClass: string | null }) {
+  if (!scheduleClass) return null;
+  return (
+    <p className="mb-2 text-xs text-muted-foreground" data-testid="kpi-class-note">
+      Figures for {labelOf(SCHEDULE_CLASS_LABELS, scheduleClass).toLowerCase()} stops only. Figures that are not split by schedule class show “—”.
+    </p>
   );
 }
 

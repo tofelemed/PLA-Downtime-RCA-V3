@@ -1,7 +1,8 @@
 import { Input } from '@/components/ui/input';
 import { Field } from '../components/field';
 import type { ProfileEditor } from './hooks/use-profile-draft';
-import { IDENTITY_STRATEGIES, QUALITY_PROTOCOLS, TIME_UNITS } from './model/mqtt-form';
+import { QUALITY_PROTOCOLS, TIME_UNITS } from './model/mqtt-form';
+import { DEFAULT_IDENTITY_LABEL, IDENTITY_STRATEGY_OPTIONS, profileKindLabel } from './model/profile-labels';
 import type { ProfileDraft } from './model/profile-draft';
 import type { ProfileFieldErrors } from './model/profile-field-errors';
 
@@ -29,9 +30,9 @@ export function ProfileSettingsFields({ group, editor, errors }: SettingsProps) 
   return (
     <div className="grid min-w-0 gap-3 sm:grid-cols-2">
       {group === 'identity' ? <>
-        {input('topicTemplate', 'pp-template', `Topic template (${draft.kind})`)}
+        {input('topicTemplate', 'pp-template', `Topic template (${profileKindLabel(draft.kind)})`)}
         {input('schemaVersion', 'pp-schema', 'Schema version')}
-        {select('identityStrategy', 'pp-identity', 'Identity strategy', { placeholder: 'seq_boot (default)', options: optionsOf(IDENTITY_STRATEGIES) })}
+        {select('identityStrategy', 'pp-identity', 'Identity strategy', { placeholder: DEFAULT_IDENTITY_LABEL, options: IDENTITY_STRATEGY_OPTIONS })}
       </> : <>
         {select('timeUnit', 'pp-time-unit', 'Timestamp unit', { placeholder: 'auto (default)', options: optionsOf(TIME_UNITS) })}
         {input('maxFutureSkewSeconds', 'pp-future', 'Max future skew (s)', true)}

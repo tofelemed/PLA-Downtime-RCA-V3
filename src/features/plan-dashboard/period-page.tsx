@@ -4,6 +4,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { PeriodDetail } from './components/period-detail';
 import { usePlanContext } from './hooks/use-plan-context';
+import { usePeriodTitle } from './hooks/use-period-title';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { isPeriodSection, periodPath, QUALITY_ONLY_SECTION } from './model/period-navigation';
 
@@ -31,13 +32,16 @@ export function PeriodPage() {
   const { canViewAnalysis } = useCapabilities();
   const { tenantId, zone, plan, state, unitName } = usePlanContext(planId);
   const back = eventOrigin(location.state) ?? gridBack(canViewAnalysis, planId, plan.data?.name);
+  const title = usePeriodTitle(periodId, unitName, plan.data ? `${plan.data.name} · period` : 'Period');
+  /** an operator reaches neither the planning pages nor the period grid: no trail to them, only Back (QA P-4) */
+  const breadcrumbs = canViewAnalysis ? undefined : false;
   if (!isPeriodSection(section)) return <Navigate to={`${periodPath(planId ?? '', periodId ?? '')}${location.search}`} replace />;
   if (!canViewAnalysis && section !== QUALITY_ONLY_SECTION) return <Navigate to={`${periodPath(planId ?? '', periodId ?? '', QUALITY_ONLY_SECTION)}${location.search}`} replace />;
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to open its plans." />;
   if (state !== 'ready' || !plan.data || !planId || !periodId) {
     return (
       <Page>
-        <PageHeader title="Period" back={back} />
+        <PageHeader title="Period" back={back} breadcrumbs={breadcrumbs} />
         <DataState state={state === 'ready' ? 'empty' : state} error={plan.error} />
       </Page>
     );
@@ -45,7 +49,7 @@ export function PeriodPage() {
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="plan-dashboard-v2">
-        <PageHeader title={`${plan.data.name} · period`} back={back} />
+        <PageHeader title={title} description={plan.data.name} back={back} breadcrumbs={breadcrumbs} />
         <PeriodDetail key={periodId} planId={planId} periodId={periodId} section={section} unitName={unitName} planLabel={`Plan version ${plan.data.version.version}`} planWindow={{ from: plan.data.version.validFrom, to: plan.data.version.validTo }} timezone={zone.timezone} />
       </div>
     </Page>

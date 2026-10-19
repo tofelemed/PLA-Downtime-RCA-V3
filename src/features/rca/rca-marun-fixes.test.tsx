@@ -73,6 +73,8 @@ describe('Marun E2E RCA fixes: models', () => {
         causes: [{ id: 'k1', rcaId: 'c1', kind: 'root', causeCodeId: 'x', causeCode: { code: 'ME-INSPECTION-GAP', name: 'Gap', active: true }, statement: 'Gap', evidenceIds: [], nodeIds: [], createdBy: null, createdAt: '', updatedAt: '', rowVersion: 1 }],
         links: [{ id: 'l1', rcaId: 'c1', linkType: 'event', targetId: 'e1', targetRevision: 1, unitId: 'u1', source: 'manual', linkedBy: 'farid', linkedAt: '2026-10-18T00:00:00Z', reason: null, evidence: null }],
         outcome: null,
+        analyses: null,
+        history: [],
       }, 'Asia/Tehran'),
     ) as Record<string, unknown>;
     expect(document).toMatchObject({

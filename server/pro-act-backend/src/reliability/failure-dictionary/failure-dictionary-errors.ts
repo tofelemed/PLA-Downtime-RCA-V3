@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { DictionaryRowError } from '../../domain/reliability/failure-dictionary-import';
 import { FieldProblem } from '../../domain/reliability/failure-dictionary';
+import { plural } from '../../common/helpers/plural';
 
 export function entryNotFound(): NotFoundException {
   return new NotFoundException({
@@ -35,7 +36,7 @@ export function entryClosed(): ConflictException {
 export function classInUse(count: number): ConflictException {
   return new ConflictException({
     code: 'DICTIONARY_CLASS_IN_USE',
-    message: `The equipment class still has ${count} maintainable item(s) or failure mode(s); retire them first`,
+    message: `The equipment class still has ${plural(count, 'open maintainable item or failure mode', 'open maintainable items or failure modes')}; retire them first`,
     details: { openEntries: count },
   });
 }
@@ -57,7 +58,7 @@ export function importInvalid(
 ): UnprocessableEntityException {
   return new UnprocessableEntityException({
     code: 'DICTIONARY_IMPORT_INVALID',
-    message: `The import has ${errors.length} invalid row(s); nothing was stored`,
+    message: `The import has ${plural(errors.length, 'invalid row', 'invalid rows')}; nothing was stored`,
     details: { errors },
   });
 }

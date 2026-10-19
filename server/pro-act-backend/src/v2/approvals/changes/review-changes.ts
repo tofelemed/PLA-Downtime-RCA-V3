@@ -6,6 +6,11 @@ import { PeriodChangeProposal } from '../../../reconciliation/entities/period-ch
 import { loadRevisionState } from '../../../reconciliation/revision-state';
 import { figuresOf } from '../../../reconciliation/restatement-figures';
 import {
+  approvedValuesPart,
+  ProposalValues as RevisionValues,
+} from '../../../reconciliation/proposal-values';
+import { RevisionState } from '../../../reconciliation/revision-state';
+import {
   RestatementDelta,
   restatementDelta,
   ReviewedFigures,
@@ -78,6 +83,43 @@ export function deltaSides(delta: RestatementDelta): Sides {
   return sides;
 }
 
+/**
+ * QA audit 2026-10-19 (P-2): the loss value of each side in its own default valuation view, one row per
+ * currency, so a value-only restatement (quantities unchanged) shows what it changes.
+ */
+export function addValueRows(
+  sides: Sides,
+  before: RevisionValues | undefined,
+  after: RevisionValues | undefined,
+): void {
+  const currencies = [
+    ...new Set(
+      [...(before?.amounts ?? []), ...(after?.amounts ?? [])].map(
+        (a) => a.currency,
+      ),
+    ),
+  ];
+  for (const currency of currencies) {
+    const amount = (values: RevisionValues | undefined) =>
+      values?.amounts.find((a) => a.currency === currency)?.amount ?? null;
+    addFigure(
+      sides,
+      `value:${currency}`,
+      {
+        key: '',
+        label: 'Loss value (default valuation view)',
+        format: 'money',
+        currency: () => currency,
+        group: 'value',
+      },
+      { old: amount(before), new: amount(after) },
+    );
+  }
+}
+
+const valuesOf = (state: RevisionState | null) =>
+  state ? approvedValuesPart(state).values : undefined;
+
 /** A revision in review / an approved restatement against the approved revision it supersedes. */
 export async function loadPeriodChanges(
   manager: EntityManager,
@@ -102,15 +144,22 @@ export async function loadPeriodChanges(
           tenantId,
         })
       : null;
-    const after = figuresOf(
-      await loadRevisionState(manager, period, revision, policies),
+    const afterState = await loadRevisionState(
+      manager,
+      period,
+      revision,
+      policies,
     );
-    const before = superseded
-      ? figuresOf(
-          await loadRevisionState(manager, period, superseded, policies),
-        )
-      : EMPTY;
-    const sides = deltaSides(restatementDelta(before, after));
+    const beforeState = superseded
+      ? await loadRevisionState(manager, period, superseded, policies)
+      : null;
+    const sides = deltaSides(
+      restatementDelta(
+        beforeState ? figuresOf(beforeState) : EMPTY,
+        figuresOf(afterState),
+      ),
+    );
+    addValueRows(sides, valuesOf(beforeState), valuesOf(afterState));
     sources.push({
       id,
       after: sides.after,

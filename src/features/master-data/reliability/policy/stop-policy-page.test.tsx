@@ -47,6 +47,35 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     actAs('SuperAdmin');
   });
 
+  it('QA M1 / M7: a seeded plant default reads "Built-in default (from the start)" with a plain note, never 1970 or D04', async () => {
+    const EPOCH = '1970-01-01T00:00:00.000Z';
+    const SEED = 'Seeded on first use from the D04 / D05 / D06 / D13 default (DECISIONS.md, 2026-10-07); change by a new version.';
+    stubV2Fetch((call) => {
+      if (call.url.pathname.endsWith('/stop-event-policies/current')) return jsonResponse(200, { ...STOP, version: 1, effectiveFrom: EPOCH, notes: SEED });
+      if (call.url.pathname.endsWith('/micro-stop-policies/current')) return jsonResponse(200, { ...MICRO, version: 1, effectiveFrom: EPOCH, notes: SEED });
+      if (call.url.pathname.endsWith('/transition-allowance-policies/current')) return jsonResponse(200, { ...ALLOWANCE, version: 1, effectiveFrom: EPOCH });
+      return reply(call);
+    });
+    actAs('manager_approver');
+    renderPage();
+    const micro = await screen.findByTestId('micro-stop-current');
+    expect(micro).toHaveTextContent('Version 1 · plant-wide · Built-in default (from the start)');
+    expect(micro).toHaveTextContent('Built-in default; change it by recording a new version.');
+    expect(await screen.findByTestId('transition-allowance')).toHaveTextContent('Built-in default (from the start)');
+    await waitFor(() => expect(screen.getAllByTestId('built-in-default-start').length).toBeGreaterThan(0));
+    expect(document.body).not.toHaveTextContent('1970');
+    expect(document.body).not.toHaveTextContent('D04');
+  });
+
+  it('QA M4: a role without master-data access gets the standard "No access" page with the page title', () => {
+    actAs('operator');
+    renderPage();
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.getByText('No access')).toBeInTheDocument();
+    expect(screen.getByText(/Your roles in this plant do not include/)).toBeInTheDocument();
+    expect(document.title).not.toBe('');
+  });
+
   it('shows the plant settings in force and records a micro-stop version carrying the class thresholds', async () => {
     const calls = stubV2Fetch(reply);
     actAs('manager_approver');

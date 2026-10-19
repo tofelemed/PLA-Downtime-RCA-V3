@@ -3,6 +3,7 @@ import { useRcaKnowledgeEntry } from '@/api/v2/queries/rca-knowledge';
 import type { RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { Badge } from '@/components/ui/badge';
 import { useRcaFormat } from '@/features/rca/use-rca-format';
+import { useFailureModeLabel } from '@/features/rca/use-failure-mode-label';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PageHeader, Section } from '@/features/ux-kit/page-layout';
@@ -14,6 +15,7 @@ import { QualityBadge, QualityBreakdown } from './quality-score';
 
 function Facts({ entry }: { entry: RcaKnowledgeView }) {
   const { date } = useRcaFormat();
+  const modeLabel = useFailureModeLabel(Boolean(entry.failureMode));
   const { actionsSummary: actions } = entry;
   return (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -25,7 +27,7 @@ function Facts({ entry }: { entry: RcaKnowledgeView }) {
         </Badge>
       )}
       {entry.shareScope === 'organization' && <Badge variant="outline">Shared with other plants</Badge>}
-      {entry.failureMode && <span>Failure mode: {entry.failureMode}</span>}
+      {entry.failureMode && <span>Failure mode: {modeLabel(entry.failureMode)}</span>}
       <span>Unit: {entry.unitName ?? (entry.unitId ? 'Unknown unit' : GLOSSARY.wholePlant)}</span>
       {entry.assetName && <span>Asset: {entry.assetName}</span>}
       <span>Written {date(entry.createdAt)}</span>

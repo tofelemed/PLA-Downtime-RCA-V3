@@ -74,6 +74,7 @@ function paretoOf(
       share: ratio(amount, total),
       cumulativeShare: amount === null ? null : ratio(running, total),
       lines: row.lines,
+      eventLines: row.event_lines,
       status: statusOf(row, input.quantity),
       fxProvisional: row.fx_provisional > 0,
       reasons: [...(row.reasons ?? [])].sort(),

@@ -48,7 +48,7 @@ function KnowledgeScreen() {
   return (
     <Page width="wide">
       <PageHeader
-        title="RCA knowledge base"
+        title="Knowledge base"
         description="Learning from closed investigations of this plant. Entries are written when an investigation closes; a reliability engineer or manager publishes them."
         actions={<ExportButton filters={filters} />}
       />

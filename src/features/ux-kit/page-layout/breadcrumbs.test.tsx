@@ -1,8 +1,9 @@
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
+import { CrumbReachProvider } from './crumb-reach';
 import { PageHeader } from './page-header';
-import { routeTrail } from './route-trail';
+import { dedupeCrumbs, routeTrail } from './route-trail';
 
 describe('routeTrail', () => {
   it('module pages (depth 1) and paths outside the menu get no trail', () => {
@@ -12,14 +13,14 @@ describe('routeTrail', () => {
 
   it('Module › parent › page: the parent is the back link inside the module', () => {
     expect(routeTrail('/plans/p1/periods/x1', 'Period 3 Oct', { to: '/plans/p1', label: 'HDPE plan' })).toEqual({
-      crumbs: [{ label: 'Plans, Profiles & Calendars', to: '/planning' }, { label: 'HDPE plan', to: '/plans/p1' }, { label: 'Period 3 Oct' }],
+      crumbs: [{ label: 'Plans, profiles & calendars', to: '/planning' }, { label: 'HDPE plan', to: '/plans/p1' }, { label: 'Period 3 Oct' }],
       keepBack: false,
     });
   });
 
   it('a back link to the module page itself is one crumb in the page\'s own words (keeps its tab)', () => {
     expect(routeTrail('/master-data/codes-rules/rules/r1', 'Rule', { to: '/master-data/codes-rules?tab=rules', label: 'Rules' })?.crumbs).toEqual([
-      { label: 'Master Data', to: '/master-data' },
+      { label: 'Master data', to: '/master-data' },
       { label: 'Rules', to: '/master-data/codes-rules?tab=rules' },
       { label: 'Rule' },
     ]);
@@ -34,10 +35,21 @@ describe('routeTrail', () => {
   });
 
   it('a back link outside the module (where the user came from) stays next to the trail', () => {
-    expect(routeTrail('/events/e1', 'Stop', { to: '/downtime?from=x', label: 'Downtime Analysis' })).toEqual({
+    expect(routeTrail('/events/e1', 'Stop', { to: '/downtime?from=x', label: 'Downtime analysis' })).toEqual({
       crumbs: [{ label: 'Event Hub', to: '/events' }, { label: 'Stop' }],
       keepBack: true,
     });
+  });
+
+  it('the module named again in another case is one step (QA_SHELL: "Admin Panel › Admin panel › Edit Marun")', () => {
+    expect(routeTrail('/admin/organizations/o1/edit', 'Edit Marun', { to: '/admin?tab=plants', label: 'ADMIN PANEL' })?.crumbs).toEqual([
+      { label: 'ADMIN PANEL', to: '/admin?tab=plants' },
+      { label: 'Edit Marun' },
+    ]);
+    expect(dedupeCrumbs([{ label: 'Tasks', to: '/tasks' }, { label: 'tasks', to: '/tasks?x=1' }, { label: 'T1', to: '/tasks?x=1' }, { label: 'Page' }])).toEqual([
+      { label: 'T1', to: '/tasks?x=1' },
+      { label: 'Page' },
+    ]);
   });
 
   it('without a back link: Module › page', () => {
@@ -72,6 +84,25 @@ describe('PageHeader breadcrumbs', () => {
     at('/tasks/t1', <PageHeader title="Task" back={{ to: '/tasks', label: 'Tasks' }} breadcrumbs={false} />);
     expect(screen.queryByRole('navigation', { name: 'Breadcrumb' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Tasks' })).toBeInTheDocument();
+  });
+
+  it('a step the user cannot open is plain text, and such a back link is left out (QA_MASTERDATA L23)', () => {
+    const noConnectivity = (to: string) => !to.startsWith('/connectivity');
+    const { unmount } = render(
+      <MemoryRouter initialEntries={['/connectivity/connections/c1']}>
+        <CrumbReachProvider reach={noConnectivity}><PageHeader title="Connection" back={{ to: '/connectivity?tab=x', label: 'Connections' }} /></CrumbReachProvider>
+      </MemoryRouter>,
+    );
+    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(trail).queryAllByRole('link')).toHaveLength(0);
+    expect(within(trail).getByText('Connections')).toBeInTheDocument();
+    unmount();
+    render(
+      <MemoryRouter initialEntries={['/connectivity/source-authority']}>
+        <CrumbReachProvider reach={noConnectivity}><PageHeader title="Source priority" back={{ to: '/connectivity', label: 'Connectivity' }} /></CrumbReachProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('link', { name: 'Connectivity' })).toBeNull();
   });
 
   it('outside a router (isolated component tests) the header still renders', () => {

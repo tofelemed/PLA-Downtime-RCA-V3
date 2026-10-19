@@ -86,7 +86,7 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     await expect(page.locator('a[href="/finance"]').first()).toBeVisible();
 
     await addFxDraft(page, first, '585000.25');
-    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 585000.25 IRR');
+    await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 585,000.25 IRR');
     // a maintainer never approves (SME V1): no approve or retire control at all
     await expect(page.getByTestId('fx-approve')).toHaveCount(0);
     await addFxDraft(page, second, '590000');

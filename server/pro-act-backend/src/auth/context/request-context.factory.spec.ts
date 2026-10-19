@@ -100,3 +100,52 @@ describe('RequestContextFactory legacy role provenance', () => {
     );
   });
 });
+
+describe('RequestContextFactory: guide roles only (QA audit 2026-10-19)', () => {
+  const own = (
+    role: string,
+    kind: ScopeGrant['kind'] = 'tenant',
+  ): ScopeGrant => ({
+    kind,
+    id: kind === 'tenant' ? HOME : UNIT.id,
+    tenantId: HOME,
+    role,
+  });
+
+  it('an Analyst with an explicit finance_approver grant is not a production engineer', async () => {
+    const context = await factory([own('finance_approver')]).build(
+      input('Analyst', HOME),
+    );
+    expect(context.roles).toEqual(['Analyst', 'finance_approver']);
+    expect(holdsAnyRoleOnUnit(context, OTHER, ['production_engineer'])).toBe(
+      false,
+    );
+  });
+
+  it('keeps the D06 mapping while the user holds no own grant in the plant', async () => {
+    const context = await factory([]).build(input('Analyst', HOME));
+    expect(context.roles).toEqual(['Analyst', 'production_engineer']);
+  });
+
+  it('a delegated grant alone does not replace the legacy mapping', async () => {
+    const delegated: ScopeGrant = {
+      ...own('quality_approver'),
+      delegationId: 'd-1',
+      delegatorId: 'p-1',
+    };
+    const context = await factory([delegated]).build(input('Analyst', HOME));
+    expect(context.roles).toContain('production_engineer');
+  });
+
+  it('a unit-scoped grant of the mapped role is not widened to the whole plant', async () => {
+    const context = await factory([own('production_engineer', 'unit')]).build(
+      input('Engineer', HOME),
+    );
+    expect(holdsAnyRoleOnUnit(context, UNIT, ['production_engineer'])).toBe(
+      true,
+    );
+    expect(holdsAnyRoleOnUnit(context, OTHER, ['production_engineer'])).toBe(
+      false,
+    );
+  });
+});

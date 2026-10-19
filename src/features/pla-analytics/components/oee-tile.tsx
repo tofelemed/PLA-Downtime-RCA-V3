@@ -26,11 +26,8 @@ function Unavailable({ reason, showReason }: { reason: string; showReason: boole
     <>
       <p className="text-xl font-semibold" data-testid="oee-tile-value">
         <span aria-hidden="true">—</span>
-        <span className="sr-only">Not available</span>
       </p>
-      <p className="text-xs font-medium text-muted-foreground" aria-hidden="true">
-        Not available
-      </p>
+      <p className="text-xs font-medium text-muted-foreground">Not available</p>
       {showReason && (
         <p className="truncate text-xs text-muted-foreground" title={reason} data-testid="oee-tile-reason">
           {reason}

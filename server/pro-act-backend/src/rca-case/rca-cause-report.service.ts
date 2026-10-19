@@ -23,7 +23,7 @@ export interface RcaCauseReportItem {
 
 export interface RcaCauseReportV2View {
   items: RcaCauseReportItem[];
-  /** valuation view of the amounts (the policy default, SME V8) and the basis of the figures */
+  /** valuation view of the amounts (the policy default) and the basis of the figures */
   view: DefaultBasis | null;
   basis: string | null;
   asOf: string;

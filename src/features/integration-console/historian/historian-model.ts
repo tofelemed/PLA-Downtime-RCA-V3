@@ -1,3 +1,5 @@
+import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import type { DigitSystem } from '@/lib/dates';
 import type { SignalPreviewView } from '@/api/v2/types/integration-mappings';
 
 export type SignalSample = SignalPreviewView['samples'][number];
@@ -43,6 +45,15 @@ export function trendPoints(samples: readonly SignalSample[], max = MAX_DRAWN_PO
 export function sampleValue(sample: SignalSample): string {
   if (sample.value === null) return sample.stateName ?? '—';
   return /^-?\d+\.\d+$/.test(sample.value) ? sample.value.replace(/\.?0+$/, '') : sample.value;
+}
+
+/** Fraction digits of a measured value in the sample table (QA L25: "986.47", not "986.467"). */
+export const SAMPLE_FRACTION_DIGITS = 2;
+
+/** A sample's value for the table: grouped with fixed precision, or the state name, or "—". */
+export function sampleDisplayValue(sample: SignalSample, digits?: DigitSystem): string {
+  if (sample.value === null) return sample.stateName ?? '—';
+  return formatDecimal(sample.value, SAMPLE_FRACTION_DIGITS, digits);
 }
 
 const csvCell = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);

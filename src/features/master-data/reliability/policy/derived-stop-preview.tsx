@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export function DerivedStopPreview({ unitId, timezone }: { unitId: string; timezone: string }) {
   const [range, setRange] = useState<InstantRange>(() => rollingWindow(DAY_MS));
@@ -16,7 +17,7 @@ export function DerivedStopPreview({ unitId, timezone }: { unitId: string; timez
     {!unitId && <p className="text-sm">Choose a unit to preview its state engine.</p>}
     {preview.error && <FriendlyErrorAlert error={preview.error} />}
     {preview.data && <div className="space-y-2 text-sm" aria-live="polite">
-      <p>{preview.data.mapped ? `${preview.data.stops.length} stop(s), ${preview.data.slowdowns.length} slowdown(s)` : 'No state mapping at the start of this window.'}</p>
+      <p>{preview.data.mapped ? `${plural(preview.data.stops.length, 'stop', 'stops')}, ${plural(preview.data.slowdowns.length, 'slowdown', 'slowdowns')}` : 'No state mapping at the start of this window.'}</p>
       {[...preview.data.stops, ...preview.data.slowdowns].map((row) => <div className="rounded border p-2" key={row.key}><p>{row.description}</p><PlantTime iso={row.startTime} tz={timezone} withDate /> to {row.endTime ? <PlantTime iso={row.endTime} tz={timezone} withDate /> : 'open at window end'}</div>)}
     </div>}
   </div>;

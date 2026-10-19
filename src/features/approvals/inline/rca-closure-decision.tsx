@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useRcaCase } from '@/api/v2/queries/rca-cases';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { CaseWorkspaceContext } from '@/features/rca/case/case-context';
+import { workspaceOf } from '@/features/rca/case/workspace-of';
 import { WorkflowPanel } from '@/features/rca/case/workflow/workflow-panel';
 import { normalizeCase } from '@/features/rca/model/normalize-case';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -19,7 +20,7 @@ export function RcaClosureDecision({ item, onDecided }: InlineFormProps) {
   const { canWriteRca } = useCapabilities();
   const query = useRcaCase(item.id);
   const rca = query.data;
-  const value = useMemo(() => (rca ? { rca: normalizeCase(rca), readOnly: !canWriteRca, basePath: `/rca/${rca.id}` } : null), [rca, canWriteRca]);
+  const value = useMemo(() => (rca ? workspaceOf(normalizeCase(rca), canWriteRca) : null), [rca, canWriteRca]);
   const status = value?.rca.status;
   useDecidedWhen(status === undefined ? undefined : status === CLOSURE_REVIEW, status === 'Closed' ? 'Closure approved' : 'Closure returned to the investigation', onDecided);
   return (

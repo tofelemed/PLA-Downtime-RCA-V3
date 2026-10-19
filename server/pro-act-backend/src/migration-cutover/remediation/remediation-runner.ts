@@ -16,6 +16,7 @@ import {
   ReviewItemDraft,
   RowChange,
 } from './remediation-types';
+import { plural } from '../../common/helpers/plural';
 
 export interface DryRunResult {
   job: string;
@@ -314,7 +315,7 @@ async function lockAppliedReport(
   if (decided[0].n > 0) {
     throw new ConflictException({
       code: 'MIGRATION_REVIEW_DECIDED',
-      message: `${decided[0].n} review item(s) of this run were already resolved or dismissed; revert refused`,
+      message: `${plural(decided[0].n, 'review item of this run was', 'review items of this run were')} already resolved or dismissed; revert refused`,
     });
   }
   return rows[0];

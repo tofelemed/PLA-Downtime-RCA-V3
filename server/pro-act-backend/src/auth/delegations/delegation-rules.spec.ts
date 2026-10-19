@@ -57,6 +57,15 @@ describe('delegation rules', () => {
     ).toBe(false);
   });
 
+  it('the legacy mapping does not count once the delegator holds an own grant in the plant (QA audit 2026-10-19)', () => {
+    const financeOnly = [
+      { tenantId: T, role: 'finance_approver', kind: 'tenant' as const, id: T },
+    ];
+    expect(
+      holdsForScope(financeOnly, { role: 'Manager', tenantId: T }, unitTarget),
+    ).toBe(false);
+  });
+
   it('refuses self-delegation, empty or over-long intervals and intervals already over', () => {
     const now = new Date('2026-10-15T00:00:00Z');
     const base = {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { withByteOrderMark } from './csv-text';
 import { V2ApiError } from '@/api/v2/errors';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { invalidReferenceIds, sharedUnitOf } from './bulk-targets';
@@ -135,5 +136,12 @@ describe('E-5 source-owned fields', () => {
     const changes = { startTime: 'x', endTime: null, durationSeconds: 60, description: 'belt' };
     expect(withoutSourceInterval(changes, { intervalOwned: true })).toEqual({ description: 'belt' });
     expect(withoutSourceInterval(changes, { intervalOwned: false })).toBe(changes);
+  });
+});
+
+describe('event CSV download (QA audit L5)', () => {
+  it('keeps exactly one UTF-8 byte order mark at the start', () => {
+    expect(withByteOrderMark('start_utc,unit\n').charCodeAt(0)).toBe(0xfeff);
+    expect(withByteOrderMark('﻿start_utc').indexOf('﻿', 1)).toBe(-1);
   });
 });

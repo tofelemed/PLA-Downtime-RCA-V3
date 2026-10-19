@@ -12,7 +12,7 @@ import {
   SCHEDULE_CLASS_LABELS,
   SOURCE_KIND_LABELS,
 } from '@/features/ux-kit/labels';
-import { EVENT_TYPE_LABELS } from '@/features/ux-kit/labels/event-hub-labels';
+import { EVENT_TYPE_LABELS, FAILURE_SEVERITY_LABELS } from '@/features/ux-kit/labels/event-hub-labels';
 
 /**
  * Display of revision facts (`effectiveFacts` / `sourceFacts`, ING06): every field gets its label and
@@ -28,6 +28,11 @@ export interface FactResolvers {
   dateTime: (iso: string) => string;
   /** seconds as `1 h 30 min` in the plant's digits */
   duration: (seconds: number) => string;
+  /**
+   * QA audit F4: the failure dictionary's name of a coded failure field (`TRIP_ALARM` → "Trip alarm"); null
+   * when the plant has no such code (free text is shown as typed)
+   */
+  failureName?: (field: string, code: string) => string | null;
 }
 
 type Resolver = (value: string, r: FactResolvers) => string;
@@ -43,6 +48,21 @@ const ENUM_LABELS: Readonly<Record<string, Readonly<Record<string, string>>>> = 
   sourceKind: SOURCE_KIND_LABELS,
   eventType: EVENT_TYPE_LABELS,
   apmType: EVENT_TYPE_LABELS,
+  failureSeverity: FAILURE_SEVERITY_LABELS,
+};
+
+/** Coded failure fields whose values are failure-dictionary codes (SME D11); free text is shown as typed. */
+const FAILURE_CODE_FIELDS = ['failureMode', 'failureMechanism', 'failureCause', 'detectionMethod', 'maintainableItem'] as const;
+
+/**
+ * Field names this page words differently from the shared list (QA audit F4 / L12: two rows read "Event type";
+ * docs/GLOSSARY.md: an RCA is an "investigation").
+ */
+const LOCAL_FIELD_LABELS: Readonly<Record<string, string>> = {
+  apmType: 'APM alert type',
+  solType: 'Safe operating limit type',
+  rcaState: 'Investigation state',
+  rcaId: 'Investigation',
 };
 
 const ID_RESOLVERS: Readonly<Record<string, Resolver>> = {
@@ -53,6 +73,7 @@ const ID_RESOLVERS: Readonly<Record<string, Resolver>> = {
   createdBy: (v, r) => r.userName(v),
   updatedBy: (v, r) => r.userName(v),
   userId: (v, r) => r.userName(v),
+  ...Object.fromEntries(FAILURE_CODE_FIELDS.map((field): [string, Resolver] => [field, (v, r) => r.failureName?.(field, v) ?? v])),
 };
 
 const TIME_FIELDS: ReadonlySet<string> = new Set(['startTime', 'endTime', 'createdAt', 'updatedAt', 'retractedAt']);
@@ -60,7 +81,7 @@ const DURATION_FIELDS: ReadonlySet<string> = new Set(['durationSeconds', 'breach
 
 /** Label of a fact field (`reasonCodeId` → "Reason"). */
 export function factLabel(field: string): string {
-  return EVENT_FIELD_LABELS[field] ?? humanize(field);
+  return LOCAL_FIELD_LABELS[field] ?? EVENT_FIELD_LABELS[field] ?? humanize(field);
 }
 
 function scalarText(field: string, value: string | number | boolean, r: FactResolvers): string {

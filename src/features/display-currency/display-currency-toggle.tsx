@@ -1,13 +1,19 @@
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { cn } from '@/lib/utils';
 import { DISPLAY_CURRENCIES, isDisplayCurrency } from './display-currency-store';
 import { useDisplayCurrency } from './use-display-currency';
 
 const LABELS = { USD: '$ USD', IRR: 'IRR' } as const;
 
-/** Compact USD / IRR switch for the money shown on every valuation screen (a view preference only). */
+/**
+ * Compact USD / IRR switch for the money shown on every valuation screen (a view preference only); not
+ * shown to roles without money (owner 19 Oct 2026: operators).
+ */
 export function DisplayCurrencyToggle({ className }: { className?: string }) {
   const { currency, setCurrency } = useDisplayCurrency();
+  const { canViewMoney } = useCapabilities();
+  if (!canViewMoney) return null;
   return (
     <ToggleGroup
       type="single"

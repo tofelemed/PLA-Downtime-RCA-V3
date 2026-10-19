@@ -24,6 +24,8 @@ const options = (labels: Readonly<Record<string, string>>) => Object.entries(lab
 
 export interface PolicyFormProps {
   source: ValuationPolicyView | null;
+  /** default basis of a fresh version (the version in force) */
+  freshBasis?: DefaultBasis | null;
   onSaved: (policy: ValuationPolicyView) => void;
   onCancel: () => void;
 }
@@ -42,10 +44,10 @@ function CurrencyChoice({ values, toggle }: { values: PolicyFormValues; toggle: 
 }
 
 /** A new valuation policy version, not approved yet; a finance approver (not the author) records the sign-off afterwards (SME V1). */
-export function PolicyForm({ source, onSaved, onCancel }: PolicyFormProps) {
+export function PolicyForm({ source, freshBasis = null, onSaved, onCancel }: PolicyFormProps) {
   const { timezone } = usePlantDates();
   const calendar = useCalendarPreference().calendar;
-  const initial = useMemo(() => policyFormOf(source), [source]);
+  const initial = useMemo(() => policyFormOf(source, freshBasis), [source, freshBasis]);
   const [values, setValues] = useState<PolicyFormValues>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateValuationPolicy();

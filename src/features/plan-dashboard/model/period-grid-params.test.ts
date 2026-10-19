@@ -6,8 +6,15 @@ const TZ = 'Asia/Tehran';
 
 describe('period grid URL filters and Go to date (UX audit D-5)', () => {
   it('reads only known workflow states and ISO dates from the URL', () => {
-    expect(parseGridParams(new URLSearchParams('state=in_review&date=2026-10-12'))).toEqual({ workflow: 'in_review', date: '2026-10-12', residual: '' });
-    expect(parseGridParams(new URLSearchParams('state=bogus&date=12/10/2026&residual=toString'))).toEqual({ workflow: '', date: '', residual: '' });
+    expect(parseGridParams(new URLSearchParams('state=in_review&date=2026-10-12'))).toEqual({ workflow: 'in_review', date: '2026-10-12', residual: '', view: 'current' });
+    expect(parseGridParams(new URLSearchParams('state=bogus&date=12/10/2026&residual=toString'))).toEqual({ workflow: '', date: '', residual: '', view: 'current' });
+  });
+
+  it('keeps "Figures of: approved revision only" in the URL (QA planning)', () => {
+    expect(parseGridParams(new URLSearchParams('view=approved')).view).toBe('approved');
+    expect(parseGridParams(new URLSearchParams('view=bogus')).view).toBe('current');
+    expect(withGridParam(new URLSearchParams('state=approved'), 'view', 'approved').toString()).toBe('state=approved&view=approved');
+    expect(withGridParam(new URLSearchParams('view=approved'), 'view', '').toString()).toBe('');
   });
 
   it('maps the residual filter of the URL to the server residual states (D-5)', () => {

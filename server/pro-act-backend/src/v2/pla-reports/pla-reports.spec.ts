@@ -7,6 +7,7 @@ const cell = (over: Partial<LossTreeCell>): LossTreeCell => ({
   unit: 't',
   amount: '0',
   lines: 1,
+  event_lines: 0,
   valued: 0,
   unvalued: 0,
   fx_missing: 0,
@@ -51,6 +52,23 @@ describe('PLA analytics pure parts (plan 3.6)', () => {
     ]);
     expect(view.totals).toEqual([
       expect.objectContaining({ unit: 't', amount: '40', status: 'quantity' }),
+    ]);
+  });
+
+  it('loss tree groups say how many of their lines explain an event (0 = manual or disposition lines only)', () => {
+    const view = lossTreeView(
+      {
+        rows: [
+          cell({ group_key: 'a', amount: '4', lines: 1, event_lines: 0 }),
+          cell({ group_key: 'b', amount: '28', lines: 2, event_lines: 2 }),
+        ],
+        labels: new Map(),
+      },
+      { ...request, metric: 'qty' },
+    );
+    expect(view.groups.map((g) => [g.key, g.eventLines])).toEqual([
+      ['b', 2],
+      ['a', 0],
     ]);
   });
 

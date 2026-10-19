@@ -167,7 +167,8 @@ describe('finance — exchange rates and valuation policy commands', () => {
     const statuses = screen.getAllByTestId('policy-row').map((row) => row.getAttribute('data-status'));
     expect(statuses).toEqual(['unapproved', 'placeholder', 'approved']);
     const text = screen.getByRole('table').textContent ?? '';
-    expect(text).toMatch(/You/);
+    expect(text).toMatch(/\(you\)/);
+    expect(text).not.toMatch(/Another user/);
     expect(text).toMatch(/Earlier setup \(no currency\)/);
     expect(text).toMatch(/Contribution margin/);
     expect(text).not.toMatch(/contribution_margin|XXX|p3/);

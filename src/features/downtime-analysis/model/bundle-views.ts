@@ -15,6 +15,8 @@ export interface DowntimeBundleItem {
 /** `GET /reports/downtime-bundle` data: every view reads the same run selection, window and units (T24). */
 export interface DowntimeBundleData {
   includeMicroStops: boolean;
+  /** the schedule class the summary is for (null = every class; owner decision 2026-10-19) */
+  scheduleClass?: string | null;
   summary: KpiAggregateView[];
   views: DowntimeBundleItem[];
   calculationRunIds: string[];
@@ -42,8 +44,11 @@ export function pageViews(filters: DowntimeFilters) {
 export type PageViews = ReturnType<typeof pageViews>;
 
 export interface DowntimeBundleQuery extends ReportBase, PeriodSelection {
+  /** at least one token: the API refuses an empty list (422) */
   views: string[];
   includeMicroStops?: boolean;
+  /** the summary follows the page's schedule class (owner decision 2026-10-19); left out for every class */
+  scheduleClass?: ScheduleClass;
 }
 
 /** The one bundle request of the page (views sorted so equal pages share a cache key). */
@@ -52,6 +57,7 @@ export function bundleQuery(filters: DowntimeFilters): DowntimeBundleQuery {
   const tokens = [views.assetDuration, views.assetFrequency, views.crew, ...Object.values(views.trend)].filter((token): token is string => Boolean(token));
   const query: DowntimeBundleQuery = { ...reportBase(filters), ...periodSelection(filters), views: [...new Set(tokens)].sort() };
   if (filters.includeMicroStops) query.includeMicroStops = true;
+  if (filters.scheduleClass !== 'all') query.scheduleClass = filters.scheduleClass;
   return query;
 }
 
@@ -60,11 +66,14 @@ export function viewOf(data: DowntimeBundleData | undefined, token: string | und
   return token ? data?.views.find((view) => view.view === token) : undefined;
 }
 
-/** Request only the breakdowns rendered by the active page; the server always includes its summary. */
+/**
+ * Request only the breakdowns rendered by the active page; the server always includes its summary. A page
+ * that shows the summary only (the previous-period comparison) still names one view — the trend series it
+ * would show — because the API requires at least one (QA audit F1: an empty list was refused with 422).
+ */
 export function pageBundleQuery(filters: DowntimeFilters, page: string, mode: string | null): DowntimeBundleQuery {
   const views = pageViews(filters);
   const trend = Object.values(views.trend).filter((token): token is string => Boolean(token));
-  const tokens = page === 'overview' ? trend : page === 'causes' ? [views.assetDuration, views.assetFrequency]
-    : mode === 'crew' ? [views.crew] : mode === 'calendar' ? [] : trend;
+  const tokens = page === 'causes' ? [views.assetDuration, views.assetFrequency] : page === 'trends' && mode === 'crew' ? [views.crew] : trend;
   return { ...bundleQuery(filters), views: [...new Set(tokens)].sort() };
 }

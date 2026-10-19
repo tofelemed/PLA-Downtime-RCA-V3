@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useEventLosses } from '@/api/v2/queries/pla-analytics';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { QueryParams } from '@/api/v2/request-url';
 import type { ProductionEventView } from '@/api/v2/types/events';
@@ -14,24 +15,39 @@ import { useEventHubEnv, type EventHubEnv } from '@/features/event-hub/use-event
 import { EventRcaChip } from '@/features/rca/components/event-rca-chip';
 import { StartRcaLink } from '@/features/rca/components/start-rca-link';
 import { SELECT_CLASS } from '../components/analytics-filters';
-import { LOSS_EVENT_TYPES, lossEventsQuery, type AnalyticsScope, type LossEventType } from '../model/analytics-scope';
+import { eventLossQuery, LOSS_EVENT_TYPES, lossEventsQuery, type AnalyticsScope, type LossEventType } from '../model/analytics-scope';
+import { eventLossesOf, type EventLoss } from '../model/event-losses';
 import { LOSS_EVENT_TYPE_LABELS } from '../model/display';
 
-function columnsOf(env: EventHubEnv): Array<DataTableColumn<ProductionEventView>> {
+function AttributedLoss({ losses }: { losses: readonly EventLoss[] | undefined }) {
+  if (!losses?.length) return <span title="No loss line of the shown periods is attributed to this event">—</span>;
+  return (
+    <span data-testid="event-attributed-loss">
+      {losses.map((loss, i) => (
+        <span key={loss.uom ?? '-'}>
+          {i > 0 && ' · '}
+          <Quantity value={loss.amount} uom={loss.uom} />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function columnsOf(env: EventHubEnv, losses: ReadonlyMap<string, EventLoss[]>): Array<DataTableColumn<ProductionEventView>> {
   return [
     { id: 'start', header: 'Start', nowrap: true, cell: (e) => <PlantTime iso={e.startTime} tz={env.timezone} withDate /> },
     { id: 'unit', header: 'Unit', cell: (e) => env.unitName(e.unitId) },
     { id: 'type', header: 'Type', cell: (e) => labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType) },
     { id: 'reason', header: 'Reason', cell: (e) => (e.reasonCodeId ? env.reasonName(e.reasonCodeId) : 'Not coded') },
     { id: 'duration', header: 'Duration', align: 'right', nowrap: true, cell: (e) => (e.durationSeconds === null ? 'Ongoing' : <DurationText seconds={e.durationSeconds} />) },
-    { id: 'quantity', header: 'Lost quantity', align: 'right', nowrap: true, cell: (e) => (e.quantity === null ? '—' : <Quantity value={e.quantity} uom={e.quantityUom} />) },
+    { id: 'quantity', header: 'Lost quantity (attributed)', align: 'right', nowrap: true, cell: (e) => <AttributedLoss losses={losses.get(e.id)} /> },
     {
       id: 'rca',
       header: 'RCA',
       cell: (e) => (
         <span className="flex flex-wrap items-center gap-1">
           <EventRcaChip rcaState={e.states.rca} caseId={e.rcaId} />
-          {!e.rcaId && <StartRcaLink context={{ eventId: e.id }} label={`Start an RCA for the ${labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType).toLowerCase()} on ${env.unitName(e.unitId)}`} />}
+          {!e.rcaId && <StartRcaLink context={{ eventId: e.id }} label={`Start investigation for the ${labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType).toLowerCase()} on ${env.unitName(e.unitId)}`} />}
         </span>
       ),
     },
@@ -46,13 +62,15 @@ export interface LossEventsProps {
 /**
  * The loss events behind the figures (the v1 "loss event drill-down"): stops, slowdowns and quality losses
  * of the scope's units overlapping the window, newest first, 20 per page from the server keyset list.
- * A row opens the event's page in the Event Hub.
+ * Lost quantity is the loss attributed to the event by the periods' loss lines (approved, else the draft),
+ * the same lines as the loss tree. A row opens the event's page in the Event Hub.
  */
 export function LossEvents({ scope, onChange }: LossEventsProps) {
   const env = useEventHubEnv();
   const navigate = useNavigate();
   const location = useLocation();
   const { from, to, unitIds, ...filters } = lossEventsQuery(scope);
+  const losses = useEventLosses(eventLossQuery(scope), env.timezone);
   const events = usePagedQuery<ProductionEventView>({
     resource: 'production-events',
     path: '/production-events',
@@ -81,7 +99,7 @@ export function LossEvents({ scope, onChange }: LossEventsProps) {
       </div>
       <DataTable
         caption="Loss events of this scope"
-        columns={columnsOf(env)}
+        columns={columnsOf(env, eventLossesOf(losses.data?.data))}
         rows={events.rows}
         getRowKey={(e) => e.id}
         pager={events.pager}

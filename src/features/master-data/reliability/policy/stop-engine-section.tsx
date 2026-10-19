@@ -9,7 +9,8 @@ import { CommissioningBackdateFields } from '@/features/policy-backdate/commissi
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { EffectiveFrom } from '@/features/ux-kit/effective-from';
+import { isSeedNote } from '@/features/ux-kit/format/built-in-default';
 
 const SECONDS = [
   ['debounceSeconds', 'Stop debounce (seconds)'],
@@ -20,7 +21,7 @@ const SECONDS = [
 const recordLabel = (backdated: boolean) => (backdated ? 'Record stop-engine settings (backdated)' : 'Record stop-engine settings (effective from now)');
 function SettingsForm({ policy, unitId, canWrite }: { policy: StopEnginePolicy; unitId: string; canWrite: boolean }) {
   const [values, setValues] = useState<StopEngineSettings>(policy);
-  const [notes, setNotes] = useState(policy.notes ?? '');
+  const [notes, setNotes] = useState(isSeedNote(policy.notes) ? '' : policy.notes ?? '');
   const [failure, setFailure] = useState<unknown>(null);
   const [backdate, setBackdate] = useState(EMPTY_BACKDATE);
   const [checkBackdate, setCheckBackdate] = useState(false);
@@ -54,7 +55,7 @@ function SettingsForm({ policy, unitId, canWrite }: { policy: StopEnginePolicy; 
 export function StopEngineSection({ unitId, canWrite, timezone }: { unitId: string; canWrite: boolean; timezone: string }) {
   const policy = useStopEnginePolicy(unitId);
   return <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>{policy.data && <div className="space-y-3">
-    <p className="text-sm text-muted-foreground">Version {policy.data.version} ({policy.data.unitId ? 'unit override' : 'plant-wide'}) since <PlantTime iso={policy.data.effectiveFrom} tz={timezone} withDate />. Existing derived events keep their recorded settings.</p>
+    <p className="text-sm text-muted-foreground">Version {policy.data.version} ({policy.data.unitId ? 'unit override' : 'plant-wide'}) · <EffectiveFrom iso={policy.data.effectiveFrom} tz={timezone} prefix="since" />. Existing derived events keep their recorded settings.</p>
     <SettingsForm key={`${unitId}-${policy.data.id}`} policy={policy.data} unitId={unitId} canWrite={canWrite} />
   </div>}</DataState>;
 }

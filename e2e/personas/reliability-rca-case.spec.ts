@@ -95,7 +95,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await openHub(page, world.unitName);
     await openStop(page, world.stopId);
     await expect(page.getByTestId('event-rca-panel').getByTestId('rca-recommendations')).toHaveCount(0);
-    await expect(page.getByTestId('event-detail').getByLabel('RCA state: RCA linked')).toBeVisible();
+    await expect(page.getByTestId('event-detail').getByLabel('Investigation state: RCA linked')).toBeVisible();
 
     const found = await call<{ items: Array<{ id: string }> }>(viktor.token, 'GET', `/v2/rcas?q=${encodeURIComponent(caseTitle)}`);
     expect(found.body.items).toHaveLength(1);
@@ -296,7 +296,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     await openHub(page, world.unitName);
     await openStop(page, world.stopId);
     const detail = page.getByTestId('event-detail');
-    await expect(detail.getByLabel('RCA state: RCA completed')).toBeVisible();
+    await expect(detail.getByLabel('Investigation state: RCA completed')).toBeVisible();
     await expect(detail.getByTestId('event-rca-panel')).toBeVisible();
     await expect(detail.getByTestId('rca-recommendations')).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('j3-event-rca-completed.png'), fullPage: true });
@@ -333,7 +333,7 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     const claimed = page.getByTestId('outcome-claimed');
     await expect(claimed).toContainText(money(usd!.amount, 'USD'));
     await expect(claimed).toContainText(money(irr!.amount, 'IRR'));
-    await expect(claimed).toContainText(`(${usd!.actions} action(s))`);
+    await expect(claimed).toContainText(`(${usd!.actions} ${usd!.actions === 1 ? 'action' : 'actions'})`);
     const approved = page.getByTestId('outcome-panel').locator('section').first();
     if (outcome.body.approvedHistoricalLoss.lines === 0) await expect(approved.getByTestId('approved-impact-none')).toBeVisible();
 

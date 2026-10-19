@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
+import { EffectiveFrom } from '@/features/ux-kit/effective-from';
+import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ConsoleRefusal } from '../components/console-refusal';
 
@@ -36,7 +38,7 @@ export function MappingVersionCard({ version, timezone }: { version: SourceStatu
         {version.inForce && <Badge data-testid="mapping-in-force">In force</Badge>}
       </p>
       <p className="text-muted-foreground">
-        From <PlantTime iso={version.effectiveFrom} tz={timezone} withDate />
+        <EffectiveFrom iso={version.effectiveFrom} tz={timezone} prefix="From" />
         {version.effectiveTo ? (
           <>
             {' '}
@@ -62,7 +64,7 @@ export function MappingVersionCard({ version, timezone }: { version: SourceStatu
           </>
         )}
       </p>
-      {version.notes && <p className="text-xs">{version.notes}</p>}
+      {version.notes && <p className="text-xs">{policyNoteText(version.notes)}</p>}
       <Approve version={version} />
     </div>
   );

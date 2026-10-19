@@ -3,6 +3,7 @@ import type { SessionScope } from '@/services/api/authApi';
 import {
   effectiveRoles,
   legacyRoleAppliesIn,
+  legacyRolesApplying,
   maySelectTenant,
   organizationOf,
   rolesForLegacyRole,
@@ -50,9 +51,17 @@ describe('effectiveRoles (mirrors RequestContextFactory.build)', () => {
   });
 
   it('no selection means the home tenant', () => {
-    const analyst = user('Analyst', DEMO, [scope(DEMO, 'master_data_admin')]);
+    const analyst = user('Analyst', DEMO, [scope(DEMO, 'production_engineer'), scope(DEMO, 'master_data_admin')]);
     expect(effectiveRoles(analyst, at(null))).toEqual(['Analyst', 'production_engineer', 'master_data_admin']);
     expect(effectiveRoles(analyst, { tenantId: undefined })).toEqual(['Analyst', 'production_engineer', 'master_data_admin']);
+  });
+
+  it('guide roles only: with a grant in the plant the legacy mapping adds nothing (QA audit 2026-10-19)', () => {
+    const kamran = user('Analyst', DEMO, [scope(DEMO, 'finance_approver')]);
+    expect(effectiveRoles(kamran, at(DEMO))).toEqual(['Analyst', 'finance_approver']);
+    const noGrant = user('Analyst', DEMO, []);
+    expect(effectiveRoles(noGrant, at(DEMO))).toEqual(['Analyst', 'production_engineer']);
+    expect(legacyRolesApplying('Engineer', true)).toEqual(['Engineer']);
   });
 
   it('another tenant: only the scope roles held there, never the home roles', () => {

@@ -11,6 +11,12 @@ import { AuditLogService } from './audit-log.service';
 import { SKIP_AUDIT_KEY } from './skip-audit.decorator';
 import { AUDIT_READ_KEY } from './audit-read.decorator';
 import {
+  isPreviewBody,
+  SKIP_AUDIT_PREVIEW_KEY,
+} from './skip-audit-preview.decorator';
+import {
+  auditRecordLabel,
+  auditResponseId,
   methodToAuditAction,
   resolveAuditTarget,
   shouldSkipAudit,
@@ -64,7 +70,7 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
     if (readEntity && method === 'GET') {
       return this.auditRead(next, request, path, readEntity);
     }
-    if (shouldSkipAudit(path, method)) {
+    if (shouldSkipAudit(path, method) || this.isDryRun(context, request.body)) {
       return next.handle();
     }
 
@@ -89,6 +95,15 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
         );
       }),
     );
+  }
+
+  /** `@SkipAuditOnPreview()` routes called with `preview: true`: a dry run changes nothing. */
+  private isDryRun(context: ExecutionContext, body: unknown): boolean {
+    const marked = this.reflector.getAllAndOverride<boolean>(
+      SKIP_AUDIT_PREVIEW_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    return marked === true && isPreviewBody(body);
   }
 
   /** `@AuditRead()`: who read which raw / sensitive record, after a successful response. */
@@ -142,7 +157,7 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
     const { entityType, entityId, subresource } = resolveAuditTarget({
       path,
       params: request.params,
-      responseId: typeof body.id === 'string' ? body.id : undefined,
+      responseId: auditResponseId(body),
       requestId: typeof reqBody.id === 'string' ? reqBody.id : undefined,
     });
     const subresourceNote = subresource
@@ -161,12 +176,7 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
       user.organizationId ||
       '';
 
-    const label =
-      (typeof body.title === 'string' && body.title) ||
-      (typeof body.name === 'string' && body.name) ||
-      (typeof reqBody.title === 'string' && reqBody.title) ||
-      (typeof reqBody.name === 'string' && reqBody.name) ||
-      entityId;
+    const label = auditRecordLabel(body, reqBody) ?? entityId;
 
     await this.auditLogService.create({
       userId: user.userId,

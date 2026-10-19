@@ -1,7 +1,7 @@
 import { EntityManager, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
 import { RequestContext } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
-import { rolesForLegacyRole } from '../../auth/roles/role-model';
+import { legacyRolesOf } from '../../auth/roles/legacy-roles-of';
 import { Unit } from '../../unit/unit.entity';
 import { User } from '../../users/user.entity';
 import {
@@ -93,7 +93,7 @@ function workflowScope(
   )
     return;
   const roles = [
-    ...rolesForLegacyRole(context.legacyRole),
+    ...legacyRolesOf(context),
     ...context.scopes
       .filter(
         (scope) =>

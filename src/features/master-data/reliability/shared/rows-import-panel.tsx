@@ -6,6 +6,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import type { TextRow } from './delimited-rows';
 import { mapPastedRows, serverRowProblems, type MappedRow, type RowProblem } from './row-mapping';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface RowsImportPanelProps<TRow, TResult> {
   id: string;
@@ -49,7 +50,7 @@ export function RowsImportPanel<TRow, TResult>({ id, header, example, mapRow, su
     const mapped = mapPastedRows(text, mapRow);
     if (mapped.error) return setOutcome({ ...NONE, status: mapped.error });
     const ok = mapped.problems.length === 0;
-    setOutcome({ ...NONE, problems: mapped.problems, status: ok ? `${number(mapped.rows.length)} row(s) ready to import.` : 'Fix the rows below first.' });
+    setOutcome({ ...NONE, problems: mapped.problems, status: ok ? `${plural(mapped.rows.length, 'row', 'rows', number)} ready to import.` : 'Fix the rows below first.' });
   };
   const run = async () => {
     const mapped = mapPastedRows(text, mapRow);

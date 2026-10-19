@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/features/ux-kit/form-field';
-import { ANALYSIS_METHOD_KEYS, CONSEQUENCE_CLASSES, type ConsequenceClass, type RcaRulesDraft } from './rca-policy-rules-draft';
+import { ANALYSIS_METHOD_KEYS, ANALYSIS_METHOD_LABELS, CONSEQUENCE_CLASSES, percentError, type ConsequenceClass, type RcaRulesDraft } from './rca-policy-rules-draft';
 
 type SetRule = <K extends keyof RcaRulesDraft>(key: K, value: RcaRulesDraft[K]) => void;
 
@@ -12,10 +12,10 @@ interface Props {
   set: SetRule;
 }
 
-function NumberInput({ id, label, hint, value, onChange }: { id: string; label: string; hint: string; value: string; onChange: (value: string) => void }) {
+function NumberInput({ id, label, hint, value, onChange, error }: { id: string; label: string; hint: string; value: string; onChange: (value: string) => void; error?: string | null }) {
   return (
-    <FormField id={id} label={label} hint={hint}>
-      <Input id={id} inputMode="numeric" value={value} onChange={(e) => onChange(e.target.value)} />
+    <FormField id={id} label={label} hint={hint} error={error ?? undefined}>
+      <Input id={id} inputMode="numeric" value={value} aria-invalid={error ? true : undefined} onChange={(e) => onChange(e.target.value)} />
     </FormField>
   );
 }
@@ -38,8 +38,8 @@ function EffectivenessFields({ draft, set }: Props) {
       <legend className="px-1 text-sm font-medium">Effectiveness</legend>
       <NumberInput id="rca-min-exposure" label="Minimum run hours after the action" hint="Fewer known run hours in the verification window = not enough evidence." value={draft.minExposureHours} onChange={(v) => set('minExposureHours', v)} />
       <NumberInput id="rca-baseline-days" label="Baseline lookback (days)" hint="History before the verification window the baseline is counted from." value={draft.baselineLookbackDays} onChange={(v) => set('baselineLookbackDays', v)} />
-      <NumberInput id="rca-reduction" label="Required reduction (%)" hint="The same-mode rate must fall by at least this much." value={draft.requiredReductionPercent} onChange={(v) => set('requiredReductionPercent', v)} />
-      <NumberInput id="rca-min-coverage" label="Minimum state-data coverage for a verdict (%)" hint="Below this share of known unit state in the window after the action, the verdict is insufficient evidence." value={draft.minimumCoveragePercent} onChange={(v) => set('minimumCoveragePercent', v)} />
+      <NumberInput id="rca-reduction" label="Required reduction (%)" hint="The same-mode rate must fall by at least this much." value={draft.requiredReductionPercent} error={percentError(draft.requiredReductionPercent, false)} onChange={(v) => set('requiredReductionPercent', v)} />
+      <NumberInput id="rca-min-coverage" label="Minimum state-data coverage for a verdict (%)" hint="Below this share of known unit state in the window after the action, the verdict is insufficient evidence." value={draft.minimumCoveragePercent} error={percentError(draft.minimumCoveragePercent, true)} onChange={(v) => set('minimumCoveragePercent', v)} />
             <NumberInput id="rca-review-days" label="Review checkpoint (days)" hint="Proposed review after the action." value={draft.reviewDays} onChange={(v) => set('reviewDays', v)} />
       <div className="space-y-2 sm:col-span-2">
         <p className="text-sm font-medium">Any repeat is not effective for</p>
@@ -80,7 +80,8 @@ function InvestigationFields({ draft, set }: Props) {
     <fieldset className="grid gap-4 rounded border p-3 sm:grid-cols-3" data-testid="rca-policy-methods">
       <legend className="px-1 text-sm font-medium">Methods per consequence class</legend>
       <p className="text-xs text-muted-foreground sm:col-span-3">
-        One group per line; each group needs at least one of its methods. Methods: {ANALYSIS_METHOD_KEYS.join(', ')}.
+        One group per line, methods separated by commas; each group needs at least one of its methods. Type each method as its key:{' '}
+        {ANALYSIS_METHOD_KEYS.map((key) => `${ANALYSIS_METHOD_LABELS[key]} = ${key}`).join(', ')}.
       </p>
       {CONSEQUENCE_CLASSES.map((cls) => (
         <div key={cls} className="space-y-2">

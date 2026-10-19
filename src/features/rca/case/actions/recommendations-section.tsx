@@ -1,21 +1,24 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { RcaRecommendationItem } from '@/api/v2/types/rca';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_RECOMMENDATION_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { RCA_RECOMMENDATION_STATUS_TONES } from '@/features/ux-kit/labels/status-tones';
+import { StatusBadge } from '@/features/ux-kit/status-badge';
+import { toneOf } from '@/features/ux-kit/status-tone';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
-import { isRecommendationClosed, RECOMMENDATION_PRIORITIES, RECOMMENDATION_STATUSES } from '../../model/recommendation-form';
+import { isRecommendationClosed, RECOMMENDATION_PRIORITIES, RECOMMENDATION_STATUS_OPTIONS } from '../../model/recommendation-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { ChoiceField, optionsOf } from '../evidence/form-controls';
 import { useCaseWorkspace } from '../case-context';
 import { CreateTaskButton, TasksLink } from './create-task-button';
 import { RecommendationActions } from './recommendation-actions';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 interface Filters {
   text: string;
@@ -33,7 +36,7 @@ interface ColumnContext {
 function columns({ owner, day, readOnly, basePath }: ColumnContext): DataTableColumn<RcaRecommendationItem>[] {
   const base: DataTableColumn<RcaRecommendationItem>[] = [
     { id: 'title', header: 'Recommendation', cell: (row) => <span className="font-medium">{row.title}</span> },
-    { id: 'status', header: 'Status', cell: (row) => <Badge variant="secondary">{labelOf(RCA_RECOMMENDATION_STATUS_LABELS, row.status, 'Open')}</Badge>, nowrap: true },
+    { id: 'status', header: 'Status', cell: (row) => <StatusBadge tone={toneOf(RCA_RECOMMENDATION_STATUS_TONES, row.status ?? 'Open')}>{labelOf(RCA_RECOMMENDATION_STATUS_LABELS, row.status, 'Open')}</StatusBadge>, nowrap: true },
     { id: 'priority', header: 'Priority', cell: (row) => row.priority ?? '—', nowrap: true },
     { id: 'owner', header: 'Owner', cell: (row) => owner(row.ownerId) },
     { id: 'due', header: 'Due', cell: (row) => day(row.dueDate), nowrap: true },
@@ -73,11 +76,11 @@ export function RecommendationsSection() {
     </>
   );
   return (
-    <Section title="Recommendations" description={`${number(rca.recommendations.length)} recommendation(s), ${number(closed)} closed.`} actions={actions}>
+    <Section title="Recommendations" description={`${plural(rca.recommendations.length, 'recommendation', 'recommendations', number)}, ${number(closed)} closed.`} actions={actions}>
       <div className="space-y-3" data-testid="rec">
         <div className="flex flex-wrap items-end gap-3">
           <Input className="max-w-xs" aria-label="Search recommendations" placeholder="Search recommendations" value={filters.text} onChange={(e) => setFilters({ ...filters, text: e.target.value })} />
-          <ChoiceField id="rec-status-filter" label="Status" value={filters.status} options={optionsOf(RECOMMENDATION_STATUSES)} allowNone="All statuses" onChange={(status) => setFilters({ ...filters, status })} />
+          <ChoiceField id="rec-status-filter" label="Status" value={filters.status} options={RECOMMENDATION_STATUS_OPTIONS} allowNone="All statuses" onChange={(status) => setFilters({ ...filters, status })} />
           <ChoiceField id="rec-priority-filter" label="Priority" value={filters.priority} options={optionsOf(RECOMMENDATION_PRIORITIES)} allowNone="All priorities" onChange={(priority) => setFilters({ ...filters, priority })} />
         </div>
         <DataTable

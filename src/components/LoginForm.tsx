@@ -37,10 +37,11 @@ export const LoginForm: React.FC = () => {
       <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8 md:px-10 md:py-12">
         <div className="w-full max-w-md">
           <div className="mb-6">
-            <h1 className="text-2xl font-bold tracking-[0.2em] text-foreground">{LOGIN_COPY.appName}</h1>
-            <p className="mt-2 font-mono text-xs tracking-[0.1em] text-muted-foreground lg:tracking-[0.2em]">
+            <p className="text-sm font-bold tracking-[0.2em] text-foreground">{LOGIN_COPY.appName}</p>
+            <p className="mt-1 font-mono text-xs tracking-[0.1em] text-muted-foreground lg:tracking-[0.2em]">
               {LOGIN_COPY.appSubtitle}
             </p>
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">{LOGIN_COPY.heading}</h1>
           </div>
 
           <div className="mb-6 rounded-md border border-border bg-muted p-3 text-xs leading-relaxed text-foreground">

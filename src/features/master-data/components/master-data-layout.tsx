@@ -18,7 +18,7 @@ export interface MasterDataLayoutProps {
 /** Frame of every master-data page: access gate, one page header, the section links on list pages. */
 export function MasterDataLayout({ title, description, actions, back, alsoAllowed, children }: MasterDataLayoutProps) {
   return (
-    <MasterDataGate alsoAllowed={alsoAllowed}>
+    <MasterDataGate title={title} alsoAllowed={alsoAllowed}>
       <Page>
         <PageHeader
           title={title}

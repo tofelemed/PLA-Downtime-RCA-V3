@@ -4,7 +4,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { formatDateTime, useCalendarPreference } from '@/lib/dates';
 import { useEquipmentJourney } from './journey-context';
-import { setupStep, stepPrerequisite } from './setup-steps';
+import { canOpenStep, setupStep, stepPrerequisite } from './setup-steps';
 import { ReadinessBadge } from './readiness-status';
 
 export function ReadinessResults({ snapshot, timezone }: { snapshot: EquipmentReadinessView; timezone: string }) {
@@ -23,7 +23,7 @@ export function ReadinessResults({ snapshot, timezone }: { snapshot: EquipmentRe
       <ul aria-label="Equipment readiness checks" className="mt-3 grid gap-3 lg:grid-cols-2">
         {checks.map((check) => {
           const step = setupStep(check.stepId);
-          const blocked = !context?.journey || !capabilities[step.capability] || !!stepPrerequisite(step, context.journey);
+          const blocked = !context?.journey || !canOpenStep(step, capabilities) || !!stepPrerequisite(step, context.journey);
           return <li key={check.id} className="space-y-2 rounded-md border p-3">
             <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="text-sm font-medium">{check.label}</h3><ReadinessBadge status={check.status} /></div>
             <p className="text-sm text-muted-foreground">{numbers.text(check.detail)}</p>

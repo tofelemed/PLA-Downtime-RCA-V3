@@ -4,15 +4,16 @@ import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { eventNoun, type EventNoun } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useCalendarPreference } from '@/lib/dates';
+import { usePlantFormat } from '../hooks/use-plant-format';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { AuditReasonField } from './audit-reason-field';
 import { CommandError } from './command-error';
+import { SplitSlider } from './split-slider';
 
 export interface SplitDialogProps {
   event: ProductionEventView;
@@ -51,6 +52,7 @@ interface SplitAtProps {
 function SplitAtFields({ start, steps, offset, error, noun, onOffset }: SplitAtProps) {
   const env = useEventHubEnv();
   const preference = useCalendarPreference();
+  const { dateTime } = usePlantFormat();
   const splitAt = new Date(start + offset * MINUTE_MS).toISOString();
   const type = (iso: string | null) => {
     const next = splitOffsetOf(iso, start, steps);
@@ -62,7 +64,7 @@ function SplitAtFields({ start, steps, offset, error, noun, onOffset }: SplitAtP
       <Label htmlFor="split-at" className="text-xs text-muted-foreground">
         or drag: <PlantTime iso={splitAt} tz={env.timezone} withDate />
       </Label>
-      <Slider id="split-at" min={1} max={steps} step={1} value={[offset]} onValueChange={([value]) => onOffset(value, null)} aria-label="Split instant" />
+      <SplitSlider id="split-at" max={steps} value={offset} label="Split at" valueText={dateTime(splitAt)} onChange={(value) => onOffset(value, null)} />
     </div>
   );
 }

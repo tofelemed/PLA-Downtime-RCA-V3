@@ -40,7 +40,7 @@ export function RcaTiles() {
   const { number } = useNumberFormat();
   return (
     <AnalyticsCard
-      title="Root cause analysis"
+      title="Investigations and actions"
       testId="dashboard-rca"
       query={query}
       response={undefined}

@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { RequestContext } from '../../common/context/request-context';
 import { BoundedInterval } from '../../domain/time/interval-algebra';
 import { assertBodyUnitsInScope } from '../../periods/period-scope';
+import { plural } from '../../common/helpers/plural';
 
 /** 422 INVALID_RANGE unless `from < to`; both required for an analytical window. */
 export function windowOf(from: string, to: string): BoundedInterval {
@@ -56,7 +57,7 @@ export function rowsInvalid(
 ): UnprocessableEntityException {
   return new UnprocessableEntityException({
     code,
-    message: `The import has ${errors.length} invalid row(s); nothing was stored`,
+    message: `The import has ${plural(errors.length, 'invalid row', 'invalid rows')}; nothing was stored`,
     details: { errors },
   });
 }

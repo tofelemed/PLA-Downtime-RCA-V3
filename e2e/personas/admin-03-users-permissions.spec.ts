@@ -111,21 +111,19 @@ test.describe('ADM-04 users and permissions', () => {
     expect(rejected.status).toBe(400);
   });
 
-  test('ADM-04d permissions: the matrix is honest — read-only switches, no Save, a link to the user', async ({ page }) => {
+  test('ADM-04d permissions: the list is honest — the reachable menu, no Save, a link to the user', async ({ page }) => {
     await signIn(page, USERS.helena);
     await page.goto('/permissions');
     await expect(page.getByRole('heading', { name: 'Permissions', level: 1 })).toBeVisible({ timeout: 60_000 });
     await page.getByLabel('Search users').fill('Kenji');
     await page.getByRole('row', { name: /Kenji/ }).first().click();
-    await expect(page.getByText(/What the role of .* reaches by default/)).toBeVisible({ timeout: 30_000 });
-    // nothing can be saved: no Save button, every module switch is disabled (the role default is shown)
+    await expect(page.getByText(/What .* reaches in this plant/)).toBeVisible({ timeout: 30_000 });
+    // nothing can be saved: no Save button; the list is the menu the user's plant roles reach (QA audit 2026-10-19)
     await expect(page.getByRole('button', { name: 'Save Permissions' })).toHaveCount(0);
-    const auditSwitch = page.locator('#module-audit');
-    await expect(auditSwitch).toBeVisible();
-    await expect(auditSwitch).toBeDisabled();
-    const switches = page.getByRole('switch');
-    expect(await switches.count()).toBeGreaterThan(1);
-    for (const module of await switches.all()) await expect(module).toBeDisabled();
+    await expect(page.getByRole('switch')).toHaveCount(0);
+    const modules = page.getByTestId('reachable-modules');
+    await expect(modules).toBeVisible();
+    await expect(modules).toContainText('Dashboard');
     // the note says why, and sends the administrator to the user's role and access grants
     const readOnlyNote = page.getByTestId('permissions-read-only-note');
     await expect(readOnlyNote).toBeVisible();

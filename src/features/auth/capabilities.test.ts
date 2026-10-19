@@ -133,6 +133,7 @@ describe('capabilitiesOf', () => {
       ['canDelegateApprovals', Roles.DELEGATION_WRITERS],
       ['canVerifyStops', Roles.STOP_VERIFIERS],
       ['canValidateFailures', Roles.FAILURE_VALIDATORS],
+      ['canWriteEvents', Roles.EVENT_WRITERS],
       ['canWriteUncertaintyBudgets', Roles.BUDGET_WRITERS],
       ['canApproveUncertaintyBudgets', Roles.BUDGET_APPROVERS],
       ['canAdoptTolerance', Roles.TOLERANCE_ADOPTERS],
@@ -172,14 +173,32 @@ describe('capabilitiesOf', () => {
       expect([caps.canDecidePosting, caps.canSignOffMonth, caps.canApproveValuation]).toEqual([true, true, true]);
     });
 
-    it('canWriteEvents: any non-viewer member; a viewer (or no role) has no write capability at all', () => {
+    it('canWriteEvents: the event writers; a viewer (or no role) has no write capability at all', () => {
       expect(capabilitiesOf(['Operator', 'operator']).canWriteEvents).toBe(true);
       expect(capabilitiesOf(['production_engineer']).canWriteEvents).toBe(true);
+      expect(capabilitiesOf(['reliability_engineer']).canWriteEvents).toBe(true);
+      expect(capabilitiesOf(['manager_approver']).canWriteEvents).toBe(true);
+      expect(capabilitiesOf(['SuperAdmin']).canWriteEvents).toBe(true);
       for (const roles of [['viewer'], []]) {
         const caps = capabilitiesOf(roles);
         expect(PINS.every(([key]) => !caps[key])).toBe(true);
         expect(caps.canWriteEvents).toBe(false);
+        expect(caps.canWriteTasks).toBe(false);
       }
     });
+
+    it('owner decision 2026-10-19: the production accountant reconciles but has read-only coding', () => {
+      const sara = capabilitiesOf(['production_accountant']);
+      expect(sara.canWriteEvents).toBe(false);
+      expect(sara.canWriteTasks).toBe(true);
+      expect(sara.canApproveRevisions).toBe(true);
+    });
+  });
+
+  it('money is hidden from operators only (owner 19 Oct 2026, QA audit)', () => {
+    expect(capabilitiesOf(['Operator', 'operator']).canViewMoney).toBe(false);
+    expect(capabilitiesOf(['operator']).canViewMoney).toBe(false);
+    expect(capabilitiesOf(['Analyst', 'finance_approver']).canViewMoney).toBe(true);
+    expect(capabilitiesOf(['production_engineer']).canViewMoney).toBe(true);
   });
 });

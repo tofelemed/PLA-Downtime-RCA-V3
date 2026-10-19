@@ -16,7 +16,7 @@ import { useDefinitionDraft, type DefinitionEditorDraft } from './use-definition
 
 function SaveBar({ draft, pending, saved, onSave, onDiscard }: { draft: DefinitionEditorDraft; pending: boolean; saved: boolean; onSave: () => void; onDiscard: () => void }) {
   return <div className="flex flex-wrap items-center gap-2">
-    <Button disabled={!draft.editable || !draft.dirty || draft.form.title.trim() === '' || pending} onClick={onSave} data-testid="save-case">Save case</Button>
+    <Button disabled={!draft.editable || !draft.dirty || draft.form.title.trim() === '' || pending} onClick={onSave} data-testid="save-case">Save investigation</Button>
     {draft.dirty && <ConfirmDialog
       trigger={<Button variant="outline" disabled={pending}>Discard changes</Button>}
       title="Discard your changes?"

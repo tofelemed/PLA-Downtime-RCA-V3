@@ -1,5 +1,6 @@
 import { Dec } from '../actuals/decimal';
 import { WorkflowIssue } from './reconciliation.types';
+import { plural } from '../../common/helpers/plural';
 
 /** Stops of a shift period by how they are coded (stopping downtime overlapping the period). */
 export interface StopCodingCounts {
@@ -97,7 +98,7 @@ export function codingGate(
     issues.push(
       issue(
         'STOPS_UNCODED',
-        `${uncoded} stop(s) have neither a reason code nor "investigation pending"`,
+        `${plural(uncoded, 'stop has', 'stops have')} neither a reason code nor "investigation pending"`,
       ),
     );
   }

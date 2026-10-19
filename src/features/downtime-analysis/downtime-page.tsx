@@ -41,12 +41,12 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
   const { mode, bundled, scope, page, showTrend } = downtimePageSettings(view, params);
   const bundle = useDowntimeBundle(pageBundleQuery(filters, view, mode), env.timezone, bundled);
   const Content = PAGES[view];
-  const windowText = useWindowRangeText()({ label: filters.windowLabel, from: filters.from, to: filters.to });
+  const windowText = useWindowRangeText()({ label: filters.windowLabel, from: filters.from, to: filters.to, relative: filters.relativeWindow !== null });
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="downtime-analysis">
-        {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime Analysis · ${page.label}`} />
-          : <PageHeader title={`Downtime Analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {windowText} · {env.timezone}</p>} />}
+        {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime analysis · ${page.label}`} />
+          : <PageHeader title={`Downtime analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {windowText} · {env.timezone}</p>} />}
         <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
         <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={params.get('presentation') !== 'timeline' || view !== 'stops'} />
         <p className="text-xs text-muted-foreground" data-testid="period-selection-note">{DOWNTIME_SCOPE_NOTES[scope]}</p>

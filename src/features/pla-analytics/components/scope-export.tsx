@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useCreateExport } from '@/api/v2/queries/exports';
 import { useExportJob } from '@/api/v2/queries/period-overview';
 import { downloadExportFile } from '@/api/v2/queries/period-workflow';
@@ -6,6 +6,7 @@ import type { ExportRequest } from '@/api/v2/queries/reports';
 import { Button } from '@/components/ui/button';
 import { createLogger } from '@/lib/logger';
 import { ActionIcon } from '@/lib/icons';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { labelOf } from '@/features/ux-kit/labels';
 import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
@@ -25,9 +26,13 @@ export interface ScopeExportProps {
   /** csv (default): every column; pdf: a printable report in the plant calendar and the display currency */
   format?: 'csv' | 'pdf';
   testId?: string;
+  /** why there is no request (`exportBlockedReason`), shown under the disabled button */
+  disabledReason?: string | null;
+  /** id of a reason the page shows once for several exports (then none is shown here) */
+  reasonShownAt?: string;
 }
 
-const DISABLED_HINT = 'Exports contain approved figures only: tick “Approved only” and wait until the scope is approved';
+const DISABLED_HINT = 'Exports contain approved figures only: choose approved revisions only, for dates whose periods are all approved.';
 
 /**
  * Asynchronous export of the shown scope (2.9 job, AN03): queued with the page's window and units, polled
@@ -35,7 +40,10 @@ const DISABLED_HINT = 'Exports contain approved figures only: tick “Approved o
  * PDF (rendered on the server in the plant calendar, money in the user's display currency). Failures read
  * in plain language.
  */
-export function ScopeExport({ request: base, label, timezone, format = 'csv', testId = 'scope-export' }: ScopeExportProps) {
+export function ScopeExport({ request: base, label, timezone, format = 'csv', testId = 'scope-export', disabledReason, reasonShownAt }: ScopeExportProps) {
+  const ownId = useId();
+  const reasonId = reasonShownAt ?? ownId;
+  const reason = base ? null : (disabledReason ?? DISABLED_HINT);
   const { currency } = useDisplayCurrency();
   const request: ExportRequest | null = base && format === 'pdf' ? { ...base, format: 'pdf', currency } : base;
   const exporter = useCreateExport();
@@ -64,11 +72,11 @@ export function ScopeExport({ request: base, label, timezone, format = 'csv', te
   const { number } = useNumberFormat();
   return (
     <div className="space-y-1 text-sm" data-testid={testId} data-request={request ? JSON.stringify(request) : ''}>
-      <Button size="sm" variant="outline" disabled={!request || exporter.isPending} title={request ? undefined : DISABLED_HINT} onClick={() => void start()} data-testid={`${testId}-start`}>
+      <Button size="sm" variant="outline" disabled={!request || exporter.isPending} aria-describedby={reason ? reasonId : undefined} onClick={() => void start()} data-testid={`${testId}-start`}>
         <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />
         {label} ({format.toUpperCase()})
       </Button>
-      {!request && <p className="text-xs text-muted-foreground">Approved figures only.</p>}
+      {!reasonShownAt && <DisabledReason id={reasonId} reason={reason} />}
       {data && (
         <p data-testid={`${testId}-job`} data-state={data.state} role="status">
           Export {labelOf(EXPORT_STATE_LABELS, data.state)}

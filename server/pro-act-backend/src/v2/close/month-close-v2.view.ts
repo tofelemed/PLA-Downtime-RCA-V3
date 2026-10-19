@@ -1,4 +1,5 @@
 import { MissingPeriod } from '../../close/month-coverage';
+import { UncoveredDay } from '../../close/month-uncovered';
 import { MonthCloseSnapshot } from '../../close/month-close.service';
 import {
   OpenProposal,
@@ -93,6 +94,12 @@ export interface MonthCloseV2View {
     uncertifiedDays: UncertifiedDay[];
     openProposalCount: number;
     openProposals: OpenProposal[];
+    /**
+     * information, never a prerequisite: production days with periods or scheduled shifts that no approved
+     * plan covers (owner decision 2026-10-19); they are left out of every count above until planned
+     */
+    uncoveredDayCount: number;
+    uncoveredDays: UncoveredDay[];
   };
   materiality: {
     findings: MaterialityFinding[];

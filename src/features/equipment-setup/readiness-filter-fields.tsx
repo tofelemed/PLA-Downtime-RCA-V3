@@ -27,6 +27,6 @@ export function ReadinessFilterFields({ filters, onChange, timezone }: { filters
         <p className="text-xs text-muted-foreground">Must match the production profile. Applied when you leave this field.</p>
       </div>
     </div>
-    <DateRangeInput label="Readiness window (maximum 31 days)" mode="datetime" timeZone={timezone} value={filters.range} onChange={(range) => onChange({ ...filters, range })} />
+    <DateRangeInput label="Readiness window (whole plant days, maximum 31)" timeZone={timezone} value={filters.range} onChange={(range) => onChange({ ...filters, range })} />
   </>;
 }

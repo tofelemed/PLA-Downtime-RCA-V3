@@ -2,16 +2,16 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useReconciliationStatus } from '@/api/v2/queries/pla-analytics';
 import type { OverduePeriodView } from '@/api/v2/types/pla-analytics';
 import { Badge } from '@/components/ui/badge';
-import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
 import { statusQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { ageText } from '../model/display';
 import { withPeriodList } from '../model/period-list';
+import { periodLabel } from '../model/period-label';
 
 /**
  * Reconciliation status and age (AN02): periods per workflow and residual state of their current revision,
@@ -96,7 +96,7 @@ function OverdueTable({ rows, timezone }: { rows: readonly OverduePeriodView[]; 
       nowrap: true,
       cell: (row) => (
         <span data-testid="overdue-period" data-period-id={row.periodId}>
-          {formatOperationalDate(row.localDate, pref)} {row.shiftName ?? ''} (<PlantTime iso={row.utcStart} tz={timezone} />)
+          {periodLabel(row, timezone, pref)}
         </span>
       ),
     },

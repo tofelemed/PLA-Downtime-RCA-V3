@@ -198,9 +198,9 @@ export function presetWindow(hours: number, label: string, now: number): { from:
 }
 
 /** The window as shown to people: a rolling window ends at its resolve instant (the look-ahead is internal). */
-export function shownWindow(state: EventFilterState): { label: string; from: string | null; to: string | null } {
+export function shownWindow(state: EventFilterState): { label: string; from: string | null; to: string | null; relative: boolean } {
   const to = state.relativeWindow && state.from && state.to ? displayEnd({ from: state.from, to: state.to }, EVENT_WINDOW_LOOKAHEAD_MS) : state.to;
-  return { label: state.windowLabel, from: state.from, to };
+  return { label: state.windowLabel, from: state.from, to, relative: state.relativeWindow !== null };
 }
 
 /** E-1: the order a sortable header chooses — its first order when another column sorts, else its other order. */

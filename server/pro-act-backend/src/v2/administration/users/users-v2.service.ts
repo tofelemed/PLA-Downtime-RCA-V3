@@ -3,6 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { In, Repository } from 'typeorm';
+import { UserScope } from '../../../auth/scopes/user-scope.entity';
 import {
   canGrantRole,
   LEGACY_ROLES,
@@ -21,6 +24,7 @@ import {
   PlantUserDirectory,
   UserSource,
 } from './plant-user-directory';
+import { plantRolesOf } from './plant-roles';
 import { permissionsOf } from './user-manage-rules';
 import { UsersListQueryDto } from './users-v2.dto';
 import { GrantableRolesView, toUserView, UserV2View } from './user-v2.view';
@@ -40,6 +44,8 @@ export class UsersV2Service {
   constructor(
     private readonly directory: PlantUserDirectory,
     private readonly places: PlaceNamesService,
+    @InjectRepository(UserScope)
+    private readonly scopes: Repository<UserScope>,
   ) {}
 
   async list(
@@ -111,9 +117,23 @@ export class UsersV2Service {
     context: RequestContext,
     users: DirectoryUser[],
   ): Promise<UserV2View[]> {
-    const names = await this.places.namesFor(users);
+    const tenantId = requireTenantId(context);
+    const [names, grants] = await Promise.all([
+      this.places.namesFor(users),
+      users.length
+        ? this.scopes.find({
+            where: { tenantId, userId: In(users.map((user) => user.id)) },
+            select: { userId: true, role: true },
+          })
+        : [],
+    ]);
     return users.map((user) =>
-      toUserView(user, names, permissionsOf(context, user)),
+      toUserView(
+        user,
+        names,
+        permissionsOf(context, user),
+        plantRolesOf(user, grants, tenantId),
+      ),
     );
   }
 

@@ -155,7 +155,7 @@ describe('RCA U3 flows', () => {
     } satisfies RcaEvidenceItem;
     const rca = { ...CASE, evidence: [item], logicTree: [], eventDiagram: { nodes: [], edges: [] } } as unknown as RcaCaseView;
     wrap(
-      <CaseWorkspaceContext.Provider value={{ rca, readOnly: true, basePath: '/rca/c1' }}>
+      <CaseWorkspaceContext.Provider value={{ rca, readOnly: true, canWrite: false, closed: false, basePath: '/rca/c1' }}>
         <Routes><Route path="/rca/:caseId/evidence/:evidenceId" element={<EvidenceDetailPage />} /></Routes>
       </CaseWorkspaceContext.Provider>,
       '/rca/c1/evidence/ev-1',
@@ -164,11 +164,13 @@ describe('RCA U3 flows', () => {
     expect(screen.getByText('Reza Ahmadi')).toBeInTheDocument();
   });
 
-  it('evidence: the collection task picks an assignee among the plant members', async () => {
+  it('evidence: the evidence request (QA M5: never "Task") picks who brings it among the plant members', async () => {
     const onChange = vi.fn();
     wrap(<EvidenceTaskFields form={EMPTY_EVIDENCE_FORM} onChange={onChange} />);
     await screen.findByRole('option', { name: 'Reza Ahmadi' });
-    fireEvent.change(screen.getByLabelText('Assigned to'), { target: { value: 'u-2' } });
+    expect(screen.getByRole('heading', { name: 'Evidence request' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Task/)).toBeNull();
+    fireEvent.change(screen.getByLabelText('Requested from'), { target: { value: 'u-2' } });
     expect(onChange).toHaveBeenCalledWith({ taskAssigneeId: 'u-2' });
   });
 });

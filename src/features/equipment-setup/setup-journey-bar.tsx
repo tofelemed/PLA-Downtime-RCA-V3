@@ -4,7 +4,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { UnitSelect } from '@/features/master-data/components/unit-select';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { useEquipmentJourney } from './journey-context';
-import { SETUP_PHASES, SETUP_STEPS, setupStep, stepPrerequisite } from './setup-steps';
+import { canOpenStep, SETUP_PHASES, SETUP_STEPS, setupStep, stepPrerequisite } from './setup-steps';
 
 /** Visible across normal save/detail navigation while the user chooses to follow the setup guide. */
 export function SetupJourneyBar() {
@@ -28,11 +28,11 @@ export function SetupJourneyBar() {
     <p className="text-sm text-muted-foreground"><strong>Check before continuing:</strong> {step.verify}</p>
     <div className="max-w-sm"><UnitSelect id="setup-unit" label="Setup production unit" value={journey.unitId} onChange={context.chooseUnit} /></div>
     {restriction && <p className="text-sm text-warning">{restriction}</p>}
-    {!capabilities[step.capability] && <p className="text-sm text-muted-foreground">Your current role cannot open this step. Ask a permitted user to configure it, or use an authorized account.</p>}
+    {!canOpenStep(step, capabilities) && <p className="text-sm text-muted-foreground">Your current role cannot open this step. Ask a permitted user to configure it, or use an authorized account.</p>}
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" variant="outline" disabled={!previous || !capabilities[previous.capability] || !!stepPrerequisite(previous, journey)} onClick={() => previous && openStep(previous.id)}>Previous setup step</Button>
-      <Button size="sm" variant="outline" disabled={!!restriction || !capabilities[step.capability]} onClick={() => openStep(step.id)}>Open this step</Button>
-      {next ? <Button size="sm" disabled={!!nextRestriction || !capabilities[next.capability]} onClick={() => openStep(next.id)}>Next setup step</Button> : <Button size="sm" onClick={context.stop}>Finish guide</Button>}
+      <Button size="sm" variant="outline" disabled={!previous || !canOpenStep(previous, capabilities) || !!stepPrerequisite(previous, journey)} onClick={() => previous && openStep(previous.id)}>Previous setup step</Button>
+      <Button size="sm" variant="outline" disabled={!!restriction || !canOpenStep(step, capabilities)} onClick={() => openStep(step.id)}>Open this step</Button>
+      {next ? <Button size="sm" disabled={!!nextRestriction || !canOpenStep(next, capabilities)} onClick={() => openStep(next.id)}>Next setup step</Button> : <Button size="sm" onClick={context.stop}>Finish guide</Button>}
       {step.related?.map((link) => <Button asChild key={link.label} size="sm" variant="link"><Link to={link.to(journey)}>{link.label}</Link></Button>)}
     </div>
     {nextRestriction && <p className="text-xs text-muted-foreground">Next step: {nextRestriction}</p>}

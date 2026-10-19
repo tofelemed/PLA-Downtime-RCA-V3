@@ -47,3 +47,19 @@ const TEXT: Record<string, string> = {
 export function warningText(warning: CalendarWarning): string {
   return TEXT[warning.code] ?? humanize(warning.code);
 }
+
+export interface PreviewInputs {
+  /** "Preview" above was chosen (the stored version or the unsaved edits) */
+  candidate: boolean;
+  unitId: string;
+  localFrom: string;
+  localTo: string;
+}
+
+/** Why "Run preview" is unavailable, the first missing input first; null when it can run. */
+export function previewBlockedReason(inputs: PreviewInputs): string | null {
+  if (!inputs.candidate) return 'Choose “Preview” above first.';
+  if (!inputs.unitId) return 'Choose a unit first.';
+  if (!inputs.localFrom || !inputs.localTo) return 'Enter the first and last operational dates.';
+  return null;
+}

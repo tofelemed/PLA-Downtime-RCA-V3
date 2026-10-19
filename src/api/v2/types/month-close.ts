@@ -19,6 +19,16 @@ export interface PendingPeriodView {
   localDate: string;
   shiftName: string | null;
   workflow: string;
+  /** the period's plan, for a link to the period page (absent from older servers) */
+  planId?: string | null;
+}
+
+/** A production day with periods or scheduled shifts that no approved plan covers (information only). */
+export interface UncoveredDayView {
+  unitId: string;
+  unitName: string | null;
+  localDate: string;
+  shifts: number;
 }
 
 /** A scheduled shift of the month that has no production period yet. */
@@ -115,6 +125,9 @@ export interface MonthCloseView {
     uncertifiedDays: Array<{ unitId: string; unitName: string | null; localDate: string }>;
     openProposalCount: number;
     openProposals: OpenProposalView[];
+    /** owner decision 2026-10-19: days no approved plan covers — never counted above (absent from older servers) */
+    uncoveredDayCount?: number;
+    uncoveredDays?: UncoveredDayView[];
   };
   materiality: {
     findings: Array<{ uom: string; quantity: string; threshold: string }>;

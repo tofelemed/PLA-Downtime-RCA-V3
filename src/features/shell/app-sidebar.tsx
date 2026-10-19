@@ -1,20 +1,11 @@
 import { useLocation } from 'react-router-dom';
-import { useFeatureFlags } from '@/api/v2/queries/feature-flags';
-import type { FeatureFlagKey } from '@/api/v2/types/flags';
-import { activeNavItem, groupNavigationItems, NAVIGATION_FLAGS, visibleNavigationItems } from '@/features/auth/navigation-items';
+import { activeNavItem, groupNavigationItems, visibleNavigationItems } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import type { NavStateApi } from '@/features/auth/use-nav-state';
 import { UiIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 import { SidebarGroup } from './sidebar-group';
-
-/** `{flag: on}` for the flags the menu depends on (unknown / unreachable = off, decision C4). */
-function useMenuFlags(): Partial<Record<FeatureFlagKey, boolean>> {
-  const { data } = useFeatureFlags();
-  return Object.fromEntries(
-    NAVIGATION_FLAGS.map((key) => [key, data?.items.find((flag) => flag.key === key)?.enabled === true]),
-  );
-}
+import { useMenuFlags } from './use-menu-flags';
 
 /**
  * The sidebar: capability-gated items (features/auth) grouped in collapsible sections; an icon rail

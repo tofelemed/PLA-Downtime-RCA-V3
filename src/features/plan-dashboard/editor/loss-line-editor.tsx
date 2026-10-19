@@ -9,6 +9,7 @@ import { EditorProblem } from './editor-problem';
 import { ManualLines } from './manual-lines';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface LossLineEditorProps {
   view: ReconciliationView;
@@ -50,7 +51,7 @@ export function LossLineEditorContent({ view, timezone, readOnly = false, editor
       {editor.draft.pendingManual && !readOnly && <p className="text-xs text-muted-foreground">Add or cancel the manual line before saving the complete draft.</p>}
       {editor.dropped && editor.dropped.length > 0 && (
         <p className="text-xs text-warning" data-testid="rebase-dropped">
-          Rebased on the new run: {number(editor.dropped.length)} decision(s) dropped because their candidate no longer exists.
+          Rebased on the new run: {plural(editor.dropped.length, 'decision', 'decisions', number)} dropped because their candidate no longer exists.
         </p>
       )}
       <CandidateTable view={view} draft={editor.draft} setDraft={editor.setDraft} issues={rowIssues} readOnly={readOnly} timezone={timezone} />

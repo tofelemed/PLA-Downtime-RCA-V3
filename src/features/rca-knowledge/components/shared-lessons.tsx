@@ -6,6 +6,7 @@ import { useRcaFormat } from '@/features/rca/use-rca-format';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { RCA_LESSON_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { humanize } from '@/features/ux-kit/labels';
 
 function Lesson({ lesson }: { lesson: SharedLessonView }) {
   const { date } = useRcaFormat();
@@ -19,7 +20,7 @@ function Lesson({ lesson }: { lesson: SharedLessonView }) {
       </div>
       <p className="text-xs text-muted-foreground">
         {lesson.sourcePlant} · shared {date(lesson.sharedAt)}
-        {lesson.failureMode ? ` · failure mode: ${lesson.failureMode}` : ''}
+        {lesson.failureMode ? ` · failure mode: ${humanize(lesson.failureMode)}` : ''}
         {lesson.equipmentCategory ? ` · ${lesson.equipmentCategory}` : ''}
       </p>
       {lesson.problemStatement && <p>Problem: {lesson.problemStatement}</p>}

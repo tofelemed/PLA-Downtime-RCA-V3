@@ -2,6 +2,11 @@ import { A, HOUR } from './support/actuals-world';
 import { plus } from './support/accounting-world';
 import { ApiError } from './support/plan-world';
 import { addCodedRootCause } from './support/rca-causes';
+import {
+  closedCaseWrites,
+  expectRepairHistory,
+  expectSweepSkips,
+} from './support/rca-closed-case';
 import { CaseBody, LinkResultBody, RcaWorld } from './support/rca-world';
 
 /**
@@ -277,11 +282,24 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       expect(view.verdict).toBe('insufficient_evidence');
       const outcome = (await env.get(`rcas/${caseId}/outcome`).expect(200))
         .body as {
-        approvedHistoricalLoss: { lines: number };
+        approvedHistoricalLoss: { lines: number; view: string; basis: string };
         claimedAvoided: unknown[];
         realized: Array<{ verdict: string }>;
       };
       expect(outcome.approvedHistoricalLoss.lines).toBeGreaterThan(0);
+      const [frozen] = await env.rows<{ view: string }>(
+        `SELECT evidence -> 'approvedImpact' ->> 'view' AS view FROM rca_case_links
+          WHERE rca_id = $1 AND evidence -> 'approvedImpact' ->> 'view' IS NOT NULL ORDER BY linked_at LIMIT 1`,
+        [caseId],
+      );
+      // QA M3: one basis on Links & outcome — the view frozen in the linked evidence package, named
+      expect(outcome.approvedHistoricalLoss.view).toBe(frozen.view);
+      expect(outcome.approvedHistoricalLoss.basis).toMatch(
+        /^Approved plan lines .*linked evidence package/,
+      );
+      expect(outcome.approvedHistoricalLoss.basis).not.toMatch(
+        /SME|policy default/,
+      );
       expect(outcome.claimedAvoided).toEqual([
         { currency: 'USD', amount: '1000', actions: 1 },
       ]);
@@ -462,6 +480,36 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
       expect(again.created).toBe(false);
     });
 
+    it('H1: every write on a closed investigation answers 409 CASE_CLOSED (reopen stays the only path)', async () => {
+      const read = (await env.get(`rcas/${caseId}`).expect(200))
+        .body as CaseBody;
+      const [action] = await env.rows<{ id: string; row_version: number }>(
+        `SELECT id, row_version FROM rca_actions WHERE rca_id = $1 LIMIT 1`,
+        [caseId],
+      );
+      const [cause] = await env.rows<{ id: string; row_version: number }>(
+        `SELECT id, row_version FROM rca_causes WHERE rca_id = $1 LIMIT 1`,
+        [caseId],
+      );
+      const writes = closedCaseWrites(env, {
+        caseId,
+        etag: `"${read.rowVersion}"`,
+        action,
+        cause,
+      });
+      for (const write of writes) {
+        const response = await write();
+        expect([response.status, codeOf(response)]).toEqual([
+          409,
+          'CASE_CLOSED',
+        ]);
+      }
+      const after = (await env.get(`rcas/${caseId}`).expect(200))
+        .body as CaseBody;
+      expect(after.rowVersion).toBe(read.rowVersion);
+      await expectSweepSkips(env, action.id);
+    });
+
     it('the repair migration applies the closure rule to recommendations of cases closed before it', async () => {
       const [done] = await env.rows<{ id: string }>(
         `SELECT id FROM rca_actions WHERE rca_id = $1 AND status = 'done' LIMIT 1`,
@@ -510,6 +558,7 @@ describe('RCA cases, links and actions (plan 3.9)', () => {
           (r) => r.status,
         ),
       ).toEqual(['Completed', 'Cancelled', 'Open']);
+      await expectRepairHistory(env, caseId);
       await env.rows(
         `UPDATE rca_actions SET recommendation_id = NULL WHERE id IN ($1, $2)`,
         [done.id, cancelled.id],

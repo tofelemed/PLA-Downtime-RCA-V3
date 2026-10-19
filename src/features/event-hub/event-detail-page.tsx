@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { EventRcaPanel } from '@/features/rca/event-rca-panel';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { eventNoun, labelOf, PHYSICAL_TYPE_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
+import { eventNoun, labelOf, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { AttributedLossesCard } from './components/attributed-losses-card';
@@ -15,7 +15,9 @@ import { EventSummary } from './components/event-summary';
 import { EventVerificationPanel } from './components/event-verification-panel';
 import { EventHubFrame } from './event-hub-frame';
 import { useBackTarget } from './hooks/use-back-target';
+import { useScrollToTop } from './hooks/use-scroll-to-top';
 import { eventHeaderDescription } from './model/event-header';
+import { eventPageTitle, eventTrail } from './model/event-trail';
 import { latestRevisionNumber } from './model/source-facts';
 import { useEventHubEnv } from './use-event-hub-env';
 
@@ -36,13 +38,15 @@ function EventDetailScreen({ eventId }: { eventId: string }) {
   const history = useProductionEventHistory(eventId);
   const event = detail.data;
   const latestRevision = latestRevisionNumber(history.data?.revisions ?? []);
-  const title = event ? `${labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)} · ${env.unitName(event.unitId)}` : 'Event';
+  const title = event ? eventPageTitle(event, env.unitName) : 'Event';
+  useScrollToTop(eventId);
   return (
     <Page>
       <div className="space-y-6" data-testid="event-detail">
         <PageHeader
           title={title}
           back={back}
+          breadcrumbs={eventTrail(back, title)}
           description={event ? eventHeaderDescription(labelOf(SOURCE_KIND_LABELS, event.sourceKind), latestRevision) : undefined}
           actions={event ? <EventDetailActions event={event} /> : undefined}
         />

@@ -41,7 +41,7 @@ function TrendControls({ scope, onChange, grouping, policy }: TrendsTabProps & {
       {TREND_GROUPS.map((group) => <option key={group} value={group}>{TREND_LABELS[group]}</option>)}
     </select></>}
     {policy && <><Label htmlFor="trend-policy">OEE</Label><select id="trend-policy" data-testid="trend-policy" className={SELECT_CLASS} value={scope.policy} onChange={(event) => onChange({ policy: event.target.value as OeePolicy })}>
-      <option value="operational">Operational OEE (ISO 22400)</option><option value="reconciled">Reconciled PLA OEE (labelled)</option>
+      <option value="operational">Operational OEE (ISO 22400)</option><option value="reconciled">Reconciled PLA OEE</option>
     </select></>}
   </div>;
 }

@@ -4,6 +4,7 @@ import { formatDuration } from '@/features/ux-kit/format/duration';
 import { localizeNumber, useCalendarPreference } from '@/lib/dates';
 import { formatCount, formatRatio } from '../../model/kpi-display';
 import { ChartFigure } from '@/features/ux-kit/chart-figure';
+import { plural } from '@/features/ux-kit/format/plural';
 
 export interface ParetoChartProps {
   groups: readonly DowntimeGroupView[];
@@ -35,7 +36,7 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
   const format = (value: unknown) => (unit === 's' ? formatDuration(Number(value), 'long', digits) : formatCount(String(value), digits));
   const top = points[0];
   const caption = top
-    ? `Pareto of ${points.length} groups by ${unit === 's' ? 'downtime' : 'stop count'}, largest first; the largest is ${top.name} (${format(top.value)}).`
+    ? `Pareto of ${plural(points.length, 'group', 'groups')} by ${unit === 's' ? 'downtime' : 'stop count'}, largest first; the largest is ${top.name} (${format(top.value)}).`
     : 'Pareto with no groups.';
   return (
     <ChartFigure caption={caption} chartClassName="h-72 w-full" testId="pareto-chart">

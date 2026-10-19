@@ -32,7 +32,7 @@ function show(value = context) {
 }
 beforeEach(() => {
   actAs('SuperAdmin'); plant.id = 'tenant-a'; vi.clearAllMocks(); sessionStorage.clear();
-  sessionStorage.setItem(`proact:equipment-readiness:v1:tenant-a:user-1:${unitId}`, JSON.stringify({ productId, operatingMode: 'normal', range: { from, to } }));
+  sessionStorage.setItem(`proact:equipment-readiness:v2:tenant-a:user-1:${unitId}`, JSON.stringify({ productId, operatingMode: 'normal', range: { from, to } }));
 });
 afterEach(() => { vi.unstubAllGlobals(); sessionStorage.clear(); });
 
@@ -57,7 +57,7 @@ describe('automatic equipment readiness', () => {
     show(); await screen.findByText('Approved profile covers the full window.');
     fireEvent.change(screen.getByLabelText('Product grade'), { target: { value: productB } });
     await waitFor(() => expect(products).toContain(productB));
-    const saved = JSON.parse(sessionStorage.getItem(`proact:equipment-readiness:v1:tenant-a:user-1:${unitId}`)!);
+    const saved = JSON.parse(sessionStorage.getItem(`proact:equipment-readiness:v2:tenant-a:user-1:${unitId}`)!);
     expect(saved.productId).toBe(productB); expect(saved.checks).toBeUndefined();
   });
   it('clears previously successful badges when refresh fails', async () => {

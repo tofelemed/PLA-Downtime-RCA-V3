@@ -1,62 +1,106 @@
-import { GLOSSARY, humanize, looksLikeRawId } from '@/features/ux-kit/labels';
+import { GLOSSARY } from '@/features/ux-kit/labels';
 
-/** glossary names of figures whose key differs from the shown word (docs/GLOSSARY.md) */
-const FIGURE_NAMES: Readonly<Record<string, string>> = { residual: GLOSSARY.residual, slices: 'Reconciliation', ledgers: 'Ledger' };
-const figureName = (key: string) => FIGURE_NAMES[key] ?? humanize(key);
-
-export interface SnapshotFigure {
+/** One curated figure of a change proposal: its label, unit and the server's values on each side. */
+export interface ComparisonRow {
+  key: string;
   label: string;
-  value: string;
+  unit: string | null;
+  before: string | null;
+  after: string | null;
 }
 
-/** the loss value per currency and the reason-code changes, shown on their own (`proposal-values.tsx`) */
-const OWN_PANELS: ReadonlySet<string> = new Set(['values', 'codingChanges']);
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-
-/** keys that only identify records or hashes: never shown */
-const HIDDEN_KEY = /(^id$|Id$|Ids$|hash|Hash|key$|Key$|version$|Version$)/;
-
-function shown(key: string, value: unknown): value is string | number | boolean {
-  if (HIDDEN_KEY.test(key)) return false;
-  if (typeof value === 'number' || typeof value === 'boolean') return true;
-  return typeof value === 'string' && value.length > 0 && !looksLikeRawId(value);
+/** A titled group of figures: the reconciliation, or one calculated ledger — never mixed. */
+export interface ComparisonGroup {
+  key: string;
+  title: string;
+  note: string;
+  rows: ComparisonRow[];
 }
 
-const text = (value: string | number | boolean) => (typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value));
+type Row = Record<string, unknown>;
+const isRecord = (value: unknown): value is Row => typeof value === 'object' && value !== null && !Array.isArray(value);
+const listOf = (snapshot: Row | null, key: string): Row[] => {
+  const value = snapshot?.[key];
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+};
+const text = (row: Row | undefined, key: string): string | null => {
+  const value = row?.[key];
+  return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
+};
 
-/** The heading of one nested group: a ledger row by its ledger, several rows of a list by their position. */
-function groupName(key: string, item: Record<string, unknown>, index: number, count: number): string {
-  if (typeof item.ledger === 'string') return `${humanize(item.ledger)} ledger`;
-  return count > 1 ? `${figureName(key)} ${index + 1}` : figureName(key);
+/** QA audit P-1: the reconciled figures an approver signs, in the order of the reconciliation equation. */
+const RECONCILIATION_FIGURES: ReadonlyArray<[string, string]> = [
+  ['target', 'Target'],
+  ['actual', 'Actual (good)'],
+  ['gap', 'Gap'],
+  ['attributed', 'Attributed losses'],
+  ['toleranceAdjustment', 'Tolerance adjustment'],
+  ['residual', GLOSSARY.residual],
+];
+
+/** The calculated losses of one ledger (before review decisions); the capacity ledger starts at capacity. */
+const LEDGER_FIGURES: Readonly<Record<string, ReadonlyArray<[string, string]>>> = {
+  plan: [
+    ['target', 'Target'],
+    ['actual', 'Actual (good)'],
+    ['availability', 'Availability loss'],
+    ['performance', 'Performance loss'],
+    ['quality', 'Quality loss'],
+    ['residual', GLOSSARY.residual],
+  ],
+  capacity: [
+    ['capacity', 'Capacity'],
+    ['actual', 'Actual (good)'],
+    ['availability', 'Availability loss'],
+    ['performance', 'Performance loss'],
+    ['quality', 'Quality loss'],
+    ['residual', GLOSSARY.residual],
+  ],
+};
+
+const LEDGER_TITLES: Readonly<Record<string, { title: string; note: string }>> = {
+  plan: { title: 'Plan ledger (calculated)', note: 'Losses as calculated, before the review decisions.' },
+  capacity: { title: 'Capacity ledger (calculated)', note: 'Against capacity at the sustained rate, before the review decisions.' },
+};
+
+/** Slices of one side matched by id; a period with several slices names them by position. */
+function sliceKeys(before: Row[], after: Row[]): string[] {
+  const ids = [...before, ...after].map((row) => text(row, 'sliceId') ?? '');
+  return [...new Set(ids)];
 }
 
-function groupFigures(group: string, item: Record<string, unknown>): SnapshotFigure[] {
-  return Object.entries(item)
-    .filter(([inner, value]) => inner !== 'ledger' && shown(inner, value))
-    .map(([inner, value]) => ({ label: `${group} · ${figureName(inner).toLowerCase()}`, value: text(value as string | number | boolean) }));
+function rowsOf(figures: ReadonlyArray<[string, string]>, before: Row[], after: Row[], prefix: string): ComparisonRow[] {
+  const slices = sliceKeys(before, after);
+  return slices.flatMap((sliceId, index) => {
+    const b = before.find((row) => (text(row, 'sliceId') ?? '') === sliceId);
+    const a = after.find((row) => (text(row, 'sliceId') ?? '') === sliceId);
+    const unit = text(a, 'uom') ?? text(b, 'uom');
+    const suffix = slices.length > 1 ? ` · slice ${index + 1}` : '';
+    return figures.map(([key, label]) => ({ key: `${prefix}:${sliceId}:${key}`, label: `${label}${suffix}`, unit, before: text(b, key), after: text(a, key) }));
+  });
 }
 
-/** The nested groups of one snapshot key: a record, or a list of records (the server sends slices and ledgers as lists). */
-function groupsOf(key: string, value: unknown): SnapshotFigure[] {
-  if (HIDDEN_KEY.test(key)) return [];
-  if (isRecord(value)) return groupFigures(figureName(key), value);
-  if (!Array.isArray(value)) return [];
-  const items = value.filter(isRecord);
-  return items.flatMap((item, i) => groupFigures(groupName(key, item, i, items.length), item));
-}
+const ledgerRows = (snapshot: Row | null, ledger: string) => listOf(snapshot, 'ledgers').filter((row) => row.ledger === ledger);
 
 /**
- * The figures of a change-proposal snapshot (before / after) as label and value: top-level and one
- * nested level of plain values (a record or a list of records, e.g. the reconciliation per slice and the
- * run ledgers) with humanized keys; ids, hashes and versions are left out. No JSON dump.
+ * QA audit 2026-10-19 (P-1): a change proposal's before (approved) and after (new inputs with the approved
+ * decisions) as curated, labelled figures with units — the reconciliation (with {@link GLOSSARY} terms) kept
+ * apart from each calculated ledger. Ids, hashes, flags and internal fields (unadjusted residual,
+ * exclusion, over-accounted…) are never shown; the server's values are shown as they are, never summed.
  */
-export function snapshotFigures(snapshot: Record<string, unknown>): SnapshotFigure[] {
-  const figures: SnapshotFigure[] = [];
-  for (const [key, value] of Object.entries(snapshot)) {
-    if (OWN_PANELS.has(key)) continue;
-    if (shown(key, value)) figures.push({ label: figureName(key), value: text(value) });
-    figures.push(...groupsOf(key, value));
-  }
-  return figures;
+export function proposalComparison(before: Row | null, after: Row | null): ComparisonGroup[] {
+  const groups: ComparisonGroup[] = [
+    {
+      key: 'reconciliation',
+      title: 'Reconciliation',
+      note: `With the review decisions: ${GLOSSARY.residual} = gap − attributed − tolerance adjustment.`,
+      rows: rowsOf(RECONCILIATION_FIGURES, listOf(before, 'slices'), listOf(after, 'slices'), 'slices'),
+    },
+    ...Object.entries(LEDGER_FIGURES).map(([ledger, figures]) => ({
+      key: ledger,
+      ...LEDGER_TITLES[ledger],
+      rows: rowsOf(figures, ledgerRows(before, ledger), ledgerRows(after, ledger), ledger),
+    })),
+  ];
+  return groups.filter((group) => group.rows.some((row) => row.before !== null || row.after !== null));
 }

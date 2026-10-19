@@ -52,12 +52,57 @@ export function resolveRouteSegment(path: string): string {
   return normalizedSegments(path)[0] || '';
 }
 
+/**
+ * Read-only POSTs by their last path segment (`/bulk-code/preview`, `/rules/validate`, `/…/dry-run`): they
+ * compute an answer and change nothing, so they are not audited as creates (QA audit 2026-10-19).
+ */
+export const AUDIT_SKIP_ROUTE_SUFFIXES = ['preview', 'validate', 'dry-run'];
+
 export function shouldSkipAudit(path: string, method: string): boolean {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase())) {
     return true;
   }
-  const segment = resolveRouteSegment(path);
-  return AUDIT_SKIP_ROUTE_PREFIXES.includes(segment);
+  const segments = normalizedSegments(path);
+  if (AUDIT_SKIP_ROUTE_SUFFIXES.includes(segments[segments.length - 1] ?? '')) {
+    return true;
+  }
+  return AUDIT_SKIP_ROUTE_PREFIXES.includes(segments[0] || '');
+}
+
+const text = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() !== '' ? value : undefined;
+
+/** `period_summary` → "Period summary". */
+const sentenceOf = (token: string): string => {
+  const words = token.replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+/** The id of the written record: `id`, else the `jobId` of a 202 job answer (exports, imports). */
+export function auditResponseId(
+  body: Record<string, unknown>,
+): string | undefined {
+  return text(body.id) ?? text(body.jobId);
+}
+
+/**
+ * The record's name in an audit entry (QA audit: exports were `"unknown"`): its title / name / code /
+ * file name from the answer or the request, else a requested report ("Period summary CSV").
+ */
+export function auditRecordLabel(
+  body: Record<string, unknown>,
+  request: Record<string, unknown>,
+): string | undefined {
+  for (const source of [body, request]) {
+    const value = ['title', 'name', 'code', 'fileName']
+      .map((key) => text(source[key]))
+      .find(Boolean);
+    if (value) return value;
+  }
+  const report = text(request.reportType) ?? text(body.reportType);
+  if (!report) return undefined;
+  const format = text(request.format) ?? text(body.format);
+  return `${sentenceOf(report)}${format ? ` ${format.toUpperCase()}` : ''}`;
 }
 
 export function resolveEntityType(path: string): string {

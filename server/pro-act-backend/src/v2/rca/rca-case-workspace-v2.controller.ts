@@ -68,7 +68,8 @@ const SaveRevision = createParamDecorator(
 
 const SAVE =
   'Replaces the tool record as sent. First save: no `If-Match`; later saves: `If-Match` = the rowVersion read ' +
-  '(412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.';
+  '(412 STALE_REVISION when someone saved meanwhile). Writers: reliability engineer or manager approver.' +
+  ' 409 CASE_CLOSED on a closed investigation (reopen it first).';
 
 const ID = new ParseUUIDPipe();
 
@@ -202,7 +203,8 @@ export class RcaCaseWorkspaceV2Controller {
     description:
       'RCA writers, or the owner of an open action of the case (completion evidence; 403 FORBIDDEN_ROLE otherwise). ' +
       'Answers the stored file name; reference it from an evidence item (`attachments`) and save the case. ' +
-      'Not idempotent: a repeated upload stores another file, an unreferenced file is never served.',
+      'Not idempotent: a repeated upload stores another file, an unreferenced file is never served.' +
+      ' 409 CASE_CLOSED on a closed investigation (reopen it first).',
   })
   upload(
     @Ctx() ctx: RequestContext,

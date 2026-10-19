@@ -14,8 +14,8 @@ export function SimilarKnowledgePanel({ eventId }: { eventId: string }) {
   const similar = useSimilarKnowledge(eventId);
   const items = similar.data ?? [];
   return (
-    <section className="space-y-1" aria-label="Similar past RCAs" data-testid="similar-knowledge">
-      <h4 className="text-sm font-semibold">Similar past RCAs</h4>
+    <section className="space-y-1" aria-label="Similar past investigations" data-testid="similar-knowledge">
+      <h4 className="text-sm font-semibold">Similar past investigations</h4>
       <DataState state={dataStateOf(similar, { isEmpty: items.length === 0 })} error={similar.error} onRetry={() => similar.refetch()}>
         <ul className="space-y-1 text-sm">
           {items.map((item) => (

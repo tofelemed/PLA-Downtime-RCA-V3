@@ -13,6 +13,7 @@ import { Unit } from '../../unit/unit.entity';
 import { check, coverageCheck, overlapping } from './readiness-checks';
 import { EquipmentReadinessQueryDto } from './readiness-v2.dto';
 import { ReadinessStore } from './readiness-store';
+import { plural } from '../../common/helpers/plural';
 
 @Injectable()
 export class ReadinessRecordsService {
@@ -191,7 +192,7 @@ export class ReadinessRecordsService {
       return check(
         'impact',
         'needs_attention',
-        `${pending.length} applicable impact rule version(s) are not approved.`,
+        `${plural(pending.length, 'applicable impact rule version is', 'applicable impact rule versions are')} not approved.`,
       );
     // A rule per asset: one asset's coverage must never hide another asset's gap.
     const assets = [...new Set(rows.map((row) => row.assetId))];
@@ -207,7 +208,7 @@ export class ReadinessRecordsService {
       'impact',
       gaps.length ? 'needs_attention' : 'ready',
       gaps.length
-        ? `${gaps.length} configured asset(s) have impact-rule coverage gaps.`
+        ? `${plural(gaps.length, 'configured asset has', 'configured assets have')} impact-rule coverage gaps.`
         : 'Every configured asset impact rule covers this window and is approved.',
     );
   }

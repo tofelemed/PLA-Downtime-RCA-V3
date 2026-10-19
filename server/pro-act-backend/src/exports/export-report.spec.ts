@@ -281,6 +281,52 @@ describe('export report rows (plan 2.9, AN03)', () => {
     expect(csvRow(rows[1])).toContain(",'=cmd|calc,");
   });
 
+  it('loss lines carry plant-time, labelled and reason-code columns from the pinned labels', () => {
+    const labelled = source();
+    labelled.reviewed.candidates[0].reasonCodeId = 'rc-1';
+    const rows = reportRows('loss_lines', labelled, {
+      requestedByName: 'Sara',
+      plantTimezone: 'Asia/Tehran',
+      reasonCodes: { 'rc-1': { code: 'MECH-GEARBOX', name: 'Gearbox' } },
+    });
+    const col = (name: string) => REPORT_COLUMNS.loss_lines.indexOf(name);
+    expect(REPORT_COLUMNS.loss_lines.slice(0, 4)).toEqual([
+      'period_id',
+      'unit_id',
+      'unit_name',
+      'utc_start',
+    ]);
+    const pick = (row: unknown[]) =>
+      [
+        'plant_start',
+        'approved_at_plant',
+        'line_source_label',
+        'kind_label',
+        'state_label',
+        'reason_code',
+        'reason_name',
+      ].map((name) => row[col(name)]);
+    expect(pick(rows[0])).toEqual([
+      '2027-03-01T06:00:00+03:30',
+      '2027-03-01T15:30:00+03:30',
+      'Calculated',
+      'Availability',
+      'Rejected',
+      'MECH-GEARBOX',
+      'Gearbox',
+    ]);
+    expect(rows[1][col('state_label')]).toBe('In force');
+    expect(rows[1][col('reason_code')]).toBeNull();
+    expect(
+      rows.every((r) => r.length === REPORT_COLUMNS.loss_lines.length),
+    ).toBe(true);
+    const [summary] = reportRows('period_summary', source());
+    expect(summary).toHaveLength(REPORT_COLUMNS.period_summary.length);
+    expect(
+      summary[REPORT_COLUMNS.period_summary.indexOf('plant_start')],
+    ).toBeNull();
+  });
+
   it('header names status, scope, filters and the source count', () => {
     const records = headerRecords({
       jobId: 'job-1',
@@ -290,6 +336,11 @@ describe('export report rows (plan 2.9, AN03)', () => {
       requestedAt: '2027-03-02T00:00:00.000Z',
       requestedBy: 'user-1',
       sourceCount: 3,
+      labels: {
+        requestedByName: 'Sara',
+        plantTimezone: 'Asia/Tehran',
+        reasonCodes: {},
+      },
     });
     const map = Object.fromEntries(
       records.map((record): [string, unknown] => [
@@ -300,6 +351,8 @@ describe('export report rows (plan 2.9, AN03)', () => {
     expect(map).toMatchObject({
       status: 'approved',
       timezone: 'UTC',
+      requested_by_name: 'Sara',
+      plant_timezone: 'Asia/Tehran',
       filter_unit_ids: 'u1;u2',
       filter_revision_ids: null,
       source_revisions: 3,

@@ -1,4 +1,5 @@
 import type { RcaDiagramNode, RcaEvidenceItem, RcaLinkView } from '@/api/v2/types/rca';
+import { linkedEventKind } from './rca-labels';
 
 /** One entry of the event timeline: a diagram event, or a production event linked to the case. */
 export interface TimelineEntry {
@@ -17,7 +18,10 @@ export interface TimelineEntry {
 interface LinkedEvent {
   start?: unknown;
   physicalType?: unknown;
-  eventType?: unknown;
+}
+
+interface CauseCodes {
+  reasonCode?: { name?: unknown } | null;
 }
 
 const str = (value: unknown) => (typeof value === 'string' && value ? value : null);
@@ -25,11 +29,14 @@ const str = (value: unknown) => (typeof value === 'string' && value ? value : nu
 function linkedEntry(link: RcaLinkView, evidence: readonly RcaEvidenceItem[]): TimelineEntry | null {
   const event = (link.evidence?.event ?? null) as LinkedEvent | null;
   if (link.linkType !== 'event' || !event) return null;
+  const kind = linkedEventKind(event.physicalType);
+  const reason = str(((link.evidence?.causeCodes ?? null) as CauseCodes | null)?.reasonCode?.name);
   return {
     id: link.id,
     source: 'linked',
-    title: str(event.eventType) ?? str(event.physicalType) ?? 'Linked event',
-    type: 'Linked event',
+    // QA L5: "Stop · Gearbox failure", never the stored entity name (`ProductionLoss`)
+    title: reason ? `${kind} · ${reason}` : kind,
+    type: `Linked ${kind.toLowerCase()}`,
     at: str(event.start),
     description: link.reason,
     asset: null,

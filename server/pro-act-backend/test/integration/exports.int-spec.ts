@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { CSV_BOM } from '../../src/exports/csv';
 import { ExportJob } from '../../src/exports/entities/export-job.entity';
 import { ExportJobsService } from '../../src/exports/export-jobs.service';
 import { ExportRenderer } from '../../src/exports/export-renderer';
@@ -141,7 +142,48 @@ describe('report exports (plan 2.9)', () => {
       quantity: '150',
       state: 'in_force',
       reason: "'@SUM(1+1)*cmd|calc",
+      // QA audit 2026-10-19: readable reason code, labels and plant-time columns pinned at request time
+      reason_code: expect.stringMatching(/^FEED/) as string,
+      line_source_label: 'Manual',
+      state_label: 'In force',
     });
+    expect(manual?.reason_name).toEqual(expect.any(String));
+    expect(manual?.reason_name.length).toBeGreaterThan(0);
+  });
+
+  it('CSV files start with a UTF-8 BOM and name the requester and the plant clock', async () => {
+    const adminId = (
+      JSON.parse(
+        Buffer.from(env.admin.split('.')[1], 'base64url').toString('utf8'),
+      ) as { sub: string }
+    ).sub;
+    await env.rows(
+      `INSERT INTO users (id, name, email, password_hash, role, tenant_id)
+       VALUES ($1, 'Export Requester', $2, 'x', 'SuperAdmin', $3)
+       ON CONFLICT (id) DO UPDATE SET name = 'Export Requester'`,
+      [adminId, `${adminId}@test.local`, env.world.tenantA],
+    );
+    const jobId = await env.exportDay();
+    await env.runExports();
+    const { text } = await env.download(jobId);
+    expect(text.charCodeAt(0)).toBe(0xfeff);
+    const header = Object.fromEntries(
+      text
+        .replace(CSV_BOM, '')
+        .split('\r\n\r\n')[0]
+        .split('\r\n')
+        .map((line) => line.split(',') as [string, string]),
+    );
+    expect(header.timezone).toBe('UTC');
+    expect(header.requested_by_name).toBe('Export Requester');
+    const [row] = ExportWorld.records(text);
+    if (header.plant_timezone) {
+      expect(row.plant_start).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00[+-]\d{2}:\d{2}$/,
+      );
+    } else {
+      expect(row.plant_start).toBe('');
+    }
   });
 
   it('content is bound to the revisions pinned at request time; re-rendering reproduces the hash', async () => {

@@ -10,6 +10,7 @@ import { restrictedUnitIds } from '../common/query/scoped-query';
 import { ReconciliationSlaPolicy } from '../domain/close/sla-policy';
 import { CursorCodec, invalidCursor } from '../v2/common/cursor-codec';
 import { PERIOD_WRITERS, REVISION_APPROVERS } from '../v2/periods/period-roles';
+import { planCoveredSql } from './plan-coverage-sql';
 import { slaPeriodsCte, SqlParams } from './sla-sql';
 import { WorkflowPoliciesService } from './workflow-policies.service';
 
@@ -75,7 +76,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /**
  * "My queue" (SME R3 / R6): the ended, not approved periods of the last `QUEUE_WINDOW_DAYS` the caller can
  * act on — to prepare (draft or never reconciled), to review (submitted by someone else), or escalated to
- * one of their roles — earliest due first (keyset on due time and id), with the SLA columns computed in SQL.
+ * one of their roles — earliest due first; periods no approved plan covers wait for a plan instead
+ * (owner decision 2026-10-19) (keyset on due time and id), with the SLA columns computed in SQL.
  */
 @Injectable()
 export class ReconciliationQueueService {
@@ -142,7 +144,7 @@ export class ReconciliationQueueService {
       ? ` AND p."unit_id" = ANY(${params.add(units)}::uuid[])`
       : '';
     return `p."tenant_id" = ${tenant} AND p."local_date" >= ${from}::date${unitFilter}
-            AND NOT (p."is_excluded" AND r."id" IS NULL)`;
+            AND NOT (p."is_excluded" AND r."id" IS NULL) AND ${planCoveredSql('p')}`;
   }
 
   private taskSql(

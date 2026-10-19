@@ -1,6 +1,6 @@
 import type { UserView } from '@/api/v2/types/administration';
 import type { DataTableColumn } from '@/features/ux-kit/data-table';
-import { roleLabel } from '@/features/ux-kit/labels';
+import { roleLabel, roleListLabel } from '@/features/ux-kit/labels';
 import { UiIcon } from '@/lib/icons';
 import { FromPlantBadge } from './from-plant-badge';
 import { UserStatusBadge } from './user-status-badge';
@@ -10,7 +10,15 @@ export function placeOf(user: UserView): string {
   return user.tenantName ?? user.organizationName ?? 'All plants';
 }
 
-/** Columns of the users table (name and e-mail, role, plant, status, open). */
+/**
+ * The roles that decide what the user sees in the acting plant (QA audit 2026-10-19), not the legacy
+ * sign-in role ("Analyst"); a server without `plantRoles` falls back to the legacy role.
+ */
+export function plantRolesText(user: UserView): string {
+  return user.plantRoles ? roleListLabel(user.plantRoles) : roleLabel(user.role);
+}
+
+/** Columns of the users table (name and e-mail, plant roles, plant, status, open). */
 export const USER_COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
   {
     id: 'name',
@@ -25,7 +33,7 @@ export const USER_COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
       </div>
     ),
   },
-  { id: 'role', header: 'Role', cell: (user) => roleLabel(user.role), nowrap: true },
+  { id: 'role', header: 'Plant roles', cell: plantRolesText },
   { id: 'place', header: 'Plant', cell: placeOf },
   { id: 'status', header: 'Status', cell: (user) => <UserStatusBadge isActive={user.isActive} />, nowrap: true },
   {

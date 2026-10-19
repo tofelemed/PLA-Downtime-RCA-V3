@@ -11,11 +11,15 @@ import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { FxVersionActions } from './fx-version-actions';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { fxRateText } from '../model/fx-rate-text';
+import { PolicyPerson } from '../components/policy-person';
 
 const BACK = { to: '/finance?tab=fx', label: 'Exchange rates' };
 
 function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
   const dates = usePlantDates();
+  const { digits } = useNumberFormat();
   return (
     <div className="space-y-6" data-testid="fx-detail" data-state={rate.state} data-version={rate.version}>
       <PageHeader
@@ -39,12 +43,17 @@ function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
       <Section title="Rate">
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Fact label="Rate">
-            <span className="font-mono" data-testid="fx-rate">1 {rate.fromCurrency} = {rate.rate} {rate.toCurrency}</span>
+            <span className="font-mono" data-testid="fx-rate">{fxRateText(rate, digits)}</span>
           </Fact>
           <Fact label="Valid">{dates.validity(rate.effectiveFrom, rate.effectiveTo)}</Fact>
           <Fact label="Rate table">{labelOf(FX_RATE_TYPE_LABELS, rate.rateType)}</Fact>
           <Fact label="Source">{rate.source ?? '—'}</Fact>
-          {rate.approvedAt && <Fact label="Approved">{dates.dateTime(rate.approvedAt)}</Fact>}
+          {rate.approvedAt && (
+            <Fact label="Approved">
+              {dates.dateTime(rate.approvedAt)}
+              {rate.approvedBy && <> by <PolicyPerson id={rate.approvedBy} /></>}
+            </Fact>
+          )}
         </dl>
       </Section>
     </div>

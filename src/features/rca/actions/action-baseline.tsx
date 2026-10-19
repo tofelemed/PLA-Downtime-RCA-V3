@@ -7,6 +7,8 @@ import { RCA_BASELINE_METRIC_LABELS } from '@/features/ux-kit/labels/rca-labels'
 import { useRcaFormat } from '../use-rca-format';
 import { BaselineCorrection } from './baseline-correction';
 import { ExposureCoverage } from './exposure-coverage';
+import { plural } from '@/features/ux-kit/format/plural';
+import { criteriaSourceText } from '../model/rca-labels';
 
 function Criteria({ baseline }: { baseline: RcaActionBaseline }) {
   const { number, percent } = useNumberFormat();
@@ -15,7 +17,8 @@ function Criteria({ baseline }: { baseline: RcaActionBaseline }) {
   return (
     <p className="text-xs text-muted-foreground" data-testid="baseline-criteria">
       Effective when the same-mode rate falls by at least {percent(criteria.requiredReduction * 100)} over at least{' '}
-      {number(criteria.minExposureHours)} run hours{criteria.zeroRepeat ? '; any repeat counts as not effective (high consequence)' : ''}.
+      {number(criteria.minExposureHours)} run hours{criteria.zeroRepeat ? '; any repeat counts as not effective (high consequence)' : ''}.{' '}
+      <span data-testid="baseline-criteria-source">{criteriaSourceText(criteria.policyVersion)}</span>
     </p>
   );
 }
@@ -34,7 +37,7 @@ function Counted({ baseline }: { baseline: RcaActionBaseline }) {
   }
   return (
     <>
-      baseline counted from history ({date(span.from)} – {date(span.to)}): {number(span.incidents)} same-mode incident(s), {formatDuration(span.downtimeSeconds, 'long', digits)} downtime,{' '}
+      baseline counted from history ({date(span.from)} – {date(span.to)}): {plural(span.incidents, 'same-mode incident', 'same-mode incidents', number)}, {formatDuration(span.downtimeSeconds, 'long', digits)} downtime,{' '}
       {/* run seconds of the server's exposure window shown in hours (a unit change, no business figure) */}
       {number(Number(span.exposureSeconds) / 3600)} {span.exposureBasis === 'standby_running_time' ? 'running hours of the standby equipment' : 'known run hours'}
       <ExposureCoverage window={span} />

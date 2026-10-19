@@ -9,7 +9,7 @@ import { METRIC_LABELS, shownMetricLabel } from '../model/display';
 import { AnalyticsCard } from '../components/analytics-card';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
-import { LOSS_LINES_NOTE, lossGroupLink } from '../model/links';
+import { lossGroupLink, lossLinesNote, noLinkReason } from '../model/links';
 
 const TOP = 10;
 
@@ -47,7 +47,7 @@ export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No loss lines in this scope."
-      note={`${LOSS_LINES_NOTE} Valuation views are never added to each other.`}
+      note={`${lossLinesNote(scope.approvedOnly)} Valuation views are never added to each other.`}
       actions={controls}
     >
       {data && <Currencies data={data} scope={scope} />}
@@ -63,7 +63,7 @@ function Currencies({ data, scope }: { data: LossTreeView; scope: AnalyticsScope
       {totals.map((total) => (
         <section key={total.unit ?? '-'} className="space-y-1" data-testid="opportunity-currency" data-currency={total.unit ?? ''} data-status={total.status}>
           <h4 className="text-sm font-medium">{total.unit ?? 'Not valued'}</h4>
-          <LossTable groups={data.groups.filter((g) => g.unit === total.unit)} total={total} metric={data.metric} groupTitle="Reason" testId="opportunity-table" rowLink={(group) => lossGroupLink(scope, data.groupBy, group.key)} />
+          <LossTable groups={data.groups.filter((g) => g.unit === total.unit)} total={total} metric={data.metric} groupTitle="Reason" testId="opportunity-table" rowLink={(group) => lossGroupLink(scope, data.groupBy, group)} noLinkReason={(group) => noLinkReason(data.groupBy, group)} />
         </section>
       ))}
       {data.truncated > 0 && <p className="text-xs text-muted-foreground">{data.truncated} smaller groups not listed; totals cover every group.</p>}

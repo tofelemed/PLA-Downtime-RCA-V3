@@ -106,7 +106,7 @@ export class RestatementV2Controller {
     summary:
       'Finance sets the posting date and treatment of a restatement (correction, estimate change, other adjustment, no posting)',
     description:
-      'Requires `Idempotency-Key`. A later decision replaces the earlier one (audited). 422 NOT_A_RESTATEMENT.',
+      'Requires `Idempotency-Key`. A decision is final: 409 POSTING_DECIDED once decided (correct it through a new restatement). 403 SEPARATION_OF_DUTIES for the proposer of the correction. 422 NOT_A_RESTATEMENT.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async decide(

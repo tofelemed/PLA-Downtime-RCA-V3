@@ -4,12 +4,12 @@ import type { PeriodSummaryView } from '@/api/v2/types/period-overview';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels';
-import { PlantTime } from '@/features/ux-kit/plant-time';
-import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { useCalendarPreference } from '@/lib/dates';
+import { periodLabel } from '../model/period-label';
 import type { AnalyticsScope } from '../model/analytics-scope';
-import { periodListQuery, periodListTitle, withPeriodList, type PeriodListFilter } from '../model/period-list';
+import { periodListQuery, periodListTitle, periodRowHref, withPeriodList, type PeriodListFilter } from '../model/period-list';
 
-function useColumns(): Array<DataTableColumn<PeriodSummaryView>> {
+function useColumns(filter: PeriodListFilter): Array<DataTableColumn<PeriodSummaryView>> {
   const env = useEventHubEnv();
   const pref = useCalendarPreference();
   return [
@@ -20,7 +20,7 @@ function useColumns(): Array<DataTableColumn<PeriodSummaryView>> {
       nowrap: true,
       cell: (row) => (
         <span data-testid="period-list-row" data-period-id={row.periodId}>
-          {formatOperationalDate(row.localDate, pref)} {row.shiftName ?? ''} (<PlantTime iso={row.utcStart} tz={env.timezone} />)
+          {periodLabel(row, env.timezone, pref)}
         </span>
       ),
     },
@@ -31,8 +31,8 @@ function useColumns(): Array<DataTableColumn<PeriodSummaryView>> {
       header: 'Period accounting',
       cell: (row) =>
         row.planId ? (
-          <Link className="underline" to={`/plans/${row.planId}/periods/${row.periodId}`} data-testid="period-list-link" data-period-id={row.periodId}>
-            Open
+          <Link className="underline" to={periodRowHref(filter, row.planId, row.periodId)} data-testid="period-list-link" data-period-id={row.periodId}>
+            {filter.kind === 'quality' ? 'Open dispositions' : 'Open'}
           </Link>
         ) : (
           <span className="text-xs text-muted-foreground">no plan</span>
@@ -49,7 +49,7 @@ function useColumns(): Array<DataTableColumn<PeriodSummaryView>> {
 export function PeriodList({ scope, filter }: { scope: AnalyticsScope; filter: PeriodListFilter }) {
   const [search] = useSearchParams();
   const list = usePeriodSummaryList(periodListQuery(scope, filter), 'pla-period-list');
-  const columns = useColumns();
+  const columns = useColumns(filter);
   const title = periodListTitle(filter);
   return (
     <section className="space-y-3 rounded-md border p-4" data-testid="pla-period-list" data-filter={filter.state} aria-label={title}>
@@ -59,7 +59,10 @@ export function PeriodList({ scope, filter }: { scope: AnalyticsScope; filter: P
           Back to the counts
         </Link>
       </div>
-      <p className="text-xs text-muted-foreground">Current revision of each period in the {scope.windowLabel.toLowerCase()}, all plans of {scope.unitIds.length > 0 ? 'the selected units' : 'the whole plant'}.</p>
+      <p className="text-xs text-muted-foreground">
+        Current revision of each period in the {scope.windowLabel.toLowerCase()}, all plans of {scope.unitIds.length > 0 ? 'the selected units' : 'the whole plant'}.
+        {filter.kind === 'quality' && ' Quality losses are recorded as lot dispositions on each period’s Actuals & quality, not as events.'}
+      </p>
       <DataTable
         caption={title}
         columns={columns}

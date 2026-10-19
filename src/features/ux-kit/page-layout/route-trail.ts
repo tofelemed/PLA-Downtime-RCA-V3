@@ -19,12 +19,34 @@ export interface RouteTrail {
 }
 
 const pathOf = (to: string) => to.split(/[?#]/)[0];
+const sameLabel = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/** The same page twice in a row (same address, or the same words in another case) is one step (QA_SHELL). */
+function sameStep(a: Crumb, b: Crumb): boolean {
+  if (a.to && a.to === b.to) return true;
+  return sameLabel(a.label, b.label);
+}
+
+/** Consecutive duplicates collapse into the later step (it carries the page's own filters / words). */
+export function dedupeCrumbs(crumbs: readonly Crumb[]): Crumb[] {
+  return crumbs.reduce<Crumb[]>((kept, crumb) => {
+    const previous = kept[kept.length - 1];
+    if (previous && sameStep(previous, crumb)) kept[kept.length - 1] = crumb;
+    else kept.push(crumb);
+    return kept;
+  }, []);
+}
+
+/** Steps the user cannot open (route gate not held) stay as text, without a link (QA_MASTERDATA L23). */
+export function withReach(crumbs: readonly Crumb[], canReach: (to: string) => boolean): Crumb[] {
+  return crumbs.map((crumb) => (crumb.to && !canReach(crumb.to) ? { label: crumb.label } : crumb));
+}
 
 function moduleCrumbs(item: NavigationItem, back: BackTarget | undefined): { crumbs: Crumb[]; keepBack: boolean } {
   if (!back) return { crumbs: [{ label: item.name, to: item.href }], keepBack: false };
   if (navMatchLength(item, pathOf(back.to)) === 0) return { crumbs: [{ label: item.name, to: item.href }], keepBack: true };
   // the back target is the module page itself (same name, or exactly its address): one crumb, keeping its filters / words
-  if (back.label === item.name || back.to === item.href) return { crumbs: [{ label: back.label, to: back.to }], keepBack: false };
+  if (sameLabel(back.label, item.name) || back.to === item.href) return { crumbs: [{ label: back.label, to: back.to }], keepBack: false };
   return { crumbs: [{ label: item.name, to: item.href }, { label: back.label, to: back.to }], keepBack: false };
 }
 
@@ -37,5 +59,5 @@ export function routeTrail(pathname: string, title: string, back: BackTarget | u
   const item = activeNavItem(items, pathname);
   if (!item || pathname === item.href) return null;
   const { crumbs, keepBack } = moduleCrumbs(item, back);
-  return { crumbs: [...crumbs, { label: title }], keepBack };
+  return { crumbs: dedupeCrumbs([...crumbs, { label: title }]), keepBack };
 }

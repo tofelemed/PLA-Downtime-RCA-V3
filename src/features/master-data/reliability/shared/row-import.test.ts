@@ -51,7 +51,7 @@ describe('pasted import rows (CSV or JSON)', () => {
     const refusal = new V2ApiError(422, { code: 'WORK_ORDER_IMPORT_INVALID', message: 'bad', correlationId: null, retryable: false, details: { errors: [{ line: 3, message: 'the stop belongs to another asset' }, 'junk'] } });
     expect(serverRowProblems(refusal)).toEqual([{ line: 3, message: 'the stop belongs to another asset' }]);
     expect(serverRowProblems(new Error('x'))).toEqual([]);
-    expect(workOrderImportSummary({ total: 3, created: 2, updated: 1, linked: 3 })).toBe('Imported 3 operation(s): 2 new, 1 updated, 3 linked to a stop.');
+    expect(workOrderImportSummary({ total: 3, created: 2, updated: 1, linked: 3 })).toBe('Imported 3 operations: 2 new, 1 updated, 3 linked to a stop.');
     expect(standbyImportSummary({ total: 1, created: 1, updated: 0 })).toBe('Imported 1 entry: 1 new, 0 replaced (same externalRef).');
   });
 });

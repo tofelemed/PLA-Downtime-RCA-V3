@@ -23,6 +23,8 @@ export interface DateRangeInputProps {
   mode?: 'date' | 'datetime';
   calendar?: CalendarSystem;
   disabled?: boolean;
+  /** `date` mode: days typed in the plant date format (see `DateInput.textEntry`) */
+  textEntry?: boolean;
 }
 
 /**
@@ -36,7 +38,7 @@ export function DateRangeInput({ mode = 'date', ...props }: DateRangeInputProps)
 
 type FieldsProps = Omit<DateRangeInputProps, 'mode'>;
 
-function DateRangeFields({ label, value, timeZone, onChange, calendar, disabled }: FieldsProps) {
+function DateRangeFields({ label, value, timeZone, onChange, calendar, disabled, textEntry }: FieldsProps) {
   const [dates, setDates] = useState<LocalDateRange>(() => datesFromRange(value, timeZone));
   useEffect(() => {
     setDates((current) => {
@@ -51,7 +53,7 @@ function DateRangeFields({ label, value, timeZone, onChange, calendar, disabled 
     if (!dateRangeError(next)) onChange(rangeFromDates(next, timeZone));
   };
   const error = dateRangeError(dates);
-  const common = { calendar, disabled };
+  const common = { calendar, disabled, textEntry };
   return (
     <fieldset className="space-y-1" disabled={disabled}>
       <legend className="text-sm font-medium leading-none">{label}</legend>

@@ -4,6 +4,7 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { useProfileDraft } from './hooks/use-profile-draft';
 import { profileServerFieldErrors } from './model/profile-field-errors';
+import { identityStrategyLabel } from './model/profile-labels';
 import { ProfileFieldsEditor } from './profile-fields-editor';
 import { ProfileSaveBar } from './profile-save-bar';
 import { ProfileSection } from './profile-section';
@@ -22,7 +23,7 @@ export function ProfileEditor({ connection }: { connection: ConnectionView }) {
       <h2 className="sr-only">Payload profile settings</h2>
       <ProfileSaveBar editor={editor} canWrite={canWriteIntegration} />
       <ConsoleRefusal error={editor.failed} />
-      <ProfileSection name="identity" title="Identity and schema" summary={`Schema ${draft.schemaVersion || 'not specified'} · ${draft.identityStrategy || 'seq_boot (default)'}`} defaultOpen errors={[errors.topicTemplate, errors.schemaVersion, errors.identityStrategy]} failure={editor.failed}>
+      <ProfileSection name="identity" title="Identity and schema" summary={`Schema ${draft.schemaVersion || 'not specified'} · ${identityStrategyLabel(draft.identityStrategy)}`} defaultOpen errors={[errors.topicTemplate, errors.schemaVersion, errors.identityStrategy]} failure={editor.failed}>
         <ProfileSettingsFields group="identity" editor={editor} errors={errors} />
       </ProfileSection>
       <ProfileSection name="time" title="Time and quality" summary={`${draft.timeUnit || 'auto'} timestamps · ${draft.qualityProtocol || 'No quality protocol declared'}`} errors={[errors.timeUnit, errors.maxFutureSkewSeconds, errors.maxPastSeconds, errors.onStale, errors.qualityProtocol]} failure={editor.failed}>

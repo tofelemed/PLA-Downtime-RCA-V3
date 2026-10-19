@@ -10,6 +10,7 @@ import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
 import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 function BarrierRow(props: { barrier: Barrier; index: number; readOnly: boolean; onChange: (next: Barrier) => void; onRemove: () => void }) {
   const { number } = useNumberFormat();
@@ -55,7 +56,7 @@ function Editor({ record, save }: { record: ToolRecord<'barrier'>; save: (body: 
         <Input id="barrier-hazard" value={content.hazard} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, hazard: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {number(content.barriers.length)} barrier(s), {number(failed)} failed.
+        {plural(content.barriers.length, 'barrier', 'barriers', number)}, {number(failed)} failed.
       </p>
       <ul className="space-y-2">
         {content.barriers.map((barrier, index) => (

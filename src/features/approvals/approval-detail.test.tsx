@@ -193,6 +193,8 @@ describe('approval detail page', () => {
     fireEvent.change(within(form).getByTestId('posting-date'), { target: { value: '2026-11-03' } });
     fireEvent.change(within(form).getByTestId('posting-treatment'), { target: { value: 'estimate_change' } });
     fireEvent.click(within(form).getByTestId('posting-save'));
+    expect(posts()).toHaveLength(0);
+    fireEvent.click(await screen.findByRole('button', { name: 'Save posting' }));
     await waitFor(() => expect(posts()).toHaveLength(1));
     expect(posts()[0].url.pathname).toMatch(/\/production-periods\/p1\/revisions\/2\/posting$/);
     expect(posts()[0].body).toEqual({ postingDate: '2026-11-03', treatment: 'estimate_change' });
@@ -227,6 +229,15 @@ describe('approval detail page', () => {
   it('a record decided elsewhere says it is no longer pending, with the way back', async () => {
     mount(null);
     expect(await screen.findByRole('heading', { level: 1, name: 'No longer pending' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Back to Pending Approvals' }).getAttribute('href')).toBe('/approvals');
+    expect(screen.getByRole('link', { name: 'Back to Pending approvals' }).getAttribute('href')).toBe('/approvals');
+  });
+
+  it('an unknown workflow in the address is "Approval not found" with a page title, not a server error', async () => {
+    mount(null, '/approvals/nonsense/123');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Approval not found' })).toBeTruthy();
+    expect(document.title.startsWith('Approval not found · ')).toBe(true);
+    expect(screen.getByRole('link', { name: 'Back to Pending approvals' }).getAttribute('href')).toBe('/approvals');
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+    expect(calls.some((call) => call.url.pathname.includes('/approval-inbox/nonsense'))).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { QueryFailedError } from 'typeorm';
+import { plural } from '../../../common/helpers/plural';
 
 /** What a master-data record is called in messages. */
 export type RecordKind =
@@ -54,7 +55,7 @@ export function recordNotRetired(kind: RecordKind): ConflictException {
 export function unitHasActiveAssets(count: number): ConflictException {
   return new ConflictException({
     code: 'UNIT_HAS_ACTIVE_ASSETS',
-    message: `The unit has ${count} active asset(s); retire or move them first`,
+    message: `The unit has ${plural(count, 'active asset', 'active assets')}; retire or move them first`,
     details: { activeAssets: count },
   });
 }
@@ -63,7 +64,7 @@ export function unitHasActiveAssets(count: number): ConflictException {
 export function causeHasChildren(count: number): ConflictException {
   return new ConflictException({
     code: 'RCA_CAUSE_HAS_CHILDREN',
-    message: `The cause has ${count} active sub-cause(s); retire or move them first`,
+    message: `The cause has ${plural(count, 'active sub-cause', 'active sub-causes')}; retire or move them first`,
     details: { activeChildren: count },
   });
 }

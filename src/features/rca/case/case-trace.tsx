@@ -3,12 +3,13 @@ import { useRcaLinks, useRcaOutcome } from '@/api/v2/queries/rca-cases';
 import type { ApprovedImpactView, RcaLinkView } from '@/api/v2/types/rca';
 import { currencyDigits, entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
-import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { triggerLinkOf } from '../model/case-trace';
+import { linkedEventKind } from '../model/rca-labels';
 import { useRcaFormat } from '../use-rca-format';
 import { useCaseWorkspace } from './case-context';
+import { plural } from '@/features/ux-kit/format/plural';
 
 interface EventSnapshot {
   start?: unknown;
@@ -20,7 +21,7 @@ function TriggerText({ link, others }: { link: RcaLinkView; others: number }) {
   const { basePath } = useCaseWorkspace();
   const { number } = useNumberFormat();
   const event = (link.evidence?.event ?? {}) as EventSnapshot;
-  const kind = typeof event.physicalType === 'string' ? humanize(event.physicalType) : 'Event';
+  const kind = linkedEventKind(event.physicalType);
   const start = typeof event.start === 'string' ? ` from ${dateTime(event.start)}` : '';
   return (
     <span data-testid="case-trigger">
@@ -33,7 +34,7 @@ function TriggerText({ link, others }: { link: RcaLinkView; others: number }) {
         <>
           {' '}
           <Link className="underline" to={`${basePath}/links`}>
-            +{number(others)} more event(s)
+            +{plural(others, 'more event', 'more events', number)}
           </Link>
         </>
       )}

@@ -14,6 +14,7 @@ import { ChoiceField, optionsOf } from '../../../evidence/form-controls';
 import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 function ChangeRow(props: { change: ChangeRecord; index: number; readOnly: boolean; onChange: (next: ChangeRecord) => void; onRemove: () => void }) {
   const { number } = useNumberFormat();
@@ -53,7 +54,7 @@ function Editor({ record, save }: { record: ToolRecord<'change'>; save: (body: C
         <Input id="change-question" value={content.question} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, question: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {number(content.changes.length)} change(s), {number(related)} related to the incident.
+        {plural(content.changes.length, 'change', 'changes', number)}, {number(related)} related to the incident.
       </p>
       <ul className="space-y-2">
         {content.changes.map((change, index) => (

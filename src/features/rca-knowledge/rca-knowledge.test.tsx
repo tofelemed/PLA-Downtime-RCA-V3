@@ -37,6 +37,9 @@ const ENTRY: RcaKnowledgeView = {
   shareScope: 'tenant', sharedAt: null,
 };
 
+/** The entry for its own reads; the plant failure dictionary (failure-mode names, QA L7) is empty. */
+const entryOr = (call: { url: URL }) => (call.url.pathname.endsWith('/failure-dictionary') ? json(200, list([])) : json(200, ENTRY));
+
 describe('model', () => {
   it('maps the filter bar to the server query and leaves "all" out', () => {
     expect(toKnowledgeQuery(EMPTY_FILTERS, '  ')).toEqual({ q: undefined, unitId: undefined, reasonCodeId: undefined, published: undefined });
@@ -107,7 +110,7 @@ describe('RCA knowledge base v2 screen', () => {
   it('shows the server score breakdown, votes once and publishes with If-Match', async () => {
     reply = (call) => {
       if (call.method === 'POST') return json(200, { ...ENTRY, rowVersion: 4, isPublished: true, myVote: 'helpful', helpfulCount: 3 });
-      return json(200, ENTRY);
+      return entryOr(call);
     };
     actAs('reliability_engineer');
     wrap(<KnowledgeDetail id="k1" />);
@@ -138,7 +141,7 @@ describe('RCA knowledge base v2 screen', () => {
   });
 
   it('CA9: an unpublished lesson cannot be shared yet', async () => {
-    reply = () => json(200, ENTRY);
+    reply = entryOr;
     actAs('manager_approver');
     wrap(<KnowledgeDetail id="k1" />);
     expect(await screen.findByTestId('knowledge-share')).toBeDisabled();
@@ -160,7 +163,7 @@ describe('RCA knowledge base v2 screen', () => {
   });
 
   it('hides publish for an engineer and every write for a viewer', async () => {
-    reply = () => json(200, ENTRY);
+    reply = entryOr;
     actAs('Engineer');
     const first = wrap(<KnowledgeDetail id="k1" />);
     expect(await screen.findByTestId('knowledge-detail')).toBeTruthy();

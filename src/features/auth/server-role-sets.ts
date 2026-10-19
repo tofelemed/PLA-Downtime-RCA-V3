@@ -31,6 +31,12 @@ export const DISPOSITION_APPROVERS = ['quality_approver'] as const;
 export const STOP_VERIFIERS = ['manager_approver', 'production_engineer'] as const;
 export const FAILURE_VALIDATORS = ['reliability_engineer'] as const;
 
+/**
+ * v2/production-events/event-write-roles.ts (owner decision 2026-10-19): create, code, split, merge, bulk code,
+ * close and retract events, decide review items and duplicate stops; the production accountant has read-only coding
+ */
+export const EVENT_WRITERS = ['operator', 'production_engineer', 'reliability_engineer', 'manager_approver'] as const;
+
 /** v2/uncertainty/uncertainty-roles.ts (SME E4 uncertainty budgets) */
 export const BUDGET_WRITERS = ['production_engineer', 'integration_admin', 'production_accountant', 'manager_approver', 'metrology_approver'] as const;
 export const BUDGET_APPROVERS = ['metrology_approver'] as const;

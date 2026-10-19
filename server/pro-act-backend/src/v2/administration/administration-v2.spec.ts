@@ -53,11 +53,34 @@ describe('v2 administration: pure rules', () => {
       readableSummary(
         `UPDATE Task "Fix seal" via API PATCH /api/v2/tasks/${ID}`,
       ),
-    ).toBe('UPDATE Task "Fix seal"');
+    ).toBe('Changed task · Fix seal');
     expect(
       readableSummary(`DELETE Unit "${ID}" via API DELETE /api/units/${ID}`),
-    ).toBe('DELETE Unit');
+    ).toBe('Deleted unit');
     expect(readableSummary(null)).toBeNull();
+  });
+
+  it('reads automatic entries as words, never a raw verb or "unknown" (QA audit 2026-10-19)', () => {
+    expect(
+      readableSummary('CREATE Exports "unknown" via API POST /api/v2/exports'),
+    ).toBe('Created export');
+    expect(
+      readableSummary(
+        'CREATE Exports "Period summary CSV" via API POST /api/v2/exports',
+      ),
+    ).toBe('Created export · Period summary CSV');
+    expect(
+      readableSummary(
+        `CREATE RCA "Pump trips" via API POST /api/v2/rcas/${ID}/actions [actions ${ID}]`,
+      ),
+    ).toBe('Created investigation · Pump trips');
+    expect(
+      readableSummary('UPDATE ProductionPlan "October" via API PATCH /x'),
+    ).toBe('Changed production plan · October');
+    expect(readableSummary('UPDATE RcaPolicies "v2"')).toBe(
+      'Changed RCA policy · v2',
+    );
+    expect(readableSummary('Changed role')).toBe('Changed role');
   });
 
   it('writes RFC 4180 CSV and neutralizes spreadsheet formulas', () => {
@@ -110,6 +133,27 @@ describe('v2 administration: pure rules', () => {
         scope({ scopeId: holder.tenantId, role: 'operator' }),
         holder,
       ),
+    ).toBe('home_role');
+  });
+
+  it('the home-role mirror is revocable once the holder has another role in its home plant (QA audit 2026-10-19)', () => {
+    const admin = context(['TenantAdmin', 'manager_approver']);
+    const kamran = {
+      ...holder,
+      role: 'Analyst',
+      tenantId: 'plant',
+      homePlantRoles: ['production_engineer', 'finance_approver'],
+    };
+    const mirror = scope({ role: 'production_engineer' });
+    expect(revokeLock(admin, mirror, kamran)).toBeNull();
+    expect(
+      revokeLock(admin, mirror, {
+        ...kamran,
+        homePlantRoles: ['production_engineer'],
+      }),
+    ).toBe('home_role');
+    expect(
+      revokeLock(admin, mirror, { ...kamran, homePlantRoles: undefined }),
     ).toBe('home_role');
   });
 

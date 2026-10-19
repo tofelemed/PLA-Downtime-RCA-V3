@@ -54,3 +54,26 @@ describe('event history actors (owner finding 1)', () => {
     expect(document.body.textContent).not.toMatch(/by System ·/);
   });
 });
+
+describe('revision notes in words (QA audit F4)', () => {
+  it('words the system notes and the investigation link, and keeps a typed reason as typed', () => {
+    const notes = ['created', 'verification', 'failure_validation', 'RCA case linked', 'RCA case closed', 'bulk code: shift C cleanup', 'Restore OEE component'];
+    const history: ProductionEventHistoryView = {
+      revisions: notes.map((changeReason, index) => revision({ revision: notes.length - index, actorId: 'u1', changeReason })),
+      coding: [],
+      reviewItems: [],
+      relations: [],
+    };
+    render(<RevisionTimeline history={history} />);
+    expect(screen.getAllByTestId('revision-note').map((n) => n.textContent)).toEqual([
+      'Created',
+      'Coding verified',
+      'Failure detail validated',
+      'Investigation linked',
+      'Investigation closed',
+      'Bulk code: shift C cleanup',
+      'Restore OEE component',
+    ]);
+    expect(document.body.textContent).not.toMatch(/failure_validation|RCA case/);
+  });
+});

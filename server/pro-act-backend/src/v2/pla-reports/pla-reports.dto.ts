@@ -14,6 +14,8 @@ export const LOSS_TREE_GROUPS = [
   'oee',
   'kind',
   'unit',
+  // the cause event of the lines (QA PLA M2: the attributed loss of each listed event; null = no event)
+  'event',
 ] as const;
 export type LossTreeGroup = (typeof LOSS_TREE_GROUPS)[number];
 

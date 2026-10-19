@@ -37,6 +37,7 @@ import { loadMonthContext, MonthContext, MonthSelector } from './month-context';
 import { ClosePrerequisites, monthCoverage } from './month-coverage';
 import { lockMonthCloses } from './month-lock';
 import { adjustmentTotals, monthPrerequisites } from './month-prerequisites';
+import { monthUncovered } from './month-uncovered';
 import { WorkflowPoliciesService } from './workflow-policies.service';
 
 /** A month as the API shows it: its context, prerequisites, materiality and history. */
@@ -156,6 +157,7 @@ export class MonthCloseService {
     const prerequisites = {
       ...(await monthPrerequisites(manager, dates)),
       ...coverage,
+      ...(await monthUncovered(manager, dates)),
     };
     const totals = await adjustmentTotals(manager, dates);
     const history = context.row
@@ -332,6 +334,7 @@ function evidenceOf(snapshot: MonthCloseSnapshot): Record<string, unknown> {
     days: snapshot.prerequisites.days,
     certifiedDays: snapshot.prerequisites.certifiedDays,
     openProposals: snapshot.prerequisites.openProposalCount,
+    uncoveredDays: snapshot.prerequisites.uncoveredDayCount,
     materiality: snapshot.findings,
     policyVersion: snapshot.context.policy.version,
   };

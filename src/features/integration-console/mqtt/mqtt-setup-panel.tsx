@@ -12,7 +12,13 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
+import { formatDuration } from '@/features/ux-kit/format/duration';
+import { formatPlantTime } from '@/features/ux-kit/format/plant-time';
+import { labelOf, SIGNAL_TYPE_LABELS } from '@/features/ux-kit/labels';
+import { ACTUALS_SOURCE_LABELS } from '@/features/plan-dashboard/model/actuals-labels';
+import { coverageSummaryText } from './model/coverage-text';
 import { MqttSamplePreview } from './mqtt-sample-preview';
+import { plural } from '@/features/ux-kit/format/plural';
 
 function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; connectionId: string; timezone: string }) {
   const numbers = useNumberFormat();
@@ -26,12 +32,12 @@ function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; con
   const current = flattenPages(signals.data?.pages).filter((row) => Date.parse(row.effectiveFrom) <= now && (!row.effectiveTo || Date.parse(row.effectiveTo) > now));
   return <div className="space-y-5 text-sm">
     <DataState state={dataStateOf(signals)} error={signals.error} onRetry={() => void signals.refetch()}>
-      <p>{hasNextPage ? 'Loading remaining signal definitions…' : `${current.length} current signal(s) on this connection and unit.`}</p>
-      {!hasNextPage && <ul className="list-disc space-y-1 pl-5">{current.map((row) => <li key={row.id}>{row.name}: {row.semanticType}, source key <code className="break-all">{row.sourceKey}</code></li>)}</ul>}
+      <p>{hasNextPage ? 'Loading remaining signal definitions…' : `${plural(current.length, 'current signal', 'current signals', numbers.number)} on this connection and unit.`}</p>
+      {!hasNextPage && <ul className="list-disc space-y-1 pl-5">{current.map((row) => <li key={row.id}>{row.name}: {labelOf(SIGNAL_TYPE_LABELS, row.semanticType)}, source key <code className="break-all">{row.sourceKey}</code></li>)}</ul>}
     </DataState>
     <DataState state={dataStateOf(authority)} error={authority.error} onRetry={() => void authority.refetch()}>
       {authority.data && <div className="space-y-1 rounded border p-3">
-        <p>Approved primary output source: <strong>{authority.data.policy.primarySource}</strong> (version {authority.data.version}).</p>
+        <p>Approved primary output source: <strong>{ACTUALS_SOURCE_LABELS[authority.data.policy.primarySource] ?? authority.data.policy.primarySource}</strong> (version {authority.data.version}).</p>
         <p>MQTT output is counted only when the approved priority permits it and the selected signal has usable samples. Defining a signal or checking “authority” on it does not approve MQTT as the output source.</p>
         <Link className="underline" to={`/connectivity/source-authority?unitId=${unitId}`}>Review and approve Source Priority</Link>
       </div>}
@@ -40,7 +46,7 @@ function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; con
       <h3 className="font-medium">Stored state coverage</h3>
       <DateRangeInput label="Coverage period" timeZone={timezone} value={range} onChange={setRange} />
       <DataState state={dataStateOf(coverage)} error={coverage.error} onRetry={() => void coverage.refetch()}>
-        {coverage.data && <p>{coverage.data.coverage ? `Scheduled ${numbers.number(coverage.data.coverage.scheduledSeconds)} s; running ${numbers.number(coverage.data.coverage.runningSeconds)} s; stopped ${numbers.number(coverage.data.coverage.knownStoppedSeconds)} s; unknown ${numbers.number(coverage.data.coverage.unknownSeconds)} s.` : 'No state mapping at the start of this window.'}{coverage.data.truncated ? ' Timeline display is truncated.' : ''}</p>}
+        {coverage.data && <p>{coverageSummaryText(coverage.data, (seconds) => formatDuration(seconds, 'long', numbers.digits), (iso) => formatPlantTime(iso, timezone, true))}</p>}
       </DataState>
       <Link className="underline" to={`/master-data/unit-state?unitId=${unitId}`}>Configure Unit State rules and heartbeat</Link>
     </div>

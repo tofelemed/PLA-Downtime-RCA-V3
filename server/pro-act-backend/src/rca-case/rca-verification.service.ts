@@ -55,10 +55,13 @@ export class RcaVerificationService {
     if (evaluated > 0) this.logger.log(`Verified ${evaluated} RCA action(s)`);
   }
 
+  /** Due actions of open investigations (a closed one is frozen, QA H1; reopening it lets the sweep run). */
   async sweep(now = new Date()): Promise<number> {
     const due: Array<{ id: string }> = await this.dataSource.query(
-      `SELECT "id" FROM "rca_actions" WHERE "verification_window_end" <= $1 AND "post_action" IS NULL
-          AND "baseline" IS NOT NULL AND "status" <> 'cancelled' ORDER BY "verification_window_end" LIMIT 200`,
+      `SELECT a."id" FROM "rca_actions" a WHERE a."verification_window_end" <= $1 AND a."post_action" IS NULL
+          AND a."baseline" IS NOT NULL AND a."status" <> 'cancelled'
+          AND NOT EXISTS (SELECT 1 FROM "rcas" r WHERE r."id" = a."rca_id" AND r."status" = 'Closed')
+        ORDER BY a."verification_window_end" LIMIT 200`,
       [now],
     );
     let evaluated = 0;

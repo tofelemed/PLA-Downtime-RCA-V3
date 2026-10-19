@@ -99,7 +99,7 @@ export class UnitStateV2Controller {
       'Scheduled time = the window minus excluded shifts. Unknown time (no data, stale heartbeat, bad or ' +
       'uncertain quality, unmapped value) is never filled: availability lies between running / scheduled and ' +
       '(running + unknown) / scheduled; `knownTimeAvailability` is conditional on observed time only. ' +
-      '`coverage` null = no mapping at `from`. Window ≤ 31 days (422 INVALID_RANGE).',
+      '`coverage` null = no mapping in the window; when the window starts before the first mapping, `coverageStartsAt` is the start of that mapping and coverage counts from it. Window ≤ 31 days (422 INVALID_RANGE).',
   })
   coverage(
     @Ctx() ctx: RequestContext,

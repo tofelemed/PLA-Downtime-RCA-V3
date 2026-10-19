@@ -22,7 +22,7 @@ export interface ApprovedImpact {
   /** active loss lines of the latest approved revision of their period */
   lines: number;
   quantities: Array<{ kind: string; uom: string | null; quantity: string }>;
-  /** SME V8: the valuation view of `values` — the default basis of the tenant's approved policy */
+  /** the valuation view of `values`: the default basis of the tenant's approved policy unless the caller fixed it */
   view: DefaultBasis;
   values: ApprovedImpactValue[];
   basis: string;
@@ -35,9 +35,14 @@ const BASIS_WORDS: Readonly<Record<DefaultBasis, string>> = {
     'economic impact view (lost contribution on unrecovered sales + incremental costs)',
 };
 
-export const approvedImpactBasis = (view: DefaultBasis) =>
-  'approved plan lines of the latest approved revision of each period (decided quantities, loss kinds ' +
-  `only); ${BASIS_WORDS[view]} (the policy default, SME V8); draft and in-review figures are never included`;
+/**
+ * Words of the figures' basis (QA M3: no internal reference, no "policy default" claim — the view is named,
+ * and `source` says where it came from when it is not simply the policy's default now).
+ */
+export const approvedImpactBasis = (view: DefaultBasis, source?: string) =>
+  'Approved plan lines of the latest approved revision of each period (decided quantities, loss kinds ' +
+  `only), valued in the ${BASIS_WORDS[view]}${source ? ` (${source})` : ''}; draft and in-review figures ` +
+  'are never included';
 
 /**
  * Loss kinds that lower output — the same set as the loss-value report (VA-01): schedule exclusions are
@@ -121,12 +126,18 @@ function valueOf(row: ValueRow): ApprovedImpactValue {
 export async function approvedImpact(
   manager: EntityManager,
   tenantId: string,
-  target: { eventIds?: string[]; lineIds?: string[]; view?: DefaultBasis },
+  target: {
+    eventIds?: string[];
+    lineIds?: string[];
+    view?: DefaultBasis;
+    /** where a fixed `view` comes from, named in the basis */
+    viewSource?: string;
+  },
 ): Promise<ApprovedImpact> {
   const filter = target.lineIds ? 'line' : 'event';
   const ids = target.lineIds ?? target.eventIds ?? [];
   const view = target.view ?? (await defaultValuationBasis(manager, tenantId));
-  const basis = approvedImpactBasis(view);
+  const basis = approvedImpactBasis(view, target.view && target.viewSource);
   if (ids.length === 0)
     return { lines: 0, quantities: [], view, values: [], basis };
   const params = [tenantId, ids, LOSS_KINDS];

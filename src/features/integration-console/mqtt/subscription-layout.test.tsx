@@ -23,10 +23,16 @@ describe('MQTT subscription health presentation', () => {
     render(<SubscriptionStatus connection={MQTT_CONNECTION} subscription={subscription()} timezone="Asia/Tehran" />);
     expect(screen.getByTestId('mqtt-status-badge')).toHaveTextContent('Connected');
     expect(screen.getByTestId('mqtt-source-available')).toBeVisible();
-    for (const label of ['Last observation', 'Last message', 'Last persist', 'Heartbeat', 'In flight', 'Reconnects']) expect(screen.getByText(label)).toBeVisible();
+    for (const label of ['Last observation', 'Last message (since the worker started)', 'Last persist (since the worker started)', 'Heartbeat', 'In flight', 'Reconnects']) expect(screen.getByText(label)).toBeVisible();
     expect(screen.getByTestId('mqtt-technical-details')).not.toHaveAttribute('open');
     expect(screen.getByTestId('mqtt-client-id')).not.toBeVisible();
     expect(screen.getByText('Session present on last connect')).not.toBeVisible();
+  });
+
+  it('says the worker facts restart with the worker instead of "never" next to a stored observation (QA L24)', () => {
+    render(<SubscriptionStatus connection={MQTT_CONNECTION} subscription={subscription({ lastMessageAt: null, lastPersistAt: null })} timezone="Asia/Tehran" />);
+    expect(screen.getByTestId('mqtt-last-message')).toHaveTextContent('none since the worker started');
+    expect(screen.queryByText('never')).toBeNull();
   });
 
   it('keeps persistence failures and source unavailability prominent, never reporting healthy', () => {

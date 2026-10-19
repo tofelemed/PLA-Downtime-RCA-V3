@@ -17,6 +17,7 @@ import {
 } from './cause-rules';
 import { childAudit, recordRcaAudit } from './rca-audit';
 import { findCase, notFound, RcaScope, scopeOf } from './rca-scope';
+import { assertCaseNotClosed } from './case-closed';
 
 export interface RcaCaseCauseV2View {
   id: string;
@@ -93,6 +94,7 @@ export class RcaCausesService {
     const scope = scopeOf(context);
     return this.dataSource.transaction(async (manager) => {
       const rca = await findCase(manager, scope, rcaId, true);
+      assertCaseNotClosed(rca);
       assertCausesOpen(rca);
       const columns = causeColumns(body);
       await this.assertValid(manager, rca, { columns, current: null });
@@ -183,6 +185,7 @@ export class RcaCausesService {
     const rca = await findCase(manager, scope, cause.rcaId, true).catch(() => {
       throw notFound('RCA cause');
     });
+    assertCaseNotClosed(rca);
     assertRevision(cause.rowVersion, target.expectedRowVersion);
     assertCausesOpen(rca);
     return { cause, rca };

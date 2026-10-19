@@ -4,18 +4,20 @@ import { removeDecidedApproval } from '@/api/v2/queries/approval-inbox-cache';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import type { ApprovalItem } from '@/api/v2/types/approvals';
 import { Button } from '@/components/ui/button';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { useToast } from '@/hooks/use-toast';
 import { ApprovalDetailSummary } from './approval-detail-summary';
 import { ApprovalEligibility } from './approval-eligibility';
+import { isApprovalKind } from './approval-kinds';
 import { ApprovalRecordDetails } from './approval-record-details';
 import { ApprovalChangesPanel } from './changes/approval-changes-panel';
 import { InlineDecision } from './inline/inline-decision';
 import { useApprovalItem } from './use-approval-item';
 import { useApprovalRecord } from './use-approval-record';
 
-const INBOX = { to: '/approvals', label: 'Pending Approvals' };
+const INBOX = { to: '/approvals', label: pageNameOf('/approvals') };
 
 /** After a server-confirmed decision: the row leaves every cached inbox page, a toast says what happened. */
 function useDecided(item: ApprovalItem) {
@@ -68,19 +70,24 @@ function ApprovalDetail({ item }: { item: ApprovalItem }) {
   );
 }
 
+/** A detail address that leads nowhere: the page header (h1, tab title) and the way back to the inbox, no Retry. */
+function InboxReturn({ title, detail }: { title: string; detail: string }) {
+  return (
+    <Page>
+      <PageHeader title={title} back={INBOX} />
+      <DataState state="empty" detail={detail} />
+      <Button className="mt-4" variant="outline" asChild>
+        <Link to={INBOX.to}>Back to {INBOX.label}</Link>
+      </Button>
+    </Page>
+  );
+}
+
 function ApprovalDetailScreen({ kind, id }: { kind: string; id: string }) {
   const item = useApprovalItem(kind, id);
   if (item.isLoading) return <DataState state="loading" />;
   if (item.isGone) {
-    return (
-      <Page>
-        <PageHeader title="No longer pending" back={INBOX} />
-        <DataState state="empty" detail="This record is not waiting for your approval any more: it was decided, withdrawn or is outside your approval roles." />
-        <Button className="mt-4" variant="outline" asChild>
-          <Link to={INBOX.to}>Back to Pending Approvals</Link>
-        </Button>
-      </Page>
-    );
+    return <InboxReturn title="No longer pending" detail="This record is not waiting for your approval any more: it was decided, withdrawn or is outside your approval roles." />;
   }
   if (item.isError || !item.data) return <DataState state="error" error={item.error} onRetry={() => void item.refetch()} />;
   return <ApprovalDetail item={item.data} />;
@@ -91,5 +98,6 @@ export function ApprovalDetailPage() {
   const tenantId = useV2TenantId();
   const { kind = '', id = '' } = useParams();
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to see pending approvals." />;
+  if (!isApprovalKind(kind)) return <InboxReturn title="Approval not found" detail="This address does not name an approval workflow. Open the record from the pending approvals list." />;
   return <ApprovalDetailScreen key={`${tenantId}:${kind}:${id}`} kind={kind} id={id} />;
 }

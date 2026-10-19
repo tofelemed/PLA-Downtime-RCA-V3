@@ -1,18 +1,18 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useRcaActions } from '@/api/v2/queries/rca-cases';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ActionForm } from './action-form';
 import { ActionRow } from './action-row';
+import { useCanWriteRca } from './use-can-write-rca';
 
 /** `?recommendation=<id>` (item 5: "Create action for this recommendation") opens the form with it chosen. */
 export const ACTION_FOR_RECOMMENDATION_PARAM = 'recommendation';
 
 /** RCA03 actions of the case with their verification against a baseline. */
 export function ActionsTab({ rcaId }: { rcaId: string }) {
-  const { canWriteRca } = useCapabilities();
+  const canWriteRca = useCanWriteRca();
   const actions = useRcaActions(rcaId);
   const [params] = useSearchParams();
   const preset = params.get(ACTION_FOR_RECOMMENDATION_PARAM) ?? '';

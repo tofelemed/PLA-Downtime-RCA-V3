@@ -13,6 +13,8 @@ export interface AssetFormProps {
   onChange: (patch: Partial<AssetDraft>) => void;
   onSave: () => void;
   saving: boolean;
+  /** the draft has unsaved edits */
+  dirty?: boolean;
   isNew: boolean;
   readOnly: boolean;
 }
@@ -22,7 +24,7 @@ const STATUS_OPTIONS = ASSET_STATUS_OPTIONS.map((value) => ({ value, label: valu
 const CRITICALITY_OPTIONS = Object.entries(ASSET_CRITICALITY_LABELS).map(([value, label]) => ({ value, label }));
 
 /** Identity (name, code, unit), classification (type, criticality, status) and the descriptive fields. */
-export function AssetForm({ draft, errors, onChange, onSave, saving, isNew, readOnly }: AssetFormProps) {
+export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly }: AssetFormProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSave();
@@ -49,7 +51,7 @@ export function AssetForm({ draft, errors, onChange, onSave, saving, isNew, read
         {text('serialNumber', 'Serial number')}
         {text('location', 'Location')}
       </div>
-      {!readOnly && <FormActions isNew={isNew} saving={saving} cancelTo="/master-data/assets" />}
+      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo="/master-data/assets" />}
     </form>
   );
 }

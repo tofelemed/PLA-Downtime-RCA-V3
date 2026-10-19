@@ -1,7 +1,7 @@
 import type { OeeReportView, ReportGroupView } from '@/api/v2/types/reports';
 import { type DigitSystem, useCalendarPreference } from '@/lib/dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { findKpi, kpiText, OEE_METRIC_LABELS } from '../model/display';
+import { findKpi, inSentence, kpiText, OEE_METRIC_LABELS } from '../model/display';
 
 export interface OeeGroupTableProps {
   report: OeeReportView;
@@ -50,7 +50,7 @@ export function OeeGroupTable({ report, groupTitle, labelOf, testId }: OeeGroupT
   return (
     <div data-testid={testId}>
       <DataTable
-        caption={`${report.label} by ${groupTitle.toLowerCase()}`}
+        caption={`${report.label} by ${inSentence(groupTitle)}`}
         columns={columnsOf(report, groupTitle, labelOf, digits)}
         rows={report.groups}
         getRowKey={(group) => group.key ?? '-'}

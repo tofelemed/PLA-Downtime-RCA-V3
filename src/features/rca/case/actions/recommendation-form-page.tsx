@@ -15,7 +15,7 @@ import {
   recommendationItemOf,
   storedRecommendations,
   RECOMMENDATION_PRIORITIES,
-  RECOMMENDATION_STATUSES,
+  RECOMMENDATION_STATUS_OPTIONS,
   type RecommendationForm,
 } from '../../model/recommendation-form';
 import { useAssignableUsers } from '../../use-assignable-users';
@@ -31,7 +31,7 @@ function Fields({ form, onChange }: { form: RecommendationForm; onChange: (patch
       <TextField id="rec-title" label="Title" value={form.title} maxLength={255} required wide onChange={(title) => onChange({ title })} />
       <AreaField id="rec-description" label="Description" value={form.description} maxLength={4000} onChange={(description) => onChange({ description })} />
       <ChoiceField id="rec-priority" label="Priority" value={form.priority} options={optionsOf(RECOMMENDATION_PRIORITIES)} onChange={(priority) => onChange({ priority })} />
-      <ChoiceField id="rec-status" label="Status" value={form.status} options={optionsOf(RECOMMENDATION_STATUSES)} onChange={(status) => onChange({ status })} />
+      <ChoiceField id="rec-status" label="Status" value={form.status} options={RECOMMENDATION_STATUS_OPTIONS} onChange={(status) => onChange({ status })} />
       <ChoiceField id="rec-owner" label="Owner" value={form.ownerId} options={owners} allowNone="No owner" onChange={(ownerId) => onChange({ ownerId })} />
       <DateInput id="rec-due" label="Due date" value={form.dueDate} onChange={(dueDate) => onChange({ dueDate })} />
       <TextField id="rec-cost" label="Estimated cost" value={form.estimatedCost} placeholder="e.g. 1250.50" onChange={(estimatedCost) => onChange({ estimatedCost })} />

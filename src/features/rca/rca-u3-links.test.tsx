@@ -145,7 +145,7 @@ describe('RCA U3 links and diagram', () => {
     const detail = useRcaCase('c1');
     if (!detail.data) return null;
     return (
-      <CaseWorkspaceContext.Provider value={{ rca: detail.data, readOnly: false, basePath: '/rca/c1' }}>
+      <CaseWorkspaceContext.Provider value={{ rca: detail.data, readOnly: false, canWrite: true, closed: false, basePath: '/rca/c1' }}>
         <EventDiagramTool />
       </CaseWorkspaceContext.Provider>
     );

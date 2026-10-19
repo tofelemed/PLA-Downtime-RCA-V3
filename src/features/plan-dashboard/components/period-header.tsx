@@ -23,7 +23,9 @@ function CalculationDetails({ accounting, timezone }: { accounting: PeriodAccoun
   return (
     <>
       <Badge variant="outline" data-testid="run-badge">
-        Calculated <PlantTime iso={accounting.completedAt ?? accounting.startedAt} tz={timezone} withDate />
+        <span>
+          Calculated <PlantTime iso={accounting.completedAt ?? accounting.startedAt} tz={timezone} withDate />
+        </span>
       </Badge>
       <details className="text-xs text-muted-foreground" data-testid="calculation-details">
         <summary className="cursor-pointer">Details</summary>

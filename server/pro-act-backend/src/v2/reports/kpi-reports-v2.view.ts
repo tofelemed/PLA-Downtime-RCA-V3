@@ -114,7 +114,12 @@ export interface DowntimeBundleItemView {
 /** `GET /reports/downtime-bundle`: every view reads the same run selection, window and units (T24). */
 export interface DowntimeBundleView {
   includeMicroStops: boolean;
-  /** period KPIs of the whole scope, as in `/reports/downtime` */
+  /** the schedule class the summary is for (query `scheduleClass`); null = every class */
+  scheduleClass: string | null;
+  /**
+   * period KPIs of the whole scope, as in `/reports/downtime`; with `scheduleClass`, the figures of that class
+   * (figures not split by class: null with reason `not_by_schedule_class`)
+   */
   summary: KpiAggregateView[];
   /** in request order, duplicates removed */
   views: DowntimeBundleItemView[];

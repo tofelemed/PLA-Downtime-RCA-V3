@@ -50,7 +50,7 @@ describe('Work-order operations (SME D10)', () => {
     const panel = screen.getByTestId('work-orders-import');
     fireEvent.change(within(panel).getByRole('textbox'), { target: { value: '[{"workOrderId":"4000123","operationId":"0020","kind":"repair","startedAt":"2026-10-01T10:00:00Z","assetCode":"P-101"}]' } });
     fireEvent.click(within(panel).getByRole('button', { name: 'Import' }));
-    expect(await within(panel).findByText('Imported 1 operation(s): 1 new, 0 updated, 1 linked to a stop.')).toBeInTheDocument();
+    expect(await within(panel).findByText('Imported 1 operation: 1 new, 0 updated, 1 linked to a stop.')).toBeInTheDocument();
   });
 
   it('a stop page shows active repair vs waiting as the server counts it', async () => {

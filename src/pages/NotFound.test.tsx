@@ -22,7 +22,8 @@ describe('NotFound', () => {
         <NotFound embedded />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('heading', { name: '404' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
+    expect(screen.getByText('404')).toBeInTheDocument();
     expect(screen.queryByRole('main')).toBeNull();
   });
 });

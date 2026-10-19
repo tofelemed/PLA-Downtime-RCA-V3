@@ -6,7 +6,7 @@ import type { ShiftInstanceView } from '@/api/v2/types/units';
 import { useWindowClock } from './use-window-clock';
 
 export interface ShiftWindows {
-  /** shifts of the last 3 days and the next day (not excluded) */
+  /** shifts of the last 3 days up to the current one (not excluded; a shift that has not started is not offered) */
   instances: ShiftInstanceView[];
   /** the shift running now, when the calendar has one */
   current: ShiftInstanceView | null;
@@ -15,6 +15,11 @@ export interface ShiftWindows {
 /** The shift running at `now`: `[utcStart, utcEnd)` contains it. */
 export function currentShiftOf(instances: readonly ShiftInstanceView[], now: number): ShiftInstanceView | null {
   return instances.find((shift) => Date.parse(shift.utcStart) <= now && now < Date.parse(shift.utcEnd)) ?? null;
+}
+
+/** QA audit L4: shifts that have started by `now` (tomorrow's shift has no events to show yet). */
+export function startedShifts(instances: readonly ShiftInstanceView[], now: number): ShiftInstanceView[] {
+  return instances.filter((shift) => !shift.isExcluded && Date.parse(shift.utcStart) <= now);
 }
 
 /**
@@ -28,6 +33,6 @@ export function useShiftWindows(unitId: string | null): ShiftWindows {
   });
   const [now] = useWindowClock(unitId !== null);
   const shifts = useShiftInstances(unitId ? { unitId, ...range } : null);
-  const instances = flattenPages(shifts.data?.pages).filter((shift) => !shift.isExcluded);
+  const instances = startedShifts(flattenPages(shifts.data?.pages), now);
   return { instances, current: unitId ? currentShiftOf(instances, now) : null };
 }

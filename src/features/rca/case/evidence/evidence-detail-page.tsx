@@ -12,6 +12,7 @@ import { verifiedText } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
 import { TaskOverdueBadge } from './task-overdue-badge';
+import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-labels';
 import { useCasePatch } from '../use-case-patch';
 import { AttachmentList } from './attachment-list';
 
@@ -115,12 +116,12 @@ export function EvidenceDetailPage() {
           <Fact label="Verified">
             <span data-testid="evidence-verified">{verifiedText(item, users.nameOf, dateTime)}</span>
           </Fact>
-          <Fact label="Task">{item.task}</Fact>
-          <Fact label="Assigned to">{item.taskAssigneeId && users.nameOf(item.taskAssigneeId)}</Fact>
-          <Fact label="Task due">
+          <Fact label={REQ.request}>{item.task}</Fact>
+          <Fact label={REQ.requestedFrom}>{item.taskAssigneeId && users.nameOf(item.taskAssigneeId)}</Fact>
+          <Fact label={REQ.due}>
             <TaskDue item={item} />
           </Fact>
-          <Fact label="Task status">{labelOf(RCA_EVIDENCE_TASK_LABELS, item.taskStatus, 'Pending')}</Fact>
+          <Fact label={REQ.status}>{labelOf(RCA_EVIDENCE_TASK_LABELS, item.taskStatus, 'Pending')}</Fact>
           <Fact label="Supports">{linkedNodeNames(item, labels)}</Fact>
           <Fact label="Collected">{[item.collectedBy ? users.nameOf(item.collectedBy) : null, item.collectedAt ? dateTime(item.collectedAt) : null].filter(Boolean).join(' · ')}</Fact>
         </dl>

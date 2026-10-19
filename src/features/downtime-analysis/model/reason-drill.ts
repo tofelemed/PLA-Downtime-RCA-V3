@@ -1,6 +1,6 @@
 import type { ProductionEventFilters } from '@/api/v2/queries/production-events';
 import type { CodeView } from '@/api/v2/types/flags';
-import type { DowntimeGroupView } from '@/api/v2/types/reports';
+import type { DowntimeGroupView, DowntimeReportView } from '@/api/v2/types/reports';
 import { downtimeQuery, type DowntimeFilters, type DowntimeQuery, type ScheduleFilter } from './downtime-filters';
 
 /** Level 1 of the Pareto, or the children of the last reason on the drill path (server grouping). */
@@ -74,4 +74,33 @@ export function drillCrumbs(path: readonly string[], codes: readonly CodeView[])
     const code = codes.find((entry) => entry.id === id);
     return { id, label: code ? `${code.code} · ${code.name}${code.active ? '' : ' (retired)'}` : 'Unknown reason' };
   });
+}
+
+/** URL value of the listed bar (QA audit L15: the list survives a visit to a stop and Back). */
+export const DRILL_PARAM = 'drill';
+const UNCODED_BAR = 'uncoded';
+
+/** Name of a Pareto bar: the server label, else "Unknown reason" / "Not coded". */
+export function barLabel(group: DowntimeGroupView): string {
+  return group.label ?? (group.key ? 'Unknown reason' : 'Not coded');
+}
+
+export function drillParamOf(selection: Pick<DrillSelection, 'reasonId'>): string {
+  return selection.reasonId ?? UNCODED_BAR;
+}
+
+/**
+ * The listed bar from the URL value and the Pareto the page shows: only a bar of this level that lists its
+ * stops (not one that drills deeper); null when the value no longer names such a bar.
+ */
+export function drillSelectionOf(
+  value: string | null,
+  report: Pick<DowntimeReportView, 'groups' | 'unit'> | undefined,
+  context: { path: readonly string[]; codes: readonly CodeView[] },
+): DrillSelection | null {
+  if (!value || !report) return null;
+  const key = value === UNCODED_BAR ? null : value;
+  const group = report.groups.find((entry) => entry.key === key);
+  if (!group || barAction(group, context.path, context.codes).kind !== 'events') return null;
+  return { reasonId: key, label: barLabel(group), group, unit: report.unit };
 }

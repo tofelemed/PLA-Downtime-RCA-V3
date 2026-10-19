@@ -61,6 +61,8 @@ export interface DataTableProps<T> {
   /** default true: the header stays visible while the body scrolls inside `maxHeight` */
   stickyHeader?: boolean;
   maxHeight?: number | string;
+  /** a wide table that scrolls sideways on narrow screens: its scroll box is a labelled, keyboard-focusable region (axe scrollable-region-focusable) */
+  scrollable?: boolean;
   /** long in-memory lists with `pager: 'none'` only: render only the visible window of rows */
   virtualize?: { rowHeight: number; height: number };
   density?: DataTableDensity;

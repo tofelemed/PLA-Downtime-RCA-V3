@@ -8,11 +8,28 @@ export type ForYouTileKey = 'currentStops' | 'stopsToCode' | 'periodsDue' | 'rec
 /** Operators and supervisors (production engineers verify stop coding, SME D13). */
 const STOP_ROLES: readonly string[] = ['operator', 'Operator', 'production_engineer'];
 
+/**
+ * QA audit 2026-10-19: every role that decides an inbox kind (plans, revisions, postings, dispositions,
+ * budgets, source priority and status rules, month close, investigations), not only manager approvers;
+ * the tile counts only what the caller can decide (`decidable=true`).
+ */
+export const APPROVAL_ROLES: readonly string[] = [
+  'SuperAdmin',
+  'OrgAdmin',
+  'TenantAdmin',
+  'Manager',
+  'manager_approver',
+  'production_accountant',
+  'quality_approver',
+  'metrology_approver',
+  'finance_approver',
+];
+
 const TILES_BY_ROLE: ReadonlyArray<readonly [readonly string[], readonly ForYouTileKey[]]> = [
   [STOP_ROLES, ['currentStops', 'stopsToCode']],
   [['production_accountant'], ['periodsDue']],
   [['reliability_engineer'], ['recommended', 'myOverdueActions']],
-  [['manager_approver'], ['approvals']],
+  [APPROVAL_ROLES, ['approvals']],
 ];
 
 /** The tiles of the "For you" row, in a fixed order, each once; empty when no role asks for one. */

@@ -26,6 +26,13 @@ export function useLossTree(query: LossTreeQuery | null, tz?: string) {
   return useReport<LossTreeView>('loss-tree', query, tz);
 }
 
+/** The loss tree by cause event (`groupBy=event`): the attributed quantity of each event in the scope (QA PLA M2). */
+export type EventLossQuery = ReportQueryBase & { groupBy: 'event'; metric: 'qty'; ledger: 'plan' | 'capacity' };
+
+export function useEventLosses(query: EventLossQuery | null, tz?: string) {
+  return useReport<LossTreeView>('loss-tree', query, tz);
+}
+
 export function useReconciliationTrend(query: ReconciliationTrendQuery | null, tz?: string) {
   return useReport<ReconciliationTrendView>('reconciliation-trend', query, tz);
 }

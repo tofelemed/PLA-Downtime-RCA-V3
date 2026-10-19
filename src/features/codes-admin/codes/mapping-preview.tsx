@@ -6,6 +6,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf } from '@/features/ux-kit/labels';
 import { MAPPING_SOURCE_LABELS, OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
 import { type NumberFormat, useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { pluralNoun } from '@/features/ux-kit/format/plural';
 
 type Axis = 'scheduleClass' | 'oeeComponent';
 
@@ -62,7 +63,7 @@ export function MappingPreview({ codeId }: { codeId: string }) {
       {data && (
         <div className="space-y-2 text-sm" data-testid="mapping-preview" data-events={data.events}>
           <p>
-            <strong>{number(data.events)}</strong> event(s) in your scope were coded with this reason in the last {number(30)} days.
+            <strong>{number(data.events)}</strong> {pluralNoun(data.events, 'event', 'events')} in your scope were coded with this reason in the last {number(30)} days.
           </p>
           <DataTable caption="Mapping preview" columns={columnsOf(data, number)} rows={AXES} getRowKey={(row) => row.axis} pager="none" density="compact" />
           <p className="text-muted-foreground">Stored events keep their classification; defaults apply to new codings.</p>

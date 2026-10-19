@@ -7,6 +7,7 @@ import { DISTRIBUTIONS, PLAN_BASES, type Distribution, type PlanBasis } from '@/
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { BASIS_LABELS, DISTRIBUTION_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
@@ -14,6 +15,7 @@ import { RefusalNotice } from '../components/refusal-notice';
 import type { PlanningRefs } from '../hooks/use-planning-refs';
 import { usePlanForm, type PlanFormMode } from '../hooks/use-plan-form';
 import { CopyFromPlan } from './copy-from-plan';
+import { CreateVersionConfirm } from './create-version-confirm';
 import { ManualTargetsEditor } from './manual-targets-editor';
 import { SlicesEditor } from './slices-editor';
 
@@ -30,20 +32,21 @@ function HeaderFields({ form, mode, refs }: { form: Form; mode: PlanFormMode; re
   const scenarios = flattenPages(usePlanScenarios().data?.pages).map((s) => ({ value: s.id, label: `${s.name}${s.isAccountingBaseline ? ' (accounting baseline)' : ''}` }));
   const { values, set, errors } = form;
   const creating = mode.kind === 'create';
+  const newVersion = mode.kind === 'new-version';
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <FormField id="planName" label="Name" error={errors.name}>
+      <FormField id="planName" label="Name" error={errors.name} required={creating}>
         <Input id="planName" value={values.name} disabled={!creating} onChange={(e) => set('name', e.target.value)} />
       </FormField>
-      <FormField id="planUnit" label="Unit" error={errors.unitId}>
-        <NativeSelect id="planUnit" value={values.unitId} options={refs.unitOptions} placeholder="Choose a unit" invalid={!!errors.unitId} onChange={(v) => set('unitId', v)} />
+      <FormField id="planUnit" label="Unit" error={errors.unitId} required={!newVersion} hint={newVersion ? 'A new version keeps the unit of the plan' : undefined}>
+        <NativeSelect id="planUnit" value={values.unitId} options={refs.unitOptions} placeholder="Choose a unit" disabled={newVersion} invalid={!!errors.unitId} onChange={(v) => set('unitId', v)} />
       </FormField>
       <FormField id="planScenario" label="Scenario" error={errors.scenarioId} hint="Default: the accounting baseline">
         <NativeSelect id="planScenario" value={values.scenarioId} options={scenarios} placeholder="Accounting baseline" disabled={!creating} onChange={(v) => set('scenarioId', v)} />
       </FormField>
-      <PlantDateTimeField id="planFrom" label="Window start" value={values.validFrom} timezone={refs.timezone} error={errors.validFrom} onChange={(v) => set('validFrom', v)} />
-      <PlantDateTimeField id="planTo" label="Window end (exclusive)" value={values.validTo} timezone={refs.timezone} error={errors.validTo} onChange={(v) => set('validTo', v)} />
-      <FormField id="changeReason" label="Change reason" error={errors.changeReason}>
+      <PlantDateTimeField id="planFrom" label="Window start" required value={values.validFrom} timezone={refs.timezone} error={errors.validFrom} onChange={(v) => set('validFrom', v)} />
+      <PlantDateTimeField id="planTo" label="Window end (exclusive)" required value={values.validTo} timezone={refs.timezone} error={errors.validTo} onChange={(v) => set('validTo', v)} />
+      <FormField id="changeReason" label="Change reason" error={errors.changeReason} required={newVersion} hint={newVersion ? 'Why this version changes the approved plan' : undefined}>
         <Input id="changeReason" value={values.changeReason} onChange={(e) => set('changeReason', e.target.value)} />
       </FormField>
     </div>
@@ -57,7 +60,7 @@ function TargetFields({ form }: { form: Form }) {
       <FormField id="planBasis" label="Basis">
         <NativeSelect id="planBasis" value={values.basis} options={PLAN_BASES.map((b) => ({ value: b, label: BASIS_LABELS[b] }))} onChange={(v) => set('basis', v as PlanBasis)} />
       </FormField>
-      <FormField id="headerTarget" label="Header target" error={errors.headerTarget} hint={values.basis === 'time' ? 'Generated from schedule × planning rate' : 'Quantity in the profile unit'}>
+      <FormField id="headerTarget" label="Header target" error={errors.headerTarget} required={values.basis === 'quantity'} hint={values.basis === 'time' ? 'Generated from schedule × planning rate' : 'Quantity in the profile unit'}>
         <DecimalInput id="headerTarget" value={values.basis === 'time' ? null : values.headerTarget} disabled={values.basis === 'time'} onChange={(v) => set('headerTarget', v)} aria-label="Header target" />
       </FormField>
       <FormField id="planDistribution" label="Distribution">
@@ -69,9 +72,19 @@ function TargetFields({ form }: { form: Form }) {
 
 const SAVE_LABEL: Record<PlanFormMode['kind'], string> = { create: 'Save draft', edit: 'Save draft', 'new-version': 'Create version' };
 
+function SaveButton({ form, mode, onSave }: { form: Form; mode: PlanFormMode; onSave: () => Promise<void> }) {
+  if (mode.kind === 'new-version') return <CreateVersionConfirm plan={mode.plan} version={mode.version} pending={form.pending} validate={form.validate} onConfirm={onSave} />;
+  return (
+    <Button onClick={() => void onSave()} disabled={form.pending} data-testid="plan-save">
+      {SAVE_LABEL[mode.kind]}
+    </Button>
+  );
+}
+
 /** Plan header and version content: no default rate anywhere — the targets come from the server preview. */
 export function PlanForm({ mode, refs, cancelTo, onSaved }: PlanFormProps) {
   const form = usePlanForm(mode, refs.timezone);
+  useUnsavedChangesGuard(form.dirty);
   const save = async () => {
     const planId = await form.submit();
     if (planId) onSaved(planId);
@@ -91,9 +104,7 @@ export function PlanForm({ mode, refs, cancelTo, onSaved }: PlanFormProps) {
       {form.values.basis === 'manual' && <ManualTargetsEditor rows={form.values.manualTargets ?? []} slices={form.values.slices} timezone={refs.timezone} errors={form.errors} onChange={(rows) => form.set('manualTargets', rows)} />}
       <RefusalNotice error={form.error} timezone={refs.timezone} />
       <div className="flex gap-2">
-        <Button onClick={save} disabled={form.pending} data-testid="plan-save">
-          {SAVE_LABEL[mode.kind]}
-        </Button>
+        <SaveButton form={form} mode={mode} onSave={save} />
         <Button asChild variant="outline">
           <Link to={cancelTo}>Cancel</Link>
         </Button>

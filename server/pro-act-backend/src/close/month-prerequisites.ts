@@ -1,5 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { AdjustmentTotal, MATERIAL_KINDS } from '../domain/close/materiality';
+import { planCoveredSql } from './plan-coverage-sql';
 
 /** How many open items a month close view lists (the counts are always complete). */
 export const PREREQUISITE_LIST_LIMIT = 50;
@@ -12,6 +13,8 @@ export interface PendingPeriod {
   shiftName: string | null;
   /** latest revision's lifecycle (`none` = never reconciled; `stale` = in review with changed inputs) */
   workflow: string;
+  /** the plan the period belongs to (for a link to the period page), when its slices were resolved */
+  planId: string | null;
 }
 
 export interface OpenProposal {
@@ -56,11 +59,12 @@ export interface MonthDates {
 
 /**
  * Periods of the month by operational date with their latest revision that is not cancelled; an excluded
- * period that was never reconciled needs no approval. $1 tenant, $2 first date, $3 end date (exclusive).
+ * period that was never reconciled needs no approval, nor does a period no approved plan covers (owner
+ * decision 2026-10-19: `month-uncovered.ts` lists those as information). $1 tenant, $2 first date, $3 end date (exclusive).
  * Uses IDX_production_periods_tenant_date and UQ_accounting_revisions_period_revision.
  */
 const MONTH_PERIODS = `WITH m AS (
-  SELECT p."id", p."unit_id", p."local_date", p."shift_name", p."utc_start",
+  SELECT p."id", p."unit_id", p."local_date", p."shift_name", p."utc_start", p."selected_plan_version_id",
          CASE WHEN r."lifecycle" IS NULL THEN 'none'
               WHEN r."lifecycle" = 'in_review' AND r."is_stale" THEN 'stale'
               ELSE r."lifecycle"::text END AS "workflow"
@@ -69,7 +73,7 @@ const MONTH_PERIODS = `WITH m AS (
                         WHERE ar."period_id" = p."id" AND ar."lifecycle" <> 'cancelled'
                         ORDER BY ar."revision" DESC LIMIT 1) r ON true
    WHERE p."tenant_id" = $1 AND p."local_date" >= $2 AND p."local_date" < $3
-     AND NOT (p."is_excluded" AND r."lifecycle" IS NULL))`;
+     AND NOT (p."is_excluded" AND r."lifecycle" IS NULL) AND ${planCoveredSql('p')})`;
 
 const paramsOf = (month: MonthDates) => [
   month.tenantId,
@@ -97,8 +101,9 @@ async function pendingPeriods(
   const rows: Array<Record<string, string | null>> = await manager.query(
     `${MONTH_PERIODS}
      SELECT m."id", m."unit_id", u."name" AS "unit_name", to_char(m."local_date", 'YYYY-MM-DD') AS "local_date",
-            m."shift_name", m."workflow"
+            m."shift_name", m."workflow", pv."plan_id"::text AS "plan_id"
        FROM m LEFT JOIN "units" u ON u."id" = m."unit_id"
+       LEFT JOIN "plan_versions" pv ON pv."id" = m."selected_plan_version_id"
       WHERE m."workflow" <> 'approved'
       ORDER BY m."local_date", m."utc_start", m."id" LIMIT ${PREREQUISITE_LIST_LIMIT}`,
     paramsOf(month),
@@ -110,6 +115,7 @@ async function pendingPeriods(
     localDate: r.local_date as string,
     shiftName: r.shift_name,
     workflow: r.workflow as string,
+    planId: r.plan_id,
   }));
 }
 

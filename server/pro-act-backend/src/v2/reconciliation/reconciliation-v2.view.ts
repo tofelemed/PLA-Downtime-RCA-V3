@@ -9,6 +9,7 @@ import {
   ManualProposalDetail,
   manualDetailOf,
 } from '../../reconciliation/manual-proposal';
+import { ProposalAfterValues } from './proposal-after-values';
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
 import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
@@ -297,12 +298,17 @@ export interface ChangeProposalV2View {
   createdRevisionId: string | null;
   /** SME R4: who proposed a manual correction, its reason and evidence (null for a system proposal) */
   manual: ManualProposalDetail | null;
+  /** the loss value of the revision an acceptance opened (null until accepted) — QA audit P-1 */
+  valueAfter: ProposalAfterValues | null;
   createdAt: string;
   updatedAt: string;
   rowVersion: number;
 }
 
-export function toProposalView(p: PeriodChangeProposal): ChangeProposalV2View {
+export function toProposalView(
+  p: PeriodChangeProposal,
+  valueAfter: ProposalAfterValues | null = null,
+): ChangeProposalV2View {
   return {
     id: p.id,
     periodId: p.periodId,
@@ -320,6 +326,7 @@ export function toProposalView(p: PeriodChangeProposal): ChangeProposalV2View {
     resolutionReason: p.resolutionReason,
     createdRevisionId: p.createdRevisionId,
     manual: manualDetailOf(p),
+    valueAfter,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
     rowVersion: p.rowVersion,

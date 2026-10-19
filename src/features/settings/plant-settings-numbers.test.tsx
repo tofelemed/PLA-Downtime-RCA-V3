@@ -96,7 +96,7 @@ describe('the digits setting applies to every displayed number', () => {
         <Screen />
       </QueryClientProvider>,
     );
-    expect(screen.getByTestId('quantity')).toHaveTextContent('12,345.68t');
+    expect(screen.getByTestId('quantity')).toHaveTextContent('12,345.68 t');
     expect(tickTexts()).toContain('1,300');
     expect(screen.getByText('21–40 of 1,234')).toBeInTheDocument();
     expect(screen.getByText('4,321')).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('the digits setting applies to every displayed number', () => {
     server.plant = plant('persian');
     await act(() => applyPlantSettings(client, 'tenant-a', server.plant as PlantView));
 
-    await waitFor(() => expect(screen.getByTestId('quantity')).toHaveTextContent('۱۲٬۳۴۵٫۶۸t'));
+    await waitFor(() => expect(screen.getByTestId('quantity')).toHaveTextContent('۱۲٬۳۴۵٫۶۸ t'));
     expect(tickTexts()).toContain('۱٬۳۰۰');
     expect(screen.getByText('۲۱–۴۰ of ۱٬۲۳۴')).toBeInTheDocument();
     expect(screen.getByText('Page ۲ of ۶۲')).toBeInTheDocument();

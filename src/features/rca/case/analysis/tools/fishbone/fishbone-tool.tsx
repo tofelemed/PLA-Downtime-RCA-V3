@@ -13,6 +13,7 @@ import { useToolDraft } from '../tool-draft';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { AddCauseDialog, type NewCause } from './add-cause-dialog';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { plural } from '@/features/ux-kit/format/plural';
 
 const defaultCategories = (): FishboneCategory[] =>
   ANALYSIS_SETTINGS.fishbone.categories.map((name, index) => ({ id: `cat-${index + 1}`, name, causes: [] }));
@@ -88,7 +89,7 @@ function Editor({ record, save }: { record: ToolRecord<'fishbone'>; save: (body:
         <Input id="fishbone-effect" value={content.effect} maxLength={1000} disabled={readOnly} onChange={(e) => setContent({ ...content, effect: e.target.value })} />
       </div>
       <p className="text-sm text-muted-foreground">
-        {number(causes.length)} cause(s), {number(causes.filter((c) => c.isPrimary).length)} primary, {number(causes.filter((c) => c.likelihood === 'High').length)} of high likelihood.
+        {plural(causes.length, 'cause', 'causes', number)}, {number(causes.filter((c) => c.isPrimary).length)} primary, {number(causes.filter((c) => c.likelihood === 'High').length)} of high likelihood.
       </p>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {content.categories.map((category) => (

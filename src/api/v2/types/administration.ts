@@ -36,6 +36,8 @@ export interface UserView {
   manageable: boolean;
   /** the caller may grant or revoke this user's roles in the acting plant */
   accessManageable: boolean;
+  /** roles in the acting plant (grants, else the legacy role's D06 fallback in its home plant); QA 2026-10-19 */
+  plantRoles?: string[];
 }
 
 export interface CreateUserInput {

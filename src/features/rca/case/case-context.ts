@@ -4,8 +4,12 @@ import type { RcaCaseView } from '@/api/v2/types/rca';
 /** The case every sub-page of `/rca/:caseId/*` works on, loaded once by the workspace. */
 export interface CaseWorkspaceValue {
   rca: RcaCaseView;
-  /** true for users who may read but not write RCA cases */
+  /** true when nothing may be changed here: the user cannot write RCA cases, or the investigation is closed */
   readOnly: boolean;
+  /** the user's roles may write RCA cases (workflow moves such as Reopen stay available on a closed one) */
+  canWrite: boolean;
+  /** QA H1: the investigation is closed and frozen — reopening it is the only way to change it */
+  closed: boolean;
   /** base path of the case, `/rca/<id>` */
   basePath: string;
 }

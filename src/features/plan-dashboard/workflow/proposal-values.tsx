@@ -1,8 +1,8 @@
 import type { ChangeProposalView } from '@/api/v2/types/reconciliation';
 import { formatCurrencyAmount } from '@/features/display-currency/money-format';
-import { DEFAULT_BASIS_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { DEFAULT_BASIS_LABELS, labelOf, REVISION_LIFECYCLE_LABELS } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { proposalValuesOf, type ProposalAmount } from '../model/proposal-labels';
+import { proposalValuesOf, type ProposalAmount, type ProposalValues as Values } from '../model/proposal-labels';
 
 function AmountText({ amount }: { amount: ProposalAmount }) {
   const { digits } = useNumberFormat();
@@ -10,41 +10,59 @@ function AmountText({ amount }: { amount: ProposalAmount }) {
   return <>{formatCurrencyAmount(amount.amount, amount.currency, digits)}</>;
 }
 
+function Amounts({ values }: { values: Values }) {
+  return (
+    <>
+      {values.amounts.map((a, i) => (
+        <span key={a.currency}>
+          {i > 0 && ' · '}
+          <AmountText amount={a} />
+        </span>
+      ))}
+    </>
+  );
+}
+
+/** The value after: the accepted revision's once it exists, else why it is not known (yet). */
+function AfterValue({ p }: { p: ChangeProposalView }) {
+  const preview = proposalValuesOf(p.after);
+  if (preview) return <Amounts values={preview} />;
+  const after = p.valueAfter;
+  if (after?.values) return <Amounts values={after.values} />;
+  if (after) return <>Not valued yet (revision {after.revision})</>;
+  if (p.state === 'dismissed') return <>Dismissed: the approved value stays.</>;
+  return <>Calculated when the proposal is accepted: the new draft revision is revalued with the inputs in force.</>;
+}
+
+function afterLabel(p: ChangeProposalView): string {
+  const after = p.valueAfter;
+  if (!after) return 'Loss value after';
+  const view = after.values ? `, ${labelOf(DEFAULT_BASIS_LABELS, after.values.view)}` : '';
+  return `Loss value after (revision ${after.revision}, ${labelOf(REVISION_LIFECYCLE_LABELS, after.lifecycle).toLowerCase()}${view})`;
+}
+
 /**
- * The loss value of a change proposal (Marun E2E): the approved value in the policy's default view, one
- * figure per reporting currency, as the server stored it; the new value is calculated when the proposal is
- * accepted and the new draft revision is revalued. Nothing is converted or added up here.
+ * The loss value of a change proposal (Marun E2E, QA audit P-1): the approved value in the policy's
+ * default view, one figure per reporting currency, as the server stored it; the value after is the
+ * accepted revision's, shown once the server has it. Nothing is converted or added up here.
  */
 export function ProposalValues({ p }: { p: ChangeProposalView }) {
   const before = proposalValuesOf(p.before);
-  const after = proposalValuesOf(p.after);
-  if (!before && !after) return null;
+  if (!before && !p.valueAfter?.values && !proposalValuesOf(p.after)) return null;
   return (
     <dl className="grid gap-1 text-xs sm:grid-cols-2" data-testid="proposal-values">
       {before && (
         <div>
           <dt className="text-muted-foreground">Loss value before (approved, {labelOf(DEFAULT_BASIS_LABELS, before.view)})</dt>
           <dd>
-            {before.amounts.map((a, i) => (
-              <span key={a.currency}>
-                {i > 0 && ' · '}
-                <AmountText amount={a} />
-              </span>
-            ))}
+            <Amounts values={before} />
           </dd>
         </div>
       )}
       <div>
-        <dt className="text-muted-foreground">Loss value after</dt>
-        <dd>
-          {after
-            ? after.amounts.map((a, i) => (
-                <span key={a.currency}>
-                  {i > 0 && ' · '}
-                  <AmountText amount={a} />
-                </span>
-              ))
-            : 'Calculated when the proposal is accepted: the new draft revision is revalued with the inputs in force.'}
+        <dt className="text-muted-foreground">{afterLabel(p)}</dt>
+        <dd data-testid="proposal-value-after">
+          <AfterValue p={p} />
         </dd>
       </div>
     </dl>

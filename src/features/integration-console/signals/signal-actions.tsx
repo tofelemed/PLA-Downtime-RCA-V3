@@ -12,6 +12,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { ToneBadge } from '../components/tone-badge';
 import { formatValue } from '../model/mapping-draft';
+import { plural } from '@/features/ux-kit/format/plural';
 
 const lastDay = (): InstantRange => rollingWindow(DAY_MS);
 
@@ -19,7 +20,7 @@ function PreviewResult({ engine, samples, result }: { engine: string; samples: n
   return (
     <div data-testid="signal-preview" className="space-y-1">
       <p>
-        {labelOf(SIGNAL_ENGINE_LABELS, engine)} · {samples} sample(s)
+        {labelOf(SIGNAL_ENGINE_LABELS, engine)} · {plural(samples, 'sample', 'samples')}
       </p>
       {typeof result === 'object' && result !== null && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 text-xs">

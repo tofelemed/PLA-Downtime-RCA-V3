@@ -2,7 +2,9 @@ import { lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AnalysisModeSelect } from '@/features/analysis-navigation/analysis-mode-select';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import type { AnalyticsScope } from '../model/analytics-scope';
+import { breakdownModesFor } from '../model/money-access';
 
 const PAGES = {
   tree: lazy(() => import('./loss-tree-tab').then((module) => ({ default: module.LossTreeTab }))),
@@ -15,11 +17,13 @@ export interface LossesTabProps { scope: AnalyticsScope; onChange: (patch: Parti
 
 export function LossesTab({ scope, onChange }: LossesTabProps) {
   const [params] = useSearchParams();
-  const key = params.get('breakdown');
+  const modes = breakdownModesFor(MODES, useCapabilities().canViewMoney);
+  const asked = params.get('breakdown');
+  const key = modes.some((mode) => mode.value === asked) ? asked : null;
   const Content = PAGES[key && key in PAGES ? key as keyof typeof PAGES : 'tree'];
   return (
     <div className="space-y-4">
-      <AnalysisModeSelect param="breakdown" label="Explore" options={MODES} />
+      <AnalysisModeSelect param="breakdown" label="Explore" options={modes} />
       {key === 'loss-events' && <p className="text-xs text-muted-foreground">Events are current operational records for these units and dates; ledger and approved-revision filters do not restrict this list.</p>}
       <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={onChange} /></Suspense>
     </div>

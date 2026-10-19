@@ -1,6 +1,7 @@
 import type { BulkCodePreviewView, CodingSnapshotView } from '@/api/v2/types/event-operations';
 import type { BulkTarget } from '@/api/v2/types/events';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import {
   BULK_EXCLUSION_LABELS,
   CODING_STATE_LABELS,
@@ -10,6 +11,7 @@ import {
   useAssetNames,
 } from '@/features/ux-kit/labels';
 import { usePlantFormat } from '../hooks/use-plant-format';
+import { bulkChanges } from '../model/bulk-preview';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 
@@ -50,6 +52,8 @@ export function BulkPreviewTable({ preview, events, show }: BulkPreviewTableProp
   const { dateTime } = usePlantFormat();
   const codingText = useCodingText();
   const extra = useExtraColumns(show);
+  const changes = bulkChanges(preview);
+  const unchanged = preview.count - changes;
   const byId = new Map(events.map((event) => [event.id, event]));
   const eventText = (id: string) => {
     const event = byId.get(id);
@@ -58,15 +62,17 @@ export function BulkPreviewTable({ preview, events, show }: BulkPreviewTableProp
   const columns: DataTableColumn<PreviewItem>[] = [
     { id: 'event', header: 'Event', nowrap: true, cell: (item) => eventText(item.eventId) },
     { id: 'before', header: 'Before', cell: (item) => codingText(item.before) },
-    { id: 'after', header: 'After', cell: (item) => codingText(item.after) },
+    { id: 'after', header: 'After', cell: (item) => (item.changed === false ? `${codingText(item.after)} · no change` : codingText(item.after)) },
     ...extra,
   ];
   return (
     <div className="space-y-3" data-testid="bulk-preview">
       <p className="text-sm">
-        <strong data-testid="bulk-preview-count">{number(preview.count)}</strong> events change ·{' '}
+        <strong data-testid="bulk-preview-count">{number(changes)}</strong> {changes === 1 ? 'event changes' : 'events change'} ·{' '}
+        {unchanged > 0 && <><strong data-testid="bulk-preview-unchanged">{number(unchanged)}</strong> already coded this way ·{' '}</>}
         <strong data-testid="bulk-preview-exclusions">{number(preview.exclusions.length)}</strong> excluded
       </p>
+      {changes === 0 && <DisabledReason id="bulk-nothing" reason="Nothing to apply: every selected event already has these codes. Choose other codes to change them." />}
       <DataTable caption="Coding before and after" columns={columns} rows={preview.items} getRowKey={(item) => item.eventId} density="compact" />
       {preview.exclusions.length > 0 && (
         <ul className="text-xs text-destructive" aria-label="Excluded events">
@@ -77,13 +83,15 @@ export function BulkPreviewTable({ preview, events, show }: BulkPreviewTableProp
           ))}
         </ul>
       )}
-      <div className="text-xs" aria-label="Windows that will recalculate">
-        <span className="font-medium">Recalculates: </span>
-        {preview.affectedWindows.map((window) => (
-          <span key={`${window.unitId}:${window.from}`} className="mr-2 inline-block">
-            {env.unitName(window.unitId)} {dateTime(window.from)} – {window.to ? dateTime(window.to) : 'ongoing'}
-          </span>
-        ))}
+      <div className="text-xs">
+        <span className="font-medium" id="bulk-recalculates">Recalculates:</span>
+        <ul aria-labelledby="bulk-recalculates" className="ml-4 list-disc">
+          {preview.affectedWindows.map((window) => (
+            <li key={`${window.unitId}:${window.from}`}>
+              {env.unitName(window.unitId)}: {dateTime(window.from)} – {window.to ? dateTime(window.to) : 'ongoing'}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

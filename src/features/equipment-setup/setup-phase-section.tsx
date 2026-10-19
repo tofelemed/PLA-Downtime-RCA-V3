@@ -4,13 +4,13 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { useEquipmentJourney } from './journey-context';
 import { emptySelection } from './journey-storage';
-import { SETUP_STEPS, stepPrerequisite, type SetupPhase, type SetupStep } from './setup-steps';
+import { canOpenStep, SETUP_STEPS, stepPrerequisite, type SetupPhase, type SetupStep } from './setup-steps';
 
 function SetupStepCard({ step, number }: { step: SetupStep; number: number }) {
   const context = useEquipmentJourney();
   const capabilities = useCapabilities();
   const restriction = stepPrerequisite(step, context?.journey ?? emptySelection);
-  const allowed = capabilities[step.capability];
+  const allowed = canOpenStep(step, capabilities);
   const current = context?.journey?.stepId === step.id;
   return <li className="rounded-lg border bg-background p-4" aria-current={current ? 'step' : undefined}>
     <div className="flex flex-wrap items-center justify-between gap-3">

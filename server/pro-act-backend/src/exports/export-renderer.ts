@@ -139,7 +139,7 @@ export class ExportRenderer {
     await writer.write(CSV_BOM + records.map(csvRow).join('') + '\r\n');
     await writer.write(csvRow(REPORT_COLUMNS[job.reportType]));
     return this.eachSource(job, checkpoint, async (source) => {
-      const rows = reportRows(job.reportType, source);
+      const rows = reportRows(job.reportType, source, job.labels);
       writer.rows += rows.length;
       await writer.write(rows.map(csvRow).join(''));
     });

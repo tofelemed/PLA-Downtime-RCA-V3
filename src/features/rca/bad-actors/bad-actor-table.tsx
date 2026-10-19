@@ -1,9 +1,11 @@
+import { useFailureDictionary } from '@/api/v2/queries/failure-dictionary';
 import type { BadActorItemView, BadActorReportView } from '@/api/v2/types/bad-actors';
 import { Badge } from '@/components/ui/badge';
 import { currencyDigits } from '@/features/display-currency/money-format';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { Quantity } from '@/features/ux-kit/quantity';
+import { humanize } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { EventRcaChip } from '../components/event-rca-chip';
 import { StartRcaLink } from '../components/start-rca-link';
@@ -46,12 +48,28 @@ function TriggerCell({ item }: { item: BadActorItemView }) {
         </span>
       )}
       <EventRcaChip rcaState={rcaStateOfTrigger(trigger)} caseId={trigger.rcaId} />
-      {!trigger.rcaId && <StartRcaLink context={badActorStartRca(item)} label={`Start an RCA for ${assetText(item)}`} />}
+      {!trigger.rcaId && <StartRcaLink context={badActorStartRca(item)} label={`Start investigation for ${assetText(item)}`} />}
     </span>
   );
 }
 
-function columnsOf(report: BadActorReportView, number: (value: number) => string): Array<DataTableColumn<BadActorItemView>> {
+type ModeName = (identity: string | null) => string;
+
+/**
+ * The failure mode in words (QA PLA M5): the dictionary name of a `mode:<code>` identity (codes are matched
+ * case-insensitively, as the server normalizes them), else the humanized text; never the raw key.
+ */
+function useFailureModeName(enabled: boolean): ModeName {
+  const { entries } = useFailureDictionary(enabled);
+  return (identity) => {
+    if (!identity?.startsWith('mode:')) return failureModeText(identity);
+    const code = failureModeText(identity);
+    const entry = entries.find((e) => e.kind === 'failure_mode' && e.code.trim().toLowerCase() === code);
+    return entry?.name ?? humanize(code);
+  };
+}
+
+function columnsOf(report: BadActorReportView, number: (value: number) => string, modeName: ModeName): Array<DataTableColumn<BadActorItemView>> {
   const columns: Array<DataTableColumn<BadActorItemView>> = [
     { id: 'rank', header: '#', align: 'right', cell: (item) => number(item.rank) },
     {
@@ -64,7 +82,7 @@ function columnsOf(report: BadActorReportView, number: (value: number) => string
       ),
     },
   ];
-  if (report.groupBy === 'failure_mode') columns.push({ id: 'mode', header: 'Failure mode', cell: (item) => failureModeText(item.failureMode) });
+  if (report.groupBy === 'failure_mode') columns.push({ id: 'mode', header: 'Failure mode', cell: (item) => modeName(item.failureMode) });
   return [
     ...columns,
     { id: 'quantity', header: 'Approved lost quantity', align: 'right', nowrap: true, cell: (item) => (item.quantity === null ? '—' : <Quantity value={item.quantity} uom={report.uom} />) },
@@ -78,10 +96,12 @@ function columnsOf(report: BadActorReportView, number: (value: number) => string
 /** The server's ranked items as they come (rank order is the server's); nothing is summed or re-sorted. */
 export function BadActorTable({ report }: { report: BadActorReportView }) {
   const { number } = useNumberFormat();
+  const modeName = useFailureModeName(report.groupBy === 'failure_mode');
   return (
     <DataTable
       caption="Bad actors"
-      columns={columnsOf(report, number)}
+      columns={columnsOf(report, number, modeName)}
+      scrollable
       rows={report.items}
       getRowKey={(item) => item.key}
       empty={{ text: 'No approved loss or stops in this window.' }}

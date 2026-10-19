@@ -116,7 +116,7 @@ test.describe('ADM-07 legacy screens on Partner Plant (flags off)', () => {
     // RCA has one version (owner decision): the v2 case list, even with v2.rca off in Partner Plant
     await page.goto('/rca');
     await expect(page.getByTestId('rca-v2')).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByRole('heading', { name: 'Root cause analysis', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'RCA Analysis', level: 1 })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('adm-07c-rca.png'), fullPage: true });
     // owner 18 Oct 2026: Integration is SuperAdmin-only; Lucas (OrgAdmin) has no menu entry and a direct visit shows no console
     await expect(page.locator('nav a[href="/connectivity"]')).toHaveCount(0);

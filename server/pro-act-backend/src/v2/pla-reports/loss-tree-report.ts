@@ -12,7 +12,10 @@ import {
 } from './pla-reports.dto';
 
 export interface LossTreeGroupView {
-  /** reason / impact code id, OEE component, kind or unit id; null = not coded */
+  /**
+   * reason / impact code id, OEE component, kind, unit id or cause event id; null = not coded (by reason:
+   * an uncoded line with a cause event; quality lines from lot dispositions are the `quality_dispositions` group)
+   */
   key: string | null;
   label: string | null;
   /** unit of measure (qty) or currency (value metrics) */
@@ -24,6 +27,8 @@ export interface LossTreeGroupView {
   /** Pareto line: this group and every larger one before it */
   cumulativeShare: string | null;
   lines: number;
+  /** lines of the group that explain an event (a cause event); 0 = manual or disposition lines only (no event to open) */
+  eventLines: number;
   status: 'valued' | 'unvalued' | 'mixed' | 'quantity';
   /** SME V7: some amount was converted with an authorised provisional FX rate (reason fx_rate_provisional) */
   fxProvisional: boolean;
@@ -67,6 +72,7 @@ interface CellRow {
   unit: string | null;
   amount: string | null;
   lines: number;
+  event_lines: number;
   valued: number;
   unvalued: number;
   fx_missing: number;
@@ -74,12 +80,16 @@ interface CellRow {
   reasons: string[] | null;
 }
 
+/** Quality lines without a cause event come from lot dispositions: their own group, never "Not coded" (QA PLA). */
+export const QUALITY_DISPOSITIONS = 'quality_dispositions';
+
 const GROUP_SQL: Readonly<Record<LossTreeGroup, string>> = {
-  reason: `l."reason_code_id"::text`,
+  reason: `COALESCE(l."reason_code_id"::text, CASE WHEN l."kind"::text = 'quality' AND l."cause_event_id" IS NULL THEN '${QUALITY_DISPOSITIONS}' END)`,
   impact: `l."impact_code_id"::text`,
   oee: `l."oee_component"`,
   kind: `l."kind"::text`,
   unit: `s."unit_id"::text`,
+  event: `l."cause_event_id"::text`,
 };
 
 const LABELS: Partial<Record<LossTreeGroup, string>> = {
@@ -96,7 +106,8 @@ const WORDS: Readonly<Record<string, string>> = {
   transition_allowance: 'Grade transition (within standard)',
   transition_excess: 'Grade transition overrun',
   bridge: 'Bridge',
-  unaccounted_classified: 'Unaccounted (classified)',
+  unaccounted_classified: 'Unaccounted',
+  [QUALITY_DISPOSITIONS]: 'Quality (dispositions)',
 };
 
 export const LOSS_TREE_BASIS =
@@ -110,12 +121,13 @@ export const LOSS_TREE_BASIS =
 const LINES = `FROM shown s
   JOIN LATERAL (
     SELECT a."id" AS "line_id", 'approved' AS "origin", a."reason_code_id", a."impact_code_id",
-           a."oee_component", a."kind", a."uom", a."quantity"
+           a."oee_component", a."kind", a."uom", a."quantity", a."cause_event_id"
       FROM "approved_loss_lines" a
      WHERE $6::text = 'plan' AND s."lifecycle" = 'approved' AND a."revision_id" = s."revision_id"
        AND a."tenant_id" = $1 AND a."kind"::text = ANY($7::text[])
     UNION ALL
-    SELECT r."id", 'run', r."reason_code_id", r."impact_code_id", r."oee_component", r."kind", r."uom", r."quantity"
+    SELECT r."id", 'run', r."reason_code_id", r."impact_code_id", r."oee_component", r."kind", r."uom", r."quantity",
+           r."cause_event_id"
       FROM "loss_lines" r
      WHERE r."run_id" = s."run_id" AND r."tenant_id" = $1 AND r."period_id" = s."period_id"
        AND r."ledger" = $6::loss_ledger AND r."state" = 'active' AND r."source" <> 'candidate_superseded'
@@ -131,7 +143,7 @@ async function quantityCells(
 ): Promise<CellRow[]> {
   return manager.query<CellRow[]>(
     `${SHOWN} SELECT ${spec.groupSql} AS "group_key", l."uom" AS "unit", sum(l."quantity")::text AS "amount",
-            count(*)::int AS "lines", 0 AS "valued", 0 AS "unvalued", 0 AS "fx_missing", 0 AS "fx_provisional",
+            count(*)::int AS "lines", count(l."cause_event_id")::int AS "event_lines", 0 AS "valued", 0 AS "unvalued", 0 AS "fx_missing", 0 AS "fx_provisional",
             NULL AS "reasons"
        ${LINES}
       GROUP BY 1, 2`,
@@ -152,6 +164,7 @@ async function valueCells(
   return manager.query<CellRow[]>(
     `${SHOWN} SELECT ${spec.groupSql} AS "group_key", v."currency" AS "unit",
             (sum(v."amount") FILTER (WHERE v."status" = 'valued'))::text AS "amount", count(*)::int AS "lines",
+            count(l."cause_event_id")::int AS "event_lines",
             count(*) FILTER (WHERE v."status" = 'valued')::int AS "valued",
             count(*) FILTER (WHERE v."status" IS DISTINCT FROM 'valued')::int AS "unvalued",
             count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NULL)::int AS "fx_missing",
@@ -195,14 +208,23 @@ async function labelsOf(
   groupBy: LossTreeGroup,
   keys: string[],
 ): Promise<Map<string, string>> {
+  // an event has no group label: the client lists the events themselves
+  if (groupBy === 'event') return new Map();
   const sql = LABELS[groupBy];
   if (!sql) return new Map(keys.map((k) => [k, WORDS[k] ?? k]));
-  if (keys.length === 0) return new Map();
+  const words = keys.flatMap(
+    (k): Array<[string, string]> => (WORDS[k] ? [[k, WORDS[k]]] : []),
+  );
+  const ids = keys.filter((k) => !WORDS[k]);
+  if (ids.length === 0) return new Map(words);
   const rows = await manager.query<Array<{ id: string; label: string }>>(sql, [
-    keys,
+    ids,
     scope.tenantId,
   ]);
-  return new Map(rows.map((r) => [r.id, r.label]));
+  return new Map([
+    ...words,
+    ...rows.map((r): [string, string] => [r.id, r.label]),
+  ]);
 }
 
 export interface LossTreeRequest {

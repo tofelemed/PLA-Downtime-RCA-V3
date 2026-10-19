@@ -45,11 +45,25 @@ const oneOf = <T extends string>(value: unknown, allowed: readonly T[], fallback
 
 const stringList = (value: unknown): string[] => (Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : []);
 
-export function policyFormOf(source: ValuationPolicyView | null): PolicyFormValues {
+/**
+ * The default basis of the approved version in force at `now` (QA L19: a fresh "New policy version"
+ * starts from it, not from the economic view); null when none is in force.
+ */
+export function inForceBasis(policies: readonly ValuationPolicyView[], now: Date = new Date()): DefaultBasis | null {
+  const at = now.getTime();
+  const inForce = policies
+    .filter((policy) => policy.approved && Date.parse(policy.effectiveFrom) <= at && (!policy.effectiveTo || Date.parse(policy.effectiveTo) > at))
+    .sort((a, b) => b.version - a.version)[0];
+  const basis = inForce?.body.defaultBasis;
+  return typeof basis === 'string' && (DEFAULT_BASES as readonly string[]).includes(basis) ? (basis as DefaultBasis) : null;
+}
+
+/** The form of a copy of `source`, or of a fresh version whose basis is `freshBasis` (the in-force one). */
+export function policyFormOf(source: ValuationPolicyView | null, freshBasis: DefaultBasis | null = null): PolicyFormValues {
   const body = source?.body ?? {};
   const currencies = source && source.reportingCurrencies.length > 0 ? source.reportingCurrencies : [...REPORTING_CURRENCIES];
   return {
-    defaultBasis: oneOf(body.defaultBasis, DEFAULT_BASES, source ? 'contribution_margin' : 'economic_impact'),
+    defaultBasis: oneOf(body.defaultBasis, DEFAULT_BASES, source ? 'contribution_margin' : freshBasis ?? 'economic_impact'),
     timeBasisRule: oneOf(body.timeBasisRule, TIME_BASIS_RULES, 'exclusive'),
     reportingCurrencies: [...currencies],
     fxPolicy: oneOf(body.fxPolicy, FX_POLICIES, 'snapshot'),

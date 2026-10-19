@@ -96,9 +96,14 @@ function windowErrors(values: PlanFormValues, timezone: string): FieldErrors {
   return errors;
 }
 
-export function validatePlanForm(values: PlanFormValues, timezone: string, creating: boolean): FieldErrors {
+/**
+ * Request-shape checks of the plan form. A new version of an approved plan (`needsReason`) states why it
+ * changes the approved targets (QA P-3), as the approval of that version will.
+ */
+export function validatePlanForm(values: PlanFormValues, timezone: string, creating: boolean, needsReason = false): FieldErrors {
   const errors = windowErrors(values, timezone);
   if (creating && !values.name.trim()) errors.name = 'Enter a name';
+  if (needsReason && !values.changeReason.trim()) errors.changeReason = 'Say why this version changes the approved plan';
   if (!values.unitId) errors.unitId = 'Choose a unit';
   if (values.slices.length === 0) errors.slices = 'Add at least one product slice';
   values.slices.forEach((slice, index) => {

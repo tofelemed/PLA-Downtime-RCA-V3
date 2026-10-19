@@ -1,5 +1,6 @@
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
+import { ExportLabels } from '../export-labels';
 import { ExportPresentation } from '../pdf/pdf-model';
 
 export const EXPORT_REPORT_TYPES = ['period_summary', 'loss_lines'] as const;
@@ -87,6 +88,10 @@ export class ExportJob extends TenantScopedEntity {
   /** PDF only: plant display settings and display currency pinned at request time (null for CSV) */
   @Column({ name: 'presentation', type: 'jsonb', nullable: true })
   presentation: ExportPresentation | null;
+
+  /** requester name, plant clock and reason code names pinned at request time (null on older jobs) */
+  @Column({ name: 'labels', type: 'jsonb', nullable: true })
+  labels: ExportLabels | null;
 
   /** content scope; null = tenant-wide (needs a tenant-wide grant to see or download) */
   @Column({ name: 'unit_ids', type: 'uuid', array: true, nullable: true })

@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ActionIcon, StatusIcon } from '@/lib/icons';
 import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
 import { toEventQuery, type EventFilterState } from '../model/event-filters';
+import { withByteOrderMark } from '../model/csv-text';
 import { useEventHubEnv } from '../use-event-hub-env';
 
 /** The list filters without paging: the export covers every matching event (server limit 50,000). */
@@ -16,7 +17,7 @@ function exportQuery(filters: EventFilterState): QueryParams {
 }
 
 function saveCsv(text: string, name: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  const url = URL.createObjectURL(new Blob([withByteOrderMark(text)], { type: 'text/csv;charset=utf-8' }));
   const link = document.createElement('a');
   link.href = url;
   link.download = name;
@@ -24,7 +25,7 @@ function saveCsv(text: string, name: string): void {
   URL.revokeObjectURL(url);
 }
 
-/** CSV of the filtered events (ISO UTC times, names not ids), built by the server from the same filters. */
+/** CSV of the filtered events (UTC and plant times, names not ids, labelled keys), built by the server from the same filters. */
 export function ExportEventsButton({ filters }: { filters: EventFilterState }) {
   const { toast } = useToast();
   const { timezone } = useEventHubEnv();

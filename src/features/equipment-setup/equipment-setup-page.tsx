@@ -6,7 +6,7 @@ import { UnitSelect } from '@/features/master-data/components/unit-select';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { useEquipmentJourney } from './journey-context';
 import { emptySelection } from './journey-storage';
-import { SETUP_PHASES, setupStep, stepPrerequisite } from './setup-steps';
+import { canOpenStep, SETUP_PHASES, setupStep, stepPrerequisite } from './setup-steps';
 import { SetupPhaseSection } from './setup-phase-section';
 
 /** Start or resume the real configuration pages; readiness comes from the backend previews/periods. */
@@ -22,8 +22,8 @@ export function EquipmentSetupPage() {
         <p className="text-sm">Start with the plant selected in the header. Reuse existing plant settings, products, code libraries and published calendars when they apply; create only the records missing for this equipment.</p>
         <p className="text-sm text-muted-foreground">Phases 1–4 configure the equipment. Phases 5–6 prove its first production period and show the results. Your place is remembered in this browser session for this user and plant.</p>
         {!context?.journey && <div className="max-w-sm"><UnitSelect id="setup-existing-unit" label="Existing production unit (optional)" value="" disabled={!context} onChange={(id) => context?.chooseUnit(id)} /></div>}
-        <Button disabled={!context || !capabilities[current.capability] || !!stepPrerequisite(current, selection)} onClick={() => context?.openStep(current.id)}>{context?.journey ? `Continue: ${current.title}` : 'Start equipment setup'}</Button>
-        <p className="text-xs text-muted-foreground">Automatic checks show saved evidence for their named requirements. A visited step is not proof of completion: save, publish or approve on its actual page, then review its checks. SuperAdmin can perform every role personally.</p>
+        <Button disabled={!context || !canOpenStep(current, capabilities) || !!stepPrerequisite(current, selection)} onClick={() => context?.openStep(current.id)}>{context?.journey ? `Continue: ${current.title}` : 'Start equipment setup'}</Button>
+        <p className="text-xs text-muted-foreground">Automatic checks show saved evidence for their named requirements. A visited step is not proof of completion: save, publish or approve on its actual page, then review its checks.{capabilities.isSuperAdmin ? ' SuperAdmin can perform every role personally.' : ''}</p>
       </section>
       <EquipmentReadiness>
       <div className="space-y-3" aria-label="Equipment setup phases">
