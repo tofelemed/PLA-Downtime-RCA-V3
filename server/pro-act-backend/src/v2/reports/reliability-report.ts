@@ -20,7 +20,7 @@ import {
 import { resolveAssets, ReportScope } from './report-scope';
 import { dataCoverage } from './data-coverage';
 
-const METRICS: readonly KpiMetric[] = [
+export const RELIABILITY_METRICS: readonly KpiMetric[] = [
   'mtbf',
   'mean_downtime_to_restore',
   'mttr',
@@ -31,7 +31,7 @@ export const FAILURE_DEFINITION =
 
 type Terms = Map<KpiMetric, GroupTerms>;
 
-function row(
+export function reliabilityRow(
   ids: { unitId: string; assetId: string | null; label: string | null },
   terms: Terms | undefined,
 ): ReliabilityRowView {
@@ -54,7 +54,10 @@ function row(
  * asset's own failures; restore and repair means from the asset's rows. An asset without failures keeps
  * the exposure and gets null with the reason, never a default.
  */
-function assetTerms(unit: Terms | undefined, own: Terms | undefined): Terms {
+export function assetTerms(
+  unit: Terms | undefined,
+  own: Terms | undefined,
+): Terms {
   const exposure = unit?.get('mtbf');
   const none = (base: GroupTerms | undefined): GroupTerms => ({
     numerator: ZERO,
@@ -112,23 +115,26 @@ export async function reliabilityReport(
 ): Promise<AnalyticsResponse<ReliabilityReportView>> {
   const units = await kpiGroups(manager, scope, {
     groupSql: TIME_GROUPS.unit,
-    metrics: METRICS,
+    metrics: RELIABILITY_METRICS,
     level: 'period',
     excludeUnknownTime: true,
   });
   const assetRows = await kpiGroups(manager, scope, {
     groupSql: `k."scope"->>'assetId'`,
-    metrics: METRICS,
+    metrics: RELIABILITY_METRICS,
     level: 'asset',
   });
   const assets = await assetUnits(manager, scope, query, assetRows);
   const stats = await periodStats(manager, scope);
   const data: ReliabilityReportView = {
     units: [...units.entries()].map(([unitId, terms]) =>
-      row({ unitId: unitId ?? '', assetId: null, label: null }, terms),
+      reliabilityRow(
+        { unitId: unitId ?? '', assetId: null, label: null },
+        terms,
+      ),
     ),
     assets: assets.map((a) =>
-      row(
+      reliabilityRow(
         { unitId: a.unitId, assetId: a.id, label: a.label },
         assetTerms(units.get(a.unitId), assetRows.get(a.id)),
       ),

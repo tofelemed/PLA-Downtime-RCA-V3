@@ -13,8 +13,10 @@ import {
   QualityDispositionsQueryDto,
   RestatementsQueryDto,
   ShiftHandoverQueryDto,
+  ReliabilityTrendQueryDto,
   TransitionPerformanceQueryDto,
 } from './ops-reports-v2.dto';
+import { reliabilityTrend, ReliabilityTrendView } from './reliability-trend';
 import {
   transitionPerformance,
   TransitionPerformanceView,
@@ -97,6 +99,17 @@ export class OpsReportsV2Service {
   ): Promise<TransitionPerformanceView> {
     const manager = this.periods.manager;
     return transitionPerformance(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
+  }
+
+  async reliabilityTrend(
+    context: RequestContext,
+    query: ReliabilityTrendQueryDto,
+  ): Promise<AnalyticsResponse<ReliabilityTrendView>> {
+    const manager = this.periods.manager;
+    return reliabilityTrend(
       manager,
       await resolveReportScope(manager, context, query),
     );

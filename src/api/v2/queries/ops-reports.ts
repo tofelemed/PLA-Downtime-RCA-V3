@@ -2,7 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { QueryParams } from '../request-url';
 import type { QueryOf } from '../schema-types';
-import type { EventStatusView, ProductionByProductView, QualityDispositionsView, RestatementsView, TransitionPerformanceView } from '../types/ops-reports';
+import type {
+  EventStatusView,
+  ProductionByProductView,
+  QualityDispositionsView,
+  ReliabilityTrendView,
+  RestatementsView,
+  TransitionPerformanceView,
+} from '../types/ops-reports';
 import { sameTenantQuery } from './placeholder';
 import { reportKey, useReport, type ReportKind, type ReportQueryBase } from './reports';
 import { STALE_TIME } from './stale-times';
@@ -54,4 +61,9 @@ export function useQualityDispositions(query: ReportQueryBase | null, tz?: strin
 /** R5: grade transitions against their standard, and per product change. */
 export function useTransitionPerformance(query: ReportQueryBase | null, tz?: string) {
   return usePlainReport<TransitionPerformanceView>('transition-performance', query, tz);
+}
+
+/** R6: reliability per plant month for each unit and its most-failing assets. */
+export function useReliabilityTrend(query: ReportQueryBase | null, tz?: string) {
+  return useReport<ReliabilityTrendView>('reliability-trend', query, tz);
 }

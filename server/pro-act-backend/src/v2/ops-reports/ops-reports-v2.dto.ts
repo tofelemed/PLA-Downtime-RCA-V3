@@ -101,3 +101,6 @@ export class QualityDispositionsQueryDto extends ReportWindowQueryDto {}
 
 /** `GET /reports/transition-performance` (R5): grade transitions starting in the window. */
 export class TransitionPerformanceQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/reliability-trend` (R6): MTBF, restore and repair means per plant month. */
+export class ReliabilityTrendQueryDto extends ReportWindowQueryDto {}

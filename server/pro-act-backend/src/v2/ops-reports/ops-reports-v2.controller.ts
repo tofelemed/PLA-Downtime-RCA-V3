@@ -11,8 +11,10 @@ import {
   QualityDispositionsQueryDto,
   RestatementsQueryDto,
   ShiftHandoverQueryDto,
+  ReliabilityTrendQueryDto,
   TransitionPerformanceQueryDto,
 } from './ops-reports-v2.dto';
+import { ReliabilityTrendView } from './reliability-trend';
 import { TransitionPerformanceView } from './transition-performance';
 import { QualityDispositionsView } from './quality-dispositions';
 import { RestatementsView } from './restatements-report';
@@ -125,5 +127,22 @@ export class OpsReportsV2Controller {
     @Query() query: TransitionPerformanceQueryDto,
   ): Promise<TransitionPerformanceView> {
     return this.reports.transitionPerformance(ctx, query);
+  }
+
+  @Get('reliability-trend')
+  @ApiOperation({
+    summary:
+      'MTBF, mean time to restore and MTTR per plant month for each unit and its most-failing assets',
+    description:
+      'The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the ' +
+      'definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed ' +
+      'while its unit runs). Assets: at most 30, those with the most eligible failures. fallingMtbf: MTBF fell ' +
+      `in each of the last three months that have a value. ${SCOPE_NOTE}`,
+  })
+  reliabilityTrend(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ReliabilityTrendQueryDto,
+  ): Promise<AnalyticsResponse<ReliabilityTrendView>> {
+    return this.reports.reliabilityTrend(ctx, query);
   }
 }

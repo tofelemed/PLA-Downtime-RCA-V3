@@ -234,4 +234,28 @@ describe('Operating reports (R1)', () => {
       tree.data.groups.every((g) => g.key !== null && classes.includes(g.key)),
     ).toBe(true);
   });
+
+  it('reliability trend: one plant month for the unit, same definitions as the reliability report', async () => {
+    const trend = (
+      await env.get(`reports/reliability-trend?${scope}`).expect(200)
+    ).body as Envelope<{
+      months: string[];
+      units: Array<{
+        unitId: string;
+        fallingMtbf: boolean;
+        months: Array<{
+          month: string;
+          row: { mtbf: { value: string | null } };
+        }>;
+      }>;
+    }>;
+    expect(trend.data.months).toEqual(['2027-03']);
+    expect(trend.data.units).toHaveLength(1);
+    const single = (await env.get(`reports/reliability?${scope}`).expect(200))
+      .body as Envelope<{ units: Array<{ mtbf: { value: string | null } }> }>;
+    expect(trend.data.units[0].months[0].row.mtbf.value).toBe(
+      single.data.units[0].mtbf.value,
+    );
+    expect(trend.data.units[0].fallingMtbf).toBe(false);
+  });
 });

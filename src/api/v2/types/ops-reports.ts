@@ -1,3 +1,5 @@
+import type { ReliabilityRowView } from './reports';
+
 /** Operating report views R1–R12 (backend `src/v2/ops-reports/`); every quantity is a decimal string. */
 export interface ProductionRowView {
   /** `total`, the plant day / week / month, or the unit id */
@@ -184,4 +186,25 @@ export interface TransitionPerformanceView {
   transitions: TransitionRowView[];
   truncated: boolean;
   pairs: TransitionPairView[];
+}
+
+export interface ReliabilityMonthView {
+  month: string;
+  row: ReliabilityRowView;
+}
+
+export interface ReliabilitySeriesView {
+  unitId: string;
+  assetId: string | null;
+  label: string | null;
+  months: ReliabilityMonthView[];
+  fallingMtbf: boolean;
+}
+
+export interface ReliabilityTrendView {
+  months: string[];
+  units: ReliabilitySeriesView[];
+  assets: ReliabilitySeriesView[];
+  failureDefinition: string;
+  calculationRunIds: string[];
 }
