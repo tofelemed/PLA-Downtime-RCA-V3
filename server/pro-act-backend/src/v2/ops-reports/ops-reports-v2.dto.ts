@@ -98,3 +98,6 @@ export class RestatementsQueryDto extends ReportWindowQueryDto {}
 
 /** `GET /reports/quality-dispositions` (R4): lot dispositions of lots produced in the window. */
 export class QualityDispositionsQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/transition-performance` (R5): grade transitions starting in the window. */
+export class TransitionPerformanceQueryDto extends ReportWindowQueryDto {}

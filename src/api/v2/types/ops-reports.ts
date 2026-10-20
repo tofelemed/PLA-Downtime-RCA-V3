@@ -139,3 +139,49 @@ export interface QualityDispositionsView {
   pending: number;
   oldestPendingAt: string | null;
 }
+
+export interface TransitionRowView {
+  eventId: string;
+  unitId: string;
+  unitName: string | null;
+  start: string;
+  end: string | null;
+  seconds: string | null;
+  fromProductId: string | null;
+  fromProduct: string | null;
+  toProductId: string | null;
+  toProduct: string | null;
+  catalystFamily: string | null;
+  operatingMode: string | null;
+  standardId: string | null;
+  referenceSeconds: string | null;
+  referenceOffgrade: string | null;
+  excessSeconds: string | null;
+  uom: string | null;
+  allowanceLoss: string | null;
+  excessLoss: string | null;
+  offGrade: string | null;
+  noStandard: boolean;
+  calculated: boolean;
+}
+
+export interface TransitionPairView {
+  fromProductId: string | null;
+  fromProduct: string | null;
+  toProductId: string | null;
+  toProduct: string | null;
+  transitions: number;
+  ended: number;
+  meanSeconds: string | null;
+  bestSeconds: string | null;
+  worstSeconds: string | null;
+  withStandard: number;
+  overStandard: number;
+  meanExcessSeconds: string | null;
+}
+
+export interface TransitionPerformanceView {
+  transitions: TransitionRowView[];
+  truncated: boolean;
+  pairs: TransitionPairView[];
+}

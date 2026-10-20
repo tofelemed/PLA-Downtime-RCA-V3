@@ -11,7 +11,9 @@ import {
   QualityDispositionsQueryDto,
   RestatementsQueryDto,
   ShiftHandoverQueryDto,
+  TransitionPerformanceQueryDto,
 } from './ops-reports-v2.dto';
+import { TransitionPerformanceView } from './transition-performance';
 import { QualityDispositionsView } from './quality-dispositions';
 import { RestatementsView } from './restatements-report';
 import { OpsReportsV2Service } from './ops-reports-v2.service';
@@ -106,5 +108,22 @@ export class OpsReportsV2Controller {
     @Query() query: QualityDispositionsQueryDto,
   ): Promise<QualityDispositionsView> {
     return this.reports.qualityDispositions(ctx, query);
+  }
+
+  @Get('transition-performance')
+  @ApiOperation({
+    summary:
+      'Grade transitions against their approved standard: duration, excess over the reference, loss within and over the allowance',
+    description:
+      'Live grade transitions of the units starting in the window, newest first, at most 500 (truncated). The ' +
+      'standard is the one the calculation applied (its line flag) and the loss is the capacity-ledger lines of ' +
+      'the shown runs of the window’s periods; calculated = false while no shown run has lines of the transition. ' +
+      `pairs: per product change over the listed transitions (means of ended ones). ${SCOPE_NOTE}`,
+  })
+  transitionPerformance(
+    @Ctx() ctx: RequestContext,
+    @Query() query: TransitionPerformanceQueryDto,
+  ): Promise<TransitionPerformanceView> {
+    return this.reports.transitionPerformance(ctx, query);
   }
 }

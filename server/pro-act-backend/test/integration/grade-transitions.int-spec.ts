@@ -185,6 +185,36 @@ describe('grade transitions (LA-08)', () => {
     expect(run.ids).toEqual([standardId]);
   });
 
+  it('R5 transition performance: the transition against the standard the calculation applied', async () => {
+    const window = `unitIds=${env.world.unitA1}&from=${encodeURIComponent(A)}&to=${encodeURIComponent(plus(A, 24 * HOUR))}`;
+    const body = (
+      await env.get(`reports/transition-performance?${window}`).expect(200)
+    ).body as {
+      transitions: Array<Record<string, unknown>>;
+      pairs: Array<Record<string, unknown>>;
+    };
+    expect(body.transitions).toEqual([
+      expect.objectContaining({
+        eventId: transitionId,
+        standardId,
+        seconds: '10800',
+        referenceSeconds: '7200',
+        excessSeconds: '3600',
+        allowanceLoss: '200',
+        excessLoss: '100',
+        calculated: true,
+        noStandard: false,
+      }),
+    ]);
+    expect(body.pairs).toEqual([
+      expect.objectContaining({
+        transitions: 1,
+        overStandard: 1,
+        meanExcessSeconds: '3600',
+      }),
+    ]);
+  });
+
   it('a unit oee_policy version with transitionAllowanceInPlan = loss charges the allowance to the plan again', async () => {
     await unitVersion(1, 'loss');
     await env.recompute(periodA1);

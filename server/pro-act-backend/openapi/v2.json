@@ -14200,6 +14200,68 @@
         ]
       }
     },
+    "/api/v2/reports/transition-performance": {
+      "get": {
+        "description": "Live grade transitions of the units starting in the window, newest first, at most 500 (truncated). The standard is the one the calculation applied (its line flag) and the loss is the capacity-ledger lines of the shown runs of the window’s periods; calculated = false while no shown run has lines of the transition. pairs: per product change over the listed transitions (means of ended ones). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.",
+        "operationId": "OpsReportsV2Controller_transitionPerformance_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Grade transitions against their approved standard: duration, excess over the reference, loss within and over the allowance",
+        "tags": [
+          "v2 · Operating reports"
+        ]
+      }
+    },
     "/api/v2/shift-notes": {
       "post": {
         "description": "Roles that record events. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); a blank body is 422 INVALID_NOTE. Notes are never edited or deleted: a correction is a new note.",

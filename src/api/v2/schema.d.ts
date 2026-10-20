@@ -4126,6 +4126,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/transition-performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Grade transitions against their approved standard: duration, excess over the reference, loss within and over the allowance
+         * @description Live grade transitions of the units starting in the window, newest first, at most 500 (truncated). The standard is the one the calculation applied (its line flag) and the loss is the capacity-ledger lines of the shown runs of the window’s periods; calculated = false while no shown run has lines of the transition. pairs: per product change over the listed transitions (means of ended ones). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         */
+        get: operations["OpsReportsV2Controller_transitionPerformance_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/shift-notes": {
         parameters: {
             query?: never;
@@ -17110,6 +17130,32 @@ export interface operations {
         };
     };
     OpsReportsV2Controller_qualityDispositions_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpsReportsV2Controller_transitionPerformance_v2: {
         parameters: {
             query: {
                 /** @description Periods starting at or after this instant (ISO 8601 with offset) */

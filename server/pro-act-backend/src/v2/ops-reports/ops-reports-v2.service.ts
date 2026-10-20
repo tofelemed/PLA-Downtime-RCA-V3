@@ -13,7 +13,12 @@ import {
   QualityDispositionsQueryDto,
   RestatementsQueryDto,
   ShiftHandoverQueryDto,
+  TransitionPerformanceQueryDto,
 } from './ops-reports-v2.dto';
+import {
+  transitionPerformance,
+  TransitionPerformanceView,
+} from './transition-performance';
 import {
   qualityDispositions,
   QualityDispositionsView,
@@ -81,6 +86,17 @@ export class OpsReportsV2Service {
   ): Promise<QualityDispositionsView> {
     const manager = this.periods.manager;
     return qualityDispositions(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
+  }
+
+  async transitionPerformance(
+    context: RequestContext,
+    query: TransitionPerformanceQueryDto,
+  ): Promise<TransitionPerformanceView> {
+    const manager = this.periods.manager;
+    return transitionPerformance(
       manager,
       await resolveReportScope(manager, context, query),
     );
