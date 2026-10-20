@@ -9,6 +9,7 @@ import type {
   ProductionByProductView,
   QualityDispositionsView,
   RateLossView,
+  RcaActionTrackerView,
   ReliabilityTrendView,
   RestatementsView,
   TransitionPerformanceView,
@@ -86,4 +87,9 @@ export function useRateLoss(query: ReportQueryBase | null, tz?: string) {
 /** R9: coding and verification discipline per crew and shift. */
 export function useCodingCompliance(query: ReportQueryBase | null, tz?: string) {
   return useReport<CodingComplianceView>('coding-compliance', query, tz);
+}
+
+/** R10: open RCA cases and actions, closures of the window. */
+export function useRcaActionTracker(query: ReportQueryBase | null, tz?: string) {
+  return usePlainReport<RcaActionTrackerView>('rca-action-tracker', query, tz);
 }

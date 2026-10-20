@@ -4226,6 +4226,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/rca-action-tracker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * RCA pipeline: open cases and actions by status, age and due date; actions done on time and cases closed in the window
+         * @description Open = case status other than Closed, action open or in progress (overdue as in the RCA summary), as of now. Window: actions done (completed_at) and cases whose closure was approved in it; on time = done before the end of the due date’s day; onTimeRate over the actions with a due date. Cases of the units in scope; a tenant-wide caller without unitIds also sees tenant-wide cases. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         */
+        get: operations["OpsReportsV2Controller_rcaActionTracker_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/shift-notes": {
         parameters: {
             query?: never;
@@ -17341,6 +17361,32 @@ export interface operations {
         };
     };
     OpsReportsV2Controller_codingCompliance_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpsReportsV2Controller_rcaActionTracker_v2: {
         parameters: {
             query: {
                 /** @description Periods starting at or after this instant (ISO 8601 with offset) */

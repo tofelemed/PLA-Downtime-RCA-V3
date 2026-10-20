@@ -324,4 +324,27 @@ describe('Operating reports (R1)', () => {
     expect(shiftA?.medianDelaySeconds).not.toBeNull();
     expect(body.data.byShift.reduce((n, r) => n + r.stops, 0)).toBe(1);
   });
+
+  it('RCA action tracker: answers with every age and due bucket, also when there is nothing open', async () => {
+    const body = (
+      await env.get(`reports/rca-action-tracker?${window}`).expect(200)
+    ).body as {
+      openCases: { total: number; byAge: Array<{ key: string }> };
+      openActions: { byDue: Array<{ key: string }> };
+      closedActions: { onTimeRate: string | null };
+    };
+    expect(body.openCases.byAge.map((b) => b.key)).toEqual([
+      '0-30',
+      '31-60',
+      '61-90',
+      '90+',
+    ]);
+    expect(body.openActions.byDue.map((b) => b.key)).toEqual([
+      'overdue',
+      'due_7_days',
+      'later',
+      'no_due_date',
+    ]);
+    expect(body.closedActions.onTimeRate).toBeNull();
+  });
 });

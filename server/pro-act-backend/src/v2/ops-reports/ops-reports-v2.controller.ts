@@ -16,7 +16,9 @@ import {
   ChronicSporadicQueryDto,
   RateLossQueryDto,
   CodingComplianceQueryDto,
+  RcaActionTrackerQueryDto,
 } from './ops-reports-v2.dto';
+import { RcaActionTrackerView } from './rca-action-tracker';
 import { CodingComplianceView } from './coding-compliance';
 import { RateLossView } from './rate-loss';
 import { ChronicSporadicView } from './chronic-sporadic';
@@ -200,5 +202,22 @@ export class OpsReportsV2Controller {
     @Query() query: CodingComplianceQueryDto,
   ): Promise<AnalyticsResponse<CodingComplianceView>> {
     return this.reports.codingCompliance(ctx, query);
+  }
+
+  @Get('rca-action-tracker')
+  @ApiOperation({
+    summary:
+      'RCA pipeline: open cases and actions by status, age and due date; actions done on time and cases closed in the window',
+    description:
+      'Open = case status other than Closed, action open or in progress (overdue as in the RCA summary), as of ' +
+      'now. Window: actions done (completed_at) and cases whose closure was approved in it; on time = done ' +
+      'before the end of the due date’s day; onTimeRate over the actions with a due date. Cases of the units ' +
+      `in scope; a tenant-wide caller without unitIds also sees tenant-wide cases. ${SCOPE_NOTE}`,
+  })
+  rcaActionTracker(
+    @Ctx() ctx: RequestContext,
+    @Query() query: RcaActionTrackerQueryDto,
+  ): Promise<RcaActionTrackerView> {
+    return this.reports.rcaActionTracker(ctx, query);
   }
 }

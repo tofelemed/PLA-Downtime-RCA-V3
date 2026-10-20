@@ -121,3 +121,6 @@ export class RateLossQueryDto extends ReportWindowQueryDto {}
 
 /** `GET /reports/coding-compliance` (R9): coding and verification discipline per crew and shift. */
 export class CodingComplianceQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/rca-action-tracker` (R10): open RCA cases and actions, closures in the window. */
+export class RcaActionTrackerQueryDto extends ReportWindowQueryDto {}

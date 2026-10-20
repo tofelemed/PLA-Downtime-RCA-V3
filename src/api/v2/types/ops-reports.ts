@@ -258,3 +258,16 @@ export interface CodingComplianceView {
   byShift: ComplianceRowView[];
   calculationRunIds: string[];
 }
+
+export interface CountView {
+  key: string;
+  count: number;
+}
+
+export interface RcaActionTrackerView {
+  openCases: { total: number; overdue: number; byStatus: CountView[]; byAge: CountView[] };
+  openActions: { total: number; byDue: CountView[]; byAge: CountView[] };
+  closedActions: { done: number; withDueDate: number; onTime: number; late: number; onTimeRate: string | null };
+  closedCases: { closed: number; meanDaysToClose: string | null };
+  asOf: string;
+}

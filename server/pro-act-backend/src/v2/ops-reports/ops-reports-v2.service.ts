@@ -18,7 +18,9 @@ import {
   ChronicSporadicQueryDto,
   RateLossQueryDto,
   CodingComplianceQueryDto,
+  RcaActionTrackerQueryDto,
 } from './ops-reports-v2.dto';
+import { rcaActionTracker, RcaActionTrackerView } from './rca-action-tracker';
 import { codingCompliance, CodingComplianceView } from './coding-compliance';
 import { rateLoss, RateLossView } from './rate-loss';
 import { chronicSporadic, ChronicSporadicView } from './chronic-sporadic';
@@ -147,6 +149,18 @@ export class OpsReportsV2Service {
       manager,
       await resolveReportScope(manager, context, query),
     );
+  }
+
+  async rcaActionTracker(
+    context: RequestContext,
+    query: RcaActionTrackerQueryDto,
+  ): Promise<RcaActionTrackerView> {
+    const manager = this.periods.manager;
+    const scope = await resolveReportScope(manager, context, query);
+    // a tenant-wide caller without named units also sees the tenant-wide cases (no unit)
+    const units =
+      query.unitIds?.length || scope.restricted ? scope.unitIds : null;
+    return rcaActionTracker(manager, scope, units);
   }
 
   createShiftNote(
