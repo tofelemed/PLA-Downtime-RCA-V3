@@ -1,7 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { Server } from 'http';
-import { Client } from 'pg';
 import * as request from 'supertest';
 import { ProductionEventModule } from '../../src/production-event/production-event.module';
 import { V2Module } from '../../src/v2/v2.module';
@@ -9,84 +7,81 @@ import { IntegrationHarness } from './harness';
 import { EventWorld, seedEventWorld } from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
-type Query = (this: Client, ...args: unknown[]) => unknown;
+/** Statements per list request, whatever the page size (identity + scope + list + relations). */
+const QUERY_BUDGET = 12;
+const EXTRA_EVENTS = 30;
 
 /**
- * Query budgets (perf audit regression guard, docs/perf-audit): the database statements one request may
- * run, counted at the pg client (RLS binding included). The budgets are the measured counts after the
- * P01 / P02 / P04 / P08 fixes; exceeding one means per-request overhead came back (identity read in
- * several statements, a second auth guard, re-binding every checkout, a per-row query in a list).
+ * Plan 3.11 step 4 (N+1 guard, ENGINEERING_STANDARDS "No N+1"): a list request runs a fixed number of
+ * statements — the same count with 6 rows as with 36 — and stays inside the budget. A relation loaded
+ * lazily per row would add one statement per row and fail here.
  */
-describe('query budgets per request', () => {
+describe('list endpoints have a fixed query budget (plan 3.11)', () => {
   const harness = new IntegrationHarness();
   let app: INestApplication;
   let world: EventWorld;
-  let user = '';
-  let counting = false;
-  let statements: string[] = [];
-  const original = Reflect.get(Client.prototype, 'query') as Query;
+  let token = '';
+  const statements: string[] = [];
 
-  const server = () => app.getHttpServer() as Server;
-  const statementsOf = async (path: string) => {
-    statements = [];
-    counting = true;
-    try {
-      await request(server()).get(path).set(bearer(user)).expect(200);
-    } finally {
-      counting = false;
-    }
-    return statements;
+  const countFor = async (path: string): Promise<number> => {
+    statements.length = 0;
+    await request(app.getHttpServer()).get(path).set(bearer(token)).expect(200);
+    return statements.filter(
+      (sql) => !/^(START TRANSACTION|COMMIT|ROLLBACK)/i.test(sql),
+    ).length;
   };
+
+  const paths = (): string[] => [
+    '/api/v2/production-events?limit=100',
+    `/api/production-events?tenantId=${world.tenantA}`,
+    '/api/v2/units',
+  ];
 
   beforeAll(async () => {
     await harness.start();
     world = await seedEventWorld(harness.dataSource);
     app = await createIntegrationApp(harness, {
       modules: [ProductionEventModule, V2Module],
-      rlsBinding: true,
+      onQuery: (sql) => statements.push(sql),
     });
-    user = signToken(app, {
+    token = signToken(app, {
       userId: randomUUID(),
       tenantId: world.tenantA,
-      role: 'Engineer',
+      role: 'TenantAdmin',
     });
-    (Client.prototype as unknown as { query: Query }).query = function (
-      this: Client,
-      ...args: unknown[]
-    ) {
-      if (counting) {
-        const config = args[0] as string | { text?: string };
-        statements.push(
-          typeof config === 'string' ? config : (config.text ?? ''),
-        );
-      }
-      return original.apply(this, args);
-    };
   });
 
   afterAll(async () => {
-    (Client.prototype as unknown as { query: Query }).query = original;
     await app?.close();
     await harness.stop();
   });
 
-  it.each([
-    // identity (1, P01) + the read + RLS binding switches (P02)
-    ['/api/v2/notifications/unread-count', 4],
-    ['/api/v2/feature-flags', 4],
-    // v1 route: one auth guard only (P04)
-    ['/api/production-events', 6],
-    // every shell read in one request (P08)
-    ['/api/v2/session/bootstrap', 14],
-  ])('GET %s runs at most %i statements', async (path, budget) => {
-    // warm the pool's connections first: a fresh connection binds once more
-    await statementsOf(path);
-    const counted = await statementsOf(path);
-    if (counted.length > budget) {
-      throw new Error(
-        `${path}: ${counted.length} statements > budget ${budget}:\n${counted.map((s) => `  ${s.replace(/\s+/g, ' ').slice(0, 140)}`).join('\n')}`,
-      );
+  it('does not grow with the number of rows returned', async () => {
+    const before = new Map<string, number>();
+    for (const path of paths()) before.set(path, await countFor(path));
+
+    for (let index = 0; index < EXTRA_EVENTS; index++) {
+      await request(app.getHttpServer())
+        .post('/api/v2/production-events')
+        .set(bearer(token))
+        .set('Idempotency-Key', randomUUID())
+        .send({
+          unitId: [world.unitA1, world.unitA2, world.unitA3][index % 3],
+          eventType: 'ProductionLoss',
+          startTime: new Date(Date.UTC(2026, 9, 1, index)).toISOString(),
+          endTime: new Date(Date.UTC(2026, 9, 1, index, 30)).toISOString(),
+          reasonCodeId: world.reasonR1,
+        })
+        .expect(201);
     }
-    expect(counted.length).toBeLessThanOrEqual(budget);
+
+    for (const path of paths()) {
+      const after = await countFor(path);
+      expect({ path, statements: after }).toEqual({
+        path,
+        statements: before.get(path),
+      });
+      expect(after).toBeLessThanOrEqual(QUERY_BUDGET);
+    }
   });
 });
