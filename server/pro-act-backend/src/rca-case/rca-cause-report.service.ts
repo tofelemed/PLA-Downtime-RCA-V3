@@ -108,26 +108,32 @@ export class RcaCauseReportService {
       scope.tenantId,
       ranked.flatMap((row) => row.rca_ids),
     );
-    const items: RcaCauseReportItem[] = [];
-    let view: DefaultBasis | null = null;
-    let basis: string | null = null;
-    for (const row of ranked) {
-      const impact = await approvedOf(
-        this.dataSource.manager,
-        scope.tenantId,
-        linksOf(row.rca_ids, links),
-      );
-      ({ view, basis } = impact);
-      items.push({
-        causeCodeId: row.cause_code_id,
-        code: row.code,
-        name: row.name,
-        active: row.is_active,
-        cases: row.cases,
-        causes: row.causes,
-        approvedLoss: { lines: impact.lines, values: impact.values },
-      });
-    }
+    // codes whose cases link the same events / loss lines share one impact read (perf audit P06)
+    const impacts = new Map<string, ReturnType<typeof approvedOf>>();
+    const impactOf = (target: { eventIds: string[]; lineIds: string[] }) => {
+      const key = `${[...target.eventIds].sort().join(',')}|${[...target.lineIds].sort().join(',')}`;
+      let impact = impacts.get(key);
+      if (!impact) {
+        impact = approvedOf(this.dataSource.manager, scope.tenantId, target);
+        impacts.set(key, impact);
+      }
+      return impact;
+    };
+    const resolved = await Promise.all(
+      ranked.map((row) => impactOf(linksOf(row.rca_ids, links))),
+    );
+    const items: RcaCauseReportItem[] = ranked.map((row, i) => ({
+      causeCodeId: row.cause_code_id,
+      code: row.code,
+      name: row.name,
+      active: row.is_active,
+      cases: row.cases,
+      causes: row.causes,
+      approvedLoss: { lines: resolved[i].lines, values: resolved[i].values },
+    }));
+    const last = resolved.at(-1);
+    const view: DefaultBasis | null = last?.view ?? null;
+    const basis: string | null = last?.basis ?? null;
     if (query.sort === 'approvedLoss') {
       const currency = query.currency ?? 'USD';
       items.sort((a, b) => amountIn(b, currency) - amountIn(a, currency));
