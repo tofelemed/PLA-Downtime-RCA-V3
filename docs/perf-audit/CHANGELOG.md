@@ -2,7 +2,7 @@
 
 Companion to [PERF_REPORT.md](PERF_REPORT.md) (Phase 1 findings) and [ENDPOINT_SCORECARD.md](ENDPOINT_SCORECARD.md) (baseline per route). All numbers come from the local perf copy of `proact` and the instrumented API on :4014 (`perf-audit/`), at today's data volume (one plant, about 2 days).
 
-Branch `feat/downtime-area2-b`, commits `96eface2..4176eeb4`. Each finding is its own commit, containing only the files of that change. Other work in progress on the branch stayed out of every commit.
+Branch `feat/downtime-area2-b`, commits `96eface2..9f2b3be9`. Each finding is its own commit, containing only the files of that change. Other work in progress on the branch stayed out of every commit.
 
 ## Overall, before → after
 
@@ -54,6 +54,8 @@ No errors at any level. **Still above the 300 ms p95 read target at 16 concurren
 | P07 | `fefbe4b5` | v1 `GET /api/audit-logs` page size 1–500 (larger or `0` capped; default unchanged) | `limit=0` / `limit=100000`: 1 313 rows / 688 KB → 500 rows / 269 KB | unit; audit int |
 | P12 | `ced9c921` | Audit rows written with `insert()` instead of `save()` | 40 audited writes: audit statements 81 → 41, BEGIN/COMMIT 120 → 40 | 8 audit int suites |
 | P13 | `f53b8c7a` | `/api/health` answers **503** (same body) when the DB does not answer; `/api/health/detailed` SuperAdmin only | anonymous health 200, detailed 401, SuperAdmin 200 | controller spec (200 / 503); guard coverage int |
+| P07 | `adab7a9c` | Runs list returns `RunSummaryV2View` (no `inputFingerprint`) and no longer reads that column; new `GET /v2/production-periods/{id}/runs/{runId}` returns one run with it (owner approved the breaking change) | default page 1 078 → **83 KB**, limit=20 282 → 17 KB; detail 15 KB | accounting int (list without, detail with, 404 under another period) |
+| P13 | `9f2b3be9` | Prometheus metrics (`prom-client`, owner approved) on `METRICS_PORT`, off by default: request latency per route template, pool in-use / idle / waiting, process defaults | built API: route-template labels, pool gauges, event-loop lag; `/metrics` 404 on the API port; overhead within noise (identity route c=16: 338–393 req/s on vs 338–379 off) | unit (labels, gauge, port, server) |
 | guard | `e532e1c5`, `4176eeb4` | Per-request statement budgets in CI (`request-overhead-budget.int-spec.ts`). The existing N+1 guard (`query-budget.int-spec.ts`) was overwritten by mistake in `e532e1c5` and restored unchanged in `4176eeb4` | unread 4, flags 4, v1 events 6, bootstrap 14; undoing P02 fails it (22 > 14) | — |
 
 **Contract changes** (all flagged in the commit messages):
@@ -61,6 +63,8 @@ No errors at any level. **Still above the 300 ms p95 read target at 16 concurren
 - Health returns 503 while the database is down, and `/health/detailed` now needs auth.
 - v1 malformed ids return 400 instead of 500.
 - The v1 audit-log `limit` is capped at 500.
+- The runs list no longer carries `inputFingerprint`; the new run detail does (breaking for direct API clients, owner approved).
+- New, opt-in metrics port (`METRICS_PORT`).
 
 No existing response shape changed.
 
@@ -77,11 +81,10 @@ No existing response shape changed.
 
 | ID | Item | Why deferred / next step |
 |---|---|---|
-| P06 | downtime report: 4× the `shown` CTE, run sequentially (`downtime-report.ts`) | The file carries another session's finished but uncommitted Tier 2 edits on the same lines. Parallelise the independent reads (cells, stats, summary, coverage, calendar basis) once that work is committed. Expected: about 4 sequential round trips → 1 wave. |
+| P06 | downtime report: independent reads run sequentially (`downtime-report.ts`) | **Done in the working tree, not committed**: the groups chain, the stats and their policy versions, the summary, the coverage and the calendar basis now run concurrently. Measured: p50 70 → **39 ms** (same 19 statements, same output); c=16 51 → 63 req/s, p95 370 → 359 ms; c=32 52 → 71 req/s, p95 668 → 584 ms (median of 3); 10 report integration suites pass (64 tests, incl. downtime-calendar-basis). It sits on another session's uncommitted Tier 2 lines in the same function, so it can be committed once that work is. |
 | P06 | reconciliation-status loads the overdue periods' states twice | Bounded (`OVERDUE_LIST_LIMIT`, about 7 statements) and does not grow with data; removing it means serialising the parallel fold. Low value. |
-| P07 | `/production-periods/{id}/runs` 1 MB per page (about 5.5 KB `inputFingerprint` per run) | No frontend caller. Dropping the field is a breaking change with no run-detail endpoint to replace it. **Needs your decision.** |
 | P10 | production-events CSV export built in memory (≤ 50 000 rows); PI test/discover/sample synchronous, no keep-alive | No CSV volume or reachable PI server here to measure. Stream the CSV rows; per-connection keep-alive agent and a 10 s budget for interactive PI calls. |
-| P13 | metrics (latency histograms, pool, event-loop lag), JSON logs with correlation id | Needs a new dependency (`prom-client` or OpenTelemetry). **Needs your approval** (CLAUDE.md). |
+| P13 | JSON logs with the correlation id; tracing | Metrics are done (`9f2b3be9`); structured logs and OpenTelemetry tracing remain |
 | P12 | RealtimeFeed polls the outbox every 1 s per process; legacy `auditLogCreated` broadcast has no consumer in this repo | LISTEN/NOTIFY or adaptive polling; drop the broadcast once external consumers are ruled out |
 | P08 | frontend: `/organizations` + `/tenants/{id}` still read in session restore (duplicates of the bootstrap); realtime invalidation fan-out | frontend refactor of the auth restore flow |
 | infra | HTTP/2 (+ Brotli) at nginx/TLS; two API replicas; shared throttler store (Redis) with replicas | infrastructure changes |
