@@ -160,6 +160,8 @@ import { BadActorReportV2Controller } from './reports/bad-actor-v2.controller';
 import { BadActorReportV2Service } from './reports/bad-actor-v2.service';
 import { CapacityGapReportV2Controller } from './reports/capacity-gap-v2.controller';
 import { CapacityGapReportV2Service } from './reports/capacity-gap-v2.service';
+import { OpsReportsV2Controller } from './ops-reports/ops-reports-v2.controller';
+import { OpsReportsV2Service } from './ops-reports/ops-reports-v2.service';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
@@ -324,6 +326,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     LossValueReportV2Controller,
     BadActorReportV2Controller,
     CapacityGapReportV2Controller,
+    OpsReportsV2Controller,
     FeatureFlagsV2Controller,
     SessionBootstrapV2Controller,
     RulesV2Controller,
@@ -383,6 +386,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     LossValueReportV2Service,
     BadActorReportV2Service,
     CapacityGapReportV2Service,
+    OpsReportsV2Service,
     PeriodOverviewService,
     PlaReportsV2Service,
     ActivitySummaryV2Service,

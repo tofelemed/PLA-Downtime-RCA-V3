@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { lazy, Suspense, useId } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
@@ -20,9 +20,12 @@ import { DowntimeReasonCard, OeeByDay } from './production-report';
 import { ReportsFilters } from './reports-filters';
 import { ReportsHeader } from './reports-header';
 
+const DailyReport = lazy(() => import('@/features/ops-reports/daily/daily-report').then((m) => ({ default: m.DailyReport })));
+
 const MAX_UNITS = 100;
 const VIEWS = [
   { key: 'production', label: 'OEE and downtime' },
+  { key: 'daily', label: 'Daily production' },
   { key: 'reconciliation', label: 'Reconciliation' },
   { key: 'value', label: 'Loss value' },
   { key: 'exports', label: 'Exports' },
@@ -94,6 +97,11 @@ function ReportsBody({ dayStart }: { dayStart: string }) {
           <TabsContent value="production" className="space-y-4">
             <OeeByDay scope={named} />
             <DowntimeReasonCard scope={named} />
+          </TabsContent>
+          <TabsContent value="daily">
+            <Suspense fallback={<DataState state="loading" />}>
+              <DailyReport scope={named} dayStart={dayStart} />
+            </Suspense>
           </TabsContent>
           <TabsContent value="reconciliation">
             <ReconciliationTab scope={named} />

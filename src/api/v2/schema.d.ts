@@ -4026,6 +4026,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/production-by-product": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Capacity, plan target, actual output and quality classes (prime, wide spec, downgrade, transition off-grade, scrap, rework) per product
+         * @description Reads the shown run of each period starting in the window (approved revision, else the open draft — provisional): the capacity and plan ledger totals and the actuals of each product slice. primeYield = Σ prime / Σ gross; planAttainment = Σ actual / Σ target. Units of measure are never mixed. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         */
+        get: operations["OpsReportsV2Controller_productionByProduct_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/event-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Running, uncoded, coded and verified loss events (downtime, slowdown, quality loss, grade transition) starting in the window
+         * @description Live events only (not superseded or retracted); approvedOnly has no effect. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         */
+        get: operations["OpsReportsV2Controller_eventStatus_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/feature-flags": {
         parameters: {
             query?: never;
@@ -16861,6 +16901,60 @@ export interface operations {
                 productIds?: string[];
                 /** @description Rows at most; `truncated` tells when more profiles match */
                 limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpsReportsV2Controller_productionByProduct_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+                /** @description Rows per product and this group: the window (`total`), the plant day, week or month, or the unit */
+                groupBy?: "total" | "day" | "week" | "month" | "unit";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpsReportsV2Controller_eventStatus_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
             };
             header?: never;
             path?: never;
