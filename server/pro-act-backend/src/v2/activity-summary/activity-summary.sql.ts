@@ -42,14 +42,6 @@ export const AUDIT_CELLS_SQL = `SELECT coalesce(nullif(a."action", ''), 'Unknown
  WHERE a."tenant_id" = $1::uuid AND a."created_at" >= $2 AND a."created_at" < $3
  GROUP BY 1, 2, 3`;
 
-/** Plant timezone: the default site's, else the plant's, else UTC — only zones Postgres knows. */
-export const TIMEZONE_SQL = `SELECT coalesce(
-  (SELECT s."timezone" FROM "sites" s JOIN pg_timezone_names z ON z."name" = s."timezone"
-    WHERE s."tenant_id" = $1 AND s."is_default" LIMIT 1),
-  (SELECT t."timezone" FROM "tenants" t JOIN pg_timezone_names z ON z."name" = t."timezone"
-    WHERE t."id" = $1 LIMIT 1),
-  'UTC') AS "timezone"`;
-
 export interface WorkItemCell {
   status: string;
   priority: string;

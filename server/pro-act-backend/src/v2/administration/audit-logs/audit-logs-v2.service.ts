@@ -11,7 +11,7 @@ import {
   requireTenantId,
 } from '../../../common/context/request-context';
 import { scopedQuery } from '../../../common/query/scoped-query';
-import { TIMEZONE_SQL } from '../../activity-summary/activity-summary.sql';
+import { plantTimezone } from '../../activity-summary/plant-timezone';
 import { keysetPage } from '../../common/keyset-page';
 import { listResponse, ListResponse } from '../../common/response';
 import { parseSort } from '../../common/sort-spec';
@@ -136,12 +136,8 @@ export class AuditLogsV2Service {
   }
 
   /** Days are plant-local: the default site's timezone, else the tenant's, else UTC (like the work summary). */
-  private async plantTimezone(tenantId: string): Promise<string> {
-    const rows: Array<{ timezone: string }> = await this.logs.manager.query(
-      TIMEZONE_SQL,
-      [tenantId],
-    );
-    return rows[0]?.timezone ?? 'UTC';
+  private plantTimezone(tenantId: string): Promise<string> {
+    return plantTimezone(this.logs.manager, tenantId);
   }
 
   private filtered(

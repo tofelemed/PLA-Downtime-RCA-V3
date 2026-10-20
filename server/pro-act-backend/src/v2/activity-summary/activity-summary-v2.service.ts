@@ -15,9 +15,9 @@ import {
   foldWorkItems,
   RCA_CELLS_SQL,
   TASK_CELLS_SQL,
-  TIMEZONE_SQL,
   WorkItemCell,
 } from './activity-summary.sql';
+import { plantTimezone } from './plant-timezone';
 import { ActivitySummaryResponse } from './activity-summary.view';
 
 const MAX_DAYS = 400;
@@ -66,11 +66,7 @@ export class ActivitySummaryV2Service {
     const tenantId = requireTenantId(context);
     const { from, to } = activityWindow(query);
     const manager = this.dataSource.manager;
-    const zone: Array<{ timezone: string }> = await manager.query(
-      TIMEZONE_SQL,
-      [tenantId],
-    );
-    const timezone = zone[0]?.timezone ?? 'UTC';
+    const timezone = await plantTimezone(manager, tenantId);
     const window = [tenantId, from, to, timezone];
     const units = restrictedUnitIds(context, tenantId);
     const [rca, tasks, audit] = await Promise.all([
