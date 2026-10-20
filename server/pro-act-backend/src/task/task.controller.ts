@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { Task } from './task.entity';
@@ -75,7 +76,7 @@ export class TaskController {
 
   @Get(':id')
   @ApiResponse({ status: 200, description: 'Get task by ID', type: Task })
-  findOne(@Param('id') id: string): Promise<Task> {
+  findOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<Task> {
     return findOrThrow(this.taskService.findOne(id), 'Task', id);
   }
 
@@ -91,7 +92,7 @@ export class TaskController {
   @ApiBody({ type: UpdateTaskDto })
   @ApiResponse({ status: 200, description: 'Update task', type: Task })
   update(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() data: UpdateTaskDto,
   ): Promise<Task | null> {
     const payload = this.transformDateFields(data);
@@ -100,7 +101,7 @@ export class TaskController {
 
   @Delete(':id')
   @ApiResponse({ status: 200, description: 'Delete task' })
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
     return this.taskService.remove(id);
   }
 

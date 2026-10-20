@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   NotFoundException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { Organization } from './organization.entity';
@@ -48,7 +49,7 @@ export class OrganizationController {
   })
   findOne(
     @Ctx() ctx: RequestContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<Organization> {
     return findOrThrow(
       this.organizationService.findOneVisible(ctx, id),
@@ -79,7 +80,7 @@ export class OrganizationController {
   })
   async update(
     @Ctx() ctx: RequestContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() data: UpdateOrganizationDto,
   ): Promise<Organization | null> {
     await this.writable(ctx, id);
@@ -91,7 +92,7 @@ export class OrganizationController {
   @ApiResponse({ status: 200, description: 'Delete organization' })
   async remove(
     @Ctx() ctx: RequestContext,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
     await this.writable(ctx, id);
     return this.organizationService.remove(id);

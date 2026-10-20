@@ -9,6 +9,7 @@ import {
   Query,
   UsePipes,
   ValidationPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -85,7 +86,9 @@ export class HierarchyMappingController {
     type: SourceHierarchyMapping,
   })
   @ApiResponse({ status: 404, description: 'Mapping not found' })
-  findOne(@Param('id') id: string): Promise<SourceHierarchyMapping> {
+  findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<SourceHierarchyMapping> {
     return this.mappingService.findOne(id);
   }
 
@@ -98,7 +101,7 @@ export class HierarchyMappingController {
   })
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   update(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateDto: UpdateSourceHierarchyMappingDto,
   ): Promise<SourceHierarchyMapping> {
     return this.mappingService.update(id, updateDto);
@@ -107,7 +110,7 @@ export class HierarchyMappingController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete hierarchy mapping' })
   @ApiResponse({ status: 200, description: 'Mapping deleted successfully' })
-  remove(@Param('id') id: string): Promise<void> {
+  remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
     return this.mappingService.remove(id);
   }
 
