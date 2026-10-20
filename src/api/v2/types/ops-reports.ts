@@ -208,3 +208,23 @@ export interface ReliabilityTrendView {
   failureDefinition: string;
   calculationRunIds: string[];
 }
+
+export type Quadrant = 'chronic' | 'sporadic' | 'major' | 'minor';
+
+export interface ChronicRowView {
+  key: string | null;
+  label: string | null;
+  stops: string;
+  seconds: string;
+  meanSeconds: string | null;
+  quadrant: Quadrant | null;
+}
+
+export interface ChronicSporadicView {
+  groupBy: 'reason' | 'asset';
+  rows: ChronicRowView[];
+  truncated: boolean;
+  medianStops: string | null;
+  medianMeanSeconds: string | null;
+  calculationRunIds: string[];
+}

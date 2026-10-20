@@ -15,7 +15,9 @@ import {
   ShiftHandoverQueryDto,
   ReliabilityTrendQueryDto,
   TransitionPerformanceQueryDto,
+  ChronicSporadicQueryDto,
 } from './ops-reports-v2.dto';
+import { chronicSporadic, ChronicSporadicView } from './chronic-sporadic';
 import { reliabilityTrend, ReliabilityTrendView } from './reliability-trend';
 import {
   transitionPerformance,
@@ -113,6 +115,15 @@ export class OpsReportsV2Service {
       manager,
       await resolveReportScope(manager, context, query),
     );
+  }
+
+  async chronicSporadic(
+    context: RequestContext,
+    query: ChronicSporadicQueryDto,
+  ): Promise<AnalyticsResponse<ChronicSporadicView>> {
+    const manager = this.periods.manager;
+    const scope = await resolveReportScope(manager, context, query);
+    return chronicSporadic(manager, scope, query.groupBy ?? 'reason');
   }
 
   createShiftNote(

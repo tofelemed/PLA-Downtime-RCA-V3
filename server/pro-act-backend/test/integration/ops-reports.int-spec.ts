@@ -63,12 +63,13 @@ describe('Operating reports (R1)', () => {
   const env = new ReconciliationWorld();
   const window = `from=${encodeURIComponent(DAY1)}&to=${encodeURIComponent(NEXT_DAY)}`;
   let scope = '';
+  let feed = '';
 
   beforeAll(async () => {
     await env.start();
     scope = `unitIds=${env.world.unitA1}&${window}`;
     await env.lossEvent(env.world.unitA1, plus(A, HOUR), 1, {
-      reasonCodeId: await env.reasonCode('FEED'),
+      reasonCodeId: (feed = await env.reasonCode('FEED')),
     });
     await env.settle();
   });
@@ -257,5 +258,32 @@ describe('Operating reports (R1)', () => {
       single.data.units[0].mtbf.value,
     );
     expect(trend.data.units[0].fallingMtbf).toBe(false);
+  });
+
+  it('chronic vs sporadic: the FEED stop with its count, seconds and quadrant', async () => {
+    const body = (
+      await env
+        .get(`reports/chronic-sporadic?${scope}&groupBy=reason`)
+        .expect(200)
+    ).body as Envelope<{
+      rows: Array<{
+        key: string | null;
+        label: string | null;
+        stops: string;
+        seconds: string;
+        meanSeconds: string | null;
+        quadrant: string | null;
+      }>;
+    }>;
+    expect(body.data.rows).toEqual([
+      expect.objectContaining({
+        key: feed,
+        stops: '1',
+        seconds: '3600',
+        meanSeconds: '3600',
+        quadrant: 'major',
+      }),
+    ]);
+    expect(body.data.rows[0].label).toContain('FEED');
   });
 });

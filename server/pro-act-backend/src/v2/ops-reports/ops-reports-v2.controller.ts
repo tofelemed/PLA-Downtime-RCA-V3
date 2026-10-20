@@ -13,7 +13,9 @@ import {
   ShiftHandoverQueryDto,
   ReliabilityTrendQueryDto,
   TransitionPerformanceQueryDto,
+  ChronicSporadicQueryDto,
 } from './ops-reports-v2.dto';
+import { ChronicSporadicView } from './chronic-sporadic';
 import { ReliabilityTrendView } from './reliability-trend';
 import { TransitionPerformanceView } from './transition-performance';
 import { QualityDispositionsView } from './quality-dispositions';
@@ -144,5 +146,22 @@ export class OpsReportsV2Controller {
     @Query() query: ReliabilityTrendQueryDto,
   ): Promise<AnalyticsResponse<ReliabilityTrendView>> {
     return this.reports.reliabilityTrend(ctx, query);
+  }
+
+  @Get('chronic-sporadic')
+  @ApiOperation({
+    summary:
+      'Unplanned stops per reason or asset: occurrences, seconds, mean length and chronic / sporadic / major / minor quadrant',
+    description:
+      'From the stored downtime breakdown cells of the shown runs (unplanned and unknown schedule class — never planned or external —, micro-stops included; seconds ' +
+      'allocated per cause as in /reports/downtime). Quadrants are cut at the medians of the rows with stops ' +
+      '(medianStops, medianMeanSeconds; a tie counts as high): frequent+short = chronic, rare+long = sporadic, ' +
+      `both high = major, both low = minor. Largest seconds first, at most 100 rows (truncated). ${SCOPE_NOTE}`,
+  })
+  chronicSporadic(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ChronicSporadicQueryDto,
+  ): Promise<AnalyticsResponse<ChronicSporadicView>> {
+    return this.reports.chronicSporadic(ctx, query);
   }
 }

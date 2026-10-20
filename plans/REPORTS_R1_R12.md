@@ -39,7 +39,7 @@ Parked (need owner decisions): T1 targets and comparisons, T2 scheduled e-mail.
 - [x] R4 Quality and off-grade (`quality-dispositions`, loss tree `groupBy=qualityClass`; Reports → Quality and off-grade)
 - [x] R5 Grade transitions (`transition-performance`; Reports → Grade transitions)
 - [x] R6 Reliability trend (`reliability-trend`; Reports → Reliability trend)
-- [ ] R7 Chronic vs sporadic
+- [x] R7 Chronic vs sporadic (`chronic-sporadic`; Reports → Chronic vs sporadic)
 - [ ] R8 Rate loss
 - [ ] R9 Coding compliance
 - [ ] R10 RCA action tracker

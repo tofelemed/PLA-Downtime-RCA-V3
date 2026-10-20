@@ -3,6 +3,7 @@ import { v2Request } from '../client';
 import type { QueryParams } from '../request-url';
 import type { QueryOf } from '../schema-types';
 import type {
+  ChronicSporadicView,
   EventStatusView,
   ProductionByProductView,
   QualityDispositionsView,
@@ -66,4 +67,11 @@ export function useTransitionPerformance(query: ReportQueryBase | null, tz?: str
 /** R6: reliability per plant month for each unit and its most-failing assets. */
 export function useReliabilityTrend(query: ReportQueryBase | null, tz?: string) {
   return useReport<ReliabilityTrendView>('reliability-trend', query, tz);
+}
+
+export type ChronicSporadicQuery = QueryOf<'/api/v2/reports/chronic-sporadic', 'get'> & ReportQueryBase;
+
+/** R7: unplanned stops per reason or asset with their chronic / sporadic quadrant. */
+export function useChronicSporadic(query: ChronicSporadicQuery | null, tz?: string) {
+  return useReport<ChronicSporadicView>('chronic-sporadic', query, tz);
 }

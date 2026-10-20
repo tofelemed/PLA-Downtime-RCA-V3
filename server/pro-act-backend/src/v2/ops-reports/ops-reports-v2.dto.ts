@@ -104,3 +104,14 @@ export class TransitionPerformanceQueryDto extends ReportWindowQueryDto {}
 
 /** `GET /reports/reliability-trend` (R6): MTBF, restore and repair means per plant month. */
 export class ReliabilityTrendQueryDto extends ReportWindowQueryDto {}
+
+export const CHRONIC_GROUPS = ['reason', 'asset'] as const;
+export type ChronicGroup = (typeof CHRONIC_GROUPS)[number];
+
+/** `GET /reports/chronic-sporadic` (R7): unplanned stops per reason or asset, chronic vs sporadic. */
+export class ChronicSporadicQueryDto extends ReportWindowQueryDto {
+  @ApiPropertyOptional({ enum: CHRONIC_GROUPS, default: 'reason' })
+  @IsOptional()
+  @IsIn(CHRONIC_GROUPS)
+  groupBy?: ChronicGroup;
+}
