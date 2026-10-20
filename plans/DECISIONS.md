@@ -1279,6 +1279,32 @@ Audit of the PI path end to end against a sample PI Web API shaped like a real o
   2. The bulk-code dialog offers "Split across several reasons". It is percent only: it sends `codes.reasonWeights`, the largest share becomes the reason, and Preview stays blocked until every row has a reason and a percent.
   3. The RCA policy editor takes its classes from `RCA_CONSEQUENCE_CLASSES`, so it shows and saves the `critical` investigation tier and the zero-repeat class. Older versions without `critical` stay valid ("not set — the default applies").
 
+## 2026-10-20 — Database audit (`docs/db-audit/AUDIT_REPORT.md`)
+
+- **Integration tests on their own server (F05, owner: "yes").**
+  - `npm run test:int` starts the throwaway in-memory container `proact-test-postgres` (`docker-compose.testdb.yml`, `127.0.0.1:5434`, fsync off) and points the suites at it through `TEST_DB_*`.
+  - `npm run testdb:down` removes it. GitHub Actions runs `test:int:ci` on its own service container.
+  - Why: schema-recreating test runs on `proact-postgres` caused checkpoints syncing 10k–23k files (up to 82 s fsync) and 0.6–2 s commits in the app.
+  - `proact` stays the only database on `proact-postgres`.
+- **Server settings (F08 / F14, owner: "yes").**
+  - `pg_stat_statements` is preloaded (migration `1794240700000-PgStatStatements`).
+  - Logging: `track_io_timing`, `log_min_duration_statement` 500 ms, `log_lock_waits`, `log_temp_files` 0, `log_autovacuum_min_duration` 1 s.
+  - Planner and memory: `shared_buffers` 512 MB, `random_page_cost` 1.1, `effective_io_concurrency` 200, `jit` off.
+  - `idle_in_transaction_session_timeout` 15 min. It is a backstop, not 60 s, because the outbox relay transaction can legitimately sit idle while consumers run (F03).
+  - Applied to `proact-postgres` with `ALTER SYSTEM` (undo with `ALTER SYSTEM RESET <name>` + restart), and to the bundled `docker-compose.yml` service via `command:`.
+- **Retention of superseded calculation runs (F01).** Engineering default chosen under standard practice: immutable *posted* records are kept forever, *draft* working state is pruned, and runs are reproducible from their frozen fingerprint. Owner asked: "which suits here according to standard".
+  - **Kept forever:**
+    - every `calculation_runs` header (small; it holds the fingerprint, input hash, engine and policy versions, so any run can be explained and re-run);
+    - the full detail (`kpi_results`, `loss_lines`, `loss_line_valuations`, `loss_line_evidence`) of every run that is or was a revision's current run when it was submitted, approved or published, or that an approval snapshot or export references;
+    - approved ledgers, as already decided.
+  - **Pruned:** the detail rows of `superseded` runs of draft revisions that were never submitted, once older than **30 days** (same window as the audit records, `CALC_RUN_DETAIL_RETENTION_DAYS`, unset = keep). The daily retention job does the pruning in small batches.
+    - The immutability triggers stay. As for `audit_log`, they allow DELETE only inside a transaction that declares a cutoff (`app.calc_retention_cutoff`) and only for rows of superseded, never-submitted runs older than it. UPDATE is still refused.
+  - **At the source:**
+    - Recompute of an **open** period (its open events count to "now", so every change makes a new input hash) is coalesced to at most one run per period per `OPEN_PERIOD_RECOMPUTE_MIN_SECONDS` (default 300 s).
+    - Closed periods and explicit user actions (revise, settle, approve) still recompute immediately.
+  - Measured on `proact` (20 Oct): 326 runs, 16 current, 25,108 of 25,976 `kpi_results` rows on superseded runs, and about 20 runs an hour for one open period. Expected effect: roughly 30× fewer detail rows, with history bounded by 30 days of draft churn.
+  - **Status:** decided, not yet implemented. Needs a migration (trigger functions), the retention job, the recompute coalescing, and tests.
+
 ## 2026-10-20 — All unused v1 tables dropped; cutover tool retired (owner: "check all other v1 tables … if not drop them all", option "A + B + C")
 
 - **How it was checked.**
