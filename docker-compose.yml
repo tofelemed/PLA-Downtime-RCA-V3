@@ -44,6 +44,9 @@ x-backend-env: &backend-env
   # Message brokers as seen from inside the containers (docker-compose.shared-infra.yml points them at the host's)
   KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:29092}
   MQTT_URL: ${MQTT_URL:-mqtt://mqtt:1883}
+  # nginx on the private Docker network is the only proxy in front of the API: client IPs come from
+  # X-Forwarded-For (per-IP rate limits of login / refresh; perf audit P11)
+  TRUST_PROXY: ${TRUST_PROXY:-loopback, uniquelocal}
   # Report export files (plan 2.9): private volume shared by API and worker, never under /app/uploads
   EXPORT_STORAGE_DIR: /app/storage/exports
   EXPORT_TTL_HOURS: ${EXPORT_TTL_HOURS:-168}

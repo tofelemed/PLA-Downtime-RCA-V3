@@ -20,6 +20,22 @@ function hasBodyParser(app: unknown): app is BodyParserHost {
 
 interface ExpressSettingsHost {
   disable(setting: string): unknown;
+  set(setting: string, value: unknown): unknown;
+}
+
+/**
+ * Express `trust proxy` from `TRUST_PROXY` (perf audit P11): `true`/`false`, a hop count, or addresses /
+ * subnets such as `loopback, uniquelocal` (nginx on the Docker network). Unset = Express's default (no
+ * proxy trusted). With it, `req.ip` is the client from `X-Forwarded-For`, so per-IP throttling of anonymous
+ * calls (login, refresh) stops sharing one bucket for every client behind the proxy.
+ */
+export function trustProxySetting(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean | number | string | undefined {
+  const raw = env.TRUST_PROXY?.trim();
+  if (!raw) return undefined;
+  if (raw === 'true' || raw === 'false') return raw === 'true';
+  return /^\d+$/.test(raw) ? Number(raw) : raw;
 }
 
 function hasExpressSettings(app: unknown): app is ExpressSettingsHost {
@@ -51,7 +67,11 @@ function configureServerTimeouts(app: INestApplication): void {
  * and the request body limits (413 above 1 MiB); no `X-Powered-By` header, keep-alive above the proxy's.
  */
 export function configureHttpApp<T extends INestApplication>(app: T): T {
-  if (hasExpressSettings(app)) app.disable('x-powered-by');
+  if (hasExpressSettings(app)) {
+    app.disable('x-powered-by');
+    const trustProxy = trustProxySetting();
+    if (trustProxy !== undefined) app.set('trust proxy', trustProxy);
+  }
   configureServerTimeouts(app);
   if (hasBodyParser(app)) {
     app.useBodyParser('json', { limit: JSON_BODY_LIMIT });
