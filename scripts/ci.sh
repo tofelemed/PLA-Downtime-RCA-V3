@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Local CI: the same steps as .github/workflows/ci.yml, run sequentially against the local Postgres
-# (server/pro-act-backend/.env; the integration harness uses the proact_test database).
+# Local CI: the same steps as .github/workflows/ci.yml, run sequentially; integration tests use a throwaway
+# Postgres container (docker-compose.testdb.yml, 127.0.0.1:5434, database proact_test), removed afterwards.
 #
 #   scripts/ci.sh [--e2e] [--skip-lint] [--skip-unit] [--skip-int]
 #   npm run ci -- --e2e
@@ -49,7 +49,8 @@ if [[ $RUN_UNIT == 1 ]]; then
 fi
 
 if [[ $RUN_INT == 1 ]]; then
-  step "Backend integration tests (local Postgres, proact_test)"
+  step "Backend integration tests (throwaway Postgres on 127.0.0.1:5434, proact_test)"
+  trap '(cd "$BACKEND" && npm run testdb:down >/dev/null 2>&1) || true' EXIT
   (cd "$BACKEND" && npm run test:int)
 fi
 

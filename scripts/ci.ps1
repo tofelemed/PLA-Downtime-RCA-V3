@@ -1,5 +1,5 @@
-# Local CI: the same steps as .github/workflows/ci.yml, run sequentially against the local Postgres
-# (server/pro-act-backend/.env; the integration harness uses the proact_test database).
+# Local CI: the same steps as .github/workflows/ci.yml, run sequentially; integration tests use a throwaway
+# Postgres container (docker-compose.testdb.yml, 127.0.0.1:5434, database proact_test), removed afterwards.
 #
 #   powershell -ExecutionPolicy Bypass -File scripts/ci.ps1 [-E2E] [-SkipLint] [-SkipUnit] [-SkipInt]
 #   npm run ci -- --e2e
@@ -47,7 +47,13 @@ if (-not $SkipUnit) {
 }
 
 if (-not $SkipInt) {
-  Invoke-Step 'Backend integration tests (local Postgres, proact_test)' $Backend { npm run test:int }
+  try {
+    Invoke-Step 'Backend integration tests (throwaway Postgres on 127.0.0.1:5434, proact_test)' $Backend { npm run test:int }
+  } finally {
+    Push-Location $Backend
+    npm run testdb:down | Out-Null
+    Pop-Location
+  }
 }
 
 if ($E2E) {

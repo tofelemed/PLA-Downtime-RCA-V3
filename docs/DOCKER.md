@@ -241,7 +241,7 @@ mosquitto_pub -h localhost -p 8885 --cafile docker/mosquitto/certs/dev-ca.crt -u
 |-----|-----------|-------|
 | `lint` | `npm run lint` (frontend), `eslint` without `--fix` (backend) | `continue-on-error` while the ~2400 pre-existing frontend errors are paid down |
 | `unit` | backend `npm run test:unit` + `npm run test:fixtures` (Jest `unit` and `fixtures` projects), frontend `npm run test:run` | `src/test/integration/*` is excluded: it needs a live backend |
-| `integration` | backend `npm run test:int` (Jest `integration` project, `*.int-spec.ts`) against a `postgres:15-alpine` service container; the harness creates `proact_test` and enables `uuid-ossp` | `DB_*` env points at the service container |
+| `integration` | backend `npm run test:int:ci` (Jest `integration` project, `*.int-spec.ts`) against a `postgres:15-alpine` service container; the harness creates `proact_test` and enables `uuid-ossp` | `DB_*` env points at the service container |
 | `e2e` | backend + frontend production builds, migrations + demo users, Playwright Chromium smoke (`auth`, `tasks`, `audit-auto-log` specs) | `continue-on-error` until stable; the HTML report is uploaded as the `playwright-report` artifact |
 
 The e2e job keeps `playwright.config.ts` in charge of starting both servers and only swaps the commands through
