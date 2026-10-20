@@ -6,6 +6,7 @@ import type {
   ChronicSporadicView,
   CodingComplianceView,
   EventStatusView,
+  PlanAdherenceView,
   ProductionByProductView,
   QualityDispositionsView,
   RateLossView,
@@ -92,4 +93,9 @@ export function useCodingCompliance(query: ReportQueryBase | null, tz?: string) 
 /** R10: open RCA cases and actions, closures of the window. */
 export function useRcaActionTracker(query: ReportQueryBase | null, tz?: string) {
   return usePlainReport<RcaActionTrackerView>('rca-action-tracker', query, tz);
+}
+
+/** R11: plan adherence per product over the window's plant days. */
+export function usePlanAdherence(query: ReportQueryBase | null, tz?: string) {
+  return useReport<PlanAdherenceView>('plan-adherence', query, tz);
 }

@@ -14585,6 +14585,68 @@
         ]
       }
     },
+    "/api/v2/reports/plan-adherence": {
+      "get": {
+        "description": "From the per-day production of the shown runs (plan ledger target and actual of each product slice, as /reports/production-by-product?groupBy=day). attainment = Σ actual / Σ target; volumeAdherence = Σ min(actual, target) per day / Σ target; dayAdherence = planned days run / planned days. Units of measure stay apart. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.",
+        "operationId": "OpsReportsV2Controller_planAdherence_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "approvedOnly",
+            "required": false,
+            "in": "query",
+            "description": "Only approved (published) revisions; default: approved when one exists, else the open draft (provisional)",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Per product (grade): planned days run or missed, unplanned days, attainment, volume adherence (capped per day) and day adherence",
+        "tags": [
+          "v2 · Operating reports"
+        ]
+      }
+    },
     "/api/v2/shift-notes": {
       "post": {
         "description": "Roles that record events. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); a blank body is 422 INVALID_NOTE. Notes are never edited or deleted: a correction is a new note.",

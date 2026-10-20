@@ -30,7 +30,8 @@ export type ReportKind =
   | 'chronic-sporadic'
   | 'rate-loss'
   | 'coding-compliance'
-  | 'rca-action-tracker';
+  | 'rca-action-tracker'
+  | 'plan-adherence';
 export type DowntimeReportQuery = QueryOf<'/api/v2/reports/downtime', 'get'>;
 export type OeeReportQuery = QueryOf<'/api/v2/reports/oee', 'get'>;
 export type ReliabilityReportQuery = QueryOf<'/api/v2/reports/reliability', 'get'>;

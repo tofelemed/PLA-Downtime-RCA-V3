@@ -19,7 +19,9 @@ import {
   RateLossQueryDto,
   CodingComplianceQueryDto,
   RcaActionTrackerQueryDto,
+  PlanAdherenceQueryDto,
 } from './ops-reports-v2.dto';
+import { planAdherenceReport, PlanAdherenceView } from './plan-adherence';
 import { rcaActionTracker, RcaActionTrackerView } from './rca-action-tracker';
 import { codingCompliance, CodingComplianceView } from './coding-compliance';
 import { rateLoss, RateLossView } from './rate-loss';
@@ -161,6 +163,17 @@ export class OpsReportsV2Service {
     const units =
       query.unitIds?.length || scope.restricted ? scope.unitIds : null;
     return rcaActionTracker(manager, scope, units);
+  }
+
+  async planAdherence(
+    context: RequestContext,
+    query: PlanAdherenceQueryDto,
+  ): Promise<AnalyticsResponse<PlanAdherenceView>> {
+    const manager = this.periods.manager;
+    return planAdherenceReport(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
   }
 
   createShiftNote(

@@ -271,3 +271,24 @@ export interface RcaActionTrackerView {
   closedCases: { closed: number; meanDaysToClose: string | null };
   asOf: string;
 }
+
+export interface PlanAdherenceRowView {
+  productId: string | null;
+  productCode: string | null;
+  productName: string | null;
+  uom: string | null;
+  plannedDays: number;
+  ranAsPlannedDays: number;
+  missedDays: number;
+  unplannedDays: number;
+  target: string;
+  actual: string;
+  attainment: string | null;
+  volumeAdherence: string | null;
+  dayAdherence: string | null;
+}
+
+export interface PlanAdherenceView {
+  rows: PlanAdherenceRowView[];
+  calculationRunIds: string[];
+}

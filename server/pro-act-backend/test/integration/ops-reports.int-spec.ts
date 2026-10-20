@@ -347,4 +347,22 @@ describe('Operating reports (R1)', () => {
     ]);
     expect(body.closedActions.onTimeRate).toBeNull();
   });
+
+  it('plan adherence: the planned day ran at 85 % of its target', async () => {
+    const body = (await env.get(`reports/plan-adherence?${scope}`).expect(200))
+      .body as Envelope<{ rows: Array<Record<string, unknown>> }>;
+    expect(body.data.rows).toEqual([
+      expect.objectContaining({
+        plannedDays: 1,
+        ranAsPlannedDays: 1,
+        missedDays: 0,
+        unplannedDays: 0,
+        target: '3000',
+        actual: '2550',
+        attainment: '0.85',
+        volumeAdherence: '0.85',
+        dayAdherence: '1',
+      }),
+    ]);
+  });
 });

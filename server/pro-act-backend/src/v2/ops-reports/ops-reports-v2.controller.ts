@@ -17,7 +17,9 @@ import {
   RateLossQueryDto,
   CodingComplianceQueryDto,
   RcaActionTrackerQueryDto,
+  PlanAdherenceQueryDto,
 } from './ops-reports-v2.dto';
+import { PlanAdherenceView } from './plan-adherence';
 import { RcaActionTrackerView } from './rca-action-tracker';
 import { CodingComplianceView } from './coding-compliance';
 import { RateLossView } from './rate-loss';
@@ -219,5 +221,22 @@ export class OpsReportsV2Controller {
     @Query() query: RcaActionTrackerQueryDto,
   ): Promise<RcaActionTrackerView> {
     return this.reports.rcaActionTracker(ctx, query);
+  }
+
+  @Get('plan-adherence')
+  @ApiOperation({
+    summary:
+      'Per product (grade): planned days run or missed, unplanned days, attainment, volume adherence (capped per day) and day adherence',
+    description:
+      'From the per-day production of the shown runs (plan ledger target and actual of each product slice, as ' +
+      '/reports/production-by-product?groupBy=day). attainment = Σ actual / Σ target; volumeAdherence = Σ ' +
+      'min(actual, target) per day / Σ target; dayAdherence = planned days run / planned days. Units of measure ' +
+      `stay apart. ${SCOPE_NOTE}`,
+  })
+  planAdherence(
+    @Ctx() ctx: RequestContext,
+    @Query() query: PlanAdherenceQueryDto,
+  ): Promise<AnalyticsResponse<PlanAdherenceView>> {
+    return this.reports.planAdherence(ctx, query);
   }
 }

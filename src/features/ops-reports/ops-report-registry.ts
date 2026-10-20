@@ -15,6 +15,7 @@ const ChronicSporadicReport = lazy(() => import('./chronic/chronic-sporadic-repo
 const RateLossReport = lazy(() => import('./rate/rate-loss-report').then((m) => ({ default: m.RateLossReport })));
 const CodingComplianceReport = lazy(() => import('./compliance/coding-compliance-report').then((m) => ({ default: m.CodingComplianceReport })));
 const RcaActionTrackerReport = lazy(() => import('./rca/rca-action-tracker-report').then((m) => ({ default: m.RcaActionTrackerReport })));
+const PlanAdherenceReport = lazy(() => import('./plan/plan-adherence-report').then((m) => ({ default: m.PlanAdherenceReport })));
 const ShiftHandoverReport = lazy(() => import('./shift/shift-handover-report').then((m) => ({ default: m.ShiftHandoverReport })));
 
 /** The operating reports of `plans/REPORTS_R1_R12.md` as Reports page views (`?view=`), each loaded on demand. */
@@ -29,4 +30,5 @@ export const OPS_VIEWS: ReadonlyArray<{ key: string; label: string; Report: Comp
   { key: 'rate', label: 'Rate loss', Report: RateLossReport },
   { key: 'compliance', label: 'Coding compliance', Report: CodingComplianceReport },
   { key: 'rca', label: 'RCA actions', Report: RcaActionTrackerReport },
+  { key: 'plan', label: 'Plan adherence', Report: PlanAdherenceReport },
 ];

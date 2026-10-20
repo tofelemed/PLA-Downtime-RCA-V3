@@ -124,3 +124,6 @@ export class CodingComplianceQueryDto extends ReportWindowQueryDto {}
 
 /** `GET /reports/rca-action-tracker` (R10): open RCA cases and actions, closures in the window. */
 export class RcaActionTrackerQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/plan-adherence` (R11): plan adherence per product over the window's plant days. */
+export class PlanAdherenceQueryDto extends ReportWindowQueryDto {}
