@@ -4266,6 +4266,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/monthly-scorecard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per plant month: operational OEE and components, utilisation and share of capacity lost, plan attainment, money lost
+         * @description Σ of the shown runs’ stored results per plant month (YYYY-MM): OEE terms; capacity-ledger capacity and good (utilisation = good / capacity, lossShare = (capacity − good) / capacity); plan-ledger target and actual; plan-ledger loss value in the approved policy’s default view (valueMetric), per currency, null when not fully valued (never 0). The page asks for 12 months (≤ 400 days). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         */
+        get: operations["OpsReportsV2Controller_monthlyScorecard_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/shift-notes": {
         parameters: {
             query?: never;
@@ -17433,6 +17453,32 @@ export interface operations {
         };
     };
     OpsReportsV2Controller_planAdherence_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpsReportsV2Controller_monthlyScorecard_v2: {
         parameters: {
             query: {
                 /** @description Periods starting at or after this instant (ISO 8601 with offset) */

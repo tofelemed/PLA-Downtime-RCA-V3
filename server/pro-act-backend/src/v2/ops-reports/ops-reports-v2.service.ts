@@ -20,7 +20,9 @@ import {
   CodingComplianceQueryDto,
   RcaActionTrackerQueryDto,
   PlanAdherenceQueryDto,
+  MonthlyScorecardQueryDto,
 } from './ops-reports-v2.dto';
+import { monthlyScorecard, MonthlyScorecardView } from './monthly-scorecard';
 import { planAdherenceReport, PlanAdherenceView } from './plan-adherence';
 import { rcaActionTracker, RcaActionTrackerView } from './rca-action-tracker';
 import { codingCompliance, CodingComplianceView } from './coding-compliance';
@@ -171,6 +173,17 @@ export class OpsReportsV2Service {
   ): Promise<AnalyticsResponse<PlanAdherenceView>> {
     const manager = this.periods.manager;
     return planAdherenceReport(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
+  }
+
+  async monthlyScorecard(
+    context: RequestContext,
+    query: MonthlyScorecardQueryDto,
+  ): Promise<AnalyticsResponse<MonthlyScorecardView>> {
+    const manager = this.periods.manager;
+    return monthlyScorecard(
       manager,
       await resolveReportScope(manager, context, query),
     );

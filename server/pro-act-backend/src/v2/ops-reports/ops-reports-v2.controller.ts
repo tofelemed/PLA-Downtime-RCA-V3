@@ -18,7 +18,9 @@ import {
   CodingComplianceQueryDto,
   RcaActionTrackerQueryDto,
   PlanAdherenceQueryDto,
+  MonthlyScorecardQueryDto,
 } from './ops-reports-v2.dto';
+import { MonthlyScorecardView } from './monthly-scorecard';
 import { PlanAdherenceView } from './plan-adherence';
 import { RcaActionTrackerView } from './rca-action-tracker';
 import { CodingComplianceView } from './coding-compliance';
@@ -238,5 +240,22 @@ export class OpsReportsV2Controller {
     @Query() query: PlanAdherenceQueryDto,
   ): Promise<AnalyticsResponse<PlanAdherenceView>> {
     return this.reports.planAdherence(ctx, query);
+  }
+
+  @Get('monthly-scorecard')
+  @ApiOperation({
+    summary:
+      'Per plant month: operational OEE and components, utilisation and share of capacity lost, plan attainment, money lost',
+    description:
+      'Σ of the shown runs’ stored results per plant month (YYYY-MM): OEE terms; capacity-ledger capacity and ' +
+      'good (utilisation = good / capacity, lossShare = (capacity − good) / capacity); plan-ledger target and ' +
+      'actual; plan-ledger loss value in the approved policy’s default view (valueMetric), per currency, null when ' +
+      `not fully valued (never 0). The page asks for 12 months (≤ 400 days). ${SCOPE_NOTE}`,
+  })
+  monthlyScorecard(
+    @Ctx() ctx: RequestContext,
+    @Query() query: MonthlyScorecardQueryDto,
+  ): Promise<AnalyticsResponse<MonthlyScorecardView>> {
+    return this.reports.monthlyScorecard(ctx, query);
   }
 }

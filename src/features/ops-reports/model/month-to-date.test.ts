@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastProductionDate, monthStartOf, monthToDateWindow } from './month-to-date';
+import { lastProductionDate, monthStartOf, monthToDateWindow, twelveMonthWindow } from './month-to-date';
 
 const TZ = 'Asia/Tehran';
 const GREGORIAN = { dayStart: '06:00', timeZone: TZ, calendar: 'gregorian' as const };
@@ -29,5 +29,12 @@ describe('month to date (R1)', () => {
 
   it('is null for an invalid end', () => {
     expect(monthToDateWindow({ to: 'not a date' }, GREGORIAN)).toBeNull();
+  });
+});
+
+describe('twelve-month window (R12)', () => {
+  it('starts at the first production day eleven months before the window’s last month', () => {
+    expect(twelveMonthWindow({ to: '2026-10-18T02:30:00.000Z' }, '06:00', 'Asia/Tehran')?.from).toBe('2025-11-01T02:30:00.000Z');
+    expect(twelveMonthWindow({ to: '2027-01-10T02:30:00.000Z' }, '06:00', 'Asia/Tehran')?.from).toBe('2026-02-01T02:30:00.000Z');
   });
 });

@@ -6,6 +6,7 @@ import type {
   ChronicSporadicView,
   CodingComplianceView,
   EventStatusView,
+  MonthlyScorecardView,
   PlanAdherenceView,
   ProductionByProductView,
   QualityDispositionsView,
@@ -98,4 +99,9 @@ export function useRcaActionTracker(query: ReportQueryBase | null, tz?: string) 
 /** R11: plan adherence per product over the window's plant days. */
 export function usePlanAdherence(query: ReportQueryBase | null, tz?: string) {
   return useReport<PlanAdherenceView>('plan-adherence', query, tz);
+}
+
+/** R12: OEE, output and loss value per plant month. */
+export function useMonthlyScorecard(query: ReportQueryBase | null, tz?: string) {
+  return useReport<MonthlyScorecardView>('monthly-scorecard', query, tz);
 }

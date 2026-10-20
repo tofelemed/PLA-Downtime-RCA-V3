@@ -127,3 +127,6 @@ export class RcaActionTrackerQueryDto extends ReportWindowQueryDto {}
 
 /** `GET /reports/plan-adherence` (R11): plan adherence per product over the window's plant days. */
 export class PlanAdherenceQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/monthly-scorecard` (R12): OEE, output and loss value per plant month. */
+export class MonthlyScorecardQueryDto extends ReportWindowQueryDto {}

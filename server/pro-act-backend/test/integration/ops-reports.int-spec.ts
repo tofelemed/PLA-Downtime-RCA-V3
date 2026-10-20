@@ -365,4 +365,35 @@ describe('Operating reports (R1)', () => {
       }),
     ]);
   });
+
+  it('monthly scorecard: the month with OEE, utilisation of capacity and plan attainment', async () => {
+    const body = (
+      await env.get(`reports/monthly-scorecard?${scope}`).expect(200)
+    ).body as Envelope<{
+      months: Array<{
+        month: string;
+        oee: Array<{ metric: string }>;
+        output: Array<Record<string, unknown>>;
+        lossValue: unknown[];
+      }>;
+      valueMetric: string;
+    }>;
+    expect(body.data.months.map((m) => m.month)).toEqual(['2027-03']);
+    const [march] = body.data.months;
+    expect(march.oee.map((k) => k.metric)).toEqual([
+      'oee',
+      'availability',
+      'performance',
+      'quality',
+    ]);
+    expect(march.output).toEqual([
+      expect.objectContaining({
+        uom: 't',
+        target: '3000',
+        actual: '2550',
+        planAttainment: '0.85',
+      }),
+    ]);
+    expect(typeof body.data.valueMetric).toBe('string');
+  });
 });

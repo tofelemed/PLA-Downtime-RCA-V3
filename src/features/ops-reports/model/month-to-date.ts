@@ -40,3 +40,16 @@ export function monthToDateWindow(window: { to: string }, days: PlantDays): { fr
   const from = plantLocalToUtc(`${first}T${days.dayStart}`, days.timeZone);
   return from ? { from, to: window.to } : null;
 }
+
+/**
+ * The 12 calendar months ending with the month the window ends in (R12 scorecard, months as the server
+ * groups them: `YYYY-MM` of the plant date), from that first production day to the window's end.
+ */
+export function twelveMonthWindow(window: { to: string }, dayStart: string, timeZone: string): { from: string; to: string } | null {
+  const last = lastProductionDate(window.to, dayStart, timeZone);
+  if (!last) return null;
+  const index = Number(last.slice(0, 4)) * 12 + Number(last.slice(5, 7)) - 1 - 11;
+  const first = `${String(Math.floor(index / 12)).padStart(4, '0')}-${String((index % 12) + 1).padStart(2, '0')}-01`;
+  const from = plantLocalToUtc(`${first}T${dayStart}`, timeZone);
+  return from ? { from, to: window.to } : null;
+}

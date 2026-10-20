@@ -258,6 +258,8 @@ export interface LossTreeRequest {
   ledger: Ledger;
   /** loss kinds to include; every kind of the tree when absent */
   kinds?: readonly LossTreeKind[];
+  /** internal reads only: a whitelisted SQL group key instead of `groupBy`'s (e.g. the plant month); no labels */
+  groupSql?: string;
 }
 
 /** The cells of the request (quantity per uom, or one valuation view per currency) from SQL. */
@@ -266,7 +268,7 @@ export async function lossTreeCells(
   scope: ReportScope,
   request: LossTreeRequest,
 ): Promise<{ rows: CellRow[]; labels: Map<string, string> }> {
-  const groupSql = GROUP_SQL[request.groupBy];
+  const groupSql = request.groupSql ?? GROUP_SQL[request.groupBy];
   const view = LOSS_TREE_METRICS[request.metric];
   const kinds = request.kinds?.length ? request.kinds : LOSS_TREE_KINDS;
   const spec = {
@@ -283,7 +285,9 @@ export async function lossTreeCells(
   ];
   return {
     rows,
-    labels: await labelsOf(manager, scope, request.groupBy, keys),
+    labels: request.groupSql
+      ? new Map<string, string>()
+      : await labelsOf(manager, scope, request.groupBy, keys),
   };
 }
 

@@ -44,4 +44,4 @@ Parked (need owner decisions): T1 targets and comparisons, T2 scheduled e-mail.
 - [x] R9 Coding compliance (`coding-compliance`; Reports → Coding compliance)
 - [x] R10 RCA action tracker (`rca-action-tracker`; Reports → RCA actions)
 - [x] R11 Plan adherence by grade (`plan-adherence`; Reports → Plan adherence)
-- [ ] R12 Executive scorecard
+- [x] R12 Executive scorecard (`monthly-scorecard`; Reports → Executive scorecard). Budget/target comparison waits for T1.

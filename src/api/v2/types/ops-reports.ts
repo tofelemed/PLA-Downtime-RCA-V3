@@ -292,3 +292,33 @@ export interface PlanAdherenceView {
   rows: PlanAdherenceRowView[];
   calculationRunIds: string[];
 }
+
+export interface ScorecardOutputView {
+  uom: string | null;
+  capacity: string | null;
+  good: string | null;
+  target: string | null;
+  actual: string | null;
+  utilisation: string | null;
+  lossShare: string | null;
+  planAttainment: string | null;
+}
+
+export interface ScorecardValueView {
+  currency: string | null;
+  amount: string | null;
+  status: string;
+}
+
+export interface ScorecardMonthView {
+  month: string;
+  oee: KpiAggregateView[];
+  output: ScorecardOutputView[];
+  lossValue: ScorecardValueView[];
+}
+
+export interface MonthlyScorecardView {
+  months: ScorecardMonthView[];
+  valueMetric: string;
+  calculationRunIds: string[];
+}
