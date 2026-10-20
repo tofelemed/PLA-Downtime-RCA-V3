@@ -71,6 +71,32 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-proact}
+    # DB audit F08/F14 (docs/db-audit/AUDIT_REPORT.md): statement statistics, slow-query/lock/temp logging
+    # and OLTP-on-SSD planner settings. The dev container proact-postgres carries the same via ALTER SYSTEM.
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - track_io_timing=on
+      - -c
+      - log_min_duration_statement=500ms
+      - -c
+      - log_lock_waits=on
+      - -c
+      - log_temp_files=0
+      - -c
+      - log_autovacuum_min_duration=1s
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - idle_in_transaction_session_timeout=15min
+      - -c
+      - jit=off
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
