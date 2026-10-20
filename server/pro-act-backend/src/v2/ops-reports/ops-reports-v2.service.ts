@@ -16,7 +16,9 @@ import {
   ReliabilityTrendQueryDto,
   TransitionPerformanceQueryDto,
   ChronicSporadicQueryDto,
+  RateLossQueryDto,
 } from './ops-reports-v2.dto';
+import { rateLoss, RateLossView } from './rate-loss';
 import { chronicSporadic, ChronicSporadicView } from './chronic-sporadic';
 import { reliabilityTrend, ReliabilityTrendView } from './reliability-trend';
 import {
@@ -124,6 +126,14 @@ export class OpsReportsV2Service {
     const manager = this.periods.manager;
     const scope = await resolveReportScope(manager, context, query);
     return chronicSporadic(manager, scope, query.groupBy ?? 'reason');
+  }
+
+  async rateLoss(
+    context: RequestContext,
+    query: RateLossQueryDto,
+  ): Promise<AnalyticsResponse<RateLossView>> {
+    const manager = this.periods.manager;
+    return rateLoss(manager, await resolveReportScope(manager, context, query));
   }
 
   createShiftNote(

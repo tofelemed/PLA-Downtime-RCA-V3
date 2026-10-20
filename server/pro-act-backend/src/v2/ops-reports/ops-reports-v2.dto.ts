@@ -115,3 +115,6 @@ export class ChronicSporadicQueryDto extends ReportWindowQueryDto {
   @IsIn(CHRONIC_GROUPS)
   groupBy?: ChronicGroup;
 }
+
+/** `GET /reports/rate-loss` (R8): equivalent downtime and performance per plant month. */
+export class RateLossQueryDto extends ReportWindowQueryDto {}

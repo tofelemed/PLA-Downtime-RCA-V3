@@ -1,4 +1,4 @@
-import type { ReliabilityRowView } from './reports';
+import type { KpiAggregateView, ReliabilityRowView } from './reports';
 
 /** Operating report views R1–R12 (backend `src/v2/ops-reports/`); every quantity is a decimal string. */
 export interface ProductionRowView {
@@ -226,5 +226,17 @@ export interface ChronicSporadicView {
   truncated: boolean;
   medianStops: string | null;
   medianMeanSeconds: string | null;
+  calculationRunIds: string[];
+}
+
+export interface RateLossMonthView {
+  month: string;
+  equivalentDowntime: KpiAggregateView;
+  performance: KpiAggregateView;
+}
+
+export interface RateLossView {
+  months: RateLossMonthView[];
+  total: { equivalentDowntime: KpiAggregateView; performance: KpiAggregateView };
   calculationRunIds: string[];
 }

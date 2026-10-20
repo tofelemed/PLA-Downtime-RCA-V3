@@ -14,7 +14,9 @@ import {
   ReliabilityTrendQueryDto,
   TransitionPerformanceQueryDto,
   ChronicSporadicQueryDto,
+  RateLossQueryDto,
 } from './ops-reports-v2.dto';
+import { RateLossView } from './rate-loss';
 import { ChronicSporadicView } from './chronic-sporadic';
 import { ReliabilityTrendView } from './reliability-trend';
 import { TransitionPerformanceView } from './transition-performance';
@@ -163,5 +165,21 @@ export class OpsReportsV2Controller {
     @Query() query: ChronicSporadicQueryDto,
   ): Promise<AnalyticsResponse<ChronicSporadicView>> {
     return this.reports.chronicSporadic(ctx, query);
+  }
+
+  @Get('rate-loss')
+  @ApiOperation({
+    summary:
+      'Equivalent downtime of running below rate and the performance component, per plant month and in total',
+    description:
+      'Σ of the stored period terms of the shown runs: downtime_equivalent = fraction × duration of the ' +
+      'partial-impact events (time at the reference rate, SME Q5), performance = operational OEE performance. ' +
+      `The loss by cause is /reports/loss-tree with kinds=performance. ${SCOPE_NOTE}`,
+  })
+  rateLoss(
+    @Ctx() ctx: RequestContext,
+    @Query() query: RateLossQueryDto,
+  ): Promise<AnalyticsResponse<RateLossView>> {
+    return this.reports.rateLoss(ctx, query);
   }
 }

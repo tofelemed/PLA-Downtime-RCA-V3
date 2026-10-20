@@ -286,4 +286,24 @@ describe('Operating reports (R1)', () => {
     ]);
     expect(body.data.rows[0].label).toContain('FEED');
   });
+
+  it('rate loss: the month of the window with equivalent downtime and performance, same as the total', async () => {
+    const body = (await env.get(`reports/rate-loss?${scope}`).expect(200))
+      .body as Envelope<{
+      months: Array<{
+        month: string;
+        equivalentDowntime: { value: string | null };
+        performance: { value: string | null };
+      }>;
+      total: {
+        equivalentDowntime: { value: string | null };
+        performance: { value: string | null };
+      };
+    }>;
+    expect(body.data.months.map((m) => m.month)).toEqual(['2027-03']);
+    expect(body.data.months[0].performance.value).toBe(
+      body.data.total.performance.value,
+    );
+    expect(body.data.total.equivalentDowntime.value).toBe('0');
+  });
 });

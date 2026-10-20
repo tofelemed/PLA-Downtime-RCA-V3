@@ -7,6 +7,7 @@ import type {
   EventStatusView,
   ProductionByProductView,
   QualityDispositionsView,
+  RateLossView,
   ReliabilityTrendView,
   RestatementsView,
   TransitionPerformanceView,
@@ -74,4 +75,9 @@ export type ChronicSporadicQuery = QueryOf<'/api/v2/reports/chronic-sporadic', '
 /** R7: unplanned stops per reason or asset with their chronic / sporadic quadrant. */
 export function useChronicSporadic(query: ChronicSporadicQuery | null, tz?: string) {
   return useReport<ChronicSporadicView>('chronic-sporadic', query, tz);
+}
+
+/** R8: equivalent downtime and performance per plant month. */
+export function useRateLoss(query: ReportQueryBase | null, tz?: string) {
+  return useReport<RateLossView>('rate-loss', query, tz);
 }
