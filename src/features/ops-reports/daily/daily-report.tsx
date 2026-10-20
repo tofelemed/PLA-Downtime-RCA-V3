@@ -1,10 +1,11 @@
+import { useMonthClose } from '@/api/v2/queries/month-close';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { DashboardOee } from '@/features/pla-analytics/dashboard/dashboard-oee';
 import type { AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { monthToDateWindow } from '../model/month-to-date';
 import { EventStatusCard } from './event-status-card';
 import { ProductionTable } from './production-table';
-import { TopLossesCards } from './top-losses-card';
+import { LossBreakdownCards } from '../components/loss-breakdown-cards';
 
 function Section({ scope, title, testId }: { scope: AnalyticsScope; title: string; testId: string }) {
   return (
@@ -17,18 +18,20 @@ function Section({ scope, title, testId }: { scope: AnalyticsScope; title: strin
 }
 
 /**
- * Daily production report (R1, morning meeting): the chosen production days and the month to date — OEE
- * with its components, output against plan per product with prime and off-grade — then the largest losses
- * and how far the events are coded. Every figure is a server read of the shown runs.
+ * Daily production report (R1, morning meeting): the chosen production days and the financial month to
+ * date — OEE with its components, output against plan per product with prime and off-grade — then the
+ * largest losses and how far the events are coded. Every figure is a server read of the shown runs.
  */
 export function DailyReport({ scope, dayStart }: { scope: AnalyticsScope; dayStart: string }) {
   const env = useEventHubEnv();
-  const mtd = monthToDateWindow(scope, dayStart, env.timezone);
+  // the month to date counts in the plant's financial calendar (month close policy); none until it is known
+  const calendar = useMonthClose('current').data?.calendar;
+  const mtd = calendar ? monthToDateWindow(scope, { dayStart, timeZone: env.timezone, calendar }) : null;
   return (
     <div className="space-y-6" data-testid="daily-report">
       <Section scope={scope} title="Chosen days" testId="daily-days" />
       {mtd && <Section scope={{ ...scope, ...mtd, windowLabel: 'Month to date' }} title="Month to date" testId="daily-mtd" />}
-      <TopLossesCards scope={scope} />
+      <LossBreakdownCards scope={scope} groupBy="reason" limit={5} title="Top 5 losses" testId="daily-top-losses" />
       <EventStatusCard scope={scope} />
     </div>
   );

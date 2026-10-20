@@ -1,4 +1,14 @@
-import { addCalendarDays, plantLocalToUtc, utcToPlantLocal } from '@/lib/dates';
+import { addCalendarDays, isoDateToJalali, jalaliToIsoDate, plantLocalToUtc, utcToPlantLocal } from '@/lib/dates';
+
+/** The plant's financial calendar (month close policy): the months a month-to-date window counts in. */
+export type FinancialCalendar = 'gregorian' | 'persian';
+
+/** How production days are cut: the day start (`HH:mm`, plant clock), the plant time zone, the financial calendar. */
+export interface PlantDays {
+  dayStart: string;
+  timeZone: string;
+  calendar: FinancialCalendar;
+}
 
 /**
  * The plant production date the window ends on: the production day holding the instant just before `to`
@@ -12,13 +22,21 @@ export function lastProductionDate(to: string, dayStart: string, timeZone: strin
   return local.slice(11, 16) < dayStart ? addCalendarDays(date, -1) : date;
 }
 
+/** The first date (Gregorian `YYYY-MM-DD`) of the financial month holding `date`. */
+export function monthStartOf(date: string, calendar: FinancialCalendar): string | null {
+  if (calendar === 'gregorian') return `${date.slice(0, 8)}01`;
+  const jalali = isoDateToJalali(date);
+  return jalali ? jalaliToIsoDate(jalali.jy, jalali.jm, 1) : null;
+}
+
 /**
- * Month to date of a report window (R1): from the first production day of the calendar month the window
- * ends in (the month-close month, `YYYY-MM` of the plant date) to the window's end. Null when unknown.
+ * Month to date of a report window (R1): from the first production day of the financial month (the month
+ * close's calendar) the window ends in, to the window's end. Null when unknown.
  */
-export function monthToDateWindow(window: { to: string }, dayStart: string, timeZone: string): { from: string; to: string } | null {
-  const last = lastProductionDate(window.to, dayStart, timeZone);
-  if (!last) return null;
-  const from = plantLocalToUtc(`${last.slice(0, 8)}01T${dayStart}`, timeZone);
+export function monthToDateWindow(window: { to: string }, days: PlantDays): { from: string; to: string } | null {
+  const last = lastProductionDate(window.to, days.dayStart, days.timeZone);
+  const first = last ? monthStartOf(last, days.calendar) : null;
+  if (!first) return null;
+  const from = plantLocalToUtc(`${first}T${days.dayStart}`, days.timeZone);
   return from ? { from, to: window.to } : null;
 }

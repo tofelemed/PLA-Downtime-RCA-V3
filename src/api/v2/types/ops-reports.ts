@@ -101,3 +101,25 @@ export interface ShiftHandoverView {
   notes: ShiftNoteView[];
   calculationRunIds: string[];
 }
+
+export interface RestatementRowView {
+  periodId: string;
+  unitId: string;
+  unitName: string | null;
+  localDate: string;
+  shiftName: string | null;
+  revision: number;
+  approvedAt: string | null;
+  afterClose: boolean;
+  treatment: string | null;
+  postingDate: string | null;
+  uom: string | null;
+  goodBefore: string | null;
+  goodAfter: string | null;
+  goodDelta: string | null;
+}
+
+export interface RestatementsView {
+  rows: RestatementRowView[];
+  truncated: boolean;
+}

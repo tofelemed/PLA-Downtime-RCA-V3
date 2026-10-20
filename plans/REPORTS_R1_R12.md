@@ -35,7 +35,7 @@ Parked (need owner decisions): T1 targets and comparisons, T2 scheduled e-mail.
 ## Checklist
 - [x] R1 Daily production (`production-by-product`, `event-status`; Reports → Daily production)
 - [x] R2 Shift handover (`shift-handover`, append-only `shift_notes` + `POST /v2/shift-notes`; Reports → Shift handover)
-- [ ] R3 Monthly loss statement
+- [x] R3 Monthly loss statement (`restatements`; composes month close, waterfall, loss tree, loss value; Reports → Monthly statement, browser print to PDF)
 - [ ] R4 Quality and off-grade
 - [ ] R5 Grade transitions
 - [ ] R6 Reliability trend

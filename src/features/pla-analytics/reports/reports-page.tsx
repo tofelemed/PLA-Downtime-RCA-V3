@@ -84,9 +84,11 @@ function ReportsBody({ dayStart }: { dayStart: string }) {
     <Page width="wide">
       <div className="space-y-4" data-testid="reports-v2">
         <ReportsHeader scope={named} shownUnitIds={scope.unitIds} />
-        <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} />
+        <div className="print:hidden">
+          <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} />
+        </div>
         <Tabs value={view} onValueChange={chooseView}>
-          <TabsList className="h-auto flex-wrap justify-start">
+          <TabsList className="h-auto flex-wrap justify-start print:hidden">
             {VIEWS.map((entry) => (
               <TabsTrigger key={entry.key} value={entry.key} data-testid={`report-tab-${entry.key}`}>
                 {entry.label}

@@ -1327,7 +1327,8 @@ Audit of the PI path end to end against a sample PI Web API shaped like a real o
 
 ## 2026-10-20 — Operating reports R1–R12 (owner: "approved go ahead"; plan `plans/REPORTS_R1_R12.md`)
 Engineering defaults; change any of them on request.
-- **R1 month to date** runs over the calendar month (`YYYY-MM` of the plant date, the same month as month close), in whole production days.
+- **R1 month to date** runs over the financial month of the month-close policy (Gregorian or Persian), in whole production days.
 - **R1 off-grade** is downgrade + transition off-grade + scrap + rework + not-yet-classified rejects, summed on the server. Wide spec is shown separately because it is conforming output (SME E3).
 - **R2 handover notes** are stored in `shift_notes` and are append-only: a correction is a new note, and notes are never edited or deleted. They are keyed by unit, plant date and shift label. Any role that records events (`EVENT_WRITERS`) can write one; anyone who can read the unit can read them.
 - **R2 shift window:** the stored shift instances of the chosen units, from the earliest start to the latest end. The events listed are the ones overlapping the window, including those still running, capped at 100.
+- **R3 statement** covers one financial month of the month-close policy: its production days `[firstDate, endDate)` at the plant's day start. It reads approved figures by default, as the Reports page does. Its PDF is the browser's print; the app header, sidebar, filters and tabs are hidden when printing. Restatements listed are approved revisions that replaced an approved one, for periods of the month, newest first, capped at 200.

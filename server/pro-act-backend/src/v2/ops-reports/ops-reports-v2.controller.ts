@@ -8,8 +8,10 @@ import { EventStatusView } from './event-status';
 import {
   EventStatusQueryDto,
   ProductionByProductQueryDto,
+  RestatementsQueryDto,
   ShiftHandoverQueryDto,
 } from './ops-reports-v2.dto';
+import { RestatementsView } from './restatements-report';
 import { OpsReportsV2Service } from './ops-reports-v2.service';
 import { ProductionByProductView } from './production-by-product';
 import { ShiftHandoverView } from './shift-handover';
@@ -71,5 +73,21 @@ export class OpsReportsV2Controller {
     @Query() query: ShiftHandoverQueryDto,
   ): Promise<AnalyticsResponse<ShiftHandoverView>> {
     return this.reports.shiftHandover(ctx, query);
+  }
+
+  @Get('restatements')
+  @ApiOperation({
+    summary:
+      'Restatements of the window’s periods: approved revisions that replaced an approved one, with posting and good-output change',
+    description:
+      'Periods of the units starting in the window; newest approval first, at most 200 (truncated). goodBefore / ' +
+      'goodAfter: capacity-ledger good output of the replaced and the replacing revision’s run; goodDelta their ' +
+      `difference. treatment / postingDate: finance’s posting decision, null while none. ${SCOPE_NOTE}`,
+  })
+  restatements(
+    @Ctx() ctx: RequestContext,
+    @Query() query: RestatementsQueryDto,
+  ): Promise<RestatementsView> {
+    return this.reports.restatements(ctx, query);
   }
 }

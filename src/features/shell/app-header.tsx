@@ -50,7 +50,7 @@ function MenuButton({ open, onOpen }: { open: boolean; onOpen: () => void }) {
 
 export function AppHeader({ branding, navigation }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-header flex h-14 items-center gap-2 border-b bg-background px-3 sm:gap-4 sm:px-4">
+    <header className="sticky top-0 z-header flex h-14 items-center gap-2 border-b bg-background px-3 print:hidden sm:gap-4 sm:px-4">
       {navigation && <MenuButton open={navigation.open} onOpen={navigation.onOpen} />}
       <div className="flex min-w-0 items-center gap-2">
         <BrandMark branding={branding} />

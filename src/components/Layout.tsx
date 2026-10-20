@@ -75,7 +75,7 @@ export const Layout = ({ children }: LayoutProps) => {
         {mode !== 'drawer' && (
           <aside
             className={cn(
-              'sticky top-14 z-sidebar h-[calc(100vh-3.5rem)] shrink-0 border-r bg-background transition-[width] duration-200',
+              'sticky top-14 z-sidebar h-[calc(100vh-3.5rem)] shrink-0 border-r bg-background transition-[width] duration-200 print:hidden',
               nav.collapsed ? 'w-16' : 'w-60',
             )}
           >

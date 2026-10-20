@@ -22,7 +22,8 @@ export type ReportKind =
   | 'reconciliation-status'
   | 'actuals-quality'
   | 'production-by-product'
-  | 'event-status';
+  | 'event-status'
+  | 'restatements';
 export type DowntimeReportQuery = QueryOf<'/api/v2/reports/downtime', 'get'>;
 export type OeeReportQuery = QueryOf<'/api/v2/reports/oee', 'get'>;
 export type ReliabilityReportQuery = QueryOf<'/api/v2/reports/reliability', 'get'>;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { lastProductionDate, monthToDateWindow } from './month-to-date';
+import { lastProductionDate, monthStartOf, monthToDateWindow } from './month-to-date';
 
 const TZ = 'Asia/Tehran';
+const GREGORIAN = { dayStart: '06:00', timeZone: TZ, calendar: 'gregorian' as const };
 
 describe('month to date (R1)', () => {
   it('ends on the production day holding the instant before the window end', () => {
@@ -10,18 +11,23 @@ describe('month to date (R1)', () => {
     expect(lastProductionDate('2026-10-18T10:00:00.000Z', '06:00', TZ)).toBe('2026-10-18');
   });
 
-  it('starts at the first production day of that calendar month', () => {
-    expect(monthToDateWindow({ to: '2026-10-18T02:30:00.000Z' }, '06:00', TZ)).toEqual({
+  it('starts at the first production day of that Gregorian month', () => {
+    expect(monthToDateWindow({ to: '2026-10-18T02:30:00.000Z' }, GREGORIAN)).toEqual({
       from: '2026-10-01T02:30:00.000Z',
       to: '2026-10-18T02:30:00.000Z',
     });
   });
 
   it('a window ending on the 1st at day start is the whole previous month', () => {
-    expect(monthToDateWindow({ to: '2026-11-01T02:30:00.000Z' }, '06:00', TZ)?.from).toBe('2026-10-01T02:30:00.000Z');
+    expect(monthToDateWindow({ to: '2026-11-01T02:30:00.000Z' }, GREGORIAN)?.from).toBe('2026-10-01T02:30:00.000Z');
+  });
+
+  it('follows a Persian financial calendar: 17 Oct 2026 is 25 Mehr 1405, the month began 23 Sep', () => {
+    expect(monthStartOf('2026-10-17', 'persian')).toBe('2026-09-23');
+    expect(monthToDateWindow({ to: '2026-10-18T02:30:00.000Z' }, { ...GREGORIAN, calendar: 'persian' })?.from).toBe('2026-09-23T02:30:00.000Z');
   });
 
   it('is null for an invalid end', () => {
-    expect(monthToDateWindow({ to: 'not a date' }, '06:00', TZ)).toBeNull();
+    expect(monthToDateWindow({ to: 'not a date' }, GREGORIAN)).toBeNull();
   });
 });

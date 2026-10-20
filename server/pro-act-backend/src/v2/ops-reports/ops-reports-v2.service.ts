@@ -10,8 +10,10 @@ import {
   CreateShiftNoteDto,
   EventStatusQueryDto,
   ProductionByProductQueryDto,
+  RestatementsQueryDto,
   ShiftHandoverQueryDto,
 } from './ops-reports-v2.dto';
+import { restatementsReport, RestatementsView } from './restatements-report';
 import {
   productionByProduct,
   ProductionByProductView,
@@ -55,6 +57,17 @@ export class OpsReportsV2Service {
     query: ShiftHandoverQueryDto,
   ): Promise<AnalyticsResponse<ShiftHandoverView>> {
     return shiftHandover(this.periods.manager, context, query);
+  }
+
+  async restatements(
+    context: RequestContext,
+    query: RestatementsQueryDto,
+  ): Promise<RestatementsView> {
+    const manager = this.periods.manager;
+    return restatementsReport(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
   }
 
   createShiftNote(

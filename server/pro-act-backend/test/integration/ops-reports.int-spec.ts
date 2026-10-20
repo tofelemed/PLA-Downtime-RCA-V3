@@ -190,4 +190,10 @@ describe('Operating reports (R1)', () => {
       notes: [],
     });
   });
+
+  it('restatements: none while no period has a second approved revision', async () => {
+    const body = (await env.get(`reports/restatements?${scope}`).expect(200))
+      .body as { rows: unknown[]; truncated: boolean };
+    expect(body).toEqual({ rows: [], truncated: false });
+  });
 });

@@ -92,3 +92,6 @@ export class CreateShiftNoteDto {
   @Length(1, SHIFT_NOTE_MAX)
   body: string = '';
 }
+
+/** `GET /reports/restatements` (R3): restatements of the periods starting in the window. */
+export class RestatementsQueryDto extends ReportWindowQueryDto {}
