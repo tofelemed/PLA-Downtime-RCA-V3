@@ -76,6 +76,15 @@ export class ReplayExecutor {
       });
     const ids = run.scopes.sourceObjectIds;
     if (ids?.length) qb.andWhere('so.sourceObjectId IN (:...ids)', { ids });
+    // a period replay leaves records an operator closed as irrecoverable alone ("never replayed");
+    // naming the object or its exception explicitly still replays it
+    if (!ids?.length && !run.scopes.exceptionIds?.length) {
+      qb.andWhere(
+        `NOT EXISTS (SELECT 1 FROM "ingestion_exceptions" "ie"
+           WHERE "ie"."tenant_id" = "so"."tenant_id" AND "ie"."connection_id" = "so"."connection_id"
+             AND "ie"."source_object_id" = "so"."source_object_id" AND "ie"."state" = 'irrecoverable')`,
+      );
+    }
     if (run.fromTime)
       qb.andWhere('so.latestObservedAt >= :from', { from: run.fromTime });
     if (run.toTime)

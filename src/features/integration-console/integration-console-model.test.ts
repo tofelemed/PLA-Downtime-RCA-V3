@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { ConnectionView, IngestionExceptionDetailView, IngestionJobView, JobAction, JobState } from '@/api/v2/types/integrations';
 import { emptyPiForm, formFromConnection, piCreateBody, piFormErrors, piUpdateBody } from './model/connection-form';
 import { connectionHealth, diagnosticRows } from './model/diagnostics';
-import { sampleQuery } from './model/discovery';
-import { bindTargetOf, canReplayAfterDryRun, replayCounts, resolutionReducer } from './model/exception-flow';
+import { sampleQuery, scopeTypeOfWebId } from './model/discovery';
+import { bindTargetOf, canReplayAfterDryRun, exceptionFacts, exceptionSummary, replayCounts, resolutionReducer } from './model/exception-flow';
 import { jobPurpose, presetJobBody } from './model/job-presets';
 import { allowedActions, jobHealth } from './model/job-states';
 import { changedRules, patchRule, previewBody } from './model/mapping-draft';
+import { childPattern } from './model/mapping-form';
 import { refusalOf } from './model/refusal';
 import { isSourceSupported } from './model/source-types';
 import { ux06Stages } from './model/stages';
@@ -58,6 +59,13 @@ describe('job state machine display (ING02)', () => {
     expect(presetJobBody({ purpose: 'production', ...scope, templateName: null }).scope).not.toHaveProperty('templateName');
     expect(jobPurpose(job({ scope: { purpose: 'limited' } }))).toBe('limited');
     expect(jobPurpose(job({ scope: { purpose: 'nonsense' } }))).toBeNull();
+  });
+
+  it('upkeep jobs: open frames per connection, rescan and deletion check daily over 7 days of the scope', () => {
+    const scope = { scopeType: 'database' as const, scopeId: 'DB', templateName: 'Production Loss' };
+    expect(presetJobBody({ purpose: 'open_frames', ...scope })).toEqual({ scope: { mode: 'open_frames' }, cadence: { intervalSeconds: 60, pageSize: 500 }, start: true });
+    expect(presetJobBody({ purpose: 'rescan', ...scope })).toMatchObject({ scope: { mode: 'rescan', scopeId: 'DB', rescanDays: 7, templateName: 'Production Loss' }, cadence: { intervalSeconds: 86_400 } });
+    expect(presetJobBody({ purpose: 'inventory', ...scope, templateName: null }).scope).toEqual({ mode: 'inventory', scopeType: 'database', scopeId: 'DB', inventoryDays: 7 });
   });
 });
 
@@ -117,6 +125,18 @@ describe('quarantine resolution flow (ING05)', () => {
     expect(bindTargetOf(exception({}))).toBeNull();
   });
 
+  it('shows what the source sent: record name, element path and the delivered token', () => {
+    const payload = { provenance: { rawPayload: { frame: { Name: 'Extruder1 loss 10:00' } } } };
+    const raw = { id: 'r1', receivedAt: null, messageId: null, outcome: null, payloadVisible: true, payload, payloadRef: null };
+    const coded = exception({ errorCode: 'unknown_code', detail: { delivered: { Name: 'SCREEN-CHANGE', Value: 61 } }, raw });
+    expect(exceptionFacts(coded)).toEqual([
+      { label: 'Source record', value: 'Extruder1 loss 10:00' },
+      { label: 'Delivered value', value: 'SCREEN-CHANGE' },
+    ]);
+    expect(exceptionSummary(exception({ detail: { sourcePath: '\\\\AF\\HDPE\\P1' } }))).toBe('\\\\AF\\HDPE\\P1');
+    expect(exceptionSummary(exception({}))).toBe('—');
+  });
+
   it('dry run first: a real replay is offered only after a completed dry run that found objects', () => {
     let state = resolutionReducer({ step: 'idle' }, { type: 'dry-run-started', runId: 'r1' });
     expect(state).toEqual({ step: 'dry-run', runId: 'r1' });
@@ -153,6 +173,17 @@ describe('mapping preview draft (ING04, PI02)', () => {
     expect(query).toMatchObject({ scopeId: 'DB', templateName: 'T', limit: 20, to: new Date(NOW).toISOString() });
     expect(Date.parse(query?.to ?? '') - Date.parse(query?.from ?? '')).toBe(31 * 86_400_000);
   });
+
+  it('reads the scope type from a PI WebId marker, otherwise keeps the choice', () => {
+    expect(scopeTypeOfWebId('F1RDAfMarunHDPE0001')).toBe('database');
+    expect(scopeTypeOfWebId(' F1EmMarunExtruder1')).toBe('element');
+    expect(scopeTypeOfWebId('DB-HDPE')).toBeNull();
+  });
+
+  it('binds child elements with a pattern under the element path', () => {
+    expect(childPattern('\\\\AF\\HDPE\\Line1\\Extruder1')).toBe('\\\\AF\\HDPE\\Line1\\Extruder1\\*');
+    expect(childPattern('//AF/HDPE/Line1/')).toBe('//AF/HDPE/Line1\\*');
+  });
 });
 
 describe('UX06 stage tracker', () => {
@@ -171,5 +202,10 @@ describe('UX06 stage tracker', () => {
     const stages = ux06Stages({ ...facts, jobs, openExceptions: 2, sourceMappings: 1 });
     const status = Object.fromEntries(stages.map((stage) => [stage.key, stage.status]));
     expect(status).toMatchObject({ map: 'done', limited: 'done', quarantine: 'attention', production: 'attention', backfill: 'pending' });
+  });
+
+  it('says "20+" when the quarantine holds more than the first page', () => {
+    const stages = ux06Stages({ ...facts, jobs: [job()], openExceptions: 20, moreExceptions: true });
+    expect(stages.find((stage) => stage.key === 'quarantine')?.detail).toBe('20+ open items');
   });
 });

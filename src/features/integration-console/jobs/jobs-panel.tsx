@@ -14,6 +14,8 @@ export interface JobsPanelProps {
   connectionId: string;
   scope: SourceScope;
   timezone: string;
+  /** choose the scope here when none is chosen under Discovery yet */
+  onScope: (scope: SourceScope) => void;
   jobs: {
     items: IngestionJobView[];
     isLoading: boolean;
@@ -27,7 +29,7 @@ export interface JobsPanelProps {
  * drain / stop with confirmation and audit trail, live lease / heartbeat / cursor / health from the
  * server (20 per page); plus the bounded replay.
  */
-export function JobsPanel({ connectionId, scope, timezone, jobs }: JobsPanelProps) {
+export function JobsPanel({ connectionId, scope, timezone, jobs, onScope }: JobsPanelProps) {
   const { canWriteIntegration } = useCapabilities();
   const now = useJobClock(jobs.items.map((job) => job.state));
   const paged = useClientPager(jobs.items);
@@ -35,7 +37,7 @@ export function JobsPanel({ connectionId, scope, timezone, jobs }: JobsPanelProp
     <div className="space-y-6" data-testid="jobs-panel">
       {canWriteIntegration && (
         <Section title="New job" headingLevel={3}>
-          <JobCreateForm connectionId={connectionId} scope={scope} />
+          <JobCreateForm connectionId={connectionId} scope={scope} onScope={onScope} />
         </Section>
       )}
       <Section title="Jobs" headingLevel={3}>

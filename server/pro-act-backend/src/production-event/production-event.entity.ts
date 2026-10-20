@@ -151,6 +151,10 @@ export const DURATION_SECONDS_EXPRESSION =
 @Index('IDX_production_events_lot', ['tenantId', 'lotCode'], {
   where: '"lot_code" IS NOT NULL',
 })
+/** Connector ingest finds the event of a source record by its source id (PI WebId, MQTT event_id). */
+@Index('IDX_production_events_tenant_event_id', ['tenantId', 'eventId'], {
+  where: '"event_id" IS NOT NULL',
+})
 export class ProductionEvent {
   @PrimaryGeneratedColumn('uuid')
   id: string;

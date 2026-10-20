@@ -2,6 +2,12 @@ import { PiEventFrame } from '../pi-frame-ingest.service';
 import { PiHttpClient, PiRequestError } from './pi-http-client';
 
 const DEFAULT_TTL_MS = 10 * 60_000;
+
+/** What the resolver learned about a frame's primary element. */
+export interface ElementContext {
+  path: string | null;
+  ancestors: string[];
+}
 const MAX_ENTRIES = 20_000;
 
 /**
@@ -41,13 +47,16 @@ export class PiAncestorResolver {
 
   constructor(private readonly ttlMs = DEFAULT_TTL_MS) {}
 
-  /** Ancestor WebIds (closest first) by frame WebId; frames without a primary element get none. */
+  /**
+   * By frame WebId: the primary element's AF path (from the frame, else looked up by WebId) and its
+   * ancestor WebIds (closest first); frames without a primary element get neither.
+   */
   async resolve(
     client: PiHttpClient,
     connectionId: string,
     frames: PiEventFrame[],
-  ): Promise<Map<string, string[]>> {
-    const result = new Map<string, string[]>();
+  ): Promise<Map<string, ElementContext>> {
+    const result = new Map<string, ElementContext>();
     for (const frame of frames) {
       const path = await this.primaryPath(client, connectionId, frame);
       const ancestors: string[] = [];
@@ -58,7 +67,23 @@ export class PiAncestorResolver {
         });
         if (webId) ancestors.push(webId);
       }
-      result.set(frame.WebId, ancestors);
+      result.set(frame.WebId, { path, ancestors });
+    }
+    return result;
+  }
+
+  /** The primary element's AF path by frame WebId (discovery sample: no ancestor lookups). */
+  async primaryPaths(
+    client: PiHttpClient,
+    connectionId: string,
+    frames: PiEventFrame[],
+  ): Promise<Map<string, string | null>> {
+    const result = new Map<string, string | null>();
+    for (const frame of frames) {
+      result.set(
+        frame.WebId,
+        await this.primaryPath(client, connectionId, frame),
+      );
     }
     return result;
   }

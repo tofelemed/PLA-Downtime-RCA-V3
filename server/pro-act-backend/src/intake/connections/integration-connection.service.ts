@@ -31,13 +31,12 @@ import {
   pickChange,
   sourceFailure,
 } from './connection-change';
+import { assertNoSecrets } from './config-secrets';
 import { resolveProfilePatch } from './profile-merge-patch';
 
 export type { ConnectionChange } from './connection-change';
 
 const SECRET_REF_PREFIX = 'secrets:';
-/** Endpoint configuration keys that look like credentials (they belong in `secret`). */
-const SECRET_KEY_PATTERN = /pass(word)?|secret|token|api[-_]?key|credential/i;
 /** `secrets.kind` of a v2 connection secret; `<sourceType>_secret` unless the source names it. */
 const SECRET_KINDS: Partial<Record<SourceType, string>> = {
   mqtt: 'mqtt_password',
@@ -140,9 +139,23 @@ export class IntegrationConnectionService {
     });
   }
 
+  /**
+   * Runs the adapter's connection test. Capabilities the test detected (e.g. PI's batch controller) are
+   * kept on the connection, so reads skip what the source does not offer from the first job on.
+   */
   async test(context: RequestContext, id: string): Promise<ConnectionTest> {
     const connection = await this.get(context, id);
-    return this.adapters.get(connection.sourceType).test(connection);
+    const result = await this.adapters
+      .get(connection.sourceType)
+      .test(connection);
+    const detected = detectedFlags(result.capabilities);
+    if (Object.keys(detected).length > 0) {
+      await this.connections.query(
+        `UPDATE "integration_connections" SET "capabilities" = "capabilities" || $1::jsonb WHERE "id" = $2 AND "tenant_id" = $3`,
+        [JSON.stringify(detected), connection.id, connection.tenantId],
+      );
+    }
+    return result;
   }
 
   /** Adapter capabilities and source metadata; a classified source failure is 502 with its code. */
@@ -444,15 +457,15 @@ function fieldErrorOf(problem: string): FieldError {
     : { field: 'endpointConfig', message: problem };
 }
 
-function assertNoSecrets(config: Record<string, unknown>): void {
-  const offending = Object.keys(config).filter((key) =>
-    SECRET_KEY_PATTERN.test(key),
-  );
-  if (offending.length === 0) return;
-  throw new UnprocessableEntityException({
-    code: 'SECRET_IN_CONFIG',
-    message: `endpointConfig must not contain credentials (${offending.join(', ')}); send them as "secret"`,
-  });
+/** The boolean capability flags a connection test reported (anything else is ignored). */
+function detectedFlags(
+  capabilities: Record<string, unknown> | undefined,
+): Record<string, boolean> {
+  const flags: Record<string, boolean> = {};
+  for (const [name, value] of Object.entries(capabilities ?? {})) {
+    if (typeof value === 'boolean') flags[name] = value;
+  }
+  return flags;
 }
 
 function piEndpoint(pi: PiConnectionSource): Record<string, unknown> {

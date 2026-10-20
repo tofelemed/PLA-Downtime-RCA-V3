@@ -6,6 +6,7 @@ import {
 import { PiEventFrame } from '../pi-frame-ingest.service';
 import { readAttributes } from './pi-attribute-reader';
 import { searchFramePage } from './pi-frame-search';
+import { withElementPath } from './pi-frame-shape';
 import { PiHttpClient } from './pi-http-client';
 import { piEndTimeIso } from './pi-time';
 
@@ -17,7 +18,13 @@ import { piEndTimeIso } from './pi-time';
 export async function samplePiFrames(
   client: PiHttpClient,
   request: SampleRequest,
-  useBatch: boolean,
+  options: {
+    useBatch: boolean;
+    /** primary element paths by frame WebId (looked up when PI sent only the element WebId) */
+    elementPaths: (
+      frames: PiEventFrame[],
+    ) => Promise<Map<string, string | null>>;
+  },
 ): Promise<SourceSample> {
   const page = await searchFramePage(
     client,
@@ -40,13 +47,17 @@ export async function samplePiFrames(
           await readAttributes(
             client,
             frames.map((frame) => frame.WebId),
-            useBatch,
+            options.useBatch,
           )
         ).values
       : new Map<string, Record<string, unknown>>();
+  const paths = await options.elementPaths(frames);
   return {
     records: frames.map((frame) =>
-      toRecord(frame, attributes.get(frame.WebId) ?? {}),
+      toRecord(
+        withElementPath(frame, paths.get(frame.WebId) ?? null),
+        attributes.get(frame.WebId) ?? {},
+      ),
     ),
     templates: templateCounts(frames),
     truncated: page.length > request.limit,

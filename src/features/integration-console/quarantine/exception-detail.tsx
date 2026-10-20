@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import type { IngestionExceptionDetailView } from '@/api/v2/types/integrations';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { SourceRef } from '../components/source-ref';
 import { BindSourceDialog } from '../mapping/bind-source-dialog';
-import { bindTargetOf, ERROR_CODE_INFO, type BindTarget } from '../model/exception-flow';
+import { bindTargetOf, ERROR_CODE_INFO, exceptionFacts, type BindTarget } from '../model/exception-flow';
 import { ExceptionActions } from './exception-actions';
 
 export interface ExceptionDetailProps {
@@ -63,6 +63,12 @@ export function ExceptionDetail({ exception, connectionName, timezone }: Excepti
             <dd>{connectionName}</dd>
             <dt className="text-muted-foreground">Source object</dt>
             <dd><SourceRef value={exception.sourceObjectId} /></dd>
+            {exceptionFacts(exception).map((fact) => (
+              <Fragment key={fact.label}>
+                <dt className="text-muted-foreground">{fact.label}</dt>
+                <dd className="break-all" data-testid="exception-fact">{fact.value}</dd>
+              </Fragment>
+            ))}
             <dt className="text-muted-foreground">Occurrences</dt>
             <dd>{exception.occurrences}</dd>
             <dt className="text-muted-foreground">First seen</dt>

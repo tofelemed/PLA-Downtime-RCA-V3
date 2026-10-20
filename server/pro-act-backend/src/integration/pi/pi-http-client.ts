@@ -161,13 +161,32 @@ function statusFailure(response: AxiosResponse): RetryableFailure | null {
   if (status >= 200 && status < 300) return null;
   const message = `PI Web API answered ${status} ${response.statusText ?? ''}`;
   const failure: RetryableFailure = new PiRequestError(
-    message.trim(),
+    `${message.trim()}${status === 401 ? authHint(response) : ''}`,
     kindOfStatus(status),
     status,
   );
   const retryAfter: unknown = response.headers?.['retry-after'];
   if (typeof retryAfter === 'string') failure.retryAfter = retryAfter;
   return failure;
+}
+
+/**
+ * Why a 401 happened when the server says so: Pro-Act sends HTTP Basic only, so a PI Web API that offers
+ * only Negotiate / Kerberos / NTLM rejects any user name and password (configure Basic on the PI Web API).
+ */
+export function authHint(response: Pick<AxiosResponse, 'headers'>): string {
+  const header: unknown = response.headers?.['www-authenticate'];
+  const offered = (
+    Array.isArray(header)
+      ? header.join(', ')
+      : typeof header === 'string'
+        ? header
+        : ''
+  ).trim();
+  if (!offered) return ' (check the user name and password)';
+  if (/\bbasic\b/i.test(offered))
+    return ' (Basic authentication refused: check the user name and password)';
+  return ` (the server offers ${offered} only; Pro-Act signs in with HTTP Basic — enable Basic authentication on the PI Web API)`;
 }
 
 function kindOfStatus(status: number): PiFailureKind {

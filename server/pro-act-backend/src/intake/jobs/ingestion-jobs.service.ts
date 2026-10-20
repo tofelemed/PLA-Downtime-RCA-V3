@@ -50,6 +50,13 @@ export class IngestionJobsService {
     input: NewIngestionJob,
   ): Promise<IngestionJob> {
     const connection = await this.connections.get(context, connectionId);
+    if (!connection.isActive) {
+      throw new UnprocessableEntityException({
+        code: 'CONNECTION_INACTIVE',
+        message:
+          'The connection is deactivated; activate it before creating jobs',
+      });
+    }
     await this.validateScope(connection, input.scope);
     const created = await this.unique(() =>
       this.jobs.manager.transaction(async (manager) => {

@@ -56,7 +56,9 @@ export function SignalActions({ signal, timezone, allowBackfill = true }: { sign
   const window = range.from && range.to ? { signalId: signal.id, from: range.from, to: range.to } : null;
   const startBackfill = async () => {
     if (!window) return;
-    const accepted = await backfill.submit(window).catch(() => null);
+    // a period ending today (inclusive) ends at midnight; the source is read up to now, never ahead
+    const now = new Date().toISOString();
+    const accepted = await backfill.submit({ ...window, to: window.to > now ? now : window.to }).catch(() => null);
     if (accepted) setRunId(accepted.jobId);
   };
   return (

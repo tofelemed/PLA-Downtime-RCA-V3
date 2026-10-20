@@ -14,6 +14,28 @@ const at = (minutes: number) => new Date(START.getTime() + minutes * 60_000);
 /** Plan 1.3 step 4 (ING04, B7, I4, I10): typed conversion, digital states, TimeSpan, per-field merge. */
 describe('typed attribute mapping', () => {
   describe('conversion', () => {
+    it('reads a duration in the unit PI delivered it, the rule unit only as fallback', () => {
+      const minutes: FieldRule = {
+        sourceAttr: 'Duration',
+        targetField: 'suppliedDurationSeconds',
+        type: 'duration',
+        unit: 'minutes',
+      };
+      expect(
+        convertValue(minutes, { Value: 300, UnitsAbbreviation: 's' }),
+      ).toEqual({ ok: true, value: 300 });
+      expect(
+        convertValue(minutes, { Value: 1.5, UnitsAbbreviation: 'h' }),
+      ).toEqual({ ok: true, value: 5400 });
+      expect(
+        convertValue(minutes, { Value: 18.5, UnitsAbbreviation: 'min' }),
+      ).toEqual({ ok: true, value: 1110 });
+      expect(convertValue(minutes, 2)).toEqual({ ok: true, value: 120 });
+      expect(
+        convertValue(minutes, { Value: 2, UnitsAbbreviation: 't' }),
+      ).toEqual({ ok: true, value: 120 });
+    });
+
     const digital: FieldRule = {
       sourceAttr: 'ReasonCode',
       targetField: 'reason',

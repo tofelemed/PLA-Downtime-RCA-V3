@@ -17,6 +17,17 @@ export function databaseOptions(discovery: DiscoveryView | undefined): Array<{ v
   );
 }
 
+/**
+ * The scope type a PI Web API WebId (2.0) names by its marker — `…1RD…` an AF database, `…1Em…` an AF
+ * element — or null when it is not recognised (then the user's choice stands).
+ */
+export function scopeTypeOfWebId(webId: string): SourceScope['scopeType'] | null {
+  const marker = /^[FIPL]1(RD|Em)/.exec(webId.trim())?.[1];
+  if (marker === 'RD') return 'database';
+  if (marker === 'Em') return 'element';
+  return null;
+}
+
 export const SAMPLE_MAX_HOURS = 31 * 24;
 
 /** The sample request of the last `hours` (1 h – 31 days, 20 records), ending now. */

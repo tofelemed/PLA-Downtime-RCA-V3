@@ -105,6 +105,17 @@ export const JOB_PURPOSE_LABELS: Readonly<Record<string, string>> = {
   subscribe: 'Broker subscription',
 };
 
+/** PI job modes without a console purpose (upkeep and signal jobs, scope `mode`). */
+export const JOB_MODE_LABELS: Readonly<Record<string, string>> = {
+  open_frames: 'Open frames refresh',
+  rescan: 'Correction rescan',
+  inventory: 'Deletion check',
+  recorded: 'Signal values',
+  summary: 'Signal totals',
+  updates: 'Signal updates',
+  backfill: 'Signal backfill',
+};
+
 /** Outcome counters of a job's last page and of replay runs. */
 export const INTAKE_OUTCOME_LABELS: Readonly<Record<string, string>> = {
   accepted: 'Accepted',

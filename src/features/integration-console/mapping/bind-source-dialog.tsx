@@ -5,12 +5,14 @@ import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useUnits } from '@/api/v2/queries/units';
 import type { MappingSample, SourceMappingView } from '@/api/v2/types/integration-mappings';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { useUnitNames } from '@/features/ux-kit/labels';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { Field } from '../components/field';
 import { NativeSelect } from '../components/native-select';
-import { sourceSystemOf } from '../model/mapping-form';
+import { childPattern, sourceSystemOf } from '../model/mapping-form';
 import type { BindTarget } from '../model/exception-flow';
 import { ResolutionPreview } from './resolution-preview';
 import { codeNameLabel } from '@/features/ux-kit/format/code-name';
@@ -34,6 +36,7 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
   const units = useUnits();
   const connection = useConnection(connectionId);
   const [unitId, setUnitId] = useState('');
+  const [withChildren, setWithChildren] = useState(false);
   const preview = useSourceMappingPreview();
   const create = useCreateSourceMapping();
   const unitList = flattenPages(units.data?.pages);
@@ -43,6 +46,7 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
     preview.reset();
     create.reset();
     setUnitId('');
+    setWithChildren(false);
     onClose();
   };
   const bind = async () => {
@@ -50,6 +54,10 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
     const body = { matchKind: target.matchKind, matchValue: target.matchValue, targetType: 'unit' as const, targetId: unitId, precedence: 0, connectionId, sourceSystem: sourceSystemOf(connection.data?.sourceType), isActive: true };
     const mapping = await create.submit(body).catch(() => null);
     if (!mapping) return;
+    if (withChildren && target.matchKind === 'exact_path') {
+      const children = await create.submit({ ...body, matchKind: 'pattern' as const, matchValue: childPattern(target.matchValue) }).catch(() => null);
+      if (!children) return;
+    }
     close();
     onBound(mapping);
   };
@@ -65,6 +73,14 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
         <Field id="bind-unit" label="Unit">
           <NativeSelect id="bind-unit" testId="bind-unit" value={unitId} placeholder="Choose a unit" options={options} onChange={setUnitId} />
         </Field>
+        {target?.matchKind === 'exact_path' && (
+          <div className="flex items-center gap-2">
+            <Checkbox id="bind-children" checked={withChildren} onCheckedChange={(checked) => setWithChildren(checked === true)} data-testid="bind-children" />
+            <Label htmlFor="bind-children" className="text-sm">
+              Also place event frames of its child elements (e.g. drives, gearboxes) on this unit
+            </Label>
+          </div>
+        )}
         <Button
           variant="outline"
           size="sm"

@@ -63,7 +63,11 @@ export class AttributeMappingService {
     );
   }
 
-  /** Highest version per template effective at `at` for the connection (or every connection). */
+  /**
+   * Per template, the version in force at `at`: the connection's own highest version when it has one,
+   * else the highest "every connection" version (a specific rule beats a general one, as in source
+   * mappings — a newer tenant-wide version never overrides a connection's override).
+   */
   effectiveVersions(
     tenantId: string,
     connectionId: string | null,
@@ -84,6 +88,7 @@ export class AttributeMappingService {
         }),
       )
       .orderBy('amv.templateName', 'ASC')
+      .addOrderBy('amv.connectionId IS NULL', 'ASC')
       .addOrderBy('amv.version', 'DESC')
       .getMany();
   }

@@ -5,7 +5,12 @@ import { Input } from '@/components/ui/input';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { Field } from '../components/field';
 import { NativeSelect } from '../components/native-select';
-import { databaseOptions, type SourceScope } from '../model/discovery';
+import { databaseOptions, scopeTypeOfWebId, type SourceScope } from '../model/discovery';
+
+const SCOPE_TYPES = [
+  { value: 'database', label: 'AF database' },
+  { value: 'element', label: 'AF element (and its event frames)' },
+] as const;
 
 export interface ScopePickerProps {
   connectionId: string;
@@ -41,9 +46,25 @@ export function ScopePicker({ connectionId, scope, onChange }: ScopePickerProps)
         )}
       </div>
       <ConsoleRefusal error={discovery.error} />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Field id="scope-id" label="AF database or element WebId">
-          <Input id="scope-id" value={scope.scopeId} onChange={(event) => onChange({ ...scope, scopeId: event.target.value.trim() })} />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Field id="scope-type" label="Read from">
+          <NativeSelect
+            id="scope-type"
+            testId="scope-type"
+            value={scope.scopeType}
+            options={SCOPE_TYPES}
+            onChange={(scopeType) => onChange({ ...scope, scopeType: scopeType === 'element' ? 'element' : 'database' })}
+          />
+        </Field>
+        <Field id="scope-id" label={scope.scopeType === 'element' ? 'AF element WebId' : 'AF database WebId'}>
+          <Input
+            id="scope-id"
+            value={scope.scopeId}
+            onChange={(event) => {
+              const scopeId = event.target.value.trim();
+              onChange({ ...scope, scopeId, scopeType: scopeTypeOfWebId(scopeId) ?? scope.scopeType });
+            }}
+          />
         </Field>
         <Field id="scope-template" label="Template (optional)">
           <Input

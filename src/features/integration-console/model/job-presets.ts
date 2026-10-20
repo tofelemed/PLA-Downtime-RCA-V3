@@ -11,8 +11,19 @@ import type { IngestionJobView } from '@/api/v2/types/integrations';
  */
 export type JobPurpose = 'limited' | 'backfill' | 'production';
 
+/**
+ * Upkeep jobs a production PI feed runs next to its window job (PI03–PI06): `open_frames` re-reads tracked
+ * open frames every 60 s, `rescan` re-reads the last 7 days daily (frames corrected after they closed),
+ * `inventory` compares the last 7 days daily and retracts frames deleted in PI.
+ */
+export type UpkeepKind = 'open_frames' | 'rescan' | 'inventory';
+export type JobKind = JobPurpose | UpkeepKind;
+
+export const UPKEEP_KINDS: readonly UpkeepKind[] = ['open_frames', 'rescan', 'inventory'];
+const isUpkeep = (kind: JobKind): kind is UpkeepKind => (UPKEEP_KINDS as readonly string[]).includes(kind);
+
 export interface JobPresetInput {
-  purpose: JobPurpose;
+  purpose: JobKind;
   scopeType: 'database' | 'element';
   scopeId: string;
   templateName: string | null;
@@ -37,8 +48,20 @@ function lookbackOf(input: JobPresetInput): number {
   return 60;
 }
 
+const UPKEEP_INTERVAL: Record<UpkeepKind, number> = { open_frames: 60, rescan: 86_400, inventory: 86_400 };
+
+function upkeepBody(kind: UpkeepKind, input: JobPresetInput): JobCreateBody {
+  const scope: Record<string, unknown> =
+    kind === 'open_frames'
+      ? { mode: kind }
+      : { mode: kind, scopeType: input.scopeType, scopeId: input.scopeId, ...(kind === 'rescan' ? { rescanDays: 7 } : { inventoryDays: 7 }) };
+  if (kind !== 'open_frames' && input.templateName) scope.templateName = input.templateName;
+  return { scope, cadence: { intervalSeconds: UPKEEP_INTERVAL[kind], pageSize: 500 }, start: true };
+}
+
 /** Body of POST /connections/{id}/jobs for a preset; every kind starts right away. */
 export function presetJobBody(input: JobPresetInput): JobCreateBody {
+  if (isUpkeep(input.purpose)) return upkeepBody(input.purpose, input);
   const scope: Record<string, unknown> = {
     mode: 'window',
     scopeType: input.scopeType,

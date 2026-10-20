@@ -33,7 +33,9 @@ export const SUBSCRIBE_MODE = 'subscribe';
 /**
  * Claims the most overdue runnable job whose lease is free or expired (ING02: one lease per job, i.e.
  * per connection + scope). `SKIP LOCKED` keeps concurrent runners from waiting on each other. A
- * subscription has `next_run_at` null and is excluded by its scope as well (defence in depth).
+ * subscription has `next_run_at` null and is excluded by its scope as well (defence in depth). Jobs of a
+ * deactivated connection are not claimed: deactivating a connection stops its reads until it is
+ * activated again (the jobs keep their state and cursor).
  */
 export async function claimDueJob(
   manager: EntityManager,
@@ -46,11 +48,13 @@ export async function claimDueJob(
     number,
   ] = await manager.query(
     `WITH "candidate" AS (
-         SELECT "id", "lease_owner" FROM "ingestion_jobs"
-          WHERE "state" IN ('running', 'draining') AND "next_run_at" <= now()
-            AND coalesce("scope"->>'mode', '') <> '${SUBSCRIBE_MODE}'
-            AND ("lease_expiry" IS NULL OR "lease_expiry" < now())
-          ORDER BY "next_run_at" LIMIT 1 FOR UPDATE SKIP LOCKED)
+         SELECT "job"."id", "job"."lease_owner" FROM "ingestion_jobs" "job"
+           JOIN "integration_connections" "connection" ON "connection"."id" = "job"."connection_id"
+          WHERE "job"."state" IN ('running', 'draining') AND "job"."next_run_at" <= now()
+            AND "connection"."is_active"
+            AND coalesce("job"."scope"->>'mode', '') <> '${SUBSCRIBE_MODE}'
+            AND ("job"."lease_expiry" IS NULL OR "job"."lease_expiry" < now())
+          ORDER BY "job"."next_run_at" LIMIT 1 FOR UPDATE OF "job" SKIP LOCKED)
        UPDATE "ingestion_jobs" "j" SET "lease_owner" = $1, "lease_expiry" = now() + make_interval(secs => $2),
               "heartbeat_at" = now(), "updated_at" = now(), "row_version" = "j"."row_version" + 1
          FROM "candidate" WHERE "j"."id" = "candidate"."id"

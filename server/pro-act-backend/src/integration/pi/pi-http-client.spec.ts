@@ -1,4 +1,4 @@
-import { PiRequestError, retryDelayMs } from './pi-http-client';
+import { authHint, PiRequestError, retryDelayMs } from './pi-http-client';
 
 /** Plan 1.6 (NFR07, PI01): retry waits and failure classification of the PI client. */
 describe('PI HTTP client', () => {
@@ -28,5 +28,17 @@ describe('PI HTTP client', () => {
       'authz_failed',
     );
     expect([busy.retryable, busy.health]).toEqual([true, 'source_unavailable']);
+  });
+
+  it('explains a 401 from a server that offers no Basic authentication', () => {
+    expect(
+      authHint({ headers: { 'www-authenticate': 'Negotiate, NTLM' } }),
+    ).toContain('offers Negotiate, NTLM only');
+    expect(
+      authHint({ headers: { 'www-authenticate': 'Basic realm="PI Web API"' } }),
+    ).toContain('check the user name and password');
+    expect(authHint({ headers: {} })).toBe(
+      ' (check the user name and password)',
+    );
   });
 });

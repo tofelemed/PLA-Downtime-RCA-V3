@@ -3,7 +3,7 @@ import type { IngestionJobView, JobAction } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DurationText } from '@/features/ux-kit/duration-text';
-import { INTAKE_OUTCOME_LABELS, JOB_PURPOSE_LABELS, labelOf } from '@/features/ux-kit/labels';
+import { INTAKE_OUTCOME_LABELS, JOB_MODE_LABELS, JOB_PURPOSE_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { ToneBadge } from '../components/tone-badge';
 import { jobPurpose, scopeSummary } from '../model/job-presets';
 import { ACTION_TEXT, allowedActions, jobAges, jobHealth, JOB_STATE_DISPLAY, pageOutcomes } from '../model/job-states';
@@ -35,7 +35,7 @@ function JobFacts({ job, now }: { job: IngestionJobView; now: number }) {
       </div>
       <div>
         <dt className="text-muted-foreground">Cadence</dt>
-        <dd>{job.cadence ? `${number(job.cadence.intervalSeconds)} s, pages of ${number(job.cadence.pageSize ?? 500)}` : '—'}</dd>
+        <dd>{job.cadence ? `${cadenceText(job.cadence.intervalSeconds, number)}, pages of ${number(job.cadence.pageSize ?? 500)}` : '—'}</dd>
       </div>
       <div>
         <dt className="text-muted-foreground">Retries</dt>
@@ -77,6 +77,21 @@ function JobDetails({ job }: { job: IngestionJobView }) {
 }
 
 /** One job: state, health badges, ages, last page outcomes, commands, audit trail; technical detail on demand. */
+/** The console purpose, else the PI mode (upkeep and signal jobs), else a generic name. */
+function jobTitle(job: IngestionJobView, purpose: string | null): string {
+  if (purpose) return labelOf(JOB_PURPOSE_LABELS, purpose);
+  const mode = typeof job.scope.mode === 'string' ? job.scope.mode : '';
+  return JOB_MODE_LABELS[mode] ?? 'Ingestion job';
+}
+
+/** `daily`, `every 6 h`, `60 s`: the interval as an operator reads it. */
+function cadenceText(seconds: number, number: (value: number) => string): string {
+  if (seconds === 86_400) return 'daily';
+  if (seconds >= 86_400 && seconds % 86_400 === 0) return `every ${number(seconds / 86_400)} days`;
+  if (seconds >= 3_600 && seconds % 3_600 === 0) return `every ${number(seconds / 3_600)} h`;
+  return `${number(seconds)} s`;
+}
+
 export function JobRow({ job, timezone, now }: JobRowProps) {
   const { text } = useNumberFormat();
   const { canWriteIntegration } = useCapabilities();
@@ -96,7 +111,7 @@ export function JobRow({ job, timezone, now }: JobRowProps) {
             {text(label)}
           </ToneBadge>
         ))}
-        <span className="font-medium">{purpose ? labelOf(JOB_PURPOSE_LABELS, purpose) : 'Ingestion job'}</span>
+        <span className="font-medium">{jobTitle(job, purpose)}</span>
       </div>
       <JobFacts job={job} now={now} />
       {job.lastError && <p className="text-xs text-destructive">The last run failed; see Details.</p>}

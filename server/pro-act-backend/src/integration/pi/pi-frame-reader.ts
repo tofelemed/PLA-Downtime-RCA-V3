@@ -7,8 +7,8 @@ import { PiFramePayload } from '../pi-envelope';
 import { PiEventFrame } from '../pi-frame-ingest.service';
 import { readAttributes } from './pi-attribute-reader';
 import { assertAnswer, getMany } from './pi-batch';
-import { PiAncestorResolver } from './pi-element-ancestors';
-import { normalizeFrame } from './pi-frame-search';
+import { ElementContext, PiAncestorResolver } from './pi-element-ancestors';
+import { normalizeFrame, withElementPath } from './pi-frame-shape';
 import { PiHttpClient } from './pi-http-client';
 
 /** A PI connection and its client for one read. */
@@ -43,13 +43,13 @@ export class PiFrameReader {
       source.connection.capabilities.batch !== false,
     );
     if (read.batchUnsupported) await this.disableBatch(source.connection);
-    const ancestors = await this.ancestors.resolve(
+    const elements = await this.ancestors.resolve(
       source.client,
       source.connection.id,
       frames,
     );
     return frames.map((frame) => ({
-      frame: withAncestors(frame, ancestors.get(frame.WebId) ?? []),
+      frame: withElement(frame, elements.get(frame.WebId)),
       attributes: read.values.get(frame.WebId) ?? {},
     }));
   }
@@ -88,8 +88,14 @@ export class PiFrameReader {
   }
 }
 
-function withAncestors(frame: PiEventFrame, ancestors: string[]): PiEventFrame {
+/** The frame with its primary element's path (exact-path mappings) and ancestor ids (AF bindings). */
+function withElement(
+  frame: PiEventFrame,
+  element: ElementContext | undefined,
+): PiEventFrame {
+  const located = withElementPath(frame, element?.path ?? null);
+  const ancestors = element?.ancestors ?? [];
   return ancestors.length > 0
-    ? { ...frame, AncestorElementWebIds: ancestors }
-    : frame;
+    ? { ...located, AncestorElementWebIds: ancestors }
+    : located;
 }

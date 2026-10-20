@@ -3,6 +3,21 @@
 Status: code-verified analysis, 19 Oct 2026, branch `feat/downtime-area2-b`.
 Where this document and other docs disagree, the code was checked and this document follows the code (see §13).
 
+> **Update, 19 Oct 2026 (PI Web API audit).** The PI path was tested end to end against a sample PI Web API shaped like a real one (`docs/PI_SAMPLE_SERVER.md`). The fixes and the design items left open are in `plans/DECISIONS.md` ("PI Web API integration audit and sample PI").
+>
+> Fixed since this analysis:
+> - §14 #3, #5, #8, #13, #20 (batch persisted on test), #21, #23 (event-id index added; per-record loads still open), #27 (nested secrets).
+> - Bugs found during the run:
+>   - the primary element of a real PI frame comes only from `Links` / `RefElementWebIds`;
+>   - the element path that was looked up was discarded;
+>   - PI never raised `unknown_code`;
+>   - a period replay reopened irrecoverable items;
+>   - element scope was impossible in the console;
+>   - the console could not create open-frame, rescan or deletion-check jobs;
+>   - the default signal backfill period was refused.
+>
+> **Superseded, 20 Oct 2026 (DECISIONS D-T2):** frames that cannot be placed are no longer mirrored into `unmapped_events`. Its writer is retired; the table stays. `ingestion_exceptions` is the only quarantine. Read every mention of `unmapped_events` below as "exception only".
+
 Paths:
 - Backend paths are relative to `server/pro-act-backend/src/`.
 - Frontend paths start with `src/` (repo root).

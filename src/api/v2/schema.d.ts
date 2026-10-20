@@ -1156,7 +1156,7 @@ export interface paths {
         put?: never;
         /**
          * Create an ingestion job for a scope of this connection (ING02)
-         * @description Requires `Idempotency-Key`. 409 JOB_SCOPE_EXISTS when a non-stopped job has the same scope. `start: true` starts it (the worker claims it under a lease).
+         * @description Requires `Idempotency-Key`. 409 JOB_SCOPE_EXISTS when a non-stopped job has the same scope; 422 CONNECTION_INACTIVE when the connection is deactivated (its jobs are not run until it is activated). `start: true` starts it (the worker claims it under a lease).
          */
         post: operations["ConnectionsV2Controller_createJob_v2"];
         delete?: never;

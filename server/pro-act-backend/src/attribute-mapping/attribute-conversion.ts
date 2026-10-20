@@ -34,7 +34,7 @@ export function convertValue(rule: FieldRule, raw: unknown): Conversion {
     case 'digital':
       return toDigital(rule, value);
     case 'duration':
-      return toDurationSeconds(rule, value);
+      return toDurationSeconds(withDeliveredUnit(rule, raw), value);
     case 'timestamp':
       return toTimestamp(rule, value);
   }
@@ -63,6 +63,36 @@ export function diagnostic(
 }
 
 /** A PI stream value wrapper `{ Value, Timestamp }` is unwrapped; digital states (with Name) are kept. */
+/** PI `UnitsAbbreviation` of time units → the duration unit they mean. */
+const DELIVERED_TIME_UNITS: Readonly<
+  Record<string, Exclude<DurationUnit, 'timespan'>>
+> = {
+  s: 'seconds',
+  sec: 'seconds',
+  secs: 'seconds',
+  second: 'seconds',
+  seconds: 'seconds',
+  min: 'minutes',
+  mins: 'minutes',
+  minute: 'minutes',
+  minutes: 'minutes',
+  h: 'hours',
+  hr: 'hours',
+  hrs: 'hours',
+  hour: 'hours',
+  hours: 'hours',
+};
+
+/**
+ * A duration delivered with a time unit (`{ Value: 300, UnitsAbbreviation: 's' }`) is read in that unit:
+ * the rule's unit is the fallback for unitless values, never a reason to scale seconds as minutes.
+ */
+function withDeliveredUnit(rule: FieldRule, raw: unknown): FieldRule {
+  if (!isObject(raw) || typeof raw.UnitsAbbreviation !== 'string') return rule;
+  const unit = DELIVERED_TIME_UNITS[raw.UnitsAbbreviation.trim().toLowerCase()];
+  return unit ? { ...rule, unit } : rule;
+}
+
 function unwrap(raw: unknown): unknown {
   if (isObject(raw) && !('Name' in raw) && 'Value' in raw) {
     return raw.Value;

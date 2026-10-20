@@ -37,8 +37,11 @@ export function DiscoveryPanel({ connectionId, scope, timezone, onScope, onSampl
   const [bindTarget, setBindTarget] = useState<BindTarget | null>(null);
   const [bound, setBound] = useState<string | null>(null);
   const sample = useSourceSample(connectionId, query);
+  const hoursValue = Number(hours);
+  const hoursValid = Number.isInteger(hoursValue) && hoursValue >= 1 && hoursValue <= SAMPLE_MAX_HOURS;
   const request = () => {
-    const next = sampleQuery(scope, Number(hours) || 24, Date.now());
+    if (!hoursValid) return;
+    const next = sampleQuery(scope, hoursValue, Date.now());
     setQuery(next);
     setSelected(null);
     if (next) onSampled();
@@ -49,11 +52,11 @@ export function DiscoveryPanel({ connectionId, scope, timezone, onScope, onSampl
       <ScopePicker connectionId={connectionId} scope={scope} onChange={onScope} />
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-40">
-          <Field id="sample-hours" label="Hours back">
-            <Input id="sample-hours" type="number" min={1} max={SAMPLE_MAX_HOURS} value={hours} onChange={(event) => setHours(event.target.value)} />
+          <Field id="sample-hours" label="Hours back" error={hoursValid ? undefined : `Whole hours from 1 to ${SAMPLE_MAX_HOURS}`}>
+            <Input id="sample-hours" type="number" min={1} max={SAMPLE_MAX_HOURS} value={hours} aria-invalid={!hoursValid} onChange={(event) => setHours(event.target.value)} />
           </Field>
         </div>
-        <Button size="sm" onClick={request} disabled={!scope.scopeId} data-testid="sample-run">
+        <Button size="sm" onClick={request} disabled={!scope.scopeId || !hoursValid} data-testid="sample-run">
           Sample records
         </Button>
       </div>

@@ -9,7 +9,7 @@ import { EXCEPTION_STATE_LABELS, INGESTION_ERROR_LABELS, labelOf } from '@/featu
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ActionIcon } from '@/lib/icons';
 import { useQuarantineFilters } from '../hooks/use-quarantine-filters';
-import { ERROR_CODE_INFO } from '../model/exception-flow';
+import { ERROR_CODE_INFO, exceptionSummary } from '../model/exception-flow';
 import { exceptionPath } from '../paths';
 import { QuarantineFilters } from './quarantine-filters';
 import { SourceRef } from '../components/source-ref';
@@ -50,8 +50,9 @@ function columnsOf({ timezone, from, nameOf, prefetch }: ColumnContext): DataTab
     },
     { id: 'connection', header: 'Connection', cell: (item) => <span>{nameOf(item.connectionId)}</span> },
     { id: 'source', header: 'Source object', cell: (item) => <SourceRef value={item.sourceObjectId} /> },
+    { id: 'what', header: 'Detail', cell: (item) => <span className="block max-w-56 truncate text-xs" title={exceptionSummary(item)}>{exceptionSummary(item)}</span> },
     { id: 'occurrences', header: 'Occurrences', align: 'right', nowrap: true, cell: (item) => item.occurrences },
-    { id: 'lastSeen', header: 'Last seen', nowrap: true, cell: (item) => <PlantTime iso={item.lastSeen} tz={timezone} withDate /> },
+    { id: 'lastSeen', header: 'Last seen', nowrap: true, cell: (item) => <PlantTime iso={item.lastSeen} tz={timezone} withDate stacked /> },
     { id: 'state', header: 'State', nowrap: true, cell: (item) => labelOf(EXCEPTION_STATE_LABELS, item.state) },
   ];
 }

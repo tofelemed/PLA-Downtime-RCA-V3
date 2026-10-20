@@ -2,9 +2,13 @@ import {
   frameView,
   overlaps,
   pathKey,
+  piTime,
+  piWebApiElementView,
+  piWebApiFrameView,
   SimElement,
   SimFrame,
   SimRequest,
+  SimShape,
 } from './sim-model';
 
 /** What the router reads from the simulator. */
@@ -13,11 +17,31 @@ export interface SimState {
   elements: Map<string, SimElement>;
   assetServer: { Name: string; WebId: string };
   database: { Name: string; WebId: string };
+  shape: SimShape;
+  origin: string;
 }
 
 export interface SimAnswer {
   status: number;
   body: unknown;
+  headers?: Record<string, string>;
+}
+
+/** The frame in the simulator's response shape. */
+function viewOf(state: SimState, frame: SimFrame): Record<string, unknown> {
+  return state.shape === 'piwebapi'
+    ? piWebApiFrameView(frame, {
+        origin: state.origin,
+        assetServerName: state.assetServer.Name,
+        databaseName: state.database.Name,
+      })
+    : frameView(frame);
+}
+
+function elementViewOf(state: SimState, found: SimElement): unknown {
+  return state.shape === 'piwebapi'
+    ? piWebApiElementView(found, state.origin)
+    : found;
 }
 
 const notFound = (what: string): SimAnswer => ({
@@ -38,7 +62,7 @@ export function routeGet(state: SimState, request: SimRequest): SimAnswer {
   if (action === 'eventframes') return search(state, parts, request.query);
   if (controller === 'eventframes' && id) {
     const frame = state.frames.get(id);
-    return frame ? ok(frameView(frame)) : notFound(`event frame ${id}`);
+    return frame ? ok(viewOf(state, frame)) : notFound(`event frame ${id}`);
   }
   if (controller === 'streamsets' && action === 'value') {
     return streamValues(state, id);
@@ -90,7 +114,7 @@ function search(
   const webIdsOnly = query.get('selectedFields') === 'Items.WebId';
   return ok({
     Items: page.map((frame) =>
-      webIdsOnly ? { WebId: frame.WebId } : frameView(frame),
+      webIdsOnly ? { WebId: frame.WebId } : viewOf(state, frame),
     ),
   });
 }
@@ -99,11 +123,31 @@ function streamValues(state: SimState, webId: string): SimAnswer {
   const frame = state.frames.get(webId);
   if (!frame) return notFound(`event frame ${webId}`);
   return ok({
-    Items: Object.entries(frame.attributes).map(([Name, Value]) => ({
+    Items: Object.entries(frame.attributes).map(([Name, raw]) => ({
+      WebId: `${webId}-${Name}`,
       Name,
-      Value: { Timestamp: frame.StartTime, Value, Good: true },
+      Value: {
+        Timestamp: piTime(frame.StartTime),
+        ...valueOf(raw),
+        Good: true,
+        Questionable: false,
+        Substituted: false,
+        Annotated: false,
+      },
     })),
   });
+}
+
+/** `{ Value, UnitsAbbreviation }` in a fixture carries a unit; anything else is the bare value. */
+function valueOf(raw: unknown): { Value: unknown; UnitsAbbreviation?: string } {
+  if (raw && typeof raw === 'object' && 'UnitsAbbreviation' in raw) {
+    const held = raw as { Value?: unknown; UnitsAbbreviation?: unknown };
+    return {
+      Value: held.Value ?? null,
+      UnitsAbbreviation: String(held.UnitsAbbreviation),
+    };
+  }
+  return { Value: raw };
 }
 
 function element(
@@ -113,12 +157,14 @@ function element(
 ): SimAnswer {
   if (id) {
     const found = state.elements.get(id);
-    return found ? ok(found) : notFound(`element ${id}`);
+    return found ? ok(elementViewOf(state, found)) : notFound(`element ${id}`);
   }
   const path = query.get('path');
   const key = path ? pathKey(path) : '';
   const match = [...state.elements.values()].find(
     (candidate) => pathKey(candidate.Path) === key,
   );
-  return match ? ok(match) : notFound(`element path ${path ?? ''}`);
+  return match
+    ? ok(elementViewOf(state, match))
+    : notFound(`element path ${path ?? ''}`);
 }

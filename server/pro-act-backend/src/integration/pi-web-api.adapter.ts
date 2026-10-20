@@ -14,6 +14,7 @@ import {
   IntegrationConnection,
 } from '../intake/entities/integration-connection.entity';
 import { PiClientFactory } from './pi/pi-client-factory';
+import { PiAncestorResolver } from './pi/pi-element-ancestors';
 import { diagnosePiEndpoint, diagnosisMessage } from './pi/pi-diagnostics';
 import { PiSearchScope } from './pi/pi-frame-search';
 import { PiInventory } from './pi/pi-inventory';
@@ -40,6 +41,8 @@ interface AfItem {
 @Injectable()
 export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
   readonly sourceType = 'pi_web_api' as const;
+  /** element paths of discovery samples, cached briefly so repeated samples do not re-ask PI */
+  private readonly sampleElements = new PiAncestorResolver(60_000);
 
   constructor(
     private readonly registry: AdapterRegistry,
@@ -125,11 +128,11 @@ export class PiWebApiAdapter implements SourceAdapter, OnModuleInit {
     request: SampleRequest,
   ): Promise<SourceSample> {
     const client = await this.clients.forConnection(connection);
-    return samplePiFrames(
-      client,
-      request,
-      connection.capabilities.batch !== false,
-    );
+    return samplePiFrames(client, request, {
+      useBatch: connection.capabilities.batch !== false,
+      elementPaths: (frames) =>
+        this.sampleElements.primaryPaths(client, connection.id, frames),
+    });
   }
 
   /** Signal jobs (plan 1.7) are checked at creation; frame jobs keep failing at read time (1.6). */

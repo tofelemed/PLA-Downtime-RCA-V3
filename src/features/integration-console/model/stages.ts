@@ -27,6 +27,8 @@ export interface StageFacts {
   jobs: readonly IngestionJobView[];
   /** open quarantine items of this connection (first page), null while unknown */
   openExceptions: number | null;
+  /** more open items exist than the first page holds */
+  moreExceptions?: boolean;
 }
 
 const LABELS: Record<StageKey, string> = {
@@ -65,7 +67,7 @@ export function ux06Stages(facts: StageFacts): StageResult[] {
     facts.openExceptions === null
       ? stage('quarantine', 'pending', 'Quarantine not loaded')
       : facts.openExceptions > 0
-        ? stage('quarantine', 'attention', plural(facts.openExceptions, 'open item', 'open items'))
+        ? stage('quarantine', 'attention', facts.moreExceptions ? `${facts.openExceptions}+ open items` : plural(facts.openExceptions, 'open item', 'open items'))
         : stage('quarantine', facts.jobs.length > 0 ? 'done' : 'pending', facts.jobs.length > 0 ? 'No open items' : 'Nothing ingested yet');
   return [
     stage('configure', 'done', `Config v${facts.connection.configVersion}, ${facts.connection.hasSecret ? 'credential stored' : 'no credential'}`, facts.connection.createdAt),

@@ -1,10 +1,18 @@
-import type { IngestionErrorCode, IngestionExceptionDetailView, ReplayRunView } from '@/api/v2/types/integrations';
+import type { IngestionErrorCode, IngestionExceptionDetailView, IngestionExceptionView, ReplayRunView } from '@/api/v2/types/integrations';
 
 /** What each quarantine code means and the usual fix (ING05); the replay applies the fixed mapping. */
 export const ERROR_CODE_INFO: Record<IngestionErrorCode, { label: string; suggestion: string }> = {
-  unknown_unit: { label: 'Source not mapped to a unit', suggestion: 'Bind the source element (path or id) to a unit, then replay.' },
+  unknown_unit: {
+    label: 'Source not mapped to a unit',
+    suggestion:
+      'Bind the source element to a unit ("Bind source to a unit" below, or the connection → Discovery and mapping → Sample records → Bind element), or add a rule under Connectivity → Source mappings; then replay this record. If the element is not accounted in Pro-Act, mark it irrecoverable.',
+  },
   unknown_template: { label: 'Unknown template', suggestion: 'Map the template in the attribute mapping editor, then replay.' },
-  unknown_code: { label: 'Unknown reason / impact code', suggestion: 'Add the code to the code library or correct the source value, then replay.' },
+  unknown_code: {
+    label: 'Unknown reason / impact code',
+    suggestion:
+      'The event was created uncoded. Add the code to the code library (later records are coded automatically) or correct the source value, then code this event in the Event Hub; a replay re-checks the record but never changes the codes of an existing event.',
+  },
   mapping_ambiguous: { label: 'Ambiguous mapping', suggestion: 'Two rules of equal precedence point at different targets: change a precedence, then replay.' },
   mapping_invalid_target: { label: 'Mapping points outside the plant', suggestion: 'Fix the rule target (unit or asset of this tenant), then replay.' },
   schema_invalid: { label: 'Record does not match the schema', suggestion: 'Correct the source or the adapter scope; replay or mark irrecoverable.' },
@@ -50,6 +58,24 @@ export function bindTargetOf(exception: IngestionExceptionDetailView): BindTarge
   const element = asRecord(frame?.PrimaryReferencedElement);
   return typeof element?.WebId === 'string' ? { matchKind: 'exact_id', matchValue: element.WebId } : null;
 }
+
+/** What the source sent, as recorded with the exception: the frame name, element path and offending value. */
+export function exceptionFacts(exception: IngestionExceptionView & Partial<Pick<IngestionExceptionDetailView, 'raw'>>): Array<{ label: string; value: string }> {
+  const detail = asRecord(exception.detail);
+  const provenance = asRecord(asRecord(exception.raw?.payload)?.provenance);
+  const frame = asRecord(asRecord(provenance?.rawPayload)?.frame);
+  const facts: Array<{ label: string; value: string }> = [];
+  if (typeof frame?.Name === 'string') facts.push({ label: 'Source record', value: frame.Name });
+  if (typeof detail?.sourcePath === 'string' && detail.sourcePath !== exception.sourceObjectId) facts.push({ label: 'Element path', value: detail.sourcePath });
+  const delivered = detail?.delivered;
+  const token = typeof delivered === 'string' ? delivered : asRecord(delivered)?.Name;
+  if (typeof token === 'string') facts.push({ label: 'Delivered value', value: token });
+  return facts;
+}
+
+/** One line for the quarantine list: element path and delivered value, or a dash. */
+export const exceptionSummary = (exception: IngestionExceptionView): string =>
+  exceptionFacts(exception).map((fact) => fact.value).join(' · ') || '—';
 
 /** UX06 resolution: dry run (counts) → confirm → replay (run) → done; or irrecoverable with a reason. */
 export type Resolution =

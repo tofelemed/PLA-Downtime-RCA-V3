@@ -11,7 +11,7 @@ export interface SampleTableProps {
   onBind: (record: SampleRecordView) => void;
 }
 
-/** Sampled source records (nothing stored): template, element, times in plant time, attribute names. */
+/** Sampled source records (nothing stored): name, template, element, times in plant time, attribute names. */
 export function SampleTable({ sample, timezone, selectedId, onMap, onBind }: SampleTableProps) {
   return (
     <div className="space-y-2" data-testid="sample-table">
@@ -23,6 +23,7 @@ export function SampleTable({ sample, timezone, selectedId, onMap, onBind }: Sam
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Name</TableHead>
               <TableHead>Template</TableHead>
               <TableHead>Element</TableHead>
               <TableHead>Start</TableHead>
@@ -34,6 +35,9 @@ export function SampleTable({ sample, timezone, selectedId, onMap, onBind }: Sam
           <TableBody>
             {sample.records.map((record) => (
               <TableRow key={record.sourceObjectId} data-testid="sample-record" data-source-id={record.sourceObjectId} aria-selected={record.sourceObjectId === selectedId}>
+                <TableCell className="max-w-56 truncate" title={record.name ?? undefined}>
+                  {record.name ?? '—'}
+                </TableCell>
                 <TableCell>{record.templateName ?? 'no template'}</TableCell>
                 <TableCell className="max-w-56 truncate" title={record.element?.path ?? undefined}>
                   {record.element?.path ?? record.element?.webId ?? '—'}

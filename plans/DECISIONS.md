@@ -1136,3 +1136,33 @@ From the "Re-test 19 Oct" sections of `docs/qa/QA_SHELL.md` and `QA_MASTERDATA.m
 - **Master data:** rule-builder errors are plain instructions per row ("Choose a field.", "Choose an operator.", "Enter a value."), never allowed-value lists or keys, and an untouched row stays quiet until Save. Date-only readiness and unit-state coverage windows are whole production days from the default site's operational day start (06:00), named by their start date (17 Oct = 17 Oct 06:00 → 18 Oct 06:00). Link texts and setup-step names come from `pageNameOf` / `sectionNameOf`. The SuperAdmin self-approval sentence is shown to SuperAdmin only. Tab bars list every page the user can open; coded records read "CODE — Name" in pickers; the derived MQTT client id is not shown.
 - **Finance descriptive text can be corrected in place:** finance maintainers correct the FX source, demand evidence and policy notes / backdate reason through text-only routes (`PATCH /v2/fx-rates/:id/source`, `/v2/demand-statuses/:id/evidence`, `/v2/valuation-policies/:id/text`; additive, audited, figures, state and approval unchanged, nothing revalued) — a new version would backdate and revalue approved periods. Course wording ("training", "guide lesson 21") is removed from the seeder catalogue and from live data by `scripts/marun-train/rewrite-finance-texts.ts`.
 - **Reliability engineers read the failure dictionary in the UI** (page and tab admit `canValidateFailures`; write controls stay with master-data administrators). The server write rule is unchanged for now (reliability engineers and manager approvers may still import through the API, which both seeders use, SME D11) — open item if writes must be master-data only on the server too.
+
+## 2026-10-19 — PI Web API integration audit and sample PI (owner: "we are going with PI Web API; fix bugs and UI flaws, flag design items"; Basic authentication confirmed)
+
+Audit of the PI path end to end against a sample PI Web API shaped like a real one (`npm run pi:sample`, `docs/PI_SAMPLE_SERVER.md`), run on the HDPE plant. Analysis: `docs/INTEGRATION_ANALYSIS.md`.
+
+- **Fixed (engineering):**
+  - **Primary element of a real PI frame.** A real PI Web API names the primary element only in `Links.PrimaryReferencedElement` and `RefElementWebIds`; it is now read from there (a single referenced element counts as primary, several never guess), at read and at ingest, so replays of retained frames place the same way (`integration/pi/pi-frame-shape.ts`).
+  - **Element path kept.** The path looked up by WebId is written onto the frame, so `exact_path` / `pattern` rules match and the discovery sample shows the path and offers "Bind element".
+  - **Delivered duration unit wins** over the rule unit (`{Value: 300, UnitsAbbreviation: 's'}` is 300 s under a minutes rule).
+  - **Connection-specific attribute overrides beat newer "every connection" versions.**
+  - **Deactivated connections run no jobs** (claim skips them; job creation answers 422 `CONNECTION_INACTIVE`).
+  - **Test persists detected capabilities** (`batch`), so reads skip a missing batch controller from the first job.
+  - **Credentials are refused at any depth** of `endpointConfig` (MQTT value-map tokens excepted, they are source data).
+  - **401 explains itself** when the server offers no Basic (Negotiate/NTLM only).
+  - **`streamsets/recorded` asks for at most 40 streams per call.**
+  - **PI raises `unknown_code`** for a reason token the code library lacks, like MQTT (shared `unresolvedReason`; the MQTT `"Reason Code"` attribute name is now read for the delivered token).
+  - **Period replays skip records closed as irrecoverable** ("never replayed"); naming the object or its exception still replays it.
+  - **Index `(tenant_id, event_id)`** on `production_events` for ingest lookups (migration `ProductionEventSourceIdIndex`).
+  - **Console:** the read scope (database/element, template) is in the URL and can be chosen on the Jobs tab; a scope-type choice (element scope was impossible) inferred from the WebId marker; job kinds for open-frame refresh, daily correction rescan and daily deletion check; upkeep jobs named, cadence "daily"; sample table shows the frame name; "Hours back" validated; bind dialog can include child elements (pattern `<path>\*`); quarantine list and page show the record, element path and delivered value; the unknown-code advice states that codes of an existing event are not changed by a replay (codes stay create-only, 2026-10-08); the stage tracker says "20+"; a signal backfill ending today is read up to now.
+- **Open for the owner (recommendations):**
+  1. **Event identity per source.** Existing events are matched on `(tenant, event_id)` only, so a PI WebId and an MQTT `event_id` (or two PI connections) can collide. Recommend scoping the lookup by source system and connection.
+  2. **Source mapping history.** Rules are edited in place (`version` counts edits), so a replay of old data uses today's rule. Recommend append-only rule versions with effective dates.
+  3. **Remapped frames do not move.** A source revision never changes `unit_id` (and codes stay create-only). Recommend: move the event when the placement changes and the event is not yet approved.
+  4. **Hierarchy fallback for paths.** A frame on a child element is placed only by an explicit pattern (now offered in the bind dialog). Recommend an optional "ancestor path" tier after `pattern`.
+  5. **AF browsing.** Discovery stops at databases; elements, attributes and stream WebIds (for signals) are typed by hand. Recommend element / attribute browse endpoints.
+  6. **Code resolution in the mapping preview.** The preview does not say whether a reason token resolves to a library code; unknown codes are first seen after ingestion.
+  7. **Child event frames.** `searchFullHierarchy` is not sent; nested frames are not read. Confirm whether the plant uses child frames.
+  8. **Security defaults.** The egress allowlist is open when `CONNECTOR_EGRESS_ALLOWLIST` is empty and credential encryption falls back to a built-in key without `CREDENTIAL_ENCRYPTION_KEY`/`JWT_SECRET`. Recommend refusing to start in production without both.
+  9. **Per-record mapping loads.** The normaliser loads the attribute profile, resolver and coding rules for every frame; ancestors are looked up one GET at a time. Recommend a short per-connection cache keyed by mapping versions.
+  10. **Diagnostics are browser-session only.** The stage tracker's "Validate" and "Discover" reset on reload. Recommend storing the last test result on the connection.

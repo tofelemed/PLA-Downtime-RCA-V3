@@ -7,6 +7,7 @@ import {
   SimFailure,
   SimFrame,
   SimRequest,
+  SimShape,
 } from './sim-model';
 import { routeGet, SimAnswer, SimState } from './sim-routes';
 import { SimStreams } from './sim-streams';
@@ -20,6 +21,15 @@ export interface SimListenOptions {
   bindHost?: string;
   /** host name advertised in `baseUrl`; default the bind address (loopback for `0.0.0.0`) */
   publicHost?: string;
+  /** fixed port; default an ephemeral one */
+  port?: number;
+}
+
+/** Simulator options: the response shape and the Basic account it accepts. */
+export interface SimOptions {
+  shape?: SimShape;
+  username?: string;
+  password?: string;
 }
 
 export interface LoggedRequest {
@@ -44,12 +54,23 @@ export class PiWebApiSimulator {
   readonly streams = new SimStreams();
   authRevoked = false;
   batchSupported = true;
+  /** optional handler of `/_sample/*` control requests (the runnable sample server) */
+  control: ((request: SimRequest, body: unknown) => SimAnswer | null) | null =
+    null;
   private failures: SimFailure[] = [];
   private server: http.Server | null = null;
   origin = '';
 
   readonly assetServer = { Name: 'SIM-AF', WebId: 'AS-SIM' };
   readonly database = { Name: 'HDPE', WebId: 'DB-HDPE' };
+  readonly shape: SimShape;
+  private readonly expectedAuth: string;
+
+  constructor(options: SimOptions = {}) {
+    this.shape = options.shape ?? 'compact';
+    const account = `${options.username ?? SIM_USERNAME}:${options.password ?? SIM_PASSWORD}`;
+    this.expectedAuth = `Basic ${Buffer.from(account).toString('base64')}`;
+  }
 
   /** `<origin>/piwebapi`, as a connection stores it */
   get baseUrl(): string {
@@ -67,7 +88,7 @@ export class PiWebApiSimulator {
       options.publicHost ?? (bindHost === '0.0.0.0' ? '127.0.0.1' : bindHost);
     this.server = http.createServer((req, res) => void this.handle(req, res));
     await new Promise<void>((resolve) =>
-      this.server!.listen(0, bindHost, resolve),
+      this.server!.listen(options.port ?? 0, bindHost, resolve),
     );
     const { port } = this.server.address() as AddressInfo;
     this.origin = `http://${publicHost}:${port}`;
@@ -149,7 +170,19 @@ export class PiWebApiSimulator {
     body: unknown,
   ): SimAnswer {
     if (!this.authorized(authorization)) {
-      return { status: 401, body: { Errors: ['Unauthorized'] } };
+      return {
+        status: 401,
+        body: { Errors: ['Unauthorized'] },
+        headers: { 'WWW-Authenticate': 'Basic realm="PI Web API"' },
+      };
+    }
+    if (this.control && request.path.startsWith('/_sample')) {
+      return (
+        this.control(request, body) ?? {
+          status: 404,
+          body: { Errors: ['unknown control request'] },
+        }
+      );
     }
     const injected = this.injected(request);
     if (injected) return injected;
@@ -172,8 +205,7 @@ export class PiWebApiSimulator {
   }
 
   private authorized(header: string | undefined): boolean {
-    const expected = `Basic ${Buffer.from(`${SIM_USERNAME}:${SIM_PASSWORD}`).toString('base64')}`;
-    return !this.authRevoked && header === expected;
+    return !this.authRevoked && header === this.expectedAuth;
   }
 
   private injected(request: SimRequest): SimAnswer | null {
@@ -214,6 +246,8 @@ export class PiWebApiSimulator {
       elements: this.elements,
       assetServer: this.assetServer,
       database: this.database,
+      shape: this.shape,
+      origin: this.origin,
     };
   }
 }
@@ -234,7 +268,10 @@ function readBody(req: http.IncomingMessage): Promise<unknown> {
 }
 
 function send(res: http.ServerResponse, answer: SimAnswer): void {
-  res.writeHead(answer.status, { 'Content-Type': 'application/json' });
+  res.writeHead(answer.status, {
+    'Content-Type': 'application/json',
+    ...(answer.headers ?? {}),
+  });
   res.end(JSON.stringify(answer.body));
 }
 

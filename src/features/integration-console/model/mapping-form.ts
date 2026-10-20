@@ -92,3 +92,9 @@ export function mappingBody(form: MappingForm, connectionType: SourceType | null
     description: form.description.trim() || null,
   };
 }
+
+/**
+ * Pattern over an AF element's descendants, `<path>\*` (glob `*` crosses separators): bound next to the
+ * element's exact-path rule so frames of its child elements (drive, gearbox) land on the same unit.
+ */
+export const childPattern = (path: string): string => `${path.replace(/[\\/]+$/, '')}\\*`;

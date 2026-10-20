@@ -9,12 +9,12 @@ import { SourceMappingService } from '../../../../source-mapping/source-mapping.
 import { CanonicalEnvelope } from '../../../envelope/canonical-envelope';
 import { IngestionErrorCode } from '../../../entities/ingestion-exception.entity';
 import {
-  LinkedQuarantine,
   NormalizationHandler,
   NormalizationHandlerRegistry,
   NormalizationInput,
   NormalizationResult,
 } from '../../../normalization/normalization-handler';
+import { unresolvedReason } from '../../../../integration/unresolved-reason';
 import { mqttFrameOf } from './mqtt-frame';
 
 /** Source system of the mappings this handler resolves against (`source_mappings.source_system`). */
@@ -112,23 +112,4 @@ export class MqttIntervalEventHandler
       ),
     };
   }
-}
-
-/** A reason token delivered but not a code of the tenant: the event is uncoded, the token parked. */
-function unresolvedReason(
-  result: FrameResult,
-  attributes: Record<string, unknown>,
-): LinkedQuarantine | null {
-  const unresolved = result.diagnostics.find(
-    (entry) => entry.code === 'CODE_UNRESOLVED' && entry.field === 'reason',
-  );
-  if (!unresolved) return null;
-  return {
-    errorCode: 'unknown_code',
-    detail: {
-      reason: unresolved.message,
-      field: 'reason',
-      delivered: attributes.ReasonCode ?? attributes.Reason ?? null,
-    },
-  };
 }

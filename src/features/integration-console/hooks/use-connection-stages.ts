@@ -6,7 +6,7 @@ import type { ConsoleSession } from './use-console-session';
 
 /**
  * Facts of the UX06 stage tracker for one connection, from the server (mapping rules and override
- * versions of this connection, its jobs, the first page (20) of its open quarantine) and this session.
+ * versions of this connection, its jobs, the first page (20) of its open quarantine — "20+" when more exist) and this session.
  */
 export function useConnectionStages(connection: ConnectionView, jobs: readonly IngestionJobView[], session: ConsoleSession): StageResult[] {
   const sourceMappings = useActiveSourceMappings();
@@ -20,5 +20,6 @@ export function useConnectionStages(connection: ConnectionView, jobs: readonly I
     sourceMappings: sourceMappings.items.filter((rule) => rule.connectionId === connection.id && rule.isActive).length,
     jobs,
     openExceptions: open.status.isLoading || open.status.isError ? null : open.rows.length,
+    moreExceptions: open.pager.canNext,
   });
 }

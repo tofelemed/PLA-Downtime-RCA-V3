@@ -1,4 +1,5 @@
 import { PiEventFrame } from '../pi-frame-ingest.service';
+import { normalizeFrame } from './pi-frame-shape';
 import { PiHttpClient, PiRequestError } from './pi-http-client';
 
 /** Where a job searches: an AF database or element, optionally one template. */
@@ -76,15 +77,4 @@ function framesPath(scope: PiSearchScope): string {
   return scope.scopeType === 'database'
     ? `assetdatabases/${id}/eventframes`
     : `elements/${id}/eventframes`;
-}
-
-/**
- * Accepts both frame shapes: an embedded `PrimaryReferencedElement` object or the plain
- * `PrimaryReferencedElementWebId` of newer PI Web API versions (D02: confirm on the installation).
- */
-export function normalizeFrame(frame: PiEventFrame): PiEventFrame {
-  const plain = (frame as { PrimaryReferencedElementWebId?: unknown })
-    .PrimaryReferencedElementWebId;
-  if (frame.PrimaryReferencedElement || typeof plain !== 'string') return frame;
-  return { ...frame, PrimaryReferencedElement: { WebId: plain, Path: null } };
 }
