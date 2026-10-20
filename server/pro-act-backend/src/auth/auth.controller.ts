@@ -3,13 +3,11 @@ import {
   Post,
   Body,
   Request,
-  UseGuards,
   Get,
   UnauthorizedException,
   HttpCode,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
 import {
   ApiBody,
   ApiTags,
@@ -106,7 +104,6 @@ export class AuthController {
     return this.authService.refreshToken(body.refreshToken);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('profile')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })

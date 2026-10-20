@@ -7,14 +7,12 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { ProductionPlanService } from './production-plan.service';
 import { ProductionPlan } from './production-plan.entity';
 import { ApiTags, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateProductionPlanDto } from './dto/create-production-plan.dto';
 import { UpdateProductionPlanDto } from './dto/update-production-plan.dto';
@@ -24,7 +22,6 @@ import { findOrThrow } from '../common/helpers/find-or-throw';
 
 @ApiTags('Production Plans')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @TenantBound()
 @Controller('production-plans')
 export class ProductionPlanController {

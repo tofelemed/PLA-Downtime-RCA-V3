@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -18,7 +17,6 @@ import {
   ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { HierarchyMappingService } from './hierarchy-mapping.service';
 import { SourceHierarchyMapping } from './entities/source-hierarchy-mapping.entity';
 import { CreateSourceHierarchyMappingDto } from './dto/create-source-hierarchy-mapping.dto';
@@ -27,7 +25,6 @@ import { HierarchyIds, MappingRequest } from './dto/hierarchy-ids.dto';
 
 @ApiTags('Hierarchy Mappings')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('hierarchy-mappings')
 export class HierarchyMappingController {
   constructor(private readonly mappingService: HierarchyMappingService) {}

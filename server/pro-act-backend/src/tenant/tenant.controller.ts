@@ -6,7 +6,6 @@ import {
   Delete,
   Param,
   Body,
-  UseGuards,
   NotFoundException,
 } from '@nestjs/common';
 import { TenantService } from './tenant.service';
@@ -15,7 +14,6 @@ import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { UpdateTenantDisplaySettingsDto } from './dto/update-tenant-display-settings.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { assertOrganizationWritable } from '../auth/roles/org-access';
 import { Ctx } from '../common/context/ctx.decorator';
@@ -27,7 +25,6 @@ import { RequestContext } from '../common/context/request-context';
  */
 @ApiTags('Tenants')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('tenants')
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}

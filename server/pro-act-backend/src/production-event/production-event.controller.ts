@@ -8,14 +8,12 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { ProductionEventService } from './production-event.service';
 import { ProductionEvent } from './production-event.entity';
 import { ApiTags, ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { CreateProductionEventDto } from './dto/create-production-event.dto';
 import { UpdateProductionEventDto } from './dto/update-production-event.dto';
@@ -24,7 +22,6 @@ import { PagedResult } from '../common/dto/paged-result';
 
 @ApiTags('Production Events')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @TenantBound()
 @Controller('production-events')
 // QA re-test 2026-10-19: an event's recorded cost is money (left out for operators)

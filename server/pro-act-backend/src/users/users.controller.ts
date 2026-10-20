@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   Query,
   NotFoundException,
 } from '@nestjs/common';
@@ -14,7 +13,6 @@ import { UsersService } from './users.service';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AnyRole, Roles } from '../auth/decorators/roles.decorator';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import {
@@ -38,7 +36,6 @@ import { AssignableUserDto, toPublicUser, UserPublicView } from './user-public';
  */
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Roles('SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver')
 @Controller('users')
 export class UsersController {

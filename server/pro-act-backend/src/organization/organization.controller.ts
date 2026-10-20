@@ -6,7 +6,6 @@ import {
   Delete,
   Param,
   Body,
-  UseGuards,
   NotFoundException,
 } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
@@ -14,7 +13,6 @@ import { Organization } from './organization.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { assertOrganizationWritable } from '../auth/roles/org-access';
 import { Ctx } from '../common/context/ctx.decorator';
@@ -28,7 +26,6 @@ import { findOrThrow } from '../common/helpers/find-or-throw';
  */
 @ApiTags('Organizations')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('organizations')
 export class OrganizationController {
   constructor(private readonly organizationService: OrganizationService) {}

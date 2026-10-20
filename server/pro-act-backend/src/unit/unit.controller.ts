@@ -6,14 +6,12 @@ import {
   Delete,
   Param,
   Body,
-  UseGuards,
 } from '@nestjs/common';
 import { UnitService } from './unit.service';
 import { Unit } from './unit.entity';
 import { ApiBody, ApiTags, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CreateUnitDto } from './dto/create-unit.dto';
 import { UpdateUnitDto } from './dto/update-unit.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantBound } from '../auth/decorators/tenant-bound.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { findOrThrow } from '../common/helpers/find-or-throw';
@@ -21,7 +19,6 @@ import { findOrThrow } from '../common/helpers/find-or-throw';
 /** Master data (§13.2): any member reads; writes need master_data_admin or manager_approver (admins via satisfiesRole). */
 @ApiTags('Units')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @TenantBound()
 @Controller('units')
 export class UnitController {
