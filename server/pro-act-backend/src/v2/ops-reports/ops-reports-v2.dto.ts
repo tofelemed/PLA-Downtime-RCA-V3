@@ -118,3 +118,6 @@ export class ChronicSporadicQueryDto extends ReportWindowQueryDto {
 
 /** `GET /reports/rate-loss` (R8): equivalent downtime and performance per plant month. */
 export class RateLossQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/coding-compliance` (R9): coding and verification discipline per crew and shift. */
+export class CodingComplianceQueryDto extends ReportWindowQueryDto {}

@@ -4,6 +4,7 @@ import type { QueryParams } from '../request-url';
 import type { QueryOf } from '../schema-types';
 import type {
   ChronicSporadicView,
+  CodingComplianceView,
   EventStatusView,
   ProductionByProductView,
   QualityDispositionsView,
@@ -80,4 +81,9 @@ export function useChronicSporadic(query: ChronicSporadicQuery | null, tz?: stri
 /** R8: equivalent downtime and performance per plant month. */
 export function useRateLoss(query: ReportQueryBase | null, tz?: string) {
   return useReport<RateLossView>('rate-loss', query, tz);
+}
+
+/** R9: coding and verification discipline per crew and shift. */
+export function useCodingCompliance(query: ReportQueryBase | null, tz?: string) {
+  return useReport<CodingComplianceView>('coding-compliance', query, tz);
 }

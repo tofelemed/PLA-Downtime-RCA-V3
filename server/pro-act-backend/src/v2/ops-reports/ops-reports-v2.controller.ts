@@ -15,7 +15,9 @@ import {
   TransitionPerformanceQueryDto,
   ChronicSporadicQueryDto,
   RateLossQueryDto,
+  CodingComplianceQueryDto,
 } from './ops-reports-v2.dto';
+import { CodingComplianceView } from './coding-compliance';
 import { RateLossView } from './rate-loss';
 import { ChronicSporadicView } from './chronic-sporadic';
 import { ReliabilityTrendView } from './reliability-trend';
@@ -181,5 +183,22 @@ export class OpsReportsV2Controller {
     @Query() query: RateLossQueryDto,
   ): Promise<AnalyticsResponse<RateLossView>> {
     return this.reports.rateLoss(ctx, query);
+  }
+
+  @Get('coding-compliance')
+  @ApiOperation({
+    summary:
+      'Per crew and shift: stops coded and verified, coding delay (median, p90) and the coded-downtime and state-coverage KPIs',
+    description:
+      'Stops: ended downtime events starting in the window, attributed to the crew and shift of the shift ' +
+      'instance holding their start. Delay: from the stop’s end to its first coding with a reason (whole ' +
+      'seconds, never negative). KPIs: Σ of the stored period terms of the shown runs per crew / shift label. ' +
+      `A null key = no crew (or shift) recorded. ${SCOPE_NOTE}`,
+  })
+  codingCompliance(
+    @Ctx() ctx: RequestContext,
+    @Query() query: CodingComplianceQueryDto,
+  ): Promise<AnalyticsResponse<CodingComplianceView>> {
+    return this.reports.codingCompliance(ctx, query);
   }
 }

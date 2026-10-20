@@ -28,7 +28,8 @@ export type ReportKind =
   | 'transition-performance'
   | 'reliability-trend'
   | 'chronic-sporadic'
-  | 'rate-loss';
+  | 'rate-loss'
+  | 'coding-compliance';
 export type DowntimeReportQuery = QueryOf<'/api/v2/reports/downtime', 'get'>;
 export type OeeReportQuery = QueryOf<'/api/v2/reports/oee', 'get'>;
 export type ReliabilityReportQuery = QueryOf<'/api/v2/reports/reliability', 'get'>;

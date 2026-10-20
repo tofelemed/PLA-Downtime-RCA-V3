@@ -306,4 +306,22 @@ describe('Operating reports (R1)', () => {
     );
     expect(body.data.total.equivalentDowntime.value).toBe('0');
   });
+
+  it('coding compliance: the stop of shift A counted under that shift, coded with a reason', async () => {
+    const body = (
+      await env.get(`reports/coding-compliance?${scope}`).expect(200)
+    ).body as Envelope<{
+      byShift: Array<{
+        key: string | null;
+        stops: number;
+        coded: number;
+        medianDelaySeconds: string | null;
+      }>;
+      byCrew: unknown[];
+    }>;
+    const shiftA = body.data.byShift.find((r) => r.key === 'A');
+    expect(shiftA).toMatchObject({ stops: 1, coded: 1 });
+    expect(shiftA?.medianDelaySeconds).not.toBeNull();
+    expect(body.data.byShift.reduce((n, r) => n + r.stops, 0)).toBe(1);
+  });
 });

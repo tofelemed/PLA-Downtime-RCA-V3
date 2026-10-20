@@ -240,3 +240,21 @@ export interface RateLossView {
   total: { equivalentDowntime: KpiAggregateView; performance: KpiAggregateView };
   calculationRunIds: string[];
 }
+
+export interface ComplianceRowView {
+  key: string | null;
+  label: string | null;
+  stops: number;
+  coded: number;
+  verified: number;
+  medianDelaySeconds: string | null;
+  p90DelaySeconds: string | null;
+  codedDowntimeRatio: KpiAggregateView;
+  stateCoverage: KpiAggregateView;
+}
+
+export interface CodingComplianceView {
+  byCrew: ComplianceRowView[];
+  byShift: ComplianceRowView[];
+  calculationRunIds: string[];
+}

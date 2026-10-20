@@ -17,7 +17,9 @@ import {
   TransitionPerformanceQueryDto,
   ChronicSporadicQueryDto,
   RateLossQueryDto,
+  CodingComplianceQueryDto,
 } from './ops-reports-v2.dto';
+import { codingCompliance, CodingComplianceView } from './coding-compliance';
 import { rateLoss, RateLossView } from './rate-loss';
 import { chronicSporadic, ChronicSporadicView } from './chronic-sporadic';
 import { reliabilityTrend, ReliabilityTrendView } from './reliability-trend';
@@ -134,6 +136,17 @@ export class OpsReportsV2Service {
   ): Promise<AnalyticsResponse<RateLossView>> {
     const manager = this.periods.manager;
     return rateLoss(manager, await resolveReportScope(manager, context, query));
+  }
+
+  async codingCompliance(
+    context: RequestContext,
+    query: CodingComplianceQueryDto,
+  ): Promise<AnalyticsResponse<CodingComplianceView>> {
+    const manager = this.periods.manager;
+    return codingCompliance(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
   }
 
   createShiftNote(

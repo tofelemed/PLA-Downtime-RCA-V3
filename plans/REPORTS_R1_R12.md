@@ -41,7 +41,7 @@ Parked (need owner decisions): T1 targets and comparisons, T2 scheduled e-mail.
 - [x] R6 Reliability trend (`reliability-trend`; Reports → Reliability trend)
 - [x] R7 Chronic vs sporadic (`chronic-sporadic`; Reports → Chronic vs sporadic)
 - [x] R8 Rate loss (`rate-loss` + loss tree `kinds=performance`; Reports → Rate loss)
-- [ ] R9 Coding compliance
+- [x] R9 Coding compliance (`coding-compliance`; Reports → Coding compliance)
 - [ ] R10 RCA action tracker
 - [ ] R11 Plan adherence by grade
 - [ ] R12 Executive scorecard
