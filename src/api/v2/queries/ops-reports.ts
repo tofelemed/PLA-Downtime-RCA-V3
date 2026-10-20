@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '../client';
 import type { QueryParams } from '../request-url';
 import type { QueryOf } from '../schema-types';
-import type { EventStatusView, ProductionByProductView, RestatementsView } from '../types/ops-reports';
+import type { EventStatusView, ProductionByProductView, QualityDispositionsView, RestatementsView } from '../types/ops-reports';
 import { sameTenantQuery } from './placeholder';
 import { reportKey, useReport, type ReportKind, type ReportQueryBase } from './reports';
 import { STALE_TIME } from './stale-times';
@@ -44,4 +44,9 @@ export function useEventStatus(query: ReportQueryBase | null, tz?: string) {
 /** R3: restatements of the window's periods with finance's posting and the change in good output. */
 export function useRestatements(query: ReportQueryBase | null, tz?: string) {
   return usePlainReport<RestatementsView>('restatements', query, tz);
+}
+
+/** R4: lot dispositions of the window by class, decision and product, with the pending decisions. */
+export function useQualityDispositions(query: ReportQueryBase | null, tz?: string) {
+  return usePlainReport<QualityDispositionsView>('quality-dispositions', query, tz);
 }

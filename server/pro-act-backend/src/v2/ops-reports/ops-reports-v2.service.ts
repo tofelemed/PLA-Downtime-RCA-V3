@@ -10,9 +10,14 @@ import {
   CreateShiftNoteDto,
   EventStatusQueryDto,
   ProductionByProductQueryDto,
+  QualityDispositionsQueryDto,
   RestatementsQueryDto,
   ShiftHandoverQueryDto,
 } from './ops-reports-v2.dto';
+import {
+  qualityDispositions,
+  QualityDispositionsView,
+} from './quality-dispositions';
 import { restatementsReport, RestatementsView } from './restatements-report';
 import {
   productionByProduct,
@@ -65,6 +70,17 @@ export class OpsReportsV2Service {
   ): Promise<RestatementsView> {
     const manager = this.periods.manager;
     return restatementsReport(
+      manager,
+      await resolveReportScope(manager, context, query),
+    );
+  }
+
+  async qualityDispositions(
+    context: RequestContext,
+    query: QualityDispositionsQueryDto,
+  ): Promise<QualityDispositionsView> {
+    const manager = this.periods.manager;
+    return qualityDispositions(
       manager,
       await resolveReportScope(manager, context, query),
     );

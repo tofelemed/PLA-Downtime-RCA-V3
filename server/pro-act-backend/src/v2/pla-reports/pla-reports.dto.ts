@@ -16,6 +16,8 @@ export const LOSS_TREE_GROUPS = [
   'unit',
   // the cause event of the lines (QA PLA M2: the attributed loss of each listed event; null = no event)
   'event',
+  // R4: the SME E3 class of quality lines (wide spec, downgrade, transition off-grade, scrap, rework); others none
+  'qualityClass',
 ] as const;
 export type LossTreeGroup = (typeof LOSS_TREE_GROUPS)[number];
 

@@ -95,3 +95,6 @@ export class CreateShiftNoteDto {
 
 /** `GET /reports/restatements` (R3): restatements of the periods starting in the window. */
 export class RestatementsQueryDto extends ReportWindowQueryDto {}
+
+/** `GET /reports/quality-dispositions` (R4): lot dispositions of lots produced in the window. */
+export class QualityDispositionsQueryDto extends ReportWindowQueryDto {}

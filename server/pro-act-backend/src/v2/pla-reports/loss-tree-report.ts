@@ -90,6 +90,8 @@ const GROUP_SQL: Readonly<Record<LossTreeGroup, string>> = {
   kind: `l."kind"::text`,
   unit: `s."unit_id"::text`,
   event: `l."cause_event_id"::text`,
+  // R4: the SME E3 class of a quality line (its `quality_class:` flag); a quality line without one is unclassified
+  qualityClass: `COALESCE(l."quality_class", CASE WHEN l."kind"::text = 'quality' THEN 'unclassified' END)`,
 };
 
 const LABELS: Partial<Record<LossTreeGroup, string>> = {
@@ -108,26 +110,42 @@ const WORDS: Readonly<Record<string, string>> = {
   bridge: 'Bridge',
   unaccounted_classified: 'Unaccounted',
   [QUALITY_DISPOSITIONS]: 'Quality (dispositions)',
+  wide_spec: 'Wide spec',
+  downgrade: 'Downgrade',
+  transition_off_grade: 'Transition off-grade',
+  scrap: 'Scrap',
+  rework: 'Rework',
+  recovered: 'Recovered',
+  unclassified: 'Not classified',
 };
 
 export const LOSS_TREE_BASIS =
   'plan ledger of an approved revision: the approved lines (decided candidates and manual lines); ' +
   'otherwise the loss lines of the shown calculation run — decisions of an open draft are in the waterfall';
 
+/** The `quality_class:<class>` flag of a line's flags (jsonb array), null without one. */
+const classOf = (flags: string) =>
+  `(SELECT substr(f, 15) FROM jsonb_array_elements_text(${flags}) f WHERE f LIKE 'quality_class:%' LIMIT 1)`;
+
+/** The quality class of an approved line: its source candidate's flag (manual lines have none). */
+const APPROVED_CLASS = `(SELECT ${classOf('x."flags"')} FROM "loss_lines" x
+     WHERE a."source" = 'candidate' AND x."id" = a."source_id" AND x."tenant_id" = $1)`;
+
 /**
  * Lines of each shown period (VA-01b): the approved plan lines when the revision is approved and has them,
- * else the run's active lines of the ledger.
+ * else the run's active lines of the ledger. `withClass`: each line's quality class (R4), else null.
  */
-const LINES = `FROM shown s
+const lines = (withClass: boolean) => `FROM shown s
   JOIN LATERAL (
     SELECT a."id" AS "line_id", 'approved' AS "origin", a."reason_code_id", a."impact_code_id",
-           a."oee_component", a."kind", a."uom", a."quantity", a."cause_event_id"
+           a."oee_component", a."kind", a."uom", a."quantity", a."cause_event_id",
+           ${withClass ? APPROVED_CLASS : 'NULL::text'} AS "quality_class"
       FROM "approved_loss_lines" a
      WHERE $6::text = 'plan' AND s."lifecycle" = 'approved' AND a."revision_id" = s."revision_id"
        AND a."tenant_id" = $1 AND a."kind"::text = ANY($7::text[])
     UNION ALL
     SELECT r."id", 'run', r."reason_code_id", r."impact_code_id", r."oee_component", r."kind", r."uom", r."quantity",
-           r."cause_event_id"
+           r."cause_event_id", ${withClass ? classOf('r."flags"') : 'NULL::text'}
       FROM "loss_lines" r
      WHERE r."run_id" = s."run_id" AND r."tenant_id" = $1 AND r."period_id" = s."period_id"
        AND r."ledger" = $6::loss_ledger AND r."state" = 'active' AND r."source" <> 'candidate_superseded'
@@ -139,13 +157,18 @@ const LINES = `FROM shown s
 async function quantityCells(
   manager: EntityManager,
   scope: ReportScope,
-  spec: { groupSql: string; ledger: Ledger; kinds: readonly LossTreeKind[] },
+  spec: {
+    groupSql: string;
+    ledger: Ledger;
+    kinds: readonly LossTreeKind[];
+    withClass: boolean;
+  },
 ): Promise<CellRow[]> {
   return manager.query<CellRow[]>(
     `${SHOWN} SELECT ${spec.groupSql} AS "group_key", l."uom" AS "unit", sum(l."quantity")::text AS "amount",
             count(*)::int AS "lines", count(l."cause_event_id")::int AS "event_lines", 0 AS "valued", 0 AS "unvalued", 0 AS "fx_missing", 0 AS "fx_provisional",
             NULL AS "reasons"
-       ${LINES}
+       ${lines(spec.withClass)}
       GROUP BY 1, 2`,
     [...params(scope), spec.ledger, spec.kinds],
   );
@@ -159,6 +182,7 @@ async function valueCells(
     ledger: Ledger;
     view: string;
     kinds: readonly LossTreeKind[];
+    withClass: boolean;
   },
 ): Promise<CellRow[]> {
   return manager.query<CellRow[]>(
@@ -171,7 +195,7 @@ async function valueCells(
             count(*) FILTER (WHERE v."status" = 'valued' AND v."amount" IS NOT NULL AND v."provisional")::int AS "fx_provisional",
             array_remove(array_agg(DISTINCT COALESCE(v."reason",
               CASE WHEN v."id" IS NULL THEN 'not_valued' WHEN v."provisional" THEN 'fx_rate_provisional' END)), NULL) AS "reasons"
-       ${LINES}
+       ${lines(spec.withClass)}
        LEFT JOIN LATERAL (
          SELECT lv."id", lv."currency", lv."amount", lv."status"::text AS "status", lv."reason", lv."provisional"
            FROM "loss_line_valuations" lv
@@ -245,7 +269,12 @@ export async function lossTreeCells(
   const groupSql = GROUP_SQL[request.groupBy];
   const view = LOSS_TREE_METRICS[request.metric];
   const kinds = request.kinds?.length ? request.kinds : LOSS_TREE_KINDS;
-  const spec = { groupSql, ledger: request.ledger, kinds };
+  const spec = {
+    groupSql,
+    ledger: request.ledger,
+    kinds,
+    withClass: request.groupBy === 'qualityClass',
+  };
   const rows = view
     ? await valueCells(manager, scope, { ...spec, view })
     : await quantityCells(manager, scope, spec);

@@ -5,7 +5,7 @@ import type { PeriodSlaView } from './period-sla';
  */
 import type { GridWorkflowState, ResidualState, WaterfallView } from './period-overview';
 
-export type LossTreeGroupBy = 'reason' | 'impact' | 'oee' | 'kind' | 'unit';
+export type LossTreeGroupBy = 'reason' | 'impact' | 'oee' | 'kind' | 'unit' | 'qualityClass';
 export type LossTreeMetric = 'qty' | 'margin' | 'standard_cost' | 'operational_cost' | 'economic_impact';
 /** What the selector asks for: a metric, or `value` = the valuation policy's default view (SME V8). */
 export type LossTreeMetricParam = LossTreeMetric | 'value';

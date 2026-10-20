@@ -123,3 +123,19 @@ export interface RestatementsView {
   rows: RestatementRowView[];
   truncated: boolean;
 }
+
+export interface DispositionGroupView {
+  dispositionClass: string;
+  state: string;
+  productId: string | null;
+  productCode: string | null;
+  uom: string;
+  lots: number;
+  quantity: string;
+}
+
+export interface QualityDispositionsView {
+  groups: DispositionGroupView[];
+  pending: number;
+  oldestPendingAt: string | null;
+}

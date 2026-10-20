@@ -196,4 +196,42 @@ describe('Operating reports (R1)', () => {
       .body as { rows: unknown[]; truncated: boolean };
     expect(body).toEqual({ rows: [], truncated: false });
   });
+
+  it('quality: dispositions summary and the loss tree by quality class answer for the window', async () => {
+    const dispositions = (
+      await env.get(`reports/quality-dispositions?${scope}`).expect(200)
+    ).body as {
+      groups: unknown[];
+      pending: number;
+      oldestPendingAt: string | null;
+    };
+    expect(dispositions).toEqual({
+      groups: [],
+      pending: 0,
+      oldestPendingAt: null,
+    });
+    const tree = (
+      await env
+        .get(
+          `reports/loss-tree?${scope}&groupBy=qualityClass&kinds=quality&metric=qty`,
+        )
+        .expect(200)
+    ).body as Envelope<{
+      groupBy: string;
+      groups: Array<{ key: string | null }>;
+    }>;
+    expect(tree.data.groupBy).toBe('qualityClass');
+    const classes = [
+      'wide_spec',
+      'downgrade',
+      'transition_off_grade',
+      'scrap',
+      'rework',
+      'recovered',
+      'unclassified',
+    ];
+    expect(
+      tree.data.groups.every((g) => g.key !== null && classes.includes(g.key)),
+    ).toBe(true);
+  });
 });

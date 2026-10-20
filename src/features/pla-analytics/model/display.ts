@@ -51,6 +51,7 @@ export const LOSS_GROUP_LABELS: Record<LossTreeGroupBy, string> = {
   oee: 'OEE component',
   kind: 'Loss kind',
   unit: 'Unit',
+  qualityClass: 'Quality class',
 };
 
 export const METRIC_LABELS: Record<LossTreeMetricParam, string> = {

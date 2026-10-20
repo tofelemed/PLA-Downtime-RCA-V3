@@ -8,9 +8,11 @@ import { EventStatusView } from './event-status';
 import {
   EventStatusQueryDto,
   ProductionByProductQueryDto,
+  QualityDispositionsQueryDto,
   RestatementsQueryDto,
   ShiftHandoverQueryDto,
 } from './ops-reports-v2.dto';
+import { QualityDispositionsView } from './quality-dispositions';
 import { RestatementsView } from './restatements-report';
 import { OpsReportsV2Service } from './ops-reports-v2.service';
 import { ProductionByProductView } from './production-by-product';
@@ -89,5 +91,20 @@ export class OpsReportsV2Controller {
     @Query() query: RestatementsQueryDto,
   ): Promise<RestatementsView> {
     return this.reports.restatements(ctx, query);
+  }
+
+  @Get('quality-dispositions')
+  @ApiOperation({
+    summary:
+      'Lot dispositions of lots produced in the window by class, decision state and product, with the pending decisions',
+    description:
+      'Live dispositions only (superseded ones left out); quantity per unit of measure, never converted. ' +
+      `pending / oldestPendingAt: proposals still waiting for the quality decision. ${SCOPE_NOTE}`,
+  })
+  qualityDispositions(
+    @Ctx() ctx: RequestContext,
+    @Query() query: QualityDispositionsQueryDto,
+  ): Promise<QualityDispositionsView> {
+    return this.reports.qualityDispositions(ctx, query);
   }
 }

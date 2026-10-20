@@ -4106,6 +4106,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/quality-dispositions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lot dispositions of lots produced in the window by class, decision state and product, with the pending decisions
+         * @description Live dispositions only (superseded ones left out); quantity per unit of measure, never converted. pending / oldestPendingAt: proposals still waiting for the quality decision. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         */
+        get: operations["OpsReportsV2Controller_qualityDispositions_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/shift-notes": {
         parameters: {
             query?: never;
@@ -17089,6 +17109,32 @@ export interface operations {
             };
         };
     };
+    OpsReportsV2Controller_qualityDispositions_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (a unit-limited caller gets its own units only). */
+                unitIds?: string[];
+                /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
+                approvedOnly?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ShiftNotesV2Controller_create_v2: {
         parameters: {
             query?: never;
@@ -18742,7 +18788,7 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
-                groupBy?: "reason" | "impact" | "oee" | "kind" | "unit" | "event";
+                groupBy?: "reason" | "impact" | "oee" | "kind" | "unit" | "event" | "qualityClass";
                 /** @description qty = lost quantity per unit of measure; margin / standard_cost / operational_cost / economic_impact = that stored valuation view per reporting currency (never added to each other; unvalued lines never count as zero); value = the default view of the approved valuation policy (SME V8, economic impact from policy version 3; contribution margin while none is approved) */
                 metric?: "qty" | "margin" | "standard_cost" | "operational_cost" | "economic_impact" | "value";
                 ledger?: "plan" | "capacity";

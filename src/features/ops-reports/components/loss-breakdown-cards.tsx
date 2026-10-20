@@ -1,4 +1,4 @@
-import { useLossTree } from '@/api/v2/queries/pla-analytics';
+import { useLossTree, type LossTreeQuery } from '@/api/v2/queries/pla-analytics';
 import type { LossTreeGroupBy, LossTreeView } from '@/api/v2/types/pla-analytics';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
@@ -17,6 +17,8 @@ export interface LossBreakdownProps {
   testId: string;
   /** largest groups only (server `limit`); absent = every group */
   limit?: number;
+  /** loss kinds to include (server `kinds`); absent = every kind of the tree */
+  kinds?: LossTreeQuery['kinds'];
 }
 
 /** The unit (uom) or currency a breakdown is shown in: the display currency when valued in it, else the first. */
@@ -30,7 +32,8 @@ function LossBreakdown({ metric, ...props }: LossBreakdownProps & { metric: 'qty
   const env = useEventHubEnv();
   const { currency } = useDisplayCurrency();
   const options = { groupBy: props.groupBy, metric, limit: props.limit };
-  const query = useLossTree(lossTreeQuery({ ...props.scope, ledger: 'plan' }, options), env.timezone);
+  const base = lossTreeQuery({ ...props.scope, ledger: 'plan' }, options);
+  const query = useLossTree(props.kinds ? { ...base, kinds: props.kinds } : base, env.timezone);
   const data = query.data?.data;
   const unit = shownUnit(data, metric, currency);
   const testId = `${props.testId}-${metric}`;
