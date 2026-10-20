@@ -130,9 +130,11 @@ export class AuditLogService {
         typeof details === 'string' ? details : JSON.stringify(details ?? {}),
       timestamp: rest.timestamp ? new Date(rest.timestamp) : new Date(),
     });
-    const saved = await this.auditLogRepository.save(log);
-    this.realtimeGateway.broadcastEntityEvent('Created', 'auditLog', saved);
-    return saved;
+    // a plain INSERT: `save()` with a preset id first SELECTs the row, then inserts inside a transaction
+    // (perf audit P12); generated columns are returned into `log` either way
+    await this.auditLogRepository.insert(log);
+    this.realtimeGateway.broadcastEntityEvent('Created', 'auditLog', log);
+    return log;
   }
 
   async update(id: string, data: Partial<AuditLog>): Promise<AuditLog | null> {
