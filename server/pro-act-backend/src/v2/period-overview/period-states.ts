@@ -109,11 +109,15 @@ async function revisionsOf(manager: EntityManager, periodIds: string[]) {
   return groupBy(rows, (r) => r.periodId);
 }
 
-async function runContent(manager: EntityManager, runs: CalculationRun[]) {
+async function runContent(
+  manager: EntityManager,
+  runs: CalculationRun[],
+  withActuals: boolean,
+) {
   const runIds = runs.map((r) => r.id);
-  const actualsRunIds = runs.flatMap((r) =>
-    r.actualsRunId ? [r.actualsRunId] : [],
-  );
+  const actualsRunIds = withActuals
+    ? runs.flatMap((r) => (r.actualsRunId ? [r.actualsRunId] : []))
+    : [];
   if (!runIds.length)
     return {
       lines: new Map<string, LossLine[]>(),
@@ -242,12 +246,15 @@ async function addPoliciesInForce(
  * Loads the selected revision of every period with its run (plan candidates, both ledgers' totals,
  * actuals results), its saved lines and tolerance rule in a fixed number of queries, and reconciles each
  * one with the plan 2.8 arithmetic (`reconcile`) — the same numbers the reconciliation view shows.
+ * `options.actuals: false` leaves `actuals` empty for callers that never read them (their JSON columns are
+ * the costliest read here; perf audit P06): the reconciliation itself does not use them.
  */
 export async function loadPeriodStates(
   manager: EntityManager,
   periods: readonly ProductionPeriod[],
   selector: RevisionSelector,
   policies: AccountingPoliciesService,
+  options: { actuals?: boolean } = {},
 ): Promise<PeriodState[]> {
   const revisionsByPeriod = await revisionsOf(
     manager,
@@ -273,7 +280,7 @@ export async function loadPeriodStates(
     : [];
   const runsById = new Map(runs.map((r) => [r.id, r]));
   const [content, lineSets, rules] = await Promise.all([
-    runContent(manager, runs),
+    runContent(manager, runs, options.actuals !== false),
     savedLines(manager, chosen),
     toleranceRules(
       manager,

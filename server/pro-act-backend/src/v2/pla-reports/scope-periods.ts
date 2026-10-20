@@ -22,6 +22,8 @@ export interface ScopeFoldInput {
   scope: ReportScope;
   selector: RevisionSelector;
   policies: AccountingPoliciesService;
+  /** false: the visitor never reads `state.actuals`, so they are not loaded */
+  actuals?: boolean;
 }
 
 /** True when a page shows an open (not approved) revision: its figures are provisional. */
@@ -79,6 +81,7 @@ export async function foldScopeStates(
       page,
       input.selector,
       input.policies,
+      { actuals: input.actuals },
     );
     provisional = provisional || hasProvisional(states);
     visit(states);

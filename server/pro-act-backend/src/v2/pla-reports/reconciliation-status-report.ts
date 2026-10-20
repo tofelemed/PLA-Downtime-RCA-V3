@@ -189,6 +189,8 @@ export async function residualCounts(
       scope: input.scope,
       selector: 'current',
       policies,
+      // residual states come from the reconciliation alone
+      actuals: false,
     },
     (states) => {
       for (const state of states) {
