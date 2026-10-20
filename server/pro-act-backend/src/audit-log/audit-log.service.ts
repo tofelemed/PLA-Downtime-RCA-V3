@@ -22,6 +22,20 @@ export interface AuditLogQuery {
   offset?: number;
 }
 
+/** Rows per `GET /api/audit-logs` page: the default, and also the most one request may read. */
+export const AUDIT_LIST_MAX = 500;
+
+/**
+ * The page size of a v1 audit-log list request (perf audit P07 / DB audit F10): an integer 1–500; anything
+ * missing, zero, negative or not a number means the default 500, larger values are capped at 500, so one
+ * request never reads the whole table (`limit=0` used to mean "no limit").
+ */
+export function auditListLimit(raw?: string): number {
+  const parsed = Number.parseInt(raw ?? '', 10);
+  if (!Number.isFinite(parsed) || parsed < 1) return AUDIT_LIST_MAX;
+  return Math.min(parsed, AUDIT_LIST_MAX);
+}
+
 @Injectable()
 export class AuditLogService {
   constructor(

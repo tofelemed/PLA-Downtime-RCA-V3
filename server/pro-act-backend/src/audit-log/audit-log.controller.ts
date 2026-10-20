@@ -11,7 +11,7 @@ import {
   UseGuards,
   ForbiddenException,
 } from '@nestjs/common';
-import { AuditLogService } from './audit-log.service';
+import { auditListLimit, AuditLogService } from './audit-log.service';
 import { AuditLog } from './audit-log.entity';
 import {
   ApiBody,
@@ -64,7 +64,11 @@ export class AuditLogController {
   @ApiQuery({ name: 'action', required: false })
   @ApiQuery({ name: 'startDate', required: false })
   @ApiQuery({ name: 'endDate', required: false })
-  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'page size 1-500 (default 500; larger values are capped)',
+  })
   @ApiQuery({ name: 'offset', required: false })
   findAll(
     @Ctx() ctx: RequestContext,
@@ -86,7 +90,7 @@ export class AuditLogController {
       action,
       startDate,
       endDate,
-      limit: limit ? parseInt(limit, 10) : 500,
+      limit: auditListLimit(limit),
       offset: offset ? parseInt(offset, 10) : undefined,
     });
   }
