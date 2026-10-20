@@ -16,10 +16,19 @@ interface ConnectionSource {
 const INSTALLED = Symbol('tenantSessionBinding');
 
 /**
+ * Binding statement each pooled connection last applied successfully. Role and `app.tenant_ids` are
+ * session settings (`set_config(…, false)`, outside any transaction), so a connection checked out again for
+ * the same binding needs no statement (perf audit P02: the binding was ~49% of all statements). Nothing
+ * else in the app changes them on a pooled connection (other `set_config` calls are transaction-local).
+ */
+const appliedBinding = new WeakMap<PgClient, string>();
+
+/**
  * Binds every pooled connection to the caller before TypeORM uses it (plan 3.11 step 2): the driver's
  * connection checkout runs, in the async context of the query, `SET ROLE proact_rls_user` + the caller's
- * tenants for a signed-in non-SuperAdmin request, `RESET ROLE` + '' otherwise (one round trip), so the
- * row-level-security policies apply to exactly that request. Returns false when already installed.
+ * tenants for a signed-in non-SuperAdmin request, `RESET ROLE` + '' otherwise (one round trip, skipped when
+ * the connection already carries exactly that binding), so the row-level-security policies apply to exactly
+ * that request. Returns false when already installed.
  */
 export function installTenantSessionBinding(dataSource: DataSource): boolean {
   const driver = dataSource.driver as unknown as ConnectionSource &
@@ -44,9 +53,14 @@ export function installTenantSessionBinding(dataSource: DataSource): boolean {
         connection.removeListener('error', onError);
       }
     };
+    if (appliedBinding.get(connection) === binding) {
+      return [connection, guardedRelease];
+    }
     try {
+      appliedBinding.delete(connection);
       await connection.query(binding);
       if (connectionError) throw connectionError;
+      appliedBinding.set(connection, binding);
     } catch (error) {
       guardedRelease(error);
       throw error;

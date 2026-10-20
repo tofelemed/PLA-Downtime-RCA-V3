@@ -110,6 +110,46 @@ describe('tenant row-level security (plan 3.11)', () => {
     expect(all).toBeGreaterThan(seen.length);
   });
 
+  it('keeps isolation when one pooled connection serves tenant A, tenant B and unrestricted calls in turn (perf P02)', async () => {
+    const dataSource = bound.get(DataSource);
+    const repository = dataSource.getRepository(ProductionEvent);
+    const tenantsSeen = async (tenantId: string | null) => {
+      // sequential: each statement checks out the (same, idle) connection on its own
+      const read = async () => {
+        const found = await repository.find({
+          select: { id: true, tenantId: true },
+        });
+        const backend = await dataSource.query<Array<{ pid: number }>>(
+          'SELECT pg_backend_pid() AS "pid"',
+        );
+        return [found, backend] as const;
+      };
+      const [rows, [{ pid }]] = tenantId
+        ? await runWithRequestContext(contextOf(randomUUID(), tenantId), read)
+        : await read();
+      return { tenants: new Set(rows.map((row) => row.tenantId)), pid };
+    };
+    const pids = new Set<number>();
+    for (let round = 0; round < 3; round += 1) {
+      for (const tenantId of [
+        world.tenantA,
+        world.tenantB,
+        null,
+        world.tenantA,
+      ]) {
+        const seen = await tenantsSeen(tenantId);
+        pids.add(seen.pid);
+        expect(seen.tenants).toEqual(
+          tenantId
+            ? new Set([tenantId])
+            : new Set([world.tenantA, world.tenantB]),
+        );
+      }
+    }
+    // sequential checkouts reuse idle connections, so bindings really were switched and skipped on them
+    expect(pids.size).toBeLessThan(12);
+  });
+
   it('refuses to write a row for a tenant the caller does not belong to', async () => {
     const repository = bound.get(DataSource).getRepository(ProductionEvent);
     const attempt = runWithRequestContext(

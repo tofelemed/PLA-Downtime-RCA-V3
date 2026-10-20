@@ -26,8 +26,9 @@ export function rlsTenantIds(context: RequestContext | undefined): string {
 }
 
 /**
- * Statement run on every connection checkout: a restricted request switches to the RLS role with its
- * tenants, anything else resets both (connections are pooled, so the previous state is never kept).
+ * Statement run on connection checkout: a restricted request switches to the RLS role with its tenants,
+ * anything else resets both. Connections are pooled, so the statement runs whenever the connection's last
+ * applied binding differs (`tenant-session-binding.ts`).
  */
 export function sessionBindingSql(tenantIds: string): string {
   if (!/^[0-9a-f,-]*$/.test(tenantIds)) {
