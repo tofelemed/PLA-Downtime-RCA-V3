@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryColumn,
@@ -24,6 +25,7 @@ export type SampleQualityValue = (typeof SAMPLE_QUALITIES)[number];
  * monthly by `observed_at` (`measurement_samples_ensure_partition`), so the primary key includes it.
  * Rows are never updated; retention drops whole partitions (3.12). Reads filter signal + time, served by
  * the identity key (signal_id, observed_at, …); a signal belongs to one tenant, so no tenant-led copy (DB-09).
+ * "Stored after the cursor" reads (state engine, period sweep) use (signal_id, inserted_at) (DB audit F04).
  */
 @Entity('measurement_samples')
 @Unique('UQ_measurement_samples_identity', [
@@ -31,6 +33,7 @@ export type SampleQualityValue = (typeof SAMPLE_QUALITIES)[number];
   'observedAt',
   'sourceRevision',
 ])
+@Index('IDX_measurement_samples_signal_inserted', ['signalId', 'insertedAt'])
 export class MeasurementSample {
   @PrimaryColumn({ name: 'id', type: 'uuid' })
   id: string;
