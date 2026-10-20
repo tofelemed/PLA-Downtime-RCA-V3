@@ -207,19 +207,34 @@ export async function downtimeReport(
   const groupBy = query.groupBy ?? 'reason';
   const metric = query.metric ?? 'duration';
   const plan = PLANS[groupBy];
-  const parent = await resolveReasonParent(
-    manager,
-    scope,
-    groupBy,
-    query.parentReasonId,
-  );
-  const cells = await breakdownGroups(
-    manager,
-    scope,
-    breakdownSpec(groupBy, query, parent),
-  );
-  const groups = await groupViews(manager, scope, plan, cells);
-  const stats = await periodStats(manager, scope);
+  // independent reads run concurrently (perf audit P06): the groups chain, the run stats and their
+  // policy versions, the summary, the data coverage and the calendar basis
+  const groupsOf = async () => {
+    const parent = await resolveReasonParent(
+      manager,
+      scope,
+      groupBy,
+      query.parentReasonId,
+    );
+    const cells = await breakdownGroups(
+      manager,
+      scope,
+      breakdownSpec(groupBy, query, parent),
+    );
+    return groupViews(manager, scope, plan, cells);
+  };
+  const statsOf = async () => {
+    const found = await periodStats(manager, scope);
+    return { found, versions: await policyVersions(manager, found.runIds) };
+  };
+  const [groups, { found: stats, versions }, summary, coverage, calendar] =
+    await Promise.all([
+      groupsOf(),
+      statsOf(),
+      summaryOf(manager, scope),
+      dataCoverage(manager, scope),
+      calendarBasisOf(manager, scope, query.scheduleClass ?? null),
+    ]);
   const data: DowntimeReportView = {
     groupBy,
     metric,
@@ -228,19 +243,15 @@ export async function downtimeReport(
     includeMicroStops: query.includeMicroStops ?? false,
     parentReasonId: query.parentReasonId ?? null,
     ...groups,
-    summary: calculatedBasis(await summaryOf(manager, scope)),
-    dataCoverage: await dataCoverage(manager, scope),
+    summary: calculatedBasis(summary),
+    dataCoverage: coverage,
     calculationRunIds: stats.runIds,
-    calendarBasis: await calendarBasisOf(
-      manager,
-      scope,
-      query.scheduleClass ?? null,
-    ),
+    calendarBasis: calendar,
   };
   return reportEnvelope(data, {
     scope,
     stats,
-    policyVersions: await policyVersions(manager, stats.runIds),
+    policyVersions: versions,
     provisionalData: false,
     notes: ['null key = not coded / not assigned'],
   });
