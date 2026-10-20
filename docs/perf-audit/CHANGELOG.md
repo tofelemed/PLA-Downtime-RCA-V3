@@ -110,7 +110,9 @@ The other session fixed the same mismatch in `auth-tokens`.
 
 | Signal | Where | Alert |
 |---|---|---|
-| API p95 per route | access log or a future metrics endpoint (P13 deferred) | reads > 300 ms, writes > 800 ms for 5 min |
+| API p95 per route | `histogram_quantile(0.95, sum by (route, le) (rate(http_request_duration_seconds_bucket[5m])))` on `METRICS_PORT` | reads > 300 ms, writes > 800 ms for 5 min |
+| Pool saturation | `db_pool_connections{state="waiting"}` | > 0 for 1 min |
+| Event-loop lag | `nodejs_eventloop_lag_p99_seconds` | > 0.1 s for 5 min |
 | Top statements by total time | `pg_stat_statements` (enabled, DB audit F08) | a new entry in the top 5; any statement with mean > 100 ms and > 1 000 calls/day |
 | Statements per request | CI: `request-overhead-budget` | any budget exceeded |
 | RLS binding rate | `pg_stat_statements` calls of `SET ROLE` / `RESET ROLE` vs total | binding > 20 % of statements (P02 regressed) |
