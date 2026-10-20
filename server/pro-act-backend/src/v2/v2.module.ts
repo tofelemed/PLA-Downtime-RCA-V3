@@ -159,6 +159,9 @@ import { LossValueReportV2Controller } from './reports/loss-value-v2.controller'
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
 import { FeatureFlagsV2Controller } from './feature-flags/feature-flags-v2.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { SessionBootstrapV2Controller } from './session/session-bootstrap-v2.controller';
+import { SessionBootstrapV2Service } from './session/session-bootstrap-v2.service';
 import { RulesModule } from '../rules/rules.module';
 import { RulesV2Controller } from './rules/rules-v2.controller';
 import { MasterDataV2Module } from './master-data/master-data-v2.module';
@@ -251,6 +254,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     StopEventsV2Module,
     CloseV2Module,
     NotificationsV2Module,
+    NotificationsModule,
   ],
   controllers: [
     ApprovalInboxV2Controller,
@@ -314,6 +318,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     LossValueReportV2Controller,
     BadActorReportV2Controller,
     FeatureFlagsV2Controller,
+    SessionBootstrapV2Controller,
     RulesV2Controller,
     RcaCasesV2Controller,
     RcaHistoryV2Controller,
@@ -333,6 +338,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     RcaPoliciesV2Controller,
   ],
   providers: [
+    SessionBootstrapV2Service,
     ApprovalInboxService,
     ApprovalChangesService,
     ...EQUIPMENT_READINESS_SERVICES,

@@ -28,7 +28,9 @@ it('waits for the saved acting plant before requesting the notification badge on
   plant.loading = false;
   view.rerender();
   await waitFor(() => expect(view.result.current.data?.unread).toBe(2));
-  expect(requestedPlants).toEqual(['selected-plant']);
+  // every request (the shell bootstrap batch, then the badge's own endpoint here) names the selected plant
+  expect(requestedPlants.length).toBeGreaterThan(0);
+  expect(requestedPlants.every((tenantId) => tenantId === 'selected-plant')).toBe(true);
   view.unmount();
   client.clear();
 });

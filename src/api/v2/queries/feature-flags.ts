@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { v2 } from '../v2';
 import type { FeatureFlagKey, FeatureFlagState, FeatureFlagsView } from '../types/flags';
 import { v2Keys } from './query-keys';
+import { fromSessionBootstrap } from './session-bootstrap';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
@@ -13,8 +14,9 @@ export function useFeatureFlags() {
     queryKey: v2Keys.list(tenantId ?? '-', 'feature-flags'),
     enabled: Boolean(tenantId),
     staleTime: STALE_TIME['feature-flags'],
-    queryFn: async ({ signal }) =>
-      (await v2.get<FeatureFlagsView, '/api/v2/feature-flags'>('/api/v2/feature-flags', { signal })).data,
+    queryFn: ({ signal }) =>
+      fromSessionBootstrap('featureFlags', async () =>
+        (await v2.get<FeatureFlagsView, '/api/v2/feature-flags'>('/api/v2/feature-flags', { signal })).data),
   });
 }
 

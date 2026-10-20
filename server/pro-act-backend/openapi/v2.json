@@ -13724,6 +13724,27 @@
         ]
       }
     },
+    "/api/v2/session/bootstrap": {
+      "get": {
+        "description": "Branding, feature flags, unread notification count, sites (first 100), the acting plant and the plant directory (every organization and plant the caller may see). Each part is exactly the body of GET /v2/branding, /v2/feature-flags, /v2/notifications/unread-count, /v2/sites?limit=100, /v2/tenants/{acting tenant} and every page of /v2/organizations and /v2/tenants. Read only.",
+        "operationId": "SessionBootstrapV2Controller_bootstrap_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Everything the app shell reads on every page, in one request",
+        "tags": [
+          "v2 · Session"
+        ]
+      }
+    },
     "/api/v2/rules/schema": {
       "get": {
         "operationId": "RulesV2Controller_schema_v2",

@@ -6,6 +6,7 @@ import type { QueryOf } from '../schema-types';
 import type { ListResponse } from '../types/envelopes';
 import type { CodeView, SiteView } from '../types/flags';
 import { v2Keys } from './query-keys';
+import { fromSessionBootstrap } from './session-bootstrap';
 import { STALE_TIME } from './stale-times';
 import { useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
@@ -50,7 +51,8 @@ export function useSites() {
     enabled: Boolean(tenantId),
     staleTime: STALE_TIME.sites,
     queryFn: async ({ signal }) =>
-      (await v2Request<ListResponse<SiteView>>({ method: 'GET', path: '/sites', query: { limit: 100 }, signal })).data,
+      fromSessionBootstrap('sites', async () =>
+        (await v2Request<ListResponse<SiteView>>({ method: 'GET', path: '/sites', query: { limit: 100 }, signal })).data),
   });
 }
 

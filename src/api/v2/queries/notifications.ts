@@ -3,6 +3,7 @@ import { v2Request } from '../client';
 import type { ListResponse } from '../types/envelopes';
 import type { NotificationFilter, NotificationView } from '../types/notifications';
 import { v2Keys } from './query-keys';
+import { fromSessionBootstrap } from './session-bootstrap';
 import { STALE_TIME } from './stale-times';
 import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
@@ -32,7 +33,9 @@ export function useUnreadNotificationCount() {
     queryKey: v2Keys.detail(tenantId ?? '-', 'notifications', 'unread-count'),
     enabled: Boolean(tenantId),
     staleTime: STALE_TIME.notifications,
-    queryFn: async ({ signal }) => (await v2Request<{ unread: number }>({ method: 'GET', path: '/notifications/unread-count', signal })).data,
+    queryFn: ({ signal }) =>
+      fromSessionBootstrap('unreadNotifications', async () =>
+        (await v2Request<{ unread: number }>({ method: 'GET', path: '/notifications/unread-count', signal })).data),
   });
 }
 

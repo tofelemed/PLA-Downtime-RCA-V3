@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { v2Request } from '@/api/v2/client';
+import { fromSessionBootstrap } from '@/api/v2/queries/session-bootstrap';
 import type { BrandingView } from '@/api/v2/types/administration';
 
 const BRANDING_KEY = ['v2', 'app', 'branding'] as const;
@@ -15,7 +16,8 @@ export function useBranding(enabled: boolean): BrandingView | undefined {
     queryKey: BRANDING_KEY,
     enabled,
     staleTime: 10 * 60_000,
-    queryFn: async ({ signal }) => (await v2Request<BrandingView>({ method: 'GET', path: '/branding', signal })).data,
+    queryFn: ({ signal }) =>
+      fromSessionBootstrap('branding', async () => (await v2Request<BrandingView>({ method: 'GET', path: '/branding', signal })).data),
   });
   useEffect(() => {
     const refresh = () => void queryClient.invalidateQueries({ queryKey: BRANDING_KEY });

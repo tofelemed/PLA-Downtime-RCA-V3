@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { v2Request } from '@/api/v2/client';
+import { fromSessionBootstrap } from '@/api/v2/queries/session-bootstrap';
 import type { QueryParams } from '@/api/v2/request-url';
 import type { ListResponse } from '@/api/v2/types/envelopes';
 import type { DirectoryAsset, DirectoryOrganization, DirectoryPlant, DirectoryUnit } from '@/api/v2/types/plant-directory';
@@ -57,13 +58,13 @@ export function usePlantDirectory(): PlantDirectory {
     queryKey: plantDirectoryKeys.organizations(userId),
     enabled: Boolean(user),
     staleTime: DIRECTORY_STALE_MS,
-    queryFn: ({ signal }) => allPages<DirectoryOrganization>('/organizations', {}, { signal }),
+    queryFn: ({ signal }) => fromSessionBootstrap('organizations', () => allPages<DirectoryOrganization>('/organizations', {}, { signal })),
   });
   const tenants = useQuery({
     queryKey: plantDirectoryKeys.tenants(userId),
     enabled: Boolean(user),
     staleTime: DIRECTORY_STALE_MS,
-    queryFn: ({ signal }) => allPages<DirectoryPlant>('/tenants', {}, { signal }),
+    queryFn: ({ signal }) => fromSessionBootstrap('plants', () => allPages<DirectoryPlant>('/tenants', {}, { signal })),
     select: (rows) => (user ? selectableTenants(user, rows) : []),
   });
   const allowed = tenants.data ?? [];

@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { adminCall } from '@/api/v2/queries/administration-shared';
 import { resyncTenant } from '@/api/v2/queries/invalidation';
 import { v2Keys } from '@/api/v2/queries/query-keys';
+import { fromSessionBootstrap } from '@/api/v2/queries/session-bootstrap';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import type { PlantView } from '@/api/v2/types/administration';
 import {
@@ -30,7 +31,7 @@ export function useActingTenant() {
     queryKey: tenantKey(tenantId ?? '-'),
     enabled: Boolean(session && tenantId),
     staleTime: 5 * 60_000,
-    queryFn: ({ signal }) => adminCall<PlantView>('GET', `/tenants/${tenantId}`, { signal }),
+    queryFn: ({ signal }) => fromSessionBootstrap('plant', () => adminCall<PlantView>('GET', `/tenants/${tenantId}`, { signal })),
     placeholderData: snapshot
       ? { name: snapshot.name, calendarSystem: snapshot.calendarSystem ?? 'gregorian', digits: snapshot.digits ?? 'latin' }
       : undefined,

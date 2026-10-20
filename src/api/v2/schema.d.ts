@@ -4006,6 +4006,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/session/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything the app shell reads on every page, in one request
+         * @description Branding, feature flags, unread notification count, sites (first 100), the acting plant and the plant directory (every organization and plant the caller may see). Each part is exactly the body of GET /v2/branding, /v2/feature-flags, /v2/notifications/unread-count, /v2/sites?limit=100, /v2/tenants/{acting tenant} and every page of /v2/organizations and /v2/tenants. Read only.
+         */
+        get: operations["SessionBootstrapV2Controller_bootstrap_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/rules/schema": {
         parameters: {
             query?: never;
@@ -16704,6 +16724,23 @@ export interface operations {
                 "application/json": components["schemas"]["FeatureFlagSetDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SessionBootstrapV2Controller_bootstrap_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
