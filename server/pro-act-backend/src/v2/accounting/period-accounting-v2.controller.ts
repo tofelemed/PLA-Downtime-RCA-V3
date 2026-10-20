@@ -30,7 +30,11 @@ import {
   RecalculatePeriodsDto,
 } from './period-accounting-v2.dto';
 import { PeriodAccountingV2Service } from './period-accounting-v2.service';
-import { PeriodAccountingV2View, RunV2View } from './period-accounting-v2.view';
+import {
+  PeriodAccountingV2View,
+  RunSummaryV2View,
+  RunV2View,
+} from './period-accounting-v2.view';
 
 /** Loss ledgers and calculation runs of production periods (plan 2.5, ACC01–ACC08, FND03). */
 @ApiTags('v2 · Loss accounting')
@@ -83,12 +87,26 @@ export class PeriodAccountingV2Controller {
   @ApiOperation({
     summary:
       'Calculation runs of a period, newest first (keyset on createdAt, id)',
+    description:
+      'Each run without its input fingerprint (about 5.5 KB per run); GET :id/runs/:runId returns one run with it.',
   })
   runs(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Query() query: CalculationRunListQueryDto,
-  ): Promise<ListResponse<RunV2View>> {
+  ): Promise<ListResponse<RunSummaryV2View>> {
     return this.reads.listRuns(ctx, id, query);
+  }
+
+  @Get(':id/runs/:runId')
+  @ApiOperation({
+    summary: 'One calculation run of a period, with its input fingerprint',
+  })
+  run(
+    @Ctx() ctx: RequestContext,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('runId', new ParseUUIDPipe()) runId: string,
+  ): Promise<RunV2View> {
+    return this.reads.getRun(ctx, id, runId);
   }
 }

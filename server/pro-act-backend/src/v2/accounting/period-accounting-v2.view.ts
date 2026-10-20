@@ -43,6 +43,12 @@ export interface RunV2View {
   stats: Record<string, number>;
 }
 
+/**
+ * A run in the runs list (perf audit P07): everything but `inputFingerprint` (~5.5 KB per run); the full
+ * run, fingerprint included, is `GET /v2/production-periods/{id}/runs/{runId}`.
+ */
+export type RunSummaryV2View = Omit<RunV2View, 'inputFingerprint'>;
+
 export interface EvidenceV2View {
   eventId: string | null;
   eventRevisionId: string | null;
@@ -155,6 +161,10 @@ export function toRevisionView(revision: AccountingRevision): RevisionV2View {
 }
 
 export function toRunView(run: CalculationRun): RunV2View {
+  return { ...toRunSummaryView(run), inputFingerprint: run.inputFingerprint };
+}
+
+export function toRunSummaryView(run: CalculationRun): RunSummaryV2View {
   return {
     id: run.id,
     revisionId: run.revisionId,
@@ -163,7 +173,6 @@ export function toRunView(run: CalculationRun): RunV2View {
     engineVersion: run.engineVersion,
     policyVersions: run.policyVersions,
     inputHash: run.inputHash,
-    inputFingerprint: run.inputFingerprint,
     actualsRunId: run.actualsRunId,
     supersedesRunId: run.supersedesRunId,
     startedAt: run.startedAt.toISOString(),

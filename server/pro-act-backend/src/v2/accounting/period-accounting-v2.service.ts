@@ -30,9 +30,11 @@ import {
 import {
   LedgerTotalsV2View,
   PeriodAccountingV2View,
+  RunSummaryV2View,
   RunV2View,
   toLineView,
   toRevisionView,
+  toRunSummaryView,
   toRunView,
   toTotalsView,
   toValuationTotalView,
@@ -44,6 +46,26 @@ import { PeriodValuationTotal } from '../../valuation/entities/period-valuation-
  * as an analytical response, and the period's calculation runs (keyset on createdAt, newest first).
  * Reads never write: the default ledger view comes from the `oee_policy` version the run recorded.
  */
+/** Runs-list columns: every run field but the input fingerprint, plus the keyset / scope keys. */
+const RUN_SUMMARY_COLUMNS = [
+  'id',
+  'tenantId',
+  'periodId',
+  'createdAt',
+  'revisionId',
+  'status',
+  'trigger',
+  'engineVersion',
+  'policyVersions',
+  'inputHash',
+  'actualsRunId',
+  'supersedesRunId',
+  'startedAt',
+  'completedAt',
+  'error',
+  'stats',
+] as const;
+
 @Injectable()
 export class PeriodAccountingV2Service {
   constructor(
@@ -88,14 +110,12 @@ export class PeriodAccountingV2Service {
     context: RequestContext,
     periodId: string,
     query: CalculationRunListQueryDto,
-  ): Promise<ListResponse<RunV2View>> {
+  ): Promise<ListResponse<RunSummaryV2View>> {
     const period = await this.period(context, periodId);
-    const qb = scopedQuery(this.runs, 'r', { context }).andWhere(
-      'r.periodId = :periodId',
-      {
-        periodId: period.id,
-      },
-    );
+    // the list never reads input_fingerprint (perf audit P07); the run detail does
+    const qb = scopedQuery(this.runs, 'r', { context })
+      .select(RUN_SUMMARY_COLUMNS.map((column) => `r.${column}`))
+      .andWhere('r.periodId = :periodId', { periodId: period.id });
     const page = await keysetPage(qb, {
       alias: 'r',
       property: 'createdAt',
@@ -103,10 +123,27 @@ export class PeriodAccountingV2Service {
       cursor: query.cursor,
       limit: query.limit,
     });
-    return listResponse(page.items.map(toRunView), page.nextCursor, {
+    return listResponse(page.items.map(toRunSummaryView), page.nextCursor, {
       ...this.scope(context),
       unitIds: [period.unitId],
     });
+  }
+
+  /** One run of the period with its input fingerprint (404 for a run of another period). */
+  async getRun(
+    context: RequestContext,
+    periodId: string,
+    runId: string,
+  ): Promise<RunV2View> {
+    const period = await this.period(context, periodId);
+    const run = await scopedQuery(this.runs, 'r', { context })
+      .andWhere('r.periodId = :periodId AND r.id = :runId', {
+        periodId: period.id,
+        runId,
+      })
+      .getOne();
+    if (!run) throw notFound('Calculation run');
+    return toRunView(run);
   }
 
   /** Lines, evidence and totals of a run (none without a run). */

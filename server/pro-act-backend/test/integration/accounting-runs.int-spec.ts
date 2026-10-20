@@ -239,6 +239,38 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     expect(env.totals(body, 'plan').flags).toContain('bridge_required');
   });
 
+  it('lists runs without the input fingerprint; the run detail has it (perf audit P07)', async () => {
+    const response = await env
+      .get(`production-periods/${periodA1}/runs`, env.admin)
+      .expect(200);
+    const items = (response.body as { items: Array<Record<string, unknown>> })
+      .items;
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((run) => !('inputFingerprint' in run))).toBe(true);
+    expect(typeof items[0].status).toBe('string');
+    const detail = await env
+      .get(
+        `production-periods/${periodA1}/runs/${String(items[0].id)}`,
+        env.admin,
+      )
+      .expect(200);
+    const run = detail.body as Record<string, unknown>;
+    expect(run.id).toBe(items[0].id);
+    expect(run.inputHash).toBe(items[0].inputHash);
+    expect(typeof run.inputFingerprint).toBe('object');
+    // a run is only found under its own period
+    const [{ id: otherPeriod }] = await env.rows<{ id: string }>(
+      `SELECT "id" FROM "production_periods" WHERE "tenant_id" = $1 AND "id" <> $2 LIMIT 1`,
+      [env.world.tenantA, periodA1],
+    );
+    await env
+      .get(
+        `production-periods/${otherPeriod}/runs/${String(items[0].id)}`,
+        env.admin,
+      )
+      .expect(404);
+  });
+
   it('an excluded period is schedule exclusion only; missing actuals leave the residual null', async () => {
     await env.materialize([env.world.unitA3], DAY3, DAY3_A_END);
     const excluded = await env.periodId(env.world.unitA3, DAY3);

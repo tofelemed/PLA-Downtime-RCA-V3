@@ -10812,6 +10812,7 @@
     },
     "/api/v2/production-periods/{id}/runs": {
       "get": {
+        "description": "Each run without its input fingerprint (about 5.5 KB per run); GET :id/runs/:runId returns one run with it.",
         "operationId": "PeriodAccountingV2Controller_runs_v2",
         "parameters": [
           {
@@ -10884,6 +10885,43 @@
           }
         ],
         "summary": "Calculation runs of a period, newest first (keyset on createdAt, id)",
+        "tags": [
+          "v2 · Loss accounting"
+        ]
+      }
+    },
+    "/api/v2/production-periods/{id}/runs/{runId}": {
+      "get": {
+        "operationId": "PeriodAccountingV2Controller_run_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "runId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One calculation run of a period, with its input fingerprint",
         "tags": [
           "v2 · Loss accounting"
         ]

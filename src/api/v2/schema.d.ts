@@ -3113,8 +3113,28 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Calculation runs of a period, newest first (keyset on createdAt, id) */
+        /**
+         * Calculation runs of a period, newest first (keyset on createdAt, id)
+         * @description Each run without its input fingerprint (about 5.5 KB per run); GET :id/runs/:runId returns one run with it.
+         */
         get: operations["PeriodAccountingV2Controller_runs_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/production-periods/{id}/runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One calculation run of a period, with its input fingerprint */
+        get: operations["PeriodAccountingV2Controller_run_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -15499,6 +15519,26 @@ export interface operations {
             header?: never;
             path: {
                 id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PeriodAccountingV2Controller_run_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                runId: string;
             };
             cookie?: never;
         };
