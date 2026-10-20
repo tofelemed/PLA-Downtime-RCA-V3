@@ -4306,6 +4306,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/{kind}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export an operating report as a designed PDF or an Excel workbook (202 + job)
+         * @description Requires `Idempotency-Key`. The query string is the report’s own (the same parameters and checks as its GET under /reports; daily also takes monthFrom). The report is read now with the caller’s units and money access and pinned on the job; provisional figures are stamped “PROVISIONAL – not approved”. Poll /exports/{id}; download from /reports/exports/{id}/download. 404 for an unknown kind.
+         */
+        post: operations["ReportExportsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/exports/{id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download an operating report export (streamed; re-authorized now)
+         * @description Operating report exports only (404 otherwise). 409 EXPORT_NOT_READY while queued or running; 410 when cancelled, failed or expired; 403 MONEY_NOT_VISIBLE when the export holds money and the caller may not see it. Header `X-Content-SHA256`. Audited.
+         */
+        get: operations["ReportExportsV2Controller_download_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/feature-flags": {
         parameters: {
             query?: never;
@@ -9743,6 +9783,18 @@ export interface components {
             /** @example A */
             shiftName: string;
             body: string;
+        };
+        ReportExportBodyDto: {
+            /**
+             * @description `pdf`: a designed report (logo, title, KPIs, tables) on the plant calendar; `xlsx`: a workbook, a sheet per table
+             * @enum {string}
+             */
+            format: "pdf" | "xlsx";
+            /**
+             * @description The reporting currency money is printed in (default USD)
+             * @enum {string}
+             */
+            currency?: "USD" | "IRR";
         };
         FeatureFlagSetDto: {
             /** @description New value of the flag for the whole tenant */
@@ -17518,6 +17570,50 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportExportsV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                kind: "daily";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportExportBodyDto"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ReportExportsV2Controller_download_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

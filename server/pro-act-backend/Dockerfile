@@ -32,6 +32,8 @@ WORKDIR /app
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
+# Report export logo (assets/marun.png; REPORT_LOGO_PATH overrides it)
+COPY --chown=node:node assets ./assets
 
 # Multer writes uploads to ./uploads (relative to the working directory); mount a volume here.
 RUN mkdir -p /app/uploads && chown node:node /app/uploads

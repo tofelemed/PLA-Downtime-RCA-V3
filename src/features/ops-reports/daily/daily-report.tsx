@@ -1,7 +1,8 @@
 import { useMonthClose } from '@/api/v2/queries/month-close';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { DashboardOee } from '@/features/pla-analytics/dashboard/dashboard-oee';
-import type { AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
+import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
+import { ReportExportBar } from '../components/report-export-bar';
 import { monthToDateWindow } from '../model/month-to-date';
 import { EventStatusCard } from './event-status-card';
 import { ProductionTable } from './production-table';
@@ -29,6 +30,7 @@ export function DailyReport({ scope, dayStart }: { scope: AnalyticsScope; daySta
   const mtd = calendar ? monthToDateWindow(scope, { dayStart, timeZone: env.timezone, calendar }) : null;
   return (
     <div className="space-y-6" data-testid="daily-report">
+      <ReportExportBar kind="daily" query={{ ...scopeBase(scope), monthFrom: mtd?.from }} timezone={env.timezone} />
       <Section scope={scope} title="Chosen days" testId="daily-days" />
       {mtd && <Section scope={{ ...scope, ...mtd, windowLabel: 'Month to date' }} title="Month to date" testId="daily-mtd" />}
       <LossBreakdownCards scope={scope} groupBy="reason" limit={5} title="Top 5 losses" testId="daily-top-losses" />

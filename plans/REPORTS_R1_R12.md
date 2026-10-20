@@ -45,3 +45,13 @@ Parked (need owner decisions): T1 targets and comparisons, T2 scheduled e-mail.
 - [x] R10 RCA action tracker (`rca-action-tracker`; Reports → RCA actions)
 - [x] R11 Plan adherence by grade (`plan-adherence`; Reports → Plan adherence)
 - [x] R12 Executive scorecard (`monthly-scorecard`; Reports → Executive scorecard). Budget/target comparison waits for T1.
+
+## Exports (owner 2026-10-20: "fully designed and formatted pdf export … logo at the top (marun.png); excel export where suitable"; exceljs approved; provisional allowed, stamped)
+
+- `POST /api/v2/reports/{kind}/export` with the report's own query plus `format` (`pdf` | `xlsx`) and `currency`. The server reads the report, as on the page, and pins it on an `export_jobs` row. The row has `report_type = ops_report`, `revision_selector = report` and a neutral **report document** in `report_content`: KPI tiles, facts and typed table columns (text, number, percent, duration, money, date). It answers 202 with the job, like every export. The worker renders the pinned document, so PDF and Excel always show the same figures. Downloads, expiry and the audit trail are the existing ones.
+- PDF (pdfkit): the logo (`assets/marun.png`, `REPORT_LOGO_PATH`) and title band on every page, a facts strip (plant, window, units, revisions, generated), KPI tiles, zebra tables that repeat their header across pages, and a footer with page x of y. Provisional figures carry a "PROVISIONAL – not approved" stamp.
+- Excel (exceljs): a Summary sheet (logo, title, facts, KPIs) and one sheet per table, with a styled header, frozen header row, auto-filter, and real number, percent, duration and date cells.
+- Excel goes with the reports that are tables (R1, R2, R4–R12). R3 (the monthly statement) is PDF and Excel.
+
+- [x] Export infrastructure + R1 (`POST /reports/{kind}/export`, `GET /reports/exports/{id}/download`; Daily production tab: PDF / Excel)
+- [ ] Export builders R2–R12

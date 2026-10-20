@@ -163,6 +163,8 @@ import { CapacityGapReportV2Service } from './reports/capacity-gap-v2.service';
 import { OpsReportsV2Controller } from './ops-reports/ops-reports-v2.controller';
 import { OpsReportsV2Service } from './ops-reports/ops-reports-v2.service';
 import { ShiftNotesV2Controller } from './ops-reports/shift-notes-v2.controller';
+import { ReportExportsV2Controller } from './ops-reports/export/report-exports-v2.controller';
+import { ReportExportService } from './ops-reports/export/report-export.service';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
@@ -329,6 +331,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     CapacityGapReportV2Controller,
     OpsReportsV2Controller,
     ShiftNotesV2Controller,
+    ReportExportsV2Controller,
     FeatureFlagsV2Controller,
     SessionBootstrapV2Controller,
     RulesV2Controller,
@@ -389,6 +392,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     BadActorReportV2Service,
     CapacityGapReportV2Service,
     OpsReportsV2Service,
+    ReportExportService,
     PeriodOverviewService,
     PlaReportsV2Service,
     ActivitySummaryV2Service,

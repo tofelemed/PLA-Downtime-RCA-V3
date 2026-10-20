@@ -3,23 +3,37 @@ import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
 import { ExportLabels } from '../export-labels';
 import { RcaCaseExportContent } from '../rca-case/rca-case-content';
 import { ExportPresentation } from '../pdf/pdf-model';
+import { ReportDocument } from '../report/report-document';
 
 /** `rca_case` (item 2.5): one RCA case as a PDF, its content pinned on the job (`case_content`). */
-export const EXPORT_REPORT_TYPES = [
+export const REQUESTABLE_REPORT_TYPES = [
   'period_summary',
   'loss_lines',
   'rca_case',
 ] as const;
+/** `ops_report` (plans/REPORTS_R1_R12.md): an operating report, requested through `/reports/{kind}/export`. */
+export const EXPORT_REPORT_TYPES = [
+  ...REQUESTABLE_REPORT_TYPES,
+  'ops_report',
+] as const;
 export type ExportReportType = (typeof EXPORT_REPORT_TYPES)[number];
 
-export const EXPORT_FORMATS = ['csv', 'pdf'] as const;
+/** Formats `POST /exports` accepts; `xlsx` is an operating report workbook only. */
+export const REQUESTABLE_FORMATS = ['csv', 'pdf'] as const;
+export const EXPORT_FORMATS = [...REQUESTABLE_FORMATS, 'xlsx'] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 /**
  * `published` = the latest approved revision of every period in the window; `revision_ids` = named approved
  * revisions; `case` = one RCA case (`rca_case` only, no revisions).
  */
-export const EXPORT_SELECTORS = ['published', 'revision_ids', 'case'] as const;
+export const REQUESTABLE_SELECTORS = [
+  'published',
+  'revision_ids',
+  'case',
+] as const;
+/** `report`: an operating report's own window and units (`ops_report`, no pinned revisions). */
+export const EXPORT_SELECTORS = [...REQUESTABLE_SELECTORS, 'report'] as const;
 export type ExportSelector = (typeof EXPORT_SELECTORS)[number];
 
 export const EXPORT_JOB_STATES = [
@@ -107,6 +121,10 @@ export class ExportJob extends TenantScopedEntity {
   /** `rca_case`: the case as read when the export was requested (null for period exports) */
   @Column({ name: 'case_content', type: 'jsonb', nullable: true })
   caseContent: RcaCaseExportContent | null;
+
+  /** `ops_report`: the report document as read when the export was requested */
+  @Column({ name: 'report_content', type: 'jsonb', nullable: true })
+  reportContent: ReportDocument | null;
 
   /** content scope; null = tenant-wide (needs a tenant-wide grant to see or download) */
   @Column({ name: 'unit_ids', type: 'uuid', array: true, nullable: true })

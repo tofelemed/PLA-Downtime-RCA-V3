@@ -171,6 +171,8 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
   ],
   // item 2.5: an RCA case is a PDF only (a CSV request is refused)
   rca_case: [],
+  // an operating report carries its own columns in its pinned document
+  ops_report: [],
 };
 
 /** Lines that add a quantity of their own (decisions on candidates are shown on the candidate rows). */

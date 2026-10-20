@@ -25,6 +25,7 @@ export const REPORT_TITLES: Record<ExportReportType, string> = {
   period_summary: 'Period summary',
   loss_lines: 'Loss lines',
   rca_case: 'Investigation report',
+  ops_report: 'Operating report',
 };
 
 /** The content of one approved revision, before it is cut into pages. */
@@ -67,6 +68,7 @@ export const PDF_COLUMNS: Record<ExportReportType, readonly PdfColumn[]> = {
   ],
   // item 2.5: the case PDF lays out its own tables (`rca-case/rca-case-pdf.ts`)
   rca_case: [],
+  ops_report: [],
 };
 
 const formatOf = (p: ExportPresentation): PlantFormat => ({

@@ -17,7 +17,10 @@ for path in "$@"; do
     GIT_INDEX_FILE="$TMP_INDEX" git update-index --force-remove "$path"
     continue
   fi
-  tr -d '\r' < "$path" > "$BLOB"
+  case "$path" in
+    *.png|*.jpg|*.jpeg|*.gif|*.pdf|*.xlsx|*.ttf|*.woff|*.woff2) cp "$path" "$BLOB" ;; # binary: bytes as is
+    *) tr -d '\r' < "$path" > "$BLOB" ;;
+  esac
   hash="$(git hash-object -w --no-filters "$BLOB")"
   GIT_INDEX_FILE="$TMP_INDEX" git update-index --add --cacheinfo "100644,$hash,$path"
 done

@@ -16,9 +16,9 @@ import {
 } from 'class-validator';
 import { toArrayParam } from '../../common/dto/query-param.transformers';
 import {
-  EXPORT_FORMATS,
-  EXPORT_REPORT_TYPES,
-  EXPORT_SELECTORS,
+  REQUESTABLE_FORMATS,
+  REQUESTABLE_REPORT_TYPES,
+  REQUESTABLE_SELECTORS,
   ExportFormat,
   ExportReportType,
   ExportSelector,
@@ -33,23 +33,23 @@ import { LIST_LIMIT_MAX, ListQueryDto } from '../common/list-query.dto';
 /** `POST /exports` (§15.2): report, format, revision selector and its filters. */
 export class CreateExportDto {
   @ApiProperty({
-    enum: EXPORT_REPORT_TYPES,
+    enum: REQUESTABLE_REPORT_TYPES,
     description:
       '`period_summary` / `loss_lines`: approved period revisions. `rca_case`: one RCA case as a PDF (definition, ' +
       'team, status timeline, causes, analyses, actions with verification, approved / claimed / realised figures, ' +
       'closure approval), with revisionSelector `case` and `rcaId`; a case the caller cannot read is 404.',
   })
-  @IsIn(EXPORT_REPORT_TYPES)
+  @IsIn(REQUESTABLE_REPORT_TYPES)
   reportType: ExportReportType;
 
   @ApiProperty({
-    enum: EXPORT_FORMATS,
+    enum: REQUESTABLE_FORMATS,
     description:
       '`csv`: every column, ISO UTC times, both reporting currencies. `pdf`: a printable report on the ' +
       'plant clock, calendar and digits, money in `currency`; at most EXPORT_PDF_MAX_SOURCES (500) period ' +
       'revisions (422 EXPORT_TOO_LARGE).',
   })
-  @IsIn(EXPORT_FORMATS)
+  @IsIn(REQUESTABLE_FORMATS)
   format: ExportFormat;
 
   @ApiPropertyOptional({
@@ -61,14 +61,14 @@ export class CreateExportDto {
   currency?: PdfCurrency;
 
   @ApiProperty({
-    enum: EXPORT_SELECTORS,
+    enum: REQUESTABLE_SELECTORS,
     description:
       '`published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional ' +
       'unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review ' +
       'content is never exported. `case`: reportType rca_case only (needs rcaId only; PDF only, 422 ' +
       'FORMAT_NOT_SUPPORTED for CSV).',
   })
-  @IsIn(EXPORT_SELECTORS)
+  @IsIn(REQUESTABLE_SELECTORS)
   revisionSelector: ExportSelector;
 
   @ApiPropertyOptional({ description: 'Window start (inclusive), ISO 8601' })

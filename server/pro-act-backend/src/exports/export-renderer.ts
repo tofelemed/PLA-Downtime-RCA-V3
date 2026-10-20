@@ -142,6 +142,8 @@ export class ExportRenderer {
   ): Promise<Outcome> {
     if (job.reportType === 'rca_case')
       return this.writeCase(writer, job, checkpoint);
+    if (job.reportType === 'ops_report')
+      return this.writeReport(writer, job, checkpoint);
     return job.format === 'pdf'
       ? this.writePdf(writer, job, checkpoint)
       : this.writeCsv(writer, job, checkpoint);
@@ -156,6 +158,20 @@ export class ExportRenderer {
     const decision = await checkpoint(0);
     if (decision !== 'continue') return { status: decision, processed: 0 };
     writer.rows = await this.pdf.writeCase(job, {
+      write: (chunk) => writer.writeBytes(chunk),
+    });
+    return { status: 'continue', processed: 1 };
+  }
+
+  /** An operating report: one pinned document, one checkpoint, PDF or workbook. */
+  private async writeReport(
+    writer: HashingWriter,
+    job: ExportJob,
+    checkpoint: CheckpointFn,
+  ): Promise<Outcome> {
+    const decision = await checkpoint(0);
+    if (decision !== 'continue') return { status: decision, processed: 0 };
+    writer.rows = await this.pdf.writeReport(job, {
       write: (chunk) => writer.writeBytes(chunk),
     });
     return { status: 'continue', processed: 1 };

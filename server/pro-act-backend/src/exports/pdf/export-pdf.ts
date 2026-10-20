@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { ExportJob } from '../entities/export-job.entity';
 import { ExportHeader, RenderSource } from '../export-report';
 import { rcaCaseDocumentOf } from '../rca-case/rca-case-pdf';
+import { writeReportPdf } from '../report/report-pdf';
+import { reportLogo } from '../report/report-pdf-kit';
+import { writeReportXlsx } from '../report/report-xlsx';
 import { basisText, sourceSection } from './pdf-content';
 import { drawDocument } from './pdf-draw';
 import { PdfFonts, resolvePdfFonts } from './pdf-fonts';
@@ -86,5 +89,25 @@ export class ExportPdfWriter {
     const surface = await this.surfaces(sink, model.info);
     await drawDocument(model, surface);
     return rowCount;
+  }
+
+  /**
+   * An operating report (`ops_report`): its pinned document as a designed PDF or an Excel workbook, with
+   * the report logo, the pinned presentation and the request time (so re-rendering reproduces the file).
+   */
+  async writeReport(job: ExportJob, sink: PdfSink): Promise<number> {
+    if (!job.presentation || !job.reportContent) {
+      throw new Error(`report export ${job.id} has no pinned document`);
+    }
+    const fonts = this.fonts();
+    const base = {
+      document: job.reportContent,
+      presentation: drawnPresentation(job.presentation, fonts),
+      logo: reportLogo(),
+      generatedAt: job.createdAt,
+    };
+    return job.format === 'xlsx'
+      ? writeReportXlsx({ ...base, presentation: job.presentation }, sink)
+      : writeReportPdf({ ...base, fonts }, sink);
   }
 }

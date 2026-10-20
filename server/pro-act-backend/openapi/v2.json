@@ -14740,6 +14740,87 @@
         ]
       }
     },
+    "/api/v2/reports/{kind}/export": {
+      "post": {
+        "description": "Requires `Idempotency-Key`. The query string is the report’s own (the same parameters and checks as its GET under /reports; daily also takes monthFrom). The report is read now with the caller’s units and money access and pinned on the job; provisional figures are stamped “PROVISIONAL – not approved”. Poll /exports/{id}; download from /reports/exports/{id}/download. 404 for an unknown kind.",
+        "operationId": "ReportExportsV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "kind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "daily"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportExportBodyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Export an operating report as a designed PDF or an Excel workbook (202 + job)",
+        "tags": [
+          "v2 · Operating reports"
+        ]
+      }
+    },
+    "/api/v2/reports/exports/{id}/download": {
+      "get": {
+        "description": "Operating report exports only (404 otherwise). 409 EXPORT_NOT_READY while queued or running; 410 when cancelled, failed or expired; 403 MONEY_NOT_VISIBLE when the export holds money and the caller may not see it. Header `X-Content-SHA256`. Audited.",
+        "operationId": "ReportExportsV2Controller_download_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Download an operating report export (streamed; re-authorized now)",
+        "tags": [
+          "v2 · Operating reports"
+        ]
+      }
+    },
     "/api/v2/feature-flags": {
       "get": {
         "description": "Registry defaults (all off) overlaid with the tenant settings; readable by any tenant member.",
@@ -30329,6 +30410,30 @@
           "localDate",
           "shiftName",
           "body"
+        ]
+      },
+      "ReportExportBodyDto": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "xlsx"
+            ],
+            "description": "`pdf`: a designed report (logo, title, KPIs, tables) on the plant calendar; `xlsx`: a workbook, a sheet per table"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "IRR"
+            ],
+            "description": "The reporting currency money is printed in (default USD)"
+          }
+        },
+        "required": [
+          "format"
         ]
       },
       "FeatureFlagSetDto": {
