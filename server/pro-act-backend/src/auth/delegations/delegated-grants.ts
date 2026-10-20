@@ -2,7 +2,7 @@ import { EntityManager } from 'typeorm';
 import { ScopeGrant } from '../../common/context/request-context';
 import { GrantRef, holdsForScope } from './delegation-rules';
 
-interface DelegationRow {
+export interface DelegationRow {
   id: string;
   tenant_id: string;
   delegator_id: string;
@@ -14,7 +14,7 @@ interface DelegationRow {
   delegator_tenant: string | null;
 }
 
-interface GrantRow {
+export interface GrantRow {
   user_id: string;
   tenant_id: string;
   role: string;
@@ -48,6 +48,17 @@ export async function delegatedGrants(
   if (rows.length === 0) return [];
   const delegators = [...new Set(rows.map((r) => r.delegator_id))];
   const grants: GrantRow[] = await manager.query(GRANTS_SQL, [delegators]);
+  return grantsFromDelegations(rows, grants);
+}
+
+/**
+ * The delegations in force whose delegator still holds the role on that scope (`grants` = the delegators'
+ * `user_scopes` rows), as grants marked with the delegation and the delegator.
+ */
+export function grantsFromDelegations(
+  rows: DelegationRow[],
+  grants: GrantRow[],
+): ScopeGrant[] {
   const byDelegator = new Map<string, GrantRef[]>();
   for (const g of grants) {
     const list = byDelegator.get(g.user_id) ?? [];

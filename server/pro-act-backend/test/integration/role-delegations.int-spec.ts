@@ -1,4 +1,6 @@
 import { randomUUID } from 'crypto';
+import { UserScopesService } from '../../src/auth/scopes/user-scopes.service';
+import { ScopeGrant } from '../../src/common/context/request-context';
 import { ApiError } from './support/plan-world';
 import { ReconciliationWorld } from './support/reconciliation-world';
 import { signToken } from './support/test-app';
@@ -106,6 +108,31 @@ describe('role delegations (SME R1 / R6)', () => {
       items: DelegationBody[];
     };
     expect(list.items.map((d) => d.id)).toContain(delegationId);
+  });
+
+  it('request identity (one statement) holds the same grants as grantsForUser, delegation included (perf P01)', async () => {
+    const scopes = env.app.get(UserScopesService);
+    for (const who of [people.deputy, people.manager, people.accountant]) {
+      const identity = await scopes.identityFor(who.id);
+      expect(identity.user).toEqual({ role: 'Operator', isActive: true });
+      const sorted = (grants: ScopeGrant[]) =>
+        [...grants].sort((a, b) =>
+          `${a.role}${a.delegationId ?? ''}`.localeCompare(
+            `${b.role}${b.delegationId ?? ''}`,
+          ),
+        );
+      expect(sorted(identity.grants)).toEqual(
+        sorted(await scopes.grantsForUser(who.id)),
+      );
+    }
+    const deputy = await scopes.identityFor(people.deputy.id);
+    expect(deputy.grants).toContainEqual(
+      expect.objectContaining({
+        role: 'manager_approver',
+        delegationId,
+        delegatorId: people.manager.id,
+      }),
+    );
   });
 
   it('the deputy approves a period as delegate; the history names the delegation', async () => {

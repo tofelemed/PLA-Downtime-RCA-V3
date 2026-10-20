@@ -1,7 +1,6 @@
 import { Repository } from 'typeorm';
 import { ScopeGrant } from '../../common/context/request-context';
 import { Tenant } from '../../tenant/tenant.entity';
-import { User } from '../../users/user.entity';
 import { actingDelegation } from '../delegations/acting-delegation';
 import { holdsAnyRoleOnUnit } from '../roles/unit-roles';
 import { AccessDenialAuditService } from '../scopes/access-denial-audit.service';
@@ -22,7 +21,6 @@ function factory(scopes: ScopeGrant[], sameOrganization = true) {
     {
       countBy: jest.fn().mockResolvedValue(sameOrganization ? 1 : 0),
     } as unknown as Repository<Tenant>,
-    {} as Repository<User>,
   );
 }
 
@@ -147,5 +145,46 @@ describe('RequestContextFactory: guide roles only (QA audit 2026-10-19)', () => 
     expect(holdsAnyRoleOnUnit(context, OTHER, ['production_engineer'])).toBe(
       false,
     );
+  });
+});
+
+describe('RequestContextFactory stored identity (one statement, perf audit P01)', () => {
+  const USER = '30000000-0000-4000-8000-000000000003';
+  const build = (identity: unknown) => {
+    const identityFor = jest.fn().mockResolvedValue(identity);
+    const grantsForUser = jest.fn();
+    const target = new RequestContextFactory(
+      { identityFor, grantsForUser } as unknown as UserScopesService,
+      { record: jest.fn() } as unknown as AccessDenialAuditService,
+      { countBy: jest.fn() } as unknown as Repository<Tenant>,
+    );
+    const request = { ...input('Engineer', HOME) };
+    request.payload = { ...request.payload, sub: USER };
+    return { run: () => target.build(request), identityFor, grantsForUser };
+  };
+
+  it('uses the stored role and grants of a UUID subject, read once', async () => {
+    const { run, identityFor, grantsForUser } = build({
+      user: { role: 'Manager', isActive: true },
+      grants: grants(),
+    });
+    const context = await run();
+    expect(context.legacyRole).toBe('Manager');
+    expect(context.scopes).toEqual(grants());
+    expect(identityFor).toHaveBeenCalledTimes(1);
+    expect(grantsForUser).not.toHaveBeenCalled();
+  });
+
+  it('refuses a deactivated account on the next request', async () => {
+    const { run } = build({
+      user: { role: 'Manager', isActive: false },
+      grants: [],
+    });
+    await expect(run()).rejects.toThrow('Account is inactive');
+  });
+
+  it("keeps the token's role for an identity without a users row", async () => {
+    const { run } = build({ user: null, grants: [] });
+    expect((await run()).legacyRole).toBe('Engineer');
   });
 });

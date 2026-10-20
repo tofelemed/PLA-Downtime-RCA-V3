@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ScopeGrant } from '../../common/context/request-context';
 import { delegatedGrants } from '../delegations/delegated-grants';
+import { IdentitySnapshot, identitySnapshot } from './identity-snapshot';
 import { UserScope } from './user-scope.entity';
 
 /** Reads `user_scopes` for identity resolution and writes the default tenant scope of new users. */
@@ -35,6 +36,17 @@ export class UserScopesService {
       ...own,
       ...(await delegatedGrants(this.scopes.manager, userId, at)),
     ];
+  }
+
+  /**
+   * The user's stored role / active flag and every grant (own and delegated) in one statement, for request
+   * identity (`RequestContextFactory`; perf audit P01). Same grants as `grantsForUser`.
+   */
+  identityFor(
+    userId: string,
+    at: Date = new Date(),
+  ): Promise<IdentitySnapshot> {
+    return identitySnapshot(this.scopes.manager, userId, at);
   }
 
   /** Tenant-wide membership for a freshly registered user (what the backfill did for existing ones). */

@@ -10,7 +10,6 @@ import {
   ScopeGrant,
 } from '../../common/context/request-context';
 import { Tenant } from '../../tenant/tenant.entity';
-import { User } from '../../users/user.entity';
 import { JwtPayload } from '../interfaces/jwt-payload.interface';
 import { legacyRolesApplying } from '../roles/role-model';
 import { AccessDenialAuditService } from '../scopes/access-denial-audit.service';
@@ -51,16 +50,11 @@ export class RequestContextFactory {
     private readonly denials: AccessDenialAuditService,
     @InjectRepository(Tenant)
     private readonly tenants: Repository<Tenant>,
-    @InjectRepository(User)
-    private readonly users: Repository<User>,
   ) {}
 
   async build(input: RequestContextInput): Promise<RequestContext> {
     const { payload } = input;
-    const [scopes, legacyRole] = await Promise.all([
-      this.userScopes.grantsForUser(payload.sub),
-      this.currentLegacyRole(payload),
-    ]);
+    const { scopes, legacyRole } = await this.identity(payload);
     const homeTenant = payload.tenantId ?? null;
     const context: RequestContext = {
       userId: payload.sub,
@@ -100,18 +94,21 @@ export class RequestContextFactory {
   }
 
   /**
-   * The user's role as stored now, so a downgrade or deactivation applies on the next request rather
-   * than at token expiry (plan 3.11). An identity without a `users` row keeps the token's role.
+   * Grants and the user's role as stored now (one statement, perf audit P01), so a downgrade or
+   * deactivation applies on the next request rather than at token expiry (plan 3.11). An identity without
+   * a `users` row (or a non-UUID subject) keeps the token's role.
    */
-  private async currentLegacyRole(payload: JwtPayload): Promise<string | null> {
-    if (!UUID.test(payload.sub)) return payload.role ?? null;
-    const user = await this.users.findOne({
-      where: { id: payload.sub },
-      select: { id: true, role: true, isActive: true },
-    });
-    if (!user) return payload.role ?? null;
+  private async identity(
+    payload: JwtPayload,
+  ): Promise<{ scopes: ScopeGrant[]; legacyRole: string | null }> {
+    if (!UUID.test(payload.sub)) {
+      const scopes = await this.userScopes.grantsForUser(payload.sub);
+      return { scopes, legacyRole: payload.role ?? null };
+    }
+    const { user, grants } = await this.userScopes.identityFor(payload.sub);
+    if (!user) return { scopes: grants, legacyRole: payload.role ?? null };
     if (!user.isActive) throw new UnauthorizedException('Account is inactive');
-    return user.role ?? null;
+    return { scopes: grants, legacyRole: user.role ?? null };
   }
 
   /**
