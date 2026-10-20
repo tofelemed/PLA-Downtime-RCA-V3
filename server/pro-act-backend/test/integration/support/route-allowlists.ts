@@ -9,7 +9,6 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'AuthController.logout',
   'AuthController.validateToken',
   'HealthController.check',
-  'HealthController.detailedCheck',
 ]);
 
 /**
