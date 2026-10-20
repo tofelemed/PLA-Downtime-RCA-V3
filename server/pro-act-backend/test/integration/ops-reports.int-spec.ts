@@ -29,6 +29,19 @@ interface ProductionBody {
   calculationRunIds: string[];
 }
 
+interface HandoverBody {
+  from: string | null;
+  instances: Array<{ unitId: string; crewName: string | null }>;
+  production: Array<{ target: string | null; actual: string | null }>;
+  events: Array<{
+    physicalType: string;
+    seconds: string | null;
+    open: boolean;
+  }>;
+  eventsTruncated: boolean;
+  notes: Array<{ body: string; authorName: string | null }>;
+}
+
 interface EventStatusBody {
   rows: Array<{
     physicalType: string;
@@ -104,5 +117,77 @@ describe('Operating reports (R1)', () => {
     await env
       .get(`reports/production-by-product?${scope}&groupBy=shift`)
       .expect(422);
+  });
+
+  it('shift notes: an event writer appends a note; blank is 422; a role that records no events is 403', async () => {
+    const note = {
+      unitId: env.world.unitA1,
+      localDate: '2027-03-01',
+      shiftName: 'A',
+    };
+    const operator = await env.scopedUser('operator');
+    const created = await env
+      .post(
+        'shift-notes',
+        { ...note, body: '  Extruder 2 screen pack changed at 07:10  ' },
+        operator,
+      )
+      .expect(201);
+    expect(created.body).toMatchObject({
+      body: 'Extruder 2 screen pack changed at 07:10',
+      authorName: 'operator',
+    });
+    await env
+      .post('shift-notes', { ...note, body: '   ' }, operator)
+      .expect(422);
+    await env
+      .post(
+        'shift-notes',
+        { ...note, body: 'x' },
+        await env.scopedUser('quality_approver'),
+      )
+      .expect(403);
+  });
+
+  it('shift handover: the shift window, its output, its stop and its notes', async () => {
+    const body = (
+      await env
+        .get(
+          `reports/shift-handover?localDate=2027-03-01&shiftName=A&unitIds=${env.world.unitA1}`,
+        )
+        .expect(200)
+    ).body as Envelope<HandoverBody>;
+    expect(body.data.from).toBe(A);
+    expect(body.data.instances).toHaveLength(1);
+    expect(body.data.production).toEqual([
+      expect.objectContaining({ target: '1000', actual: '850' }),
+    ]);
+    expect(body.data.events).toEqual([
+      expect.objectContaining({
+        physicalType: 'downtime',
+        seconds: '3600',
+        open: false,
+      }),
+    ]);
+    expect(body.data.notes.map((n) => n.body)).toContain(
+      'Extruder 2 screen pack changed at 07:10',
+    );
+  });
+
+  it('shift handover of a shift no unit has: no window, no figures', async () => {
+    const body = (
+      await env
+        .get(
+          `reports/shift-handover?localDate=2027-03-01&shiftName=Z&unitIds=${env.world.unitA1}`,
+        )
+        .expect(200)
+    ).body as Envelope<HandoverBody>;
+    expect(body.data).toMatchObject({
+      from: null,
+      instances: [],
+      production: [],
+      events: [],
+      notes: [],
+    });
   });
 });

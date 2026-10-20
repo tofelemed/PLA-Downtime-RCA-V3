@@ -7,13 +7,17 @@ import { AnalyticsResponse } from '../common/response';
 import { resolveReportScope } from '../reports/report-scope';
 import { eventStatus, EventStatusView } from './event-status';
 import {
+  CreateShiftNoteDto,
   EventStatusQueryDto,
   ProductionByProductQueryDto,
+  ShiftHandoverQueryDto,
 } from './ops-reports-v2.dto';
 import {
   productionByProduct,
   ProductionByProductView,
 } from './production-by-product';
+import { shiftHandover, ShiftHandoverView } from './shift-handover';
+import { createShiftNote, ShiftNoteView } from './shift-notes';
 
 /**
  * Persona reports R1–R12 (`plans/REPORTS_R1_R12.md`): side-effect free reads of the stored results of the
@@ -44,5 +48,19 @@ export class OpsReportsV2Service {
       manager,
       await resolveReportScope(manager, context, query),
     );
+  }
+
+  shiftHandover(
+    context: RequestContext,
+    query: ShiftHandoverQueryDto,
+  ): Promise<AnalyticsResponse<ShiftHandoverView>> {
+    return shiftHandover(this.periods.manager, context, query);
+  }
+
+  createShiftNote(
+    context: RequestContext,
+    body: CreateShiftNoteDto,
+  ): Promise<ShiftNoteView> {
+    return createShiftNote(this.periods.manager, context, body);
   }
 }

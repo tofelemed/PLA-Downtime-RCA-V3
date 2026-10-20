@@ -57,6 +57,7 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   // SME E4: adopting a budget writes the unit's tolerance version shown in the reconciliation view
   reconciliation_tolerance: ['uncertainty-budgets', 'period-accounting', 'production-periods'],
   user_notification: ['notifications'],
+  shift_note: ['reports'],
 };
 
 /** Resources to refresh for an entity type; an unknown type refreshes the whole tenant (safe default). */

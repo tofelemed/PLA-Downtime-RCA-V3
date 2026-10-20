@@ -1,8 +1,9 @@
-import { useCalendarVersions, useCrews } from '@/api/v2/queries/calendars';
+import { useCrews } from '@/api/v2/queries/calendars';
 import { useProducts } from '@/api/v2/queries/profiles';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import type { DowntimeFilters } from '../model/downtime-filters';
+import { useShiftOptions } from '../model/use-shift-options';
 
 export interface PeriodSelectionFiltersProps {
   filters: DowntimeFilters;
@@ -10,13 +11,6 @@ export interface PeriodSelectionFiltersProps {
 }
 
 const byLabel = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label);
-
-/** Shift labels of the published calendars (the names periods carry), each once. */
-function useShiftOptions() {
-  const versions = flattenPages(useCalendarVersions({}).data?.pages);
-  const names = new Set(versions.filter((v) => v.state === 'published').flatMap((v) => v.shiftTemplates.map((shift) => shift.name)));
-  return [...names].map((name) => ({ value: name, label: name })).sort(byLabel);
-}
 
 /**
  * Product, shift and crew filters of the Downtime page: the server keeps only the periods that ran one of

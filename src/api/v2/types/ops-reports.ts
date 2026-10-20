@@ -49,3 +49,55 @@ export interface EventStatusView {
   rows: EventStatusRowView[];
   asOf: string;
 }
+
+export interface ShiftInstanceView {
+  unitId: string;
+  unitName: string | null;
+  crewName: string | null;
+  from: string;
+  to: string;
+  excluded: boolean;
+}
+
+export interface HandoverEventView {
+  id: string;
+  unitId: string;
+  unitName: string | null;
+  physicalType: string;
+  open: boolean;
+  codingState: string;
+  verified: boolean;
+  start: string;
+  end: string | null;
+  seconds: string | null;
+  reason: string | null;
+  asset: string | null;
+  fromProduct: string | null;
+  toProduct: string | null;
+  description: string | null;
+}
+
+export interface ShiftNoteView {
+  id: string;
+  unitId: string;
+  localDate: string;
+  shiftName: string;
+  body: string;
+  createdAt: string;
+  createdBy: string | null;
+  authorName: string | null;
+}
+
+export interface ShiftHandoverView {
+  localDate: string;
+  shiftName: string;
+  from: string | null;
+  to: string | null;
+  instances: ShiftInstanceView[];
+  production: ProductionRowView[];
+  eventStatus: EventStatusRowView[];
+  events: HandoverEventView[];
+  eventsTruncated: boolean;
+  notes: ShiftNoteView[];
+  calculationRunIds: string[];
+}

@@ -1324,3 +1324,10 @@ Audit of the PI path end to end against a sample PI Web API shaped like a real o
   - The shared CLI argument parser moved to `src/common/cli/cli-args.ts`, together with its own `UUID_PATTERN`, because seeders and maintenance scripts still use it.
 - **Kept, because v2 still uses them:** every other v1-era table, including `units`, `assets`, `products`, `production_events`, `production_plans`, `tasks`, `pi_connections`, `pi_mappings`, `pi_sync_jobs`, `pi_sync_watermarks`, `af_bindings`, `verification_status_codes`, `evidence_categories`, `evidence_locations` and `app_settings`.
 - **Coordination:** another session's `1794240610000-DropPiAfElementDuplicateIndex` now skips when `pi_af_elements` is absent. Its `1794240600000-MeasurementSamplesInsertedIndex` shares this migration's timestamp; the two are independent, so order doesn't matter.
+
+## 2026-10-20 — Operating reports R1–R12 (owner: "approved go ahead"; plan `plans/REPORTS_R1_R12.md`)
+Engineering defaults; change any of them on request.
+- **R1 month to date** runs over the calendar month (`YYYY-MM` of the plant date, the same month as month close), in whole production days.
+- **R1 off-grade** is downgrade + transition off-grade + scrap + rework + not-yet-classified rejects, summed on the server. Wide spec is shown separately because it is conforming output (SME E3).
+- **R2 handover notes** are stored in `shift_notes` and are append-only: a correction is a new note, and notes are never edited or deleted. They are keyed by unit, plant date and shift label. Any role that records events (`EVENT_WRITERS`) can write one; anyone who can read the unit can read them.
+- **R2 shift window:** the stored shift instances of the chosen units, from the earliest start to the latest end. The events listed are the ones overlapping the window, including those still running, capped at 100.

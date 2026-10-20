@@ -14022,6 +14022,91 @@
         ]
       }
     },
+    "/api/v2/reports/shift-handover": {
+      "get": {
+        "description": "The shift window comes from the stored shift instances of localDate and shiftName (earliest start to latest end over the units); production reads the shown runs of the periods of that shift; events are the live loss events overlapping the window (also still running ones), at most 100 (eventsTruncated). No unit with that shift: empty figures, notes only. unitIds as for the other reports (422 INVALID_REFERENCE).",
+        "operationId": "OpsReportsV2Controller_shiftHandover_v2",
+        "parameters": [
+          {
+            "name": "localDate",
+            "required": true,
+            "in": "query",
+            "description": "Plant date of the shift (YYYY-MM-DD)",
+            "schema": {
+              "example": "2026-10-19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "shiftName",
+            "required": true,
+            "in": "query",
+            "description": "Shift label as the calendar names it",
+            "schema": {
+              "example": "A",
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One shift on the caller’s units: output per product, loss events and their coding, handover notes",
+        "tags": [
+          "v2 · Operating reports"
+        ]
+      }
+    },
+    "/api/v2/shift-notes": {
+      "post": {
+        "description": "Roles that record events. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); a blank body is 422 INVALID_NOTE. Notes are never edited or deleted: a correction is a new note.",
+        "operationId": "ShiftNotesV2Controller_create_v2",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShiftNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Leave a handover note for a unit’s shift (append-only)",
+        "tags": [
+          "v2 · Operating reports"
+        ]
+      }
+    },
     "/api/v2/feature-flags": {
       "get": {
         "description": "Registry defaults (all off) overlaid with the tenant settings; readable by any tenant member.",
@@ -29583,6 +29668,33 @@
           "reportingCurrencies",
           "fxPolicy",
           "effectiveFrom"
+        ]
+      },
+      "CreateShiftNoteDto": {
+        "type": "object",
+        "properties": {
+          "unitId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "localDate": {
+            "type": "string",
+            "example": "2026-10-19"
+          },
+          "shiftName": {
+            "type": "string",
+            "example": "A"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "unitId",
+          "localDate",
+          "shiftName",
+          "body"
         ]
       },
       "FeatureFlagSetDto": {

@@ -8,9 +8,11 @@ import { EventStatusView } from './event-status';
 import {
   EventStatusQueryDto,
   ProductionByProductQueryDto,
+  ShiftHandoverQueryDto,
 } from './ops-reports-v2.dto';
 import { OpsReportsV2Service } from './ops-reports-v2.service';
 import { ProductionByProductView } from './production-by-product';
+import { ShiftHandoverView } from './shift-handover';
 
 const SCOPE_NOTE =
   'unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a ' +
@@ -52,5 +54,22 @@ export class OpsReportsV2Controller {
     @Query() query: EventStatusQueryDto,
   ): Promise<EventStatusView> {
     return this.reports.eventStatus(ctx, query);
+  }
+
+  @Get('shift-handover')
+  @ApiOperation({
+    summary:
+      'One shift on the caller’s units: output per product, loss events and their coding, handover notes',
+    description:
+      'The shift window comes from the stored shift instances of localDate and shiftName (earliest start to ' +
+      'latest end over the units); production reads the shown runs of the periods of that shift; events are ' +
+      'the live loss events overlapping the window (also still running ones), at most 100 (eventsTruncated). ' +
+      'No unit with that shift: empty figures, notes only. unitIds as for the other reports (422 INVALID_REFERENCE).',
+  })
+  shiftHandover(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ShiftHandoverQueryDto,
+  ): Promise<AnalyticsResponse<ShiftHandoverView>> {
+    return this.reports.shiftHandover(ctx, query);
   }
 }

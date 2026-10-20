@@ -1,4 +1,4 @@
-import { lazy, Suspense, useId } from 'react';
+import { useId } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
@@ -19,19 +19,18 @@ import { LossValueCard } from './loss-value-card';
 import { DowntimeReasonCard, OeeByDay } from './production-report';
 import { ReportsFilters } from './reports-filters';
 import { ReportsHeader } from './reports-header';
-
-const DailyReport = lazy(() => import('@/features/ops-reports/daily/daily-report').then((m) => ({ default: m.DailyReport })));
+import { OPS_VIEWS } from '@/features/ops-reports/ops-report-registry';
+import { OpsReportView } from '@/features/ops-reports/ops-report-views';
 
 const MAX_UNITS = 100;
-const VIEWS = [
+const VIEWS: ReadonlyArray<{ key: string; label: string }> = [
   { key: 'production', label: 'OEE and downtime' },
-  { key: 'daily', label: 'Daily production' },
+  ...OPS_VIEWS,
   { key: 'reconciliation', label: 'Reconciliation' },
   { key: 'value', label: 'Loss value' },
   { key: 'exports', label: 'Exports' },
-] as const;
-type ReportView = (typeof VIEWS)[number]['key'];
-const viewOf = (value: string | null): ReportView => VIEWS.find((view) => view.key === value)?.key ?? 'production';
+];
+const viewOf = (value: string | null): string => VIEWS.find((view) => view.key === value)?.key ?? 'production';
 
 /**
  * Reports (plan 3.6 step 4): named units (always sent), periods by their plant dates, approved-only or
@@ -98,11 +97,11 @@ function ReportsBody({ dayStart }: { dayStart: string }) {
             <OeeByDay scope={named} />
             <DowntimeReasonCard scope={named} />
           </TabsContent>
-          <TabsContent value="daily">
-            <Suspense fallback={<DataState state="loading" />}>
-              <DailyReport scope={named} dayStart={dayStart} />
-            </Suspense>
-          </TabsContent>
+          {OPS_VIEWS.map((entry) => (
+            <TabsContent key={entry.key} value={entry.key}>
+              {view === entry.key && <OpsReportView viewKey={entry.key} scope={named} dayStart={dayStart} />}
+            </TabsContent>
+          ))}
           <TabsContent value="reconciliation">
             <ReconciliationTab scope={named} />
           </TabsContent>

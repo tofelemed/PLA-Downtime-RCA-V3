@@ -4066,6 +4066,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/shift-handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One shift on the caller’s units: output per product, loss events and their coding, handover notes
+         * @description The shift window comes from the stored shift instances of localDate and shiftName (earliest start to latest end over the units); production reads the shown runs of the periods of that shift; events are the live loss events overlapping the window (also still running ones), at most 100 (eventsTruncated). No unit with that shift: empty figures, notes only. unitIds as for the other reports (422 INVALID_REFERENCE).
+         */
+        get: operations["OpsReportsV2Controller_shiftHandover_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/shift-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leave a handover note for a unit’s shift (append-only)
+         * @description Roles that record events. unitId must be a unit of the tenant and the caller’s scope (422 INVALID_REFERENCE); a blank body is 422 INVALID_NOTE. Notes are never edited or deleted: a correction is a new note.
+         */
+        post: operations["ShiftNotesV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/feature-flags": {
         parameters: {
             query?: never;
@@ -9494,6 +9534,15 @@ export interface components {
             /** @description Backdate over approved figures: approval queues the revaluation and every approved period in range gets a change proposal (approved snapshots are never rewritten). Only with a backdate (422 RESTATE_WITHOUT_BACKDATE). */
             restateApproved?: boolean;
             notes?: Record<string, never> | null;
+        };
+        CreateShiftNoteDto: {
+            /** Format: uuid */
+            unitId: string;
+            /** @example 2026-10-19 */
+            localDate: string;
+            /** @example A */
+            shiftName: string;
+            body: string;
         };
         FeatureFlagSetDto: {
             /** @description New value of the flag for the whole tenant */
@@ -16963,6 +17012,51 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OpsReportsV2Controller_shiftHandover_v2: {
+        parameters: {
+            query: {
+                /** @description Plant date of the shift (YYYY-MM-DD) */
+                localDate: string;
+                /** @description Shift label as the calendar names it */
+                shiftName: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ShiftNotesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateShiftNoteDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
