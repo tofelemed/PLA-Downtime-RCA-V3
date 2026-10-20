@@ -47,6 +47,9 @@ x-backend-env: &backend-env
   # nginx on the private Docker network is the only proxy in front of the API: client IPs come from
   # X-Forwarded-For (per-IP rate limits of login / refresh; perf audit P11)
   TRUST_PROXY: ${TRUST_PROXY:-loopback, uniquelocal}
+  # Prometheus metrics of the API on this port inside the network (GET /metrics); empty = off. Never
+  # publish it on the host or route it through nginx (perf audit P13).
+  METRICS_PORT: ${METRICS_PORT:-}
   # Report export files (plan 2.9): private volume shared by API and worker, never under /app/uploads
   EXPORT_STORAGE_DIR: /app/storage/exports
   EXPORT_TTL_HOURS: ${EXPORT_TTL_HOURS:-168}

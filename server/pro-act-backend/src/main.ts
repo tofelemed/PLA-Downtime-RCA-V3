@@ -9,6 +9,13 @@ import { getProcessRole } from './common/scheduling/process-role';
 import { bootstrapWorker } from './worker';
 import { runMigrationsOnBoot } from './database/run-migrations-on-boot';
 import { reportTzdataProblems } from './common/startup/report-tzdata';
+import { DataSource } from 'typeorm';
+import {
+  metricsMiddleware,
+  metricsPort,
+  registerPoolMetrics,
+  startMetricsServer,
+} from './common/metrics/metrics';
 
 async function bootstrap() {
   reportTzdataProblems();
@@ -70,6 +77,15 @@ async function bootstrap() {
 
   // /api prefix, URI versioning (/api/v2), API03 error filter, global validation pipe
   configureHttpApp(app);
+
+  // Prometheus metrics on a port of their own, never routed by nginx (METRICS_PORT; perf audit P13)
+  const metrics = metricsPort();
+  if (metrics) {
+    app.use(metricsMiddleware);
+    registerPoolMetrics(app.get(DataSource));
+    startMetricsServer(metrics);
+    console.log(`📈 Metrics: http://0.0.0.0:${metrics}/metrics`);
+  }
 
   // Swagger: v1 at /api (everything except /api/v2), v2 at /api/docs/v2 (V2Module only)
   const v1Config = new DocumentBuilder()
