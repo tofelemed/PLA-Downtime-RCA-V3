@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { monthLabelOf } from '@/features/month-close/model/month-label';
 import { useCalendarPreference } from '@/lib/dates';
+import { ReportExportBar } from '../components/report-export-bar';
 
 type Metric = 'mtbf' | 'meanDowntimeToRestore' | 'mttr';
 
@@ -61,6 +62,7 @@ export function ReliabilityTrendReport({ scope }: { scope: AnalyticsScope }) {
   const assetLabel = (s: ReliabilitySeriesView) => `${s.label ?? 'Unknown asset'} · ${env.unitName(s.unitId) ?? ''}`;
   return (
     <div className="space-y-4" data-testid="reliability-trend">
+      <ReportExportBar kind="reliability" query={scopeBase(scope)} timezone={env.timezone} />
       {METRICS.map((metric) => (
         <AnalyticsCard key={metric.key} title={`${metric.label} by month`} testId={`reliability-trend-${metric.key}`} query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.units.length === 0} emptyText="No calculated periods on these dates." note={metric.key === 'mtbf' ? data?.failureDefinition : undefined}>
           {data && (

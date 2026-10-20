@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { PrimeYieldTrend } from '../quality/prime-yield-trend';
+import { ReportExportBar } from '../components/report-export-bar';
 
 const share = (value: string | null) => <LocalizedNumber text={shareText(value)} />;
 
@@ -44,6 +45,7 @@ export function PlanAdherenceReport({ scope }: { scope: AnalyticsScope }) {
   const rows = query.data?.data.rows ?? [];
   return (
     <div className="space-y-4" data-testid="plan-adherence">
+      <ReportExportBar kind="plan" query={scopeBase(scope)} timezone={env.timezone} />
       <AnalyticsCard
         title="Plan adherence by grade"
         testId="plan-adherence-table"

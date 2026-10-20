@@ -14,6 +14,7 @@ const data: ReliabilityTrendView = {
   calculationRunIds: [],
 };
 
+vi.mock('../components/report-export-bar', () => ({ ReportExportBar: () => null }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC', unitName: () => 'Reactor 1' }) }));
 vi.mock('@/api/v2/queries/ops-reports', () => ({
   useReliabilityTrend: () => ({ data: { data, isProvisional: false }, isLoading: false, isError: false, error: null, refetch: () => undefined }),

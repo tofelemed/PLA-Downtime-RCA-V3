@@ -17584,7 +17584,7 @@ export interface operations {
                 "Idempotency-Key": string;
             };
             path: {
-                kind: "daily";
+                kind: "daily" | "shift" | "monthly" | "quality" | "transitions" | "reliability" | "chronic" | "rate" | "compliance" | "rca" | "plan" | "scorecard";
             };
             cookie?: never;
         };

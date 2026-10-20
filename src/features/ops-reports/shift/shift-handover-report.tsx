@@ -16,6 +16,7 @@ import { ProductionRows } from '../daily/production-rows';
 import { lastProductionDate } from '../model/month-to-date';
 import { HandoverEventsTable } from './handover-events-table';
 import { ShiftNotesCard } from './shift-notes-card';
+import { ReportExportBar } from '../components/report-export-bar';
 
 function Section({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
   return (
@@ -87,6 +88,7 @@ export function ShiftHandoverReport({ scope, dayStart }: { scope: AnalyticsScope
   const query = useShiftHandover(ready ? { localDate, shiftName, unitIds } : null);
   return (
     <div className="space-y-4" data-testid="shift-handover">
+      <ReportExportBar kind="shift" query={ready ? { localDate, shiftName, unitIds } : null} formats={['pdf']} timezone={env.timezone} />
       <ShiftPicker localDate={localDate} shiftName={shiftName} shifts={shifts} onDate={setLocalDate} onShift={setShift} />
       {ready ? (
         <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>

@@ -10,12 +10,16 @@ import {
 } from '../../reports/kpi-reports-v2.dto';
 import { KpiReportsV2Service } from '../../reports/kpi-reports-v2.service';
 import { OpsReportsV2Service } from '../ops-reports-v2.service';
+import { LossValueReportV2Service } from '../../reports/loss-value-v2.service';
+import { MonthCloseService } from '../../../close/month-close.service';
 
 /** The report services a document is read through (the same reads as the Reports page). */
 export interface ReportServices {
   ops: OpsReportsV2Service;
   kpi: KpiReportsV2Service;
   pla: PlaReportsV2Service;
+  value: LossValueReportV2Service;
+  close: MonthCloseService;
 }
 
 export interface BuildInput<Q> {

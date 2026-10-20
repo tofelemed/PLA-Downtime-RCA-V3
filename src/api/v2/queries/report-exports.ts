@@ -1,4 +1,5 @@
 import { v2Request } from '../client';
+import type { QueryParams } from '../request-url';
 import type { JobAccepted } from '../types/envelopes';
 import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
@@ -8,8 +9,8 @@ export type ReportExportFormat = 'pdf' | 'xlsx';
 export interface ReportExportInput {
   /** the Reports page view key (`daily`, `shift`, …) */
   kind: string;
-  /** the report's own query, as its GET takes it */
-  query: Record<string, string | string[] | boolean | undefined>;
+  /** the report's own query, as its GET takes it (window, units and the report's options) */
+  query: object;
   format: ReportExportFormat;
   currency: string;
 }
@@ -27,7 +28,7 @@ export function useCreateReportExport() {
         await v2Request<JobAccepted>({
           method: 'POST',
           path: `/reports/${input.kind}/export`,
-          query: input.query,
+          query: input.query as QueryParams,
           body: { format: input.format, currency: input.currency },
           idempotencyKey,
         })

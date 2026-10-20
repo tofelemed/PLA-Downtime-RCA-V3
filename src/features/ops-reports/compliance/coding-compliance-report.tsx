@@ -10,6 +10,7 @@ import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { useCalendarPreference } from '@/lib/dates';
 import { EventStatusCard } from '../daily/event-status-card';
+import { ReportExportBar } from '../components/report-export-bar';
 
 const delay = (seconds: string | null) => (seconds === null ? '—' : <DurationText seconds={seconds} />);
 
@@ -44,6 +45,7 @@ export function CodingComplianceReport({ scope }: { scope: AnalyticsScope }) {
   const empty = data !== undefined && data.byCrew.length === 0 && data.byShift.length === 0;
   return (
     <div className="space-y-4" data-testid="coding-compliance">
+      <ReportExportBar kind="compliance" query={scopeBase(scope)} timezone={env.timezone} />
       <AnalyticsCard title="Coding by crew and shift" testId="coding-compliance-tables" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={empty} emptyText="No stops or calculated periods on these dates." note="Coding delay: from the end of a stop to its first coding with a reason.">
         {data && (
           <div className="space-y-4">

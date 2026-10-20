@@ -10,6 +10,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { NumberText } from '@/features/ux-kit/number-text';
+import { ReportExportBar } from '../components/report-export-bar';
 
 const AGE_LABELS: Readonly<Record<string, string>> = { '0-30': 'Up to 30 days', '31-60': '31–60 days', '61-90': '61–90 days', '90+': 'Over 90 days' };
 const DUE_LABELS: Readonly<Record<string, string>> = { overdue: 'Overdue', due_7_days: 'Due within 7 days', later: 'Due later', no_due_date: 'No due date' };
@@ -49,48 +50,51 @@ export function RcaActionTrackerReport({ scope }: { scope: AnalyticsScope }) {
   const query = useRcaActionTracker(scopeBase(scope), env.timezone);
   const data = query.data;
   return (
-    <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
-      {data && (
-        <div className="grid gap-4 lg:grid-cols-2" data-testid="rca-action-tracker">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Open now</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
-                <Figure label="Open cases" testId="rca-open-cases"><NumberText value={data.openCases.total} /></Figure>
-                <Figure label="Cases past target date" testId="rca-overdue-cases"><NumberText value={data.openCases.overdue} /></Figure>
-                <Figure label="Open actions" testId="rca-open-actions"><NumberText value={data.openActions.total} /></Figure>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Counts title="Cases by age" counts={data.openCases.byAge} labels={AGE_LABELS} testId="rca-cases-age" />
-                <Counts title="Cases by status" counts={data.openCases.byStatus} testId="rca-cases-status" />
-                <Counts title="Actions by due date" counts={data.openActions.byDue} labels={DUE_LABELS} testId="rca-actions-due" />
-                <Counts title="Actions by age" counts={data.openActions.byAge} labels={AGE_LABELS} testId="rca-actions-age" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Closed on these dates</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <Figure label="Actions done" testId="rca-actions-done"><NumberText value={data.closedActions.done} /></Figure>
-                <Figure label="Done on time (of those with a due date)" testId="rca-on-time">
-                  <LocalizedNumber text={shareText(data.closedActions.onTimeRate)} />
-                </Figure>
-                <Figure label="Cases closed" testId="rca-cases-closed"><NumberText value={data.closedCases.closed} /></Figure>
-                <Figure label="Mean days to close" testId="rca-days-to-close"><NumberText value={data.closedCases.meanDaysToClose} fractionDigits={1} /></Figure>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Late actions: <NumberText value={data.closedActions.late} /> of <NumberText value={data.closedActions.withDueDate} /> with a due date. Savings claimed and realised are in the{' '}
-                <Link className="underline" to="/reliability/portfolio">cause portfolio</Link>.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </DataState>
+    <div className="space-y-4">
+      <ReportExportBar kind="rca" query={scopeBase(scope)} timezone={env.timezone} />
+      <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
+        {data && (
+          <div className="grid gap-4 lg:grid-cols-2" data-testid="rca-action-tracker">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Open now</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-2">
+                  <Figure label="Open cases" testId="rca-open-cases"><NumberText value={data.openCases.total} /></Figure>
+                  <Figure label="Cases past target date" testId="rca-overdue-cases"><NumberText value={data.openCases.overdue} /></Figure>
+                  <Figure label="Open actions" testId="rca-open-actions"><NumberText value={data.openActions.total} /></Figure>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Counts title="Cases by age" counts={data.openCases.byAge} labels={AGE_LABELS} testId="rca-cases-age" />
+                  <Counts title="Cases by status" counts={data.openCases.byStatus} testId="rca-cases-status" />
+                  <Counts title="Actions by due date" counts={data.openActions.byDue} labels={DUE_LABELS} testId="rca-actions-due" />
+                  <Counts title="Actions by age" counts={data.openActions.byAge} labels={AGE_LABELS} testId="rca-actions-age" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Closed on these dates</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Figure label="Actions done" testId="rca-actions-done"><NumberText value={data.closedActions.done} /></Figure>
+                  <Figure label="Done on time (of those with a due date)" testId="rca-on-time">
+                    <LocalizedNumber text={shareText(data.closedActions.onTimeRate)} />
+                  </Figure>
+                  <Figure label="Cases closed" testId="rca-cases-closed"><NumberText value={data.closedCases.closed} /></Figure>
+                  <Figure label="Mean days to close" testId="rca-days-to-close"><NumberText value={data.closedCases.meanDaysToClose} fractionDigits={1} /></Figure>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Late actions: <NumberText value={data.closedActions.late} /> of <NumberText value={data.closedActions.withDueDate} /> with a due date. Savings claimed and realised are in the{' '}
+                  <Link className="underline" to="/reliability/portfolio">cause portfolio</Link>.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </DataState>
+    </div>
   );
 }

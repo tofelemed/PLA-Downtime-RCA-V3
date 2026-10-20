@@ -10,6 +10,7 @@ import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/a
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { NumberText } from '@/features/ux-kit/number-text';
+import { ReportExportBar } from '../components/report-export-bar';
 
 const QUADRANT_LABELS: Record<Quadrant, { label: string; advice: string }> = {
   chronic: { label: 'Chronic', advice: 'frequent and short: find the systematic cause (RCA)' },
@@ -51,7 +52,8 @@ export function ChronicSporadicReport({ scope }: { scope: AnalyticsScope }) {
   const query = useChronicSporadic({ ...scopeBase(scope), groupBy }, env.timezone);
   const data = query.data?.data;
   const controls = (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
+      <ReportExportBar kind="chronic" query={{ ...scopeBase(scope), groupBy }} timezone={env.timezone} />
       <Label htmlFor="chronic-group">Group by</Label>
       <select id="chronic-group" className={SELECT_CLASS} value={groupBy} onChange={(e) => setGroupBy(e.target.value === 'asset' ? 'asset' : 'reason')}>
         <option value="reason">Reason</option>

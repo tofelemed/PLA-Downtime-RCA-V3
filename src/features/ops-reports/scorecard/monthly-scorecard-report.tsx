@@ -13,6 +13,7 @@ import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { useCalendarPreference } from '@/lib/dates';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
 import { twelveMonthWindow } from '../model/month-to-date';
+import { ReportExportBar } from '../components/report-export-bar';
 
 /** The money lost in the display currency (else the first currency), or why there is none. */
 function moneyText(month: ScorecardMonthView, currency: string): string {
@@ -54,6 +55,7 @@ export function MonthlyScorecardReport({ scope, dayStart }: { scope: AnalyticsSc
   const data = query.data?.data;
   return (
     <div className="space-y-4" data-testid="monthly-scorecard">
+      <ReportExportBar kind="scorecard" query={months ? scopeBase(months) : null} timezone={env.timezone} />
       <AnalyticsCard title="Twelve-month scorecard" testId="scorecard-table" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods in these twelve months.">
         {data && <DataTable caption="Twelve-month scorecard" columns={columns} rows={data.months} getRowKey={(m) => m.month} density="compact" />}
       </AnalyticsCard>

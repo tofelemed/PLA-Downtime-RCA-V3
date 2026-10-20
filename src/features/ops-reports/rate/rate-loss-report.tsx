@@ -11,6 +11,7 @@ import { DurationText } from '@/features/ux-kit/duration-text';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { useCalendarPreference } from '@/lib/dates';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
+import { ReportExportBar } from '../components/report-export-bar';
 
 const seconds = (view: KpiAggregateView) => (view.value === null ? '—' : <DurationText seconds={view.value} />);
 
@@ -44,8 +45,10 @@ function RateLossTrend({ scope }: { scope: AnalyticsScope }) {
  * quantity and value.
  */
 export function RateLossReport({ scope }: { scope: AnalyticsScope }) {
+  const env = useEventHubEnv();
   return (
     <div className="space-y-4" data-testid="rate-loss-report">
+      <ReportExportBar kind="rate" query={scopeBase(scope)} timezone={env.timezone} />
       <RateLossTrend scope={scope} />
       <LossBreakdownCards scope={scope} groupBy="reason" kinds={['performance']} limit={15} title="Rate loss by cause" testId="rate-loss-reasons" />
       <LossBreakdownCards scope={scope} groupBy="unit" kinds={['performance']} title="Rate loss by unit" testId="rate-loss-units" />

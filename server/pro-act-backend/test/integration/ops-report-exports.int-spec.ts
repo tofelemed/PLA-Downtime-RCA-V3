@@ -104,4 +104,33 @@ describe('Operating report exports', () => {
       .post(`reports/daily/export?${window}`, { format: 'docx' })
       .expect(422);
   });
+
+  it.each([
+    ['shift', 'localDate=2027-03-01&shiftName=A'],
+    ['monthly', ''],
+    ['quality', ''],
+    ['transitions', ''],
+    ['reliability', ''],
+    ['chronic', 'groupBy=asset'],
+    ['rate', ''],
+    ['compliance', ''],
+    ['rca', ''],
+    ['plan', ''],
+    ['scorecard', ''],
+  ])('%s report renders as a PDF and a workbook', async (kind, extra) => {
+    const query =
+      kind === 'shift'
+        ? `unitIds=${env.world.unitA1}&${extra}`
+        : `${window}${extra ? `&${extra}` : ''}`;
+    const ids = [
+      await exportReport(kind, query, { format: 'pdf' }),
+      await exportReport(kind, query, { format: 'xlsx' }),
+    ];
+    await env.runExports();
+    for (const id of ids) {
+      const job = (await env.get(`exports/${id}`).expect(200)).body as JobBody;
+      expect(job.state).toBe('completed');
+      await download(id).expect(200);
+    }
+  });
 });

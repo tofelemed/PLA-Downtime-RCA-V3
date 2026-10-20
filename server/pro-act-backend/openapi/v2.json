@@ -14751,7 +14751,18 @@
             "in": "path",
             "schema": {
               "enum": [
-                "daily"
+                "daily",
+                "shift",
+                "monthly",
+                "quality",
+                "transitions",
+                "reliability",
+                "chronic",
+                "rate",
+                "compliance",
+                "rca",
+                "plan",
+                "scorecard"
               ],
               "type": "string"
             }

@@ -11,6 +11,7 @@ const data: RcaActionTrackerView = {
   asOf: '2027-03-05T00:00:00.000Z',
 };
 
+vi.mock('../components/report-export-bar', () => ({ ReportExportBar: () => null }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
 vi.mock('@/api/v2/queries/ops-reports', () => ({
   useRcaActionTracker: () => ({ data, isLoading: false, isError: false, error: null, refetch: () => undefined }),

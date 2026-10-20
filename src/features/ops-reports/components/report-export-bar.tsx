@@ -15,7 +15,7 @@ export interface ReportExportBarProps {
   /** the Reports page view key */
   kind: string;
   /** the report's query, as its GET takes it; null while the report cannot be read yet */
-  query: Record<string, string | string[] | boolean | undefined> | null;
+  query: object | null;
   /** formats offered (default PDF and Excel) */
   formats?: readonly ReportExportFormat[];
   /** the figures are provisional: the file will say so on every page */
@@ -64,8 +64,8 @@ export function ReportExportBar({ kind, query, formats = ['pdf', 'xlsx'], provis
   };
   const download = async (format: ReportExportFormat, jobId: string) => {
     try {
-      const from = typeof query?.from === 'string' ? query.from : null;
-      saveBlob(await downloadReportExport(jobId, format), exportFileName([kind, plantFileDay(from, timezone, '')], format));
+      const from: unknown = query ? Reflect.get(query, 'from') : null;
+      saveBlob(await downloadReportExport(jobId, format), exportFileName([kind, plantFileDay(typeof from === 'string' ? from : null, timezone, '')], format));
     } catch (error) {
       setFailure(error);
     }

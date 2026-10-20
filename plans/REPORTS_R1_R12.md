@@ -54,4 +54,4 @@ Parked (need owner decisions): T1 targets and comparisons, T2 scheduled e-mail.
 - Excel goes with the reports that are tables (R1, R2, R4–R12). R3 (the monthly statement) is PDF and Excel.
 
 - [x] Export infrastructure + R1 (`POST /reports/{kind}/export`, `GET /reports/exports/{id}/download`; Daily production tab: PDF / Excel)
-- [ ] Export builders R2–R12
+- [x] Export builders R2–R12 (every Reports tab has PDF / Excel; shift handover PDF only)

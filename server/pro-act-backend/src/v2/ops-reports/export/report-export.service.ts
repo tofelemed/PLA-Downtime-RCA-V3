@@ -15,6 +15,8 @@ import { requireUser } from '../../../reconciliation/revision-access';
 import { PlaReportsV2Service } from '../../pla-reports/pla-reports-v2.service';
 import { KpiReportsV2Service } from '../../reports/kpi-reports-v2.service';
 import { OpsReportsV2Service } from '../ops-reports-v2.service';
+import { LossValueReportV2Service } from '../../reports/loss-value-v2.service';
+import { MonthCloseService } from '../../../close/month-close.service';
 import { REPORT_KINDS } from './report-kinds';
 import { ReportExportBodyDto } from './report-export.dto';
 import { ReportKind, ReportServices } from './report-kind';
@@ -37,8 +39,10 @@ export class ReportExportService {
     ops: OpsReportsV2Service,
     kpi: KpiReportsV2Service,
     pla: PlaReportsV2Service,
+    value: LossValueReportV2Service,
+    close: MonthCloseService,
   ) {
-    this.services = { ops, kpi, pla };
+    this.services = { ops, kpi, pla, value, close };
   }
 
   async request(

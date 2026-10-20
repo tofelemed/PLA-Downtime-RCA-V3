@@ -6,6 +6,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
 import { TransitionPairsTable, TransitionsTable } from './transition-tables';
+import { ReportExportBar } from '../components/report-export-bar';
 
 /**
  * Grade transition performance (R5, process engineer, planner): each product change against the approved
@@ -19,6 +20,7 @@ export function TransitionsReport({ scope }: { scope: AnalyticsScope }) {
   const state = dataStateOf(query, { isEmpty: data !== undefined && data.transitions.length === 0 });
   return (
     <div className="space-y-4" data-testid="transitions-report">
+      <ReportExportBar kind="transitions" query={scopeBase(scope)} timezone={env.timezone} />
       <DataState state={state} error={query.error} detail={state === 'empty' ? 'No grade transitions start on these dates.' : undefined} onRetry={() => void query.refetch()}>
         {data && (
           <>

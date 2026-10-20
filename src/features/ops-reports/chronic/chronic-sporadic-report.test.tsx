@@ -14,6 +14,7 @@ const data: ChronicSporadicView = {
   calculationRunIds: [],
 };
 
+vi.mock('../components/report-export-bar', () => ({ ReportExportBar: () => null }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
 vi.mock('@/api/v2/queries/ops-reports', () => ({
   useChronicSporadic: () => ({ data: { data, isProvisional: false }, isLoading: false, isError: false, error: null, refetch: () => undefined }),
