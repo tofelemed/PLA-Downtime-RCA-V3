@@ -155,14 +155,17 @@ describe('API contract: error envelope, correlation id, auth, throttling', () =>
       await limited?.close();
     });
 
+    const badLogin = () =>
+      request(limited.getHttpServer())
+        .post('/api/auth/login')
+        .send({ email: 'nobody@example.invalid', password: 'wrong' });
+
     it('returns 429 RATE_LIMITED with Retry-After once the per-client limit is exceeded', async () => {
       for (let attempt = 0; attempt < 3; attempt += 1) {
-        await request(limited.getHttpServer()).get('/api/health').expect(200);
+        await badLogin().expect(401);
       }
 
-      const response = await request(limited.getHttpServer())
-        .get('/api/health')
-        .expect(429);
+      const response = await badLogin().expect(429);
 
       expect(response.body).toMatchObject({
         code: 'RATE_LIMITED',
@@ -170,6 +173,12 @@ describe('API contract: error envelope, correlation id, auth, throttling', () =>
         correlationId: expect.any(String),
       });
       expect(Number(response.headers['retry-after'])).toBeGreaterThan(0);
+    });
+
+    it('never throttles health probes (perf audit P11)', async () => {
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        await request(limited.getHttpServer()).get('/api/health').expect(200);
+      }
     });
   });
 });
