@@ -20,7 +20,7 @@ import * as mqtt from 'mqtt';
 import {
   parseCliArgs,
   stringFlag,
-} from '../../src/migration-cutover/cli/cli-args';
+} from '../../src/common/cli/cli-args';
 import {
   assertGuideCheckpoints,
   COUNTER_SIGNAL,

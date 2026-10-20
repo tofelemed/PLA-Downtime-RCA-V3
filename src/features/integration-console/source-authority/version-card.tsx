@@ -4,6 +4,8 @@ import { actorText, useUserNames } from '@/features/ux-kit/labels';
 import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
+import { selfDecisionKindOf } from '@/features/ux-kit/self-decision-kind';
 import { ACTUALS_SOURCE_LABELS } from '@/features/plan-dashboard/model/actuals-labels';
 import { VersionActions } from './version-actions';
 
@@ -53,7 +55,8 @@ function Decision({ version, timezone }: { version: SourceAuthorityVersionView; 
     <p className="text-xs text-muted-foreground">
       Drafted by {actorText({ id: version.createdBy }, users.nameOf)} on <PlantTime iso={version.createdAt} tz={timezone} withDate />
       {decidedBy && ` · ${version.state === 'rejected' ? 'rejected' : 'approved'} by ${users.nameOf(decidedBy)}`}
-      {version.rejectionReason && `: ${version.rejectionReason}`}
+      {version.rejectionReason && `: ${version.rejectionReason}`}{' '}
+      <SelfDecisionBadge selfDecided={version.selfDecided} kind={selfDecisionKindOf(version.state)} />
     </p>
   );
 }

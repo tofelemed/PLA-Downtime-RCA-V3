@@ -11721,6 +11721,118 @@
         ]
       }
     },
+    "/api/v2/reconciliation/exceptions": {
+      "get": {
+        "description": "Types, from stored state only (nothing is recalculated on read): residual_beyond_tolerance, claim_exceeds_component, bridge_required, plan_allocation_required (flags of the latest run’s slice totals), stale_submission, substitute_source (actuals of the latest run from a substitute source), uncoded_stop_time (live stops of the period without a reason, not marked investigation pending) and duplicate_merge_pending (suggested duplicate-stop pairs whose kept stop overlaps the period). Periods of the operational dates [fromDate, toDate) in the caller’s unit scope; keyset on period start, period and type. Each row has a short message and the screen that fixes it.",
+        "operationId": "ReconciliationExceptionsV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "fromDate",
+            "required": true,
+            "in": "query",
+            "description": "Periods of operational dates on or after this date (YYYY-MM-DD, plant production day)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "toDate",
+            "required": true,
+            "in": "query",
+            "description": "Periods of operational dates before this date (exclusive, YYYY-MM-DD); ≤ 400 days after fromDate",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "types",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several types; omitted = every type",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "residual_beyond_tolerance",
+                  "claim_exceeds_component",
+                  "bridge_required",
+                  "plan_allocation_required",
+                  "stale_submission",
+                  "substitute_source",
+                  "uncoded_stop_time",
+                  "duplicate_merge_pending"
+                ]
+              }
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "workflowStates",
+            "required": false,
+            "in": "query",
+            "description": "Workflow state of the period; omitted = every state that is not approved",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "draft",
+                  "in_review",
+                  "stale"
+                ]
+              }
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "nextCursor of the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open accounting problems of the periods that are not approved: one row per period and problem type",
+        "tags": [
+          "v2 · Reconciliation and approval"
+        ]
+      }
+    },
     "/api/v2/period-change-proposals": {
       "post": {
         "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. Reason and evidence required; the proposer never decides it (403 SEPARATION_OF_DUTIES). 409 MONTH_OPEN (revise directly), PROPOSAL_OPEN, REVISION_MISMATCH, REVISION_OPEN; 404 out of scope.",
@@ -13701,6 +13813,74 @@
         ]
       }
     },
+    "/api/v2/reports/capacity-gap": {
+      "get": {
+        "description": "One row per approved profile (unit, product, operating mode) in force at `at` (default now), with the approved rate version of each kind in force then (budget and forecast shown as references). A kind without one is null (\"not set\"); nothing is inferred. gaps: nameplate − demonstrated, demonstrated − sustained, sustained − planning (decimal strings; ratio = gap / upper); ratios: sustained / nameplate and planning / sustained. Null with reason not_set, uom_mismatch, timebase_mismatch (never converted) or zero_base. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units. At most `limit` (≤ 200) rows by unit, product and mode; `truncated` when more match.",
+        "operationId": "CapacityGapReportV2Controller_report_v2",
+        "parameters": [
+          {
+            "name": "at",
+            "required": false,
+            "in": "query",
+            "description": "Instant the approved profile and rate versions must be in force at (ISO 8601 with an offset); default now",
+            "schema": {
+              "example": "2026-10-19T08:00:00Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "productIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several products; omitted: every product",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Rows at most; `truncated` tells when more profiles match",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 200,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approved nameplate, demonstrated, sustained and planning rates side by side, with the gap between each step",
+        "tags": [
+          "v2 · Profiles"
+        ]
+      }
+    },
     "/api/v2/feature-flags": {
       "get": {
         "description": "Registry defaults (all off) overlaid with the tenant settings; readable by any tenant member.",
@@ -14279,7 +14459,7 @@
     },
     "/api/v2/rcas": {
       "get": {
-        "description": "Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q). Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).",
+        "description": "Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), catalogue cause code of a typed cause (causeCodeId), title (q). Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).",
         "operationId": "RcaCasesV2Controller_list_v2",
         "parameters": [
           {
@@ -14372,6 +14552,15 @@
             "required": false,
             "in": "query",
             "description": "Cases with a linked event coded with this reason",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "causeCodeId",
+            "required": false,
+            "in": "query",
+            "description": "Cases with at least one typed cause of this catalogue code (retired codes included)",
             "schema": {
               "type": "string"
             }
@@ -15053,6 +15242,107 @@
           }
         ],
         "summary": "Catalogue causes ranked by the number of cases naming them, with the approved loss of those cases",
+        "tags": [
+          "v2 · RCA"
+        ]
+      }
+    },
+    "/api/v2/reports/rca-portfolio": {
+      "get": {
+        "description": "Rows group the cases by the catalogue code of their causes of `causeKind` (root by default); cases without one form the Uncoded row (key `uncoded`). Keyset pages ordered by number of cases (`limit` ≤ 50, `cursor`). Approved loss = linked events and loss lines, approved revisions only, in `currency` (USD default, IRR); claimed avoided loss is the owners’ figure in that currency; realised difference is per verification metric. The three are never added together. Money is left out for roles without it.",
+        "operationId": "RcaPortfolioV2Controller_report_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Cases opened at or after this instant (ISO 8601 with offset); the window counts a case by its opening",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Cases opened before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (tenant-wide cases for a tenant-wide caller only).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "causeKind",
+            "required": false,
+            "in": "query",
+            "description": "The cause kind whose catalogue code groups the cases; cases without such a code form the Uncoded row",
+            "schema": {
+              "default": "root",
+              "enum": [
+                "direct",
+                "contributing",
+                "root"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "description": "Approved loss and claims are reported in this currency only (nothing converted)",
+            "schema": {
+              "default": "USD",
+              "enum": [
+                "USD",
+                "IRR"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cases of your scope opened in a window, by coded cause: approved loss, actions, verdicts, claims and realised differences",
         "tags": [
           "v2 · RCA"
         ]
@@ -16215,6 +16505,25 @@
             "name": "unitId",
             "required": false,
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "trigger",
+            "required": false,
+            "in": "query",
+            "description": "Only recommendations of this trigger kind (e.g. `reevaluate`: the recurrence watch of closed cases, D-T3)",
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "name": "rcaId",
+            "required": false,
+            "in": "query",
+            "description": "Only recommendations about this case (e.g. its `reevaluate` recommendation)",
             "schema": {
               "type": "string"
             }
@@ -25025,6 +25334,29 @@
           "events"
         ]
       },
+      "ReasonWeightInputDto": {
+        "type": "object",
+        "properties": {
+          "reasonCodeId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Reason (cause) code"
+          },
+          "percent": {
+            "type": "string",
+            "example": "60",
+            "description": "Share of the stop in percent (0 < p ≤ 100; the percents add up to 100)"
+          },
+          "seconds": {
+            "type": "number",
+            "example": 1800,
+            "description": "Share of the stop in seconds (the seconds add up to the closed stop’s duration within 1 s)"
+          }
+        },
+        "required": [
+          "reasonCodeId"
+        ]
+      },
       "BulkCodesDto": {
         "type": "object",
         "properties": {
@@ -25060,6 +25392,14 @@
           "investigationPending": {
             "type": "boolean",
             "description": "SME D12: no specific reason yet — the stops are explicitly under investigation (false clears the flag)"
+          },
+          "reasonWeights": {
+            "maxItems": 10,
+            "description": "D-T5: split every selected stop across these reasons by percent (Σ 100; seconds are refused because the stops differ in length). The largest becomes reasonCodeId. 422 REASON_WEIGHTS_* on a broken rule",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReasonWeightInputDto"
+            }
           }
         }
       },
@@ -25605,6 +25945,15 @@
             "type": "string",
             "maxLength": 1000,
             "description": "Why the event is changed; stored on the user revision (`change_reason`) and its coding revision"
+          },
+          "reasonWeights": {
+            "nullable": true,
+            "maxItems": 10,
+            "description": "D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s duration ±1 s). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReasonWeightInputDto"
+            }
           }
         }
       },
@@ -28777,8 +29126,10 @@
             "type": "string",
             "enum": [
               "period_summary",
-              "loss_lines"
-            ]
+              "loss_lines",
+              "rca_case"
+            ],
+            "description": "`period_summary` / `loss_lines`: approved period revisions. `rca_case`: one RCA case as a PDF (definition, team, status timeline, causes, analyses, actions with verification, approved / claimed / realised figures, closure approval), with revisionSelector `case` and `rcaId`; a case the caller cannot read is 404."
           },
           "format": {
             "type": "string",
@@ -28800,9 +29151,10 @@
             "type": "string",
             "enum": [
               "published",
-              "revision_ids"
+              "revision_ids",
+              "case"
             ],
-            "description": "`published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported."
+            "description": "`published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported. `case`: reportType rca_case only (needs rcaId only; PDF only, 422 FORMAT_NOT_SUPPORTED for CSV)."
           },
           "from": {
             "type": "string",
@@ -28825,6 +29177,10 @@
             "items": {
               "type": "string"
             }
+          },
+          "rcaId": {
+            "type": "string",
+            "description": "The RCA case to export (reportType rca_case only)"
           }
         },
         "required": [
@@ -29712,7 +30068,8 @@
             "enum": [
               "minor",
               "significant",
-              "major"
+              "major",
+              "critical"
             ],
             "nullable": true,
             "description": "SME CA7 actual or potential consequence (minor / significant / major) → investigation tier"
@@ -29829,7 +30186,8 @@
             "enum": [
               "minor",
               "significant",
-              "major"
+              "major",
+              "critical"
             ],
             "nullable": true,
             "description": "SME CA7 actual or potential consequence (minor / significant / major) → investigation tier"

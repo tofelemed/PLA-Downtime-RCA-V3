@@ -3,6 +3,7 @@ import {
   OeeComponent,
   ScheduleClass,
 } from '../domain/events/event-classification';
+import { ReasonWeight } from '../domain/events/reason-weights';
 
 /** Largest batch applied synchronously and atomically (DT10); larger batches become a job (API04). */
 export const ATOMIC_BULK_LIMIT = 500;
@@ -23,6 +24,8 @@ export interface BulkCodes {
   assetId?: string;
   /** UX E-3 / SME D12: explicitly under investigation (no specific reason yet) */
   investigationPending?: boolean;
+  /** D-T5: normalised weighted reasons (the first is `reasonCodeId`); null / absent = no split */
+  reasonWeights?: ReasonWeight[] | null;
 }
 
 export interface BulkCodeCommand {
@@ -34,6 +37,8 @@ export interface BulkCodeCommand {
 /** Coding of one event before or after the bulk command. */
 export interface CodingSnapshot {
   reasonCodeId: string | null;
+  /** D-T5: the weighted reasons (null = `reasonCodeId` alone) */
+  reasonWeights: ReasonWeight[] | null;
   assetId: string | null;
   investigationPending: boolean;
   impactCodeId: string | null;

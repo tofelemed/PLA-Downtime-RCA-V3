@@ -51,7 +51,7 @@ describe('focused analysis navigation', () => {
     // the PLA section also lists "Period accounting" (UX audit B-5, analysis roles only); Loss valuation is
     // money, which operators do not see (owner 19 Oct 2026, QA audit)
     const pla = groups.find((group) => group.section.key === 'pla')?.items.filter((item) => item.href.startsWith('/pla-analytics'));
-    expect(pla).toHaveLength(roles.includes('operator') ? 5 : 6);
+    expect(pla).toHaveLength(roles.includes('operator') ? 6 : 7);
     expect(groups.find((group) => group.section.key === 'production')?.items.some((item) => item.href.startsWith('/downtime') || item.href.startsWith('/pla-analytics'))).toBe(false);
   });
 

@@ -1,7 +1,15 @@
+import { RCA_CONSEQUENCE_CLASSES, type RcaConsequenceClass } from '@/api/v2/types/rca-workflow';
 import type { RcaPolicyRules } from './rca-policy-api';
 
-export const CONSEQUENCE_CLASSES = ['minor', 'significant', 'major'] as const;
-export type ConsequenceClass = (typeof CONSEQUENCE_CLASSES)[number];
+export const CONSEQUENCE_CLASSES = RCA_CONSEQUENCE_CLASSES;
+export type ConsequenceClass = RcaConsequenceClass;
+
+/**
+ * D-T4: tiers a version may leave out (versions written before `critical` existed); empty fields omit the
+ * tier and the server's default applies.
+ */
+export const OPTIONAL_TIERS: readonly ConsequenceClass[] = ['critical'];
+export const isOptionalTier = (cls: ConsequenceClass) => OPTIONAL_TIERS.includes(cls);
 
 /** Analysis method keys the server accepts in method groups (backend `ANALYSIS_METHODS`). */
 export const ANALYSIS_METHOD_KEYS = ['timeline', 'five_why', 'fishbone', 'logic_tree', 'fault_tree', 'fmea', 'barrier', 'change'] as const;
@@ -38,6 +46,7 @@ export interface RcaRulesDraft {
   unsupportedRootCauses: string;
   /** per class: one method group per line, methods separated by commas */
   methodGroups: Record<ConsequenceClass, string>;
+  /** per class; '' on an optional tier the version does not set */
   minTeamMembers: Record<ConsequenceClass, string>;
 }
 
@@ -68,9 +77,14 @@ export function rulesDraftOf(rules: RcaPolicyRules): RcaRulesDraft {
     evidencePerLevel: fiveWhy.evidencePerLevel,
     unsupportedRootCauses: fiveWhy.unsupportedRootCauses.join('\n'),
     methodGroups: perClass((cls) => (investigation[cls]?.methodGroups ?? []).map((group) => group.join(', ')).join('\n')),
-    minTeamMembers: perClass((cls) => String(investigation[cls]?.minTeamMembers ?? 0)),
+    minTeamMembers: perClass((cls) => teamText(investigation[cls]?.minTeamMembers, cls)),
   };
 }
+
+const teamText = (members: number | undefined, cls: ConsequenceClass) => {
+  if (members !== undefined) return String(members);
+  return isOptionalTier(cls) ? '' : '0';
+};
 
 const whole = (value: string, min: number, max = Number.MAX_SAFE_INTEGER) => {
   const trimmed = value.trim();
@@ -116,10 +130,19 @@ function effectivenessOf(draft: RcaRulesDraft): RcaPolicyRules['effectiveness'] 
   };
 }
 
+/** An optional tier left empty (no methods, no team size) is not sent. */
+const tierUnset = (draft: RcaRulesDraft, cls: ConsequenceClass) =>
+  isOptionalTier(cls) && draft.methodGroups[cls].trim() === '' && draft.minTeamMembers[cls].trim() === '';
+
 function investigationOf(draft: RcaRulesDraft): RcaPolicyRules['investigation'] | null {
-  const tiers = perClass((cls) => ({ methodGroups: groupsOf(draft.methodGroups[cls]), minTeamMembers: whole(draft.minTeamMembers[cls], 0) }));
-  if (CONSEQUENCE_CLASSES.some((cls) => tiers[cls].minTeamMembers === null)) return null;
-  return perClass((cls) => ({ methodGroups: tiers[cls].methodGroups, minTeamMembers: tiers[cls].minTeamMembers ?? 0 }));
+  const investigation: RcaPolicyRules['investigation'] = {};
+  for (const cls of CONSEQUENCE_CLASSES) {
+    if (tierUnset(draft, cls)) continue;
+    const minTeamMembers = whole(draft.minTeamMembers[cls], 0);
+    if (minTeamMembers === null) return null;
+    investigation[cls] = { methodGroups: groupsOf(draft.methodGroups[cls]), minTeamMembers };
+  }
+  return investigation;
 }
 
 /**

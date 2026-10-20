@@ -90,19 +90,18 @@ function EventHubScreen() {
         />
         <EventFiltersBar filters={filters} onChange={hub.changeFilters} onReset={hub.resetFilters} />
         <QuickStats filters={filters} windowText={windowText} />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="min-w-0 space-y-2">
-            {canWriteEvents && <SelectionToolbar hub={hub} />}
-            <EventTable
-              caption="Production events"
-              query={query}
-              selection={selection}
-              onCode={canWriteEvents ? openCode : undefined}
-              sort={sort}
-              empty={isToCodeFilters(filters) ? TO_CODE_EMPTY : undefined}
-            />
-          </div>
-          <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} onCode={openCode} />
+        {/* ongoing stops first, as a strip: the event table below gets the full page width */}
+        <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} onCode={openCode} />
+        <div className="min-w-0 space-y-2">
+          {canWriteEvents && <SelectionToolbar hub={hub} />}
+          <EventTable
+            caption="Production events"
+            query={query}
+            selection={selection}
+            onCode={canWriteEvents ? openCode : undefined}
+            sort={sort}
+            empty={isToCodeFilters(filters) ? TO_CODE_EMPTY : undefined}
+          />
         </div>
         <HubDialogs hub={hub} />
       </div>

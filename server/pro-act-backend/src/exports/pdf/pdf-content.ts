@@ -24,6 +24,7 @@ const QUANTITY_PLACES = 2;
 export const REPORT_TITLES: Record<ExportReportType, string> = {
   period_summary: 'Period summary',
   loss_lines: 'Loss lines',
+  rca_case: 'Investigation report',
 };
 
 /** The content of one approved revision, before it is cut into pages. */
@@ -64,6 +65,8 @@ export const PDF_COLUMNS: Record<ExportReportType, readonly PdfColumn[]> = {
     col('Loss value', 14),
     col('Reason', 18, 'left'),
   ],
+  // item 2.5: the case PDF lays out its own tables (`rca-case/rca-case-pdf.ts`)
+  rca_case: [],
 };
 
 const formatOf = (p: ExportPresentation): PlantFormat => ({
@@ -251,6 +254,11 @@ function lossRows(
   return { rows: [...candidates, ...own], values };
 }
 
+/** Item 1.3: an auditor sees a SuperAdmin self-approval without querying the database. */
+const SELF_APPROVED = 'Self-approved (SuperAdmin)';
+const selfApprovalFact = (source: RenderSource): Array<[string, string]> =>
+  source.selfApproved ? [['Approval', SELF_APPROVED]] : [];
+
 /** One approved revision: heading, approval label (provisional FX called out), facts and its table. */
 export function sourceSection(
   type: ExportReportType,
@@ -279,6 +287,7 @@ export function sourceSection(
         `${plantNumber(String(source.revision), 0, p.digits)} (${source.revisionId})`,
       ],
       ['Approved', plantDateTime(source.approvedAt, f)],
+      ...selfApprovalFact(source),
       ['Approval snapshot', source.snapshotId],
       ['Calculation run', source.reviewed.run?.id ?? NO_VALUE],
       ['Loss value basis', basisText(source)],

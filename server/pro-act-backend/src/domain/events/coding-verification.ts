@@ -7,6 +7,8 @@
 /** Fields whose change makes a supervisor's verification stale (what the supervisor confirmed). */
 export const VERIFIED_FIELDS: readonly string[] = [
   'reasonCodeId',
+  // D-T5: a changed split of the stop across reasons is a changed coding
+  'reasonWeights',
   'investigationPending',
   'impactCodeId',
   'oeeCodeId',

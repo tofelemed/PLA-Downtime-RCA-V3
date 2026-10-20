@@ -73,11 +73,7 @@ describe('event operations: retract', () => {
       .get(`/api/production-events?unitId=${world.unitA3}`)
       .set(bearer(token))
       .expect(200);
-    const items = (
-      Array.isArray(list.body)
-        ? list.body
-        : (list.body as { items: unknown[] }).items
-    ) as Array<{ id: string }>;
+    const { items } = list.body as { items: Array<{ id: string }> };
     expect(items.map((item) => item.id)).not.toContain(id);
   });
 

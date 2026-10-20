@@ -12,6 +12,18 @@ import {
 } from './support/seed-event-world';
 import { bearer, createIntegrationApp, signToken } from './support/test-app';
 
+/** The JSON body of a supertest response, typed for the fields these tests read. */
+interface ResponseBody {
+  code: string;
+  message: string;
+  items: Array<{ id: string }>;
+  fieldErrors: Array<{ field: string }>;
+  reasonCode: unknown;
+}
+
+const bodyOf = (response: { body: unknown }): ResponseBody =>
+  response.body as ResponseBody;
+
 interface ListBody {
   items: Array<Record<string, unknown> & { id: string }>;
   nextCursor: string | null;
@@ -19,7 +31,13 @@ interface ListBody {
   scope: { tenantId: string };
 }
 
+/** v1 `GET /production-events`: always one page (plan 1.6). */
+interface V1Page {
+  items: Array<Record<string, unknown> & { id: string }>;
+}
+
 const ids = (rows: Array<{ id: string }>) => rows.map((row) => row.id).sort();
+const v1Items = (response: request.Response) => (response.body as V1Page).items;
 
 /** T13 core (compound queries) for v1 bug fixes B1/B2/B17 and the v2 reference endpoint. */
 describe('production events: v1 fixes and the v2 reference endpoint', () => {
@@ -61,7 +79,7 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
       const response = await request(app.getHttpServer())
         .get('/api/production-events')
         .expect(401);
-      expect(response.body.code).toBe('UNAUTHENTICATED');
+      expect(bodyOf(response).code).toBe('UNAUTHENTICATED');
     });
 
     it('B1: ANDs tenantId and unitId instead of ignoring unitId', async () => {
@@ -70,8 +88,9 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
         unitId: world.unitA1,
       }).expect(200);
 
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(ids(response.body)).toEqual(
+      // plan 1.6: always one page (default 50 rows), never the unbounded array
+      expect(response.body).toMatchObject({ total: 3, page: 1, pageSize: 50 });
+      expect(ids(v1Items(response))).toEqual(
         ids([
           { id: world.events.e1 },
           { id: world.events.e2 },
@@ -87,7 +106,7 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
         endDate: at('09:45').toISOString(),
       }).expect(200);
 
-      expect(ids(response.body)).toEqual(
+      expect(ids(v1Items(response))).toEqual(
         ids([
           { id: world.events.e1 },
           { id: world.events.e2 },
@@ -104,13 +123,13 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
         eventType: 'ProductionLoss',
         isOpen: 'false',
       }).expect(200);
-      expect(ids(closed.body)).toEqual([world.events.e3]);
+      expect(ids(v1Items(closed))).toEqual([world.events.e3]);
 
       const running = await v1({
         tenantId: world.tenantA,
         isOpen: 'true',
       }).expect(200);
-      expect(ids(running.body)).toEqual([world.events.e4]);
+      expect(ids(v1Items(running))).toEqual([world.events.e4]);
     });
 
     it('B17: reads include the reasonCode and rca relations', async () => {
@@ -118,25 +137,23 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
         tenantId: world.tenantA,
         unitId: world.unitA1,
       }).expect(200);
-      const e1 = list.body.find(
-        (row: { id: string }) => row.id === world.events.e1,
-      );
-      expect(e1.reasonCode).toMatchObject({
+      const e1 = v1Items(list).find((row) => row.id === world.events.e1);
+      expect(e1?.reasonCode).toMatchObject({
         id: world.reasonR1,
         name: 'Mechanical',
       });
       expect(e1).toHaveProperty('rca');
-      expect(e1.asset).toMatchObject({ id: world.assetA1 });
+      expect(e1?.asset).toMatchObject({ id: world.assetA1 });
 
       const one = await request(app.getHttpServer())
         .get(`/api/production-events/${world.events.e1}`)
         .set(bearer(tokenA))
         .expect(200);
-      expect(one.body.reasonCode).toMatchObject({ id: world.reasonR1 });
+      expect(bodyOf(one).reasonCode).toMatchObject({ id: world.reasonR1 });
       expect(one.body).toHaveProperty('rca');
     });
 
-    it('returns a paged envelope only when page/pageSize are requested, newest first', async () => {
+    it('pages with page/pageSize, newest first', async () => {
       const response = await v1({
         tenantId: world.tenantA,
         unitId: world.unitA1,
@@ -145,10 +162,9 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
       }).expect(200);
 
       expect(response.body).toMatchObject({ total: 3, page: 1, pageSize: 2 });
-      expect(response.body.items.map((row: { id: string }) => row.id)).toEqual([
-        world.events.e2,
-        world.events.e1,
-      ]);
+      expect(
+        bodyOf(response).items.map((row: { id: string }) => row.id),
+      ).toEqual([world.events.e2, world.events.e1]);
 
       const second = await v1({
         tenantId: world.tenantA,
@@ -156,20 +172,20 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
         page: 2,
         pageSize: 2,
       }).expect(200);
-      expect(second.body.items.map((row: { id: string }) => row.id)).toEqual([
-        world.events.e6,
-      ]);
+      expect(bodyOf(second).items.map((row: { id: string }) => row.id)).toEqual(
+        [world.events.e6],
+      );
     });
 
     it('rejects malformed filters with 400 VALIDATION_FAILED and message[] (frontend contract)', async () => {
-      const response = await v1({ unitId: 'not-a-uuid', pageSize: 501 }).expect(
+      const response = await v1({ unitId: 'not-a-uuid', pageSize: 201 }).expect(
         400,
       );
 
-      expect(response.body.code).toBe('VALIDATION_FAILED');
-      expect(Array.isArray(response.body.message)).toBe(true);
+      expect(bodyOf(response).code).toBe('VALIDATION_FAILED');
+      expect(Array.isArray(bodyOf(response).message)).toBe(true);
       expect(
-        response.body.fieldErrors.map(
+        bodyOf(response).fieldErrors.map(
           (error: { field: string }) => error.field,
         ),
       ).toEqual(expect.arrayContaining(['unitId', 'pageSize']));
@@ -211,12 +227,12 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
 
     it('filters by eventTypes, statuses and isOpen', async () => {
       const types = await v2({ eventTypes: ['IOW', 'SOL'] }).expect(200);
-      expect(ids(types.body.items)).toEqual(
+      expect(ids(bodyOf(types).items)).toEqual(
         ids([{ id: world.events.e2 }, { id: world.events.e5 }]),
       );
 
       const open = await v2({ statuses: 'Open', isOpen: 'true' }).expect(200);
-      expect(ids(open.body.items)).toEqual([world.events.e4]);
+      expect(ids(bodyOf(open).items)).toEqual([world.events.e4]);
     });
 
     it('serialises decimals as strings and times as ISO 8601', async () => {
@@ -238,13 +254,13 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
 
     it('rejects tenantId as a query parameter with 400', async () => {
       const response = await v2({ tenantId: world.tenantA }).expect(400);
-      expect(response.body.code).toBe('TENANT_FROM_IDENTITY');
+      expect(bodyOf(response).code).toBe('TENANT_FROM_IDENTITY');
     });
 
     it('validates limit bounds and filters with 422 + fieldErrors', async () => {
       const low = await v2({ limit: 0 }).expect(422);
-      expect(low.body.code).toBe('VALIDATION_FAILED');
-      expect(low.body.fieldErrors[0].field).toBe('limit');
+      expect(bodyOf(low).code).toBe('VALIDATION_FAILED');
+      expect(bodyOf(low).fieldErrors[0].field).toBe('limit');
 
       await v2({ limit: 501 }).expect(422);
       await v2({ unitIds: 'nope' }).expect(422);
@@ -254,14 +270,14 @@ describe('production events: v1 fixes and the v2 reference endpoint', () => {
         from: at('10:00').toISOString(),
         to: at('09:00').toISOString(),
       }).expect(422);
-      expect(range.body.code).toBe('INVALID_RANGE');
+      expect(bodyOf(range).code).toBe('INVALID_RANGE');
     });
 
     it('rejects a forged cursor with 400 INVALID_CURSOR', async () => {
       const response = await v2({ cursor: 'definitely-not-a-cursor' }).expect(
         400,
       );
-      expect(response.body.code).toBe('INVALID_CURSOR');
+      expect(bodyOf(response).code).toBe('INVALID_CURSOR');
     });
 
     it('paginates with a stable keyset cursor while rows are inserted (no duplicates, no gaps)', async () => {

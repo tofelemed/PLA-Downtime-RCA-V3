@@ -1,3 +1,4 @@
+import { versionSelfApproved } from '../../domain/approvals/self-decision';
 import { DemandStatus } from '../../valuation/entities/demand-status.entity';
 import { RevaluationRequested } from '../../valuation/valuation-events';
 
@@ -16,6 +17,8 @@ export interface DemandStatusV2View {
   createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: approved by its own author — a SuperAdmin self-approval (owner decision 2026-10-16) */
+  selfDecided: boolean;
   rowVersion: number;
   createdAt: string;
   updatedAt: string;
@@ -39,6 +42,7 @@ export function toDemandStatusView(row: DemandStatus): DemandStatusV2View {
     createdBy: row.createdBy,
     approvedBy: row.approvedBy,
     approvedAt: iso(row.approvedAt),
+    selfDecided: versionSelfApproved(row),
     rowVersion: row.rowVersion,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

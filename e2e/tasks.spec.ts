@@ -23,9 +23,11 @@ test.describe('Tasks Module', () => {
     const tenants = await tenantsRes.json();
     const tenantId = tenants[0]?.id;
     expect(tenantId).toBeTruthy();
+    // by-id task routes answer 404 outside the acting tenant (plan 1.6): act on the task's plant
+    const actingHeaders = { ...headers, 'X-Tenant-Id': tenantId };
 
     const createRes = await request.post('http://localhost:4004/api/tasks', {
-      headers,
+      headers: actingHeaders,
       data: {
         title: `E2E Task ${Date.now()}`,
         description: 'Automated test task',
@@ -41,18 +43,18 @@ test.describe('Tasks Module', () => {
     const created = await createRes.json();
     expect(created.id).toBeTruthy();
 
-    const listRes = await request.get(`http://localhost:4004/api/tasks?tenantId=${tenantId}`, { headers });
+    const listRes = await request.get(`http://localhost:4004/api/tasks?tenantId=${tenantId}`, { headers: actingHeaders });
     expect(listRes.ok()).toBeTruthy();
 
     const updateRes = await request.put(`http://localhost:4004/api/tasks/${created.id}`, {
-      headers,
+      headers: actingHeaders,
       data: { status: 'Completed' },
     });
     expect(updateRes.ok()).toBeTruthy();
     const updated = await updateRes.json();
     expect(updated.status).toBe('Completed');
 
-    const deleteRes = await request.delete(`http://localhost:4004/api/tasks/${created.id}`, { headers });
+    const deleteRes = await request.delete(`http://localhost:4004/api/tasks/${created.id}`, { headers: actingHeaders });
     expect(deleteRes.ok()).toBeTruthy();
   });
 });

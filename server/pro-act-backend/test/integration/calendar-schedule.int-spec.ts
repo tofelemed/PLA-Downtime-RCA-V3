@@ -212,7 +212,7 @@ describe('calendar schedule: DST, exclusions, downtime by shift, preview (plan 2
       .set('Authorization', `Bearer ${env.admin}`)
       .expect(200);
     expect(
-      (list.body as Array<{ id: string; shift: string }>).find(
+      (list.body as { items: Array<{ id: string; shift: string }> }).items.find(
         (e) => e.id === e5,
       )?.shift,
     ).toBe('Morning');

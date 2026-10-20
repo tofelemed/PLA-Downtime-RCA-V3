@@ -1,6 +1,14 @@
 import { useCloseEvent } from '@/api/v2/queries/event-commands';
 import { usePatchProductionEvent } from '@/api/v2/queries/production-events';
-import type { ProductionEventView } from '@/api/v2/types/events';
+import type { ProductionEventView, ReasonWeightInput } from '@/api/v2/types/events';
+
+/** What the inline "Code" dialog changes: a reason, "investigation pending", or a split across reasons (D-T5). */
+export interface CodeChanges {
+  reasonCodeId?: string;
+  investigationPending?: boolean;
+  /** entered weights (the server normalises them and sets the reason), or null to remove a stored split */
+  reasonWeights?: ReasonWeightInput[] | null;
+}
 
 export interface CloseStopInput {
   endTime: string;
@@ -31,7 +39,7 @@ export function useCloseStop(event: ProductionEventView) {
 export function useCodeEvent(event: ProductionEventView) {
   const patch = usePatchProductionEvent();
   /** a reason code, or SME D12 "investigation pending" while no specific reason is known yet */
-  const submit = async (changes: { reasonCodeId?: string; investigationPending?: boolean }): Promise<boolean> =>
+  const submit = async (changes: CodeChanges): Promise<boolean> =>
     (await patch.submit({ event, changes }).catch(() => null)) !== null;
   return { submit, error: patch.error, pending: patch.isPending };
 }

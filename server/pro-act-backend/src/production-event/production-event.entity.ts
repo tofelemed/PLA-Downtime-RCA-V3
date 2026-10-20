@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ClassificationBasis } from '../code-library/classification-basis';
+import { ReasonWeight } from '../domain/events/reason-weights';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Unit } from '../unit/unit.entity';
 import { Asset } from '../asset/asset.entity';
@@ -45,6 +46,10 @@ export const DURATION_SECONDS_EXPRESSION =
   'CASE WHEN "end_time" IS NULL THEN NULL ELSE EXTRACT(EPOCH FROM ("end_time" - "start_time")) END';
 
 @Entity('production_events')
+@Check(
+  'CHK_production_events_reason_weights',
+  `"reason_weights" IS NULL OR jsonb_typeof("reason_weights") = 'array'`,
+)
 @Check(
   'CHK_production_events_interval',
   '"end_time" IS NULL OR "end_time" > "start_time"',
@@ -506,6 +511,13 @@ export class ProductionEvent {
 
   @Column({ name: 'reason_code_id', type: 'uuid', nullable: true })
   reasonCodeId?: string;
+
+  /**
+   * D-T5: the reasons the stop is split across (`[{reasonCodeId, weight}]`, 8-place weights adding up to
+   * 1, the largest first and equal to `reasonCodeId`); null = `reasonCodeId` alone
+   */
+  @Column({ name: 'reason_weights', type: 'jsonb', nullable: true })
+  reasonWeights?: ReasonWeight[] | null;
 
   @ManyToOne(() => ReasonCode)
   @JoinColumn({ name: 'reason_code_id' })

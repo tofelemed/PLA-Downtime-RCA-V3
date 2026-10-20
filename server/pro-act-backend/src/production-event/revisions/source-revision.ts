@@ -5,7 +5,12 @@ import {
 import { EntityManager } from 'typeorm';
 import { uncodedVerificationReset } from '../../domain/events/coding-verification';
 import { toLegacyStatus } from '../../domain/events/legacy-status';
-import { prepareUpdate } from '../event-write-model';
+import {
+  activeCodingRulesIn,
+  CodingRuleSource,
+} from '../../rules/active-coding-rules';
+import { ActiveCodingRule, retypedAxes } from '../../rules/rule-defaults';
+import { IntervalModelFields, prepareUpdate } from '../event-write-model';
 import { ProductionEvent } from '../production-event.entity';
 import { EventChangeMessage, changeMessage } from './event-change.notifier';
 import { EventCoding } from './event-coding.entity';
@@ -69,6 +74,7 @@ export async function applySourceIn(
   eventId: string,
   rawFacts: Readonly<Record<string, unknown>>,
   provenance: SourceProvenance,
+  rules?: CodingRuleSource,
 ): Promise<RevisionResult<SourceOutcome>> {
   const existing = await lockTracked(manager, eventId);
   const facts = completeFacts(
@@ -84,8 +90,11 @@ export async function applySourceIn(
   const overrides = existing.userOverrides ?? {};
   const plan = planFields(existing, facts, changed);
   const revision = await nextRevisionNumber(manager, eventId);
+  const ruleSet = retypes(existing, facts, plan.accepted)
+    ? await (rules ?? (() => activeCodingRulesIn(manager, existing.tenantId)))()
+    : [];
   const updated = await writeEvent(manager, eventId, {
-    ...sourceColumns(existing, facts, plan.accepted),
+    ...sourceColumns(existing, facts, plan.accepted, ruleSet),
     ...(plan.confirmed.length > 0
       ? { userOverrides: withoutOverrides(overrides, plan.confirmed) }
       : {}),
@@ -133,15 +142,29 @@ function planFields(
   };
 }
 
+/** True when writing source `fields` from `facts` changes the stored event type. */
+export function retypes(
+  existing: ProductionEvent,
+  facts: EventFacts,
+  fields: readonly string[],
+): boolean {
+  return (
+    fields.includes('eventType') &&
+    (facts.eventType ?? null) !== (existing.eventType ?? null)
+  );
+}
+
 /**
  * Columns for source `fields` taken from `facts`, with interval, classification, states, legacy status
  * and duration re-derived by the write model from the stored row. Classification axes the user
- * overrode keep the user's value even when the source changes the event type.
+ * overrode keep the user's value even when the source changes the event type; on such a change the
+ * other code-driven axes are re-filled by `rules` and the basis rebuilt (item 8 open question 1).
  */
 export function sourceColumns(
   existing: ProductionEvent,
   facts: EventFacts,
   fields: readonly string[],
+  rules: readonly ActiveCodingRule[],
 ): Partial<ProductionEvent> {
   const values: Record<string, unknown> = {};
   for (const field of fields) {
@@ -164,10 +187,37 @@ export function sourceColumns(
       Object.assign(derived, { [key]: existing[key] });
     }
   }
+  const axes = retypes(existing, facts, fields)
+    ? retypedColumns(rules, existing, derived, values)
+    : {};
   return {
     ...values,
     ...derived,
+    ...axes,
     ...uncodedVerificationReset(existing, derived),
+  } as Partial<ProductionEvent>;
+}
+
+/** The code-driven axes and basis after an event-type change, as columns. */
+function retypedColumns(
+  rules: readonly ActiveCodingRule[],
+  existing: ProductionEvent,
+  derived: IntervalModelFields,
+  values: Readonly<Record<string, unknown>>,
+): Partial<ProductionEvent> {
+  const axes = retypedAxes(rules, existing, {
+    ...derived,
+    eventType: values.eventType as string | null,
+    source: existing.source,
+    reasonCodeId: existing.reasonCodeId,
+    unitId: existing.unitId,
+    assetId: existing.assetId,
+  });
+  return {
+    scheduleClass: axes.scheduleClass,
+    oeeComponent: axes.oeeComponent,
+    impactCodeId: axes.impactCodeId,
+    classificationBasis: axes.classificationBasis,
   } as Partial<ProductionEvent>;
 }
 

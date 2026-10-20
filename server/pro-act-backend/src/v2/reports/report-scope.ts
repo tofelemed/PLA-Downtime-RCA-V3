@@ -76,13 +76,7 @@ export async function resolveReportScope(
     );
   }
   const restricted = periodScopeUnits(context);
-  const named = query.unitIds?.length ? [...new Set(query.unitIds)] : null;
-  if (named) {
-    assertBodyUnitsInScope(context, named);
-    const found = await tenantUnits(manager, tenantId, named);
-    if (found.length !== named.length)
-      throw invalidReference('unitIds', 'unit');
-  }
+  const named = await namedReportUnits(manager, context, query.unitIds);
   const unitIds =
     named ?? restricted ?? (await tenantUnits(manager, tenantId, null));
   return {
@@ -95,6 +89,23 @@ export async function resolveReportScope(
     weekStart: await tenantWeekStart(manager, tenantId),
     selection: selectionOf(query),
   };
+}
+
+/**
+ * Units a request names (distinct), each a unit of the tenant and of the caller's scope (422
+ * INVALID_REFERENCE, no existence leak); null when none is named.
+ */
+export async function namedReportUnits(
+  manager: EntityManager,
+  context: RequestContext,
+  unitIds: readonly string[] | undefined,
+): Promise<string[] | null> {
+  const named = unitIds?.length ? [...new Set(unitIds)] : null;
+  if (!named) return null;
+  assertBodyUnitsInScope(context, named);
+  const found = await tenantUnits(manager, requireTenantId(context), named);
+  if (found.length !== named.length) throw invalidReference('unitIds', 'unit');
+  return named;
 }
 
 async function tenantWeekStart(

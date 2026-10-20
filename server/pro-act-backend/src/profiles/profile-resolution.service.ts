@@ -86,14 +86,38 @@ export class ProfileResolutionService {
       .orderBy('p.version', 'DESC')
       .getOne();
     if (!profile) return { profile: null, rates: {}, reason: 'no_profile' };
-    // [at, at + 1 ms) overlaps exactly the versions in force at `at`
-    const rows = await this.approvedRates(profile.id, {
-      from: query.at,
-      to: new Date(query.at.getTime() + 1),
-    });
+    const rows = await this.ratesInForce(tenantId, [profile.id], query.at);
     const rates: Partial<Record<RateKind, UnitProductRate>> = {};
     for (const rate of rows) rates[rate.rateKind] ??= rate;
     return { profile, rates, reason: null };
+  }
+
+  /**
+   * Approved rates of several profiles in force at `at`, in one query (capacity gap report, plan 1.2):
+   * by profile, kind and newest start. Approved versions never overlap, so at most one per profile and kind.
+   */
+  ratesInForce(
+    tenantId: string,
+    profileIds: readonly string[],
+    at: Date,
+  ): Promise<UnitProductRate[]> {
+    if (profileIds.length === 0) return Promise.resolve([]);
+    // [at, at + 1 ms) overlaps exactly the versions in force at `at`
+    return this.rates
+      .createQueryBuilder('r')
+      .where('r.tenantId = :tenantId AND r.profileId IN (:...profileIds)', {
+        tenantId,
+        profileIds,
+      })
+      .andWhere(`r.state = 'approved'`)
+      .andWhere('(r.effectiveTo IS NULL OR r.effectiveTo > :from)', {
+        from: at,
+      })
+      .andWhere('r.effectiveFrom < :to', { to: new Date(at.getTime() + 1) })
+      .orderBy('r.profileId')
+      .addOrderBy('r.rateKind')
+      .addOrderBy('r.effectiveFrom', 'DESC')
+      .getMany();
   }
 
   /**

@@ -11,7 +11,7 @@
  * Env: MARUN_TRAIN_PASSWORD (required), PROACT_API_URL (default http://localhost:$PORT).
  */
 import * as dotenv from 'dotenv';
-import { parseCliArgs } from '../../src/migration-cutover/cli/cli-args';
+import { parseCliArgs } from '../../src/common/cli/cli-args';
 import {
   DemandRow,
   demandCorrections,

@@ -65,7 +65,10 @@ describe('restatement delta and posting (SME R5)', () => {
   it('finance sets the posting date and treatment', async () => {
     actAs('finance_approver', 'f1');
     wrap();
-    fireEvent.change(await screen.findByTestId('posting-date'), { target: { value: '2026-11-03' } });
+    const date = await screen.findByLabelText(/Posting date/);
+    expect(date).toHaveAttribute('placeholder', 'YYYY-MM-DD');
+    fireEvent.change(date, { target: { value: '2026-11-03' } });
+    fireEvent.blur(date);
     // QA re-test: the treatment choices are sentence case
     expect([...screen.getByTestId('posting-treatment').querySelectorAll('option')].map((o) => o.textContent)).toEqual(['Correction', 'Change in estimate', 'Other adjustment', 'No posting']);
     fireEvent.click(screen.getByTestId('posting-save'));

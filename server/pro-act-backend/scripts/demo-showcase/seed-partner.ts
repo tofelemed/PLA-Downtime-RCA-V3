@@ -3,6 +3,7 @@
  * Partner Org admin, so switching plants shows that another organisation's data stays separate.
  * Events are found by `eventId` and kept.
  */
+import { PersonaSession } from './showcase-client';
 import { ShowcaseContext } from './showcase-context';
 import { DAY_MS, iso } from './showcase-window';
 
@@ -16,6 +17,14 @@ interface UnitRow {
 interface EventRow {
   eventId: string | null;
 }
+
+/** v1 `GET /production-events` answers one page (plan 1.6: at most 200 rows). */
+interface EventPage {
+  items: EventRow[];
+  total: number;
+}
+
+const EVENT_PAGE_SIZE = 200;
 
 interface PartnerEvent {
   key: string;
@@ -100,10 +109,10 @@ export async function seedPartnerEvents(ctx: ShowcaseContext): Promise<void> {
     );
     return;
   }
-  const existing = await session.get<EventRow[]>(
+  const known = await knownEventIds(
+    session,
     `/production-events?tenantId=${ctx.tenantId}&unitId=${unit.id}`,
   );
-  const known = new Set(existing.map((e) => e.eventId));
   for (const spec of EVENTS) {
     const eventId = `SC-PP1-${spec.key}`;
     if (known.has(eventId)) {
@@ -128,5 +137,20 @@ export async function seedPartnerEvents(ctx: ShowcaseContext): Promise<void> {
       body.endTime = iso(start + spec.minutes * 60_000);
     if (spec.quantity !== undefined) body.quantity = spec.quantity;
     await session.call('POST', '/production-events', body);
+  }
+}
+
+/** Every `eventId` of the unit's v1 events, read page by page. */
+async function knownEventIds(
+  session: PersonaSession,
+  path: string,
+): Promise<Set<string | null>> {
+  const known = new Set<string | null>();
+  for (let page = 1; ; page += 1) {
+    const result = await session.get<EventPage>(
+      `${path}&page=${page}&pageSize=${EVENT_PAGE_SIZE}`,
+    );
+    result.items.forEach((event) => known.add(event.eventId));
+    if (page * EVENT_PAGE_SIZE >= result.total) return known;
   }
 }

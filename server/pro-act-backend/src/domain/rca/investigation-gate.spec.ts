@@ -20,6 +20,8 @@ const BELT: InvestigationFacts = {
     'Contamination protection and inspection of the tensioner were inadequate',
   teamSize: 1,
   methods: ['five_why'],
+  teamCharter: null,
+  codedRootCauses: 0,
   fiveWhy: {
     levels: [
       level('Belt slips because tension is low'),
@@ -64,11 +66,12 @@ describe('investigationGate (SME CA1 / CA5 / CA6 / CA7)', () => {
     expect(blocked).toEqual(['ROOT_CAUSE_MISSING', 'FIVE_WHY_ROOT_CAUSE']);
   });
 
-  it('CA7: a significant case needs a timeline, fishbone or logic tree, a causal chain and a team of 2', () => {
+  it('CA7 + D-T4: a significant case needs a timeline, fishbone or logic tree, a causal chain, a charter and a team of 2', () => {
     const blocked = codes({ ...BELT, consequenceClass: 'significant' });
     expect(blocked).toEqual([
       'METHOD_MISSING',
       'METHOD_MISSING',
+      'TEAM_CHARTER_REQUIRED',
       'TEAM_TOO_SMALL',
     ]);
     expect(
@@ -77,19 +80,47 @@ describe('investigationGate (SME CA1 / CA5 / CA6 / CA7)', () => {
         consequenceClass: 'significant',
         teamSize: 2,
         methods: ['timeline', 'fishbone', 'five_why'],
+        teamCharter: 'Find why the belt slips; lead, fitter, operator',
       }),
     ).toEqual([]);
   });
 
-  it('CA7: a major case does not demand a fault tree when a barrier analysis is used', () => {
+  it('D-T4: a major case needs a logic tree or fault tree (a barrier analysis alone is not enough), a charter and coded causes', () => {
+    const major: InvestigationFacts = {
+      ...BELT,
+      consequenceClass: 'major',
+      teamSize: 3,
+      methods: ['timeline', 'barrier', 'five_why'],
+    };
+    expect(codes(major)).toEqual([
+      'METHOD_REQUIRED',
+      'TEAM_CHARTER_REQUIRED',
+      'CODED_CAUSE_REQUIRED',
+    ]);
     expect(
       codes({
-        ...BELT,
-        consequenceClass: 'major',
-        teamSize: 3,
-        methods: ['timeline', 'barrier', 'five_why'],
+        ...major,
+        methods: ['timeline', 'barrier', 'logic_tree', 'five_why'],
+        teamCharter: 'Gearbox trips',
+        codedRootCauses: 1,
       }),
     ).toEqual([]);
+  });
+
+  it('D-T4: a minor case needs a 5-Why or deeper method; the plant tier it covers is not repeated', () => {
+    const result = investigationGate(
+      { ...BELT, methods: [], fiveWhy: null },
+      RULES,
+    );
+    expect(result.blockers.map((issue) => issue.code)).toEqual([
+      'METHOD_REQUIRED',
+    ]);
+    expect(result.blockers[0].methods).toEqual([
+      'five_why',
+      'fishbone',
+      'logic_tree',
+      'fault_tree',
+    ]);
   });
 
   it('the consequence class, an incomplete FMEA and no action block', () => {

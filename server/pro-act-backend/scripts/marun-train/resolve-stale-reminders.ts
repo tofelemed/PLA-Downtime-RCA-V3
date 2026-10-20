@@ -12,7 +12,7 @@
  * Env: the database of `.env` (DB_HOST, DB_PORT, DB_NAME, …).
  */
 import { AppDataSource } from '../../src/database/data-source';
-import { parseCliArgs } from '../../src/migration-cutover/cli/cli-args';
+import { parseCliArgs } from '../../src/common/cli/cli-args';
 import {
   ROLE_LOST,
   ROLE_LOST_SELECT,

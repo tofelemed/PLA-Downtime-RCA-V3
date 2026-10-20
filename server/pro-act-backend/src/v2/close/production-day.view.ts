@@ -1,5 +1,6 @@
 import { DaySnapshot, DaySummary } from '../../close/day-certification.service';
 import { DayCertification } from '../../close/entities/day-certification.entity';
+import { isSelfDecision } from '../../domain/approvals/self-decision';
 import { DayRollup } from '../../domain/close/day-certification';
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
 
@@ -14,6 +15,8 @@ export interface DayCertificationV2View {
   reopenedBy: string | null;
   reopenedAt: string | null;
   reopenReason: string | null;
+  /** item 1.3: certified by a submitter of one of the day's shift periods (SuperAdmin only) */
+  selfDecided: boolean;
 }
 
 export interface DaySummaryV2View {
@@ -42,6 +45,7 @@ export interface DayV2View extends DaySummaryV2View {
 
 function certificationView(
   c: DayCertification | null,
+  submitters: ReadonlyArray<string | null>,
 ): DayCertificationV2View | null {
   if (!c) return null;
   return {
@@ -55,6 +59,8 @@ function certificationView(
     reopenedBy: c.reopenedBy,
     reopenedAt: c.reopenedAt ? c.reopenedAt.toISOString() : null,
     reopenReason: c.reopenReason,
+    selfDecided:
+      c.state === 'certified' && isSelfDecision(c.certifiedBy, submitters),
   };
 }
 
@@ -72,7 +78,10 @@ export function toDaySummaryView(day: DaySummary): DaySummaryV2View {
       revision: p.revision,
       submittedBy: p.submittedBy,
     })),
-    certification: certificationView(day.certification),
+    certification: certificationView(
+      day.certification,
+      day.periods.map((p) => p.submittedBy),
+    ),
   };
 }
 

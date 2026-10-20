@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePrefetchRcaCase, useRcaCasePage } from '@/api/v2/queries/rca-cases';
+import { useReevaluateRecommendations } from '@/api/v2/queries/rca-reevaluations';
 import type { RcaCaseListItemView } from '@/api/v2/types/rca';
 import { DataTable, type DataTableColumn, type DataTableEmpty } from '@/features/ux-kit/data-table';
 import { PRIORITY_TONES, RCA_CASE_STATUS_TONES, useUserNames } from '@/features/ux-kit/labels';
@@ -12,6 +13,7 @@ import { toCaseQuery } from '../model/case-filters';
 import { useRcaFormat } from '../use-rca-format';
 import { useUnitNames } from '../use-unit-names';
 import { actionProgressText, statusLabel } from '../model/rca-labels';
+import { ReevaluateBadge } from '../components/reevaluate-badge';
 
 interface ColumnContext {
   unitName: (id: string | null) => string;
@@ -20,6 +22,17 @@ interface ColumnContext {
   date: (value: string | null) => string;
   dateTime: (value: string | null) => string;
   prefetch: (id: string) => void;
+  /** closed cases with an open "re-evaluate" recommendation (D-T3) */
+  reevaluate: ReadonlySet<string>;
+}
+
+function StatusCell({ row, reevaluate }: { row: RcaCaseListItemView; reevaluate: ReadonlySet<string> }) {
+  return (
+    <span className="flex flex-wrap items-center gap-1">
+      <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, row.status ?? 'Draft')}>{statusLabel(row.status)}</StatusBadge>
+      {row.status === 'Closed' && reevaluate.has(row.id) && <ReevaluateBadge />}
+    </span>
+  );
 }
 
 function TriggerCell({ row, dateTime }: { row: RcaCaseListItemView; dateTime: ColumnContext['dateTime'] }) {
@@ -52,7 +65,7 @@ function caseColumns(context: ColumnContext): DataTableColumn<RcaCaseListItemVie
         </span>
       ),
     },
-    { id: 'status', header: 'Status', cell: (row) => <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, row.status ?? 'Draft')}>{statusLabel(row.status)}</StatusBadge>, nowrap: true },
+    { id: 'status', header: 'Status', cell: (row) => <StatusCell row={row} reevaluate={context.reevaluate} />, nowrap: true },
     { id: 'priority', header: 'Priority', cell: (row) => <StatusBadge tone={toneOf(PRIORITY_TONES, row.priority ?? 'Medium')}>{row.priority ?? 'Medium'}</StatusBadge>, nowrap: true },
     { id: 'lead', header: 'Lead', cell: (row) => (row.teamLeadId ? context.userName(row.teamLeadId) : <span className="text-muted-foreground">No lead</span>) },
     { id: 'unit', header: 'Unit', cell: (row) => context.unitName(row.unitId) },
@@ -72,7 +85,12 @@ export function CaseTable({ filters, empty }: { filters: CaseListFilters; empty:
   const paged = useRcaCasePage(toCaseQuery(filters));
   const leadIds = useMemo(() => paged.rows.map((row) => row.teamLeadId), [paged.rows]);
   const users = useUserNames(leadIds);
-  const columns = useMemo(() => caseColumns({ unitName, userName: users.nameOf, day, date, dateTime, prefetch }), [unitName, users.nameOf, day, date, dateTime, prefetch]);
+  const reevaluations = useReevaluateRecommendations();
+  const reevaluate = useMemo(() => new Set((reevaluations.data ?? []).flatMap((rec) => (rec.rcaId ? [rec.rcaId] : []))), [reevaluations.data]);
+  const columns = useMemo(
+    () => caseColumns({ unitName, userName: users.nameOf, day, date, dateTime, prefetch, reevaluate }),
+    [unitName, users.nameOf, day, date, dateTime, prefetch, reevaluate],
+  );
   return (
     <div data-testid="case-list">
       <DataTable

@@ -15,7 +15,7 @@
  * settings from .env like scripts/bootstrap-admin.ts.
  */
 import * as dotenv from 'dotenv';
-import { parseCliArgs } from '../../src/migration-cutover/cli/cli-args';
+import { parseCliArgs } from '../../src/common/cli/cli-args';
 import { seedCalendar } from './step-calendar';
 import { seedCodes } from './step-codes';
 import { ensurePlant, ensureSuperAdmin } from './step-admin';

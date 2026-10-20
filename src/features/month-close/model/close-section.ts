@@ -3,6 +3,7 @@ export const CLOSE_SECTIONS = [
   { value: 'periods', label: 'Periods' },
   { value: 'days', label: 'Days' },
   { value: 'proposals', label: 'Proposals' },
+  { value: 'exceptions', label: 'Exceptions' },
   { value: 'history', label: 'History' },
 ] as const;
 

@@ -16,6 +16,7 @@ import { RcaAttachmentsService } from '../rca-case/rca-attachments.service';
 import { RcaCaseCommandsService } from '../rca-case/rca-case-commands.service';
 import { RcaCasesService } from '../rca-case/rca-cases.service';
 import { RcaCauseReportService } from '../rca-case/rca-cause-report.service';
+import { RcaPortfolioService } from '../rca-case/portfolio/rca-portfolio.service';
 import { RcaCausesService } from '../rca-case/rca-causes.service';
 import { RcaHistoryService } from '../rca-case/rca-history.service';
 import { RcaLinksService } from '../rca-case/rca-links.service';
@@ -492,6 +493,7 @@ const RCA_SERVICES = [
   RcaHistoryService,
   RcaCausesService,
   RcaCauseReportService,
+  RcaPortfolioService,
 ];
 @Module({
   providers: RCA_SERVICES.map((provide) => ({ provide, useValue: {} })),

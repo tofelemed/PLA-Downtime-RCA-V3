@@ -61,6 +61,8 @@ export interface MonthCloseActionView {
   actor: PersonRef | null;
   reason: string | null;
   detail: Record<string, unknown>;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   createdAt: string;
 }
 

@@ -2,6 +2,8 @@ import type { UncertaintyBudgetView } from '@/api/v2/types/uncertainty';
 import { Badge } from '@/components/ui/badge';
 import { useUserNames } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
+import { selfDecisionKindOf } from '@/features/ux-kit/self-decision-kind';
 import { BudgetActions } from './budget-actions';
 import { BudgetResult } from './budget-result';
 
@@ -45,7 +47,8 @@ export function BudgetCard({ budget, timezone }: { budget: UncertaintyBudgetView
       <p className="text-xs text-muted-foreground">
         Proposed by {users.nameOf(budget.authorId)}
         {budget.decidedBy && ` · ${budget.state === 'rejected' ? 'rejected' : 'approved'} by ${users.nameOf(budget.decidedBy)}`}
-        {budget.decisionReason && `: ${budget.decisionReason}`}
+        {budget.decisionReason && `: ${budget.decisionReason}`}{' '}
+        <SelfDecisionBadge selfDecided={budget.selfDecided} kind={selfDecisionKindOf(budget.state)} />
       </p>
       {budget.notes && <p className="text-xs">{budget.notes}</p>}
       <BudgetActions budget={budget} />

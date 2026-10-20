@@ -13,6 +13,7 @@ import { OwnerActionsScreen } from '../actions/owner-actions-screen';
 import { actionFiltersFromParams, DEFAULT_ACTION_FILTERS, paramsFromActionFilters, type ActionQueueFilters } from '../model/action-queue-filters';
 import { filtersFromParams, filtersOfChip, legacyRedirect, paramsFromFilters, type CaseListFilters } from '../model/case-filters';
 import { RecommendedTab } from '../recommendations/recommended-tab';
+import { CauseCodeFilterChip } from './cause-code-filter-chip';
 import { CaseFiltersBar } from './case-filters-bar';
 import { CaseSummary } from './case-summary';
 import { CaseTable } from './case-table';
@@ -27,6 +28,7 @@ function CasesSection({ filters, onChange, onClear }: { filters: CaseListFilters
     <Section title="Investigations">
       <div className="space-y-3">
         <CaseFiltersBar value={filters} onChange={onChange} />
+        {filters.causeCodeId && <CauseCodeFilterChip causeCodeId={filters.causeCodeId} onRemove={() => onChange({ ...filters, causeCodeId: undefined })} />}
         <CaseTable
           filters={filters}
           empty={{
@@ -108,7 +110,7 @@ function ListScreen() {
   );
 }
 
-/** `/rca`: the investigations (search, status, priority, target-date and open filters; 20 per page), the actions (`?tab=actions`) and open recommendations. */
+/** `/rca`: the investigations (search, status, priority, target-date, open and cause-code filters; 20 per page), the actions (`?tab=actions`) and open recommendations. */
 export function RcaListPage() {
   const tenantId = useV2TenantId();
   const { canViewAnalysis } = useCapabilities();

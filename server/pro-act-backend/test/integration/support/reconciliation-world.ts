@@ -34,6 +34,8 @@ export interface ReconciliationBody {
     approvalSnapshotId: string | null;
     rejectReason: string | null;
     currentRunId: string | null;
+    /** item 1.3: approved by a party of its own submission (SuperAdmin only) */
+    selfDecided?: boolean;
   };
   publishedRevision: number | null;
   baseRunId: string | null;

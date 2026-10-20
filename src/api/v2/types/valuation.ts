@@ -59,6 +59,8 @@ export interface ValuationPolicyView {
   approved: boolean;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   effectiveFrom: string;
   effectiveTo: string | null;
   /** the stored body, unchanged (v1 may carry the `XXX` placeholder) */

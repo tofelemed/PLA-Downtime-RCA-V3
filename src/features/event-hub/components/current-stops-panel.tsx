@@ -26,7 +26,10 @@ export interface CurrentStopsPanelProps {
   onCode?: (event: ProductionEventView) => void;
 }
 
-/** Ongoing (open) events of the chosen units (§16.2 current stops), independent of the list window. */
+/**
+ * Ongoing (open) events of the chosen units (§16.2 current stops), independent of the list window: cards
+ * that fill the available width (a strip above the Event Hub table), one quiet line when none is running.
+ */
 export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPanelProps) {
   const { number } = useNumberFormat();
   const env = useEventHubEnv();
@@ -35,18 +38,27 @@ export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPane
   const stops = flattenPages(query.data?.pages);
   const state = dataStateOf(query, { isEmpty: stops.length === 0 });
   const count = query.hasNextPage ? `${number(stops.length)}+` : number(stops.length);
+  if (state === 'empty') {
+    // nothing running: one quiet line instead of an empty box
+    return (
+      <p className="rounded-md border px-3 py-2 text-sm text-muted-foreground" data-testid="current-stops" data-empty="true">
+        <span className="font-medium text-foreground">Current stops (0)</span> · No ongoing stops.
+      </p>
+    );
+  }
   return (
     <Section title={`Current stops (${count})`} headingLevel={2} className="rounded-md border p-3">
       <div data-testid="current-stops" className="space-y-2">
-        <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? 'No ongoing stops.' : undefined}>
-          <ul className="space-y-2">
+        <DataState state={state} error={query.error} onRetry={() => query.refetch()}>
+          {/* cards side by side, as many as fit the width (one column in a narrow side panel) */}
+          <ul className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(17rem,1fr))]">
             {stops.map((stop) => (
               <CurrentStop key={stop.id} stop={stop} onClose={onClose} onCode={onCode} />
             ))}
           </ul>
         </DataState>
         {query.hasNextPage && (
-          <Button size="sm" variant="outline" className="w-full" disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
+          <Button size="sm" variant="outline" disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()}>
             Show more ongoing stops
           </Button>
         )}

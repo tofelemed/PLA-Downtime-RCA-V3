@@ -179,7 +179,7 @@ describe('PI frames through the durable intake (plan 1.5)', () => {
       ).toBe(0);
     });
 
-    it('quarantines an unplaceable frame (unknown_unit) and mirrors it into unmapped_events', async () => {
+    it('quarantines an unplaceable frame (unknown_unit) in the intake exceptions', async () => {
       const lost = `EF-${randomUUID()}`;
 
       const result = await app
@@ -193,14 +193,6 @@ describe('PI frames through the durable intake (plan 1.5)', () => {
         [lost],
       );
       expect(exception).toEqual({ error_code: 'unknown_unit', state: 'open' });
-      expect(
-        await countRows(
-          harness.dataSource,
-          'unmapped_events',
-          'source_id = $1',
-          [lost],
-        ),
-      ).toBe(1);
     });
 
     it('writes event messages to the outbox only when the revision commits', async () => {

@@ -15,6 +15,7 @@ import { AnalyticsHeader } from './components/analytics-header';
 import { useAnalyticsScope } from './hooks/use-analytics-scope';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { plaPagesFor } from './model/money-access';
+import { parseCapacityFilters } from './capacity-gap/capacity-gap-model';
 
 const PAGES = {
   overview: lazy(() => import('./tabs/waterfall-tab').then((module) => ({ default: module.WaterfallTab }))),
@@ -23,6 +24,7 @@ const PAGES = {
   reconciliation: lazy(() => import('./tabs/reconciliation-view').then((module) => ({ default: module.ReconciliationView }))),
   oee: lazy(() => import('./tabs/oee-tab').then((module) => ({ default: module.OeeTab }))),
   valuation: lazy(() => import('./pages/valuation-page').then((module) => ({ default: module.LossValuationPage }))),
+  capacity: lazy(() => import('./capacity-gap/capacity-gap-page').then((module) => ({ default: module.CapacityGapPage }))),
 };
 
 export function PlaAnalyticsPage() {
@@ -55,12 +57,15 @@ function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   const { canViewMoney } = useCapabilities();
   const page = PLA_PAGES.find((entry) => entry.key === view) ?? PLA_PAGES[0];
   const Content = PAGES[view];
+  // capacity gap reads one instant (its own "as of" filter), not the shared window
+  const asOfDate = view === 'capacity' ? parseCapacityFilters(params).asOf : undefined;
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="pla-analytics-v2" data-view={view}>
-        <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} description={page.description} overview={view === 'overview'} />
+        <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} description={page.description} overview={view === 'overview'} asOfDate={asOfDate} />
         <AnalysisPageNav label="Production loss analysis pages" pages={plaPagesFor(PLA_PAGES, canViewMoney)} />
-        <AnalyticsFilters scope={scope} onChange={change} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />
+        {/* capacity gap: no window or ledger, it has its own unit / product / as-of filters */}
+        {view !== 'capacity' && <AnalyticsFilters scope={scope} onChange={change} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />}
         <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>
           <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>
         </AnalysisSnapshotContext.Provider>

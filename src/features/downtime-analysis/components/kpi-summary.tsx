@@ -6,7 +6,8 @@ import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { useControllableView } from '../hooks/use-controllable-view';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
-import { CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
+import { CALENDAR_TILES, CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
+import { CalendarBasisSection } from './calendar-basis-section';
 import { ControllableSwitch } from './controllable-switch';
 import { DataCoverageNote } from './data-coverage-note';
 import { ReportCard } from './report-card';
@@ -22,7 +23,8 @@ const QUALITY_LABELS: Readonly<Record<string, string>> = {
  * KPI summary (KPI05 / KPI06, DT04): the period KPIs of the scope from `GET /reports/downtime-bundle` — the
  * server's summed terms (of the filtered schedule class, when one is chosen), shown with their labels, cohorts
  * and null reasons; nothing is added up here. The
- * switch adds the server's controllable availability (SME D15) beside the headline figures.
+ * switch adds the server's controllable availability (SME D15) beside the headline figures. Units/days without a
+ * calculation run follow under their own "Calendar basis" badge (plan 2.3), never mixed into these tiles.
  */
 export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundleResult; compact?: boolean }) {
   const summary = bundle.data?.data.summary;
@@ -48,6 +50,11 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
       {compact && <details className="mt-3"><summary className="cursor-pointer text-sm text-primary">More downtime figures</summary>
         <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">{SUMMARY_TILES.filter((tile) => !headline.has(tile.metric)).map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}</dl>
       </details>}
+      <CalendarBasisSection calendar={bundle.data?.data.calendarBasis}>
+        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="calendar-basis-tiles">
+          {CALENDAR_TILES.map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(bundle.data?.data.calendarBasis?.total, tile.metric)} />)}
+        </dl>
+      </CalendarBasisSection>
     </ReportCard>
   );
 }

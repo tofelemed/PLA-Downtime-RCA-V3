@@ -58,6 +58,8 @@ export interface SourceAuthorityVersionView {
   rejectedBy: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   notes: string | null;
   /** commissioning backdate: the past instant it takes effect from on approval, and why (null = approval time) */
   requestedEffectiveFrom: string | null;

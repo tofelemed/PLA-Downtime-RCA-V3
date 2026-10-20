@@ -223,6 +223,14 @@ export class RcaCaseV2ListQueryDto extends ListQueryDto {
   reasonCodeId?: string;
 
   @ApiPropertyOptional({
+    description:
+      'Cases with at least one typed cause of this catalogue code (retired codes included)',
+  })
+  @IsOptional()
+  @IsUUID()
+  causeCodeId?: string;
+
+  @ApiPropertyOptional({
     maxLength: 100,
     description: 'Case-insensitive title search',
   })

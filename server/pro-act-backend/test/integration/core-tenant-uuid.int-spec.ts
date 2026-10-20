@@ -4,13 +4,10 @@ import { at, EventWorld, seedEventWorld } from './support/seed-event-world';
 
 const MIGRATION = 'CoreTenantUuid1794070000000';
 
+// the v1 analysis tables (fmea_analyses … change_analyses, rca_analysis_configs) are converted here too, but
+// `DropV1RcaTables1794240500000` drops them afterwards (and `DropV1LegacyTables1794240600000` drops
+// rca_trigger_configs), so after a full run they are not checked
 const RCA_CHILDREN = [
-  'fmea_analyses',
-  'five_why_analyses',
-  'fault_tree_analyses',
-  'fishbone_diagrams',
-  'barrier_analyses',
-  'change_analyses',
   'rca_fmea_analyses',
   'rca_five_why_analyses',
   'rca_fault_tree_analyses',
@@ -26,8 +23,6 @@ const CONVERTED = [
   'assets',
   'pi_connections',
   'rcas',
-  'rca_analysis_configs',
-  'rca_trigger_configs',
   ...RCA_CHILDREN,
 ];
 

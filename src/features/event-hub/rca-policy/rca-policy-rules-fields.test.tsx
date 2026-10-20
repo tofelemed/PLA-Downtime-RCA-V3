@@ -24,4 +24,15 @@ describe('RCA policy effectiveness fields', () => {
     fireEvent.change(field, { target: { value: '90' } });
     expect(set).toHaveBeenCalledWith('minimumCoveragePercent', '90');
   });
+
+  it('D-T4: offers the Critical tier ("not set — the default applies" on older versions) and critical zero-repeat', () => {
+    const set = vi.fn();
+    render(<RcaPolicyRulesFields draft={rulesDraftOf(RULES)} set={set} />);
+    const tier = screen.getByTestId('rca-tier-critical');
+    expect(tier).toHaveTextContent('Critical: method groups');
+    expect(tier).toHaveTextContent('not set — the default applies');
+    expect(screen.getByTestId('rca-tier-major')).not.toHaveTextContent('not set');
+    fireEvent.click(screen.getByLabelText('Critical consequence'));
+    expect(set).toHaveBeenCalledWith('zeroRepeatClasses', ['major', 'critical']);
+  });
 });

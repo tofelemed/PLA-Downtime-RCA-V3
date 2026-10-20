@@ -186,12 +186,12 @@ describe('window select (E-2)', () => {
 describe('event list (C-9, C-10, E-1, E-6)', () => {
   const context = { unitName: ENV.unitName, reasonName: ENV.reasonName, assetName: () => 'Extruder 1', dateTime: () => '2026-10-15 06:00', listSearch: '', prefetch: () => undefined };
 
-  it('adds Asset and Source columns, one inline state cell and a start-time sort toggle', () => {
+  it('shows the asset under the unit, a Source column, one inline state cell and a start-time sort toggle', () => {
     const onSort = vi.fn();
     const columns = eventColumns({ ...context, sort: { value: 'newest', onChange: onSort } });
-    expect(columns.map((c) => c.id)).toEqual(['start', 'duration', 'unit', 'asset', 'type', 'reason', 'states', 'origin']);
+    expect(columns.map((c) => c.id)).toEqual(['start', 'duration', 'unit', 'type', 'reason', 'states', 'origin']);
     const cell = (id: string) => columns.find((c) => c.id === id)?.cell(STOP, 0);
-    wrap(<table><tbody><tr>{['unit', 'asset', 'states', 'origin'].map((id) => <td key={id}>{cell(id)}</td>)}</tr></tbody></table>);
+    wrap(<table><tbody><tr>{['unit', 'states', 'origin'].map((id) => <td key={id}>{cell(id)}</td>)}</tr></tbody></table>);
     expect(screen.getByTestId('unit-label')).toHaveTextContent('Extruder Line 1unit100');
     expect(screen.getByTestId('unit-label')).toHaveAttribute('title', 'Code unit100');
     expect(screen.getByTestId('event-asset')).toHaveTextContent('Extruder 1');

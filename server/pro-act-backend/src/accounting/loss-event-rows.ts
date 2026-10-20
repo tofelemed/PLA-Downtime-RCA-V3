@@ -1,3 +1,4 @@
+import { storedReasonWeights } from '../domain/events/reason-weights';
 import {
   GradeChange,
   LossEvent,
@@ -17,6 +18,8 @@ export interface EventRow {
   impact_fraction: string | null;
   quantity: string | null;
   reason_code_id: string | null;
+  /** D-T5 weighted reasons (jsonb) */
+  reason_weights: unknown;
   impact_code_id: string | null;
   failure_mode: string | null;
   asset_id: string | null;
@@ -39,7 +42,7 @@ export interface EventRow {
 /** Columns of a loss event with its asset type, reason code and latest revision. */
 const EVENT_SELECT = `SELECT e."id", e."unit_id", e."occurrence_id", e."physical_type", e."start_time", e."end_time", e."schedule_class",
        e."oee_component", e."impact_mode", e."impact_fraction"::text AS "impact_fraction", e."quantity"::text AS "quantity",
-       e."reason_code_id", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
+       e."reason_code_id", e."reason_weights", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
        e."from_product_id", e."to_product_id", e."catalyst_family", e."operating_mode", e."stream_code", e."recovery_of_event_id",
        e."failure_severity", e."disposition_class", a."asset_type", rc."code" AS "reason_code",
        r."id" AS "revision_id", r."revision"
@@ -102,6 +105,7 @@ export function toEvent(
     impactFraction: row.impact_fraction,
     quantity: row.quantity,
     reasonCodeId: row.reason_code_id,
+    reasonWeights: storedReasonWeights(row.reason_weights),
     impactCodeId: row.impact_code_id,
     failureMode: row.failure_mode,
     assetId: row.asset_id,

@@ -36,7 +36,7 @@ export function failureModeKey(
 
 /** SQL expression of `failureModeKey` over `production_events` alias `e` (same normalization). */
 export function failureModeKeySql(match: RepeatMatch): string {
-  if (match === 'asset') return `''`;
+  if (match === 'asset') return `''::text`;
   const norm = (column: string) =>
     `NULLIF(lower(btrim(regexp_replace(COALESCE(e."${column}", ''), '\\s+', ' ', 'g'))), '')`;
   const base = `COALESCE('mode:' || ${norm('failure_mode')}, 'reason:' || e."reason_code_id"::text)`;

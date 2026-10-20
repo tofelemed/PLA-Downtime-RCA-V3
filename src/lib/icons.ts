@@ -13,6 +13,8 @@ import {
   Handshake,
   Bell,
   Siren,
+  Repeat,
+  Target,
   ArrowLeftRight,
   Banknote,
   BookOpen,
@@ -22,6 +24,7 @@ import {
   CalendarClock,
   CalendarCog,
   CalendarRange,
+  ChartBarDecreasing,
   ChartColumnDecreasing,
   ChartLine,
   ChartNoAxesCombined,
@@ -190,6 +193,10 @@ export const EntityIcon = {
   rcaCase: Microscope,
   knowledge: BookOpen,
   badActor: Siren,
+  /** item 1.1: catalogue causes ranked by the cases that name them */
+  recurringCause: Repeat,
+  /** item 2.1: loss → cause → action → outcome portfolio */
+  rcaPortfolio: Target,
   task: ListChecks,
   user: User,
   team: Users,
@@ -220,6 +227,8 @@ export const EntityIcon = {
   lossBreakdown: ChartPie,
   lossTrends: ChartSpline,
   oee: Gauge,
+  /** item 1.2: approved rate kinds side by side (nameplate → planning) */
+  capacityGap: ChartBarDecreasing,
   reconciliation: Scale,
   settings: Settings,
   administration: ShieldCheck,

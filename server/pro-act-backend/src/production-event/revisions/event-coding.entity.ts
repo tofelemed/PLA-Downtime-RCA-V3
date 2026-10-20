@@ -1,4 +1,12 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import {
+  Check,
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  Unique,
+} from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
 import {
   IMPACT_MODES,
@@ -9,6 +17,7 @@ import {
   ScheduleClass,
 } from '../../domain/events/event-classification';
 import { CodeVersion } from '../../code-library/code-version.entity';
+import { ReasonWeight } from '../../domain/events/reason-weights';
 import { decimalStringTransformer } from '../../v2/common/decimal-string.transformer';
 import { ProductionEvent } from '../production-event.entity';
 import { EventFacts } from './event-facts';
@@ -19,6 +28,10 @@ import { EventFacts } from './event-facts';
  * columns hold the stable code ids; `*_version_id` the exact code versions at coding time (plan 1.3).
  */
 @Entity('event_coding')
+@Check(
+  'CHK_event_coding_reason_weights',
+  `"reason_weights" IS NULL OR jsonb_typeof("reason_weights") = 'array'`,
+)
 @Unique('UQ_event_coding_event_revision', ['eventId', 'revision'])
 @Index('IDX_event_coding_tenant_event', ['tenantId', 'eventId'])
 export class EventCoding extends TenantScopedEntity {
@@ -34,6 +47,10 @@ export class EventCoding extends TenantScopedEntity {
 
   @Column({ name: 'reason_code_id', type: 'uuid', nullable: true })
   reasonCodeId: string | null;
+
+  /** D-T5: the weighted reasons of this coding (null = `reason_code_id` alone) */
+  @Column({ name: 'reason_weights', type: 'jsonb', nullable: true })
+  reasonWeights: ReasonWeight[] | null;
 
   @Column({ name: 'impact_code_id', type: 'uuid', nullable: true })
   impactCodeId: string | null;

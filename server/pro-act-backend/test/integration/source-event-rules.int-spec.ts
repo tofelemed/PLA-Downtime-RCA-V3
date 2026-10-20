@@ -134,6 +134,74 @@ describe('coding_default rules on MQTT and state-engine events (plan 3.8)', () =
     expect(after.user_overrides ?? {}).toEqual({});
   });
 
+  it('keeps the rule basis of untouched axes when a PATCH sets a new reason code (item 8 Q2)', async () => {
+    const delivered = frame(-190, -180);
+    await env.app
+      .get(PiFrameIngestService)
+      .ingest(await mqttContext(), delivered, {});
+    const event = await classified('"event_id"', delivered.WebId);
+    const read = await env.get(`production-events/${event.id}`).expect(200);
+    await env
+      .patch(
+        `production-events/${event.id}`,
+        { reasonCodeId: reasonId },
+        read.headers.etag,
+      )
+      .expect(200);
+    const after = await classified('"id"', event.id);
+    expect(after).toMatchObject({
+      schedule_class: 'planned',
+      oee_component: 'quality',
+      classification_basis: {
+        scheduleClass: { source: 'code_default' },
+        oeeComponent: { source: 'declarative_rule', ruleId },
+      },
+    });
+  });
+
+  it('re-applies the rules when a source revision changes the event type, keeping a user override (item 8 Q1)', async () => {
+    const delivered: PiEventFrame = {
+      ...frame(-160, -150),
+      TemplateName: 'IOW Deviation',
+    };
+    const ingest = env.app.get(PiFrameIngestService);
+    await ingest.ingest(await mqttContext(), delivered, {});
+    const event = await classified('"event_id"', delivered.WebId);
+    expect(event).toMatchObject({
+      schedule_class: 'external',
+      oee_component: 'quality',
+    });
+    const read = await env.get(`production-events/${event.id}`).expect(200);
+    await env
+      .patch(
+        `production-events/${event.id}`,
+        { oeeComponent: 'performance' },
+        read.headers.etag,
+      )
+      .expect(200);
+    // the source now delivers the frame as a production loss: ProductionLoss re-derives the axes
+    const revised = await ingest.ingest(
+      await mqttContext(),
+      { ...delivered, TemplateName: 'Production Loss' },
+      {},
+    );
+    expect(revised.outcome).toBe('updated');
+    const [after] = await env.rows<ClassifiedRow & { event_type: string }>(
+      `SELECT "event_type", "schedule_class", "oee_component", "classification_basis", "user_overrides"
+         FROM "production_events" WHERE "id" = $1`,
+      [event.id],
+    );
+    expect(after).toMatchObject({
+      event_type: 'ProductionLoss',
+      schedule_class: 'external',
+      oee_component: 'performance',
+      classification_basis: {
+        scheduleClass: { source: 'declarative_rule', ruleId, ruleVersion: 1 },
+      },
+    });
+    expect(after.user_overrides).toHaveProperty('oeeComponent');
+  });
+
   it('never overwrites the schedule class the delivered reason code states', async () => {
     const delivered = frame(-240, -200);
     await env.app

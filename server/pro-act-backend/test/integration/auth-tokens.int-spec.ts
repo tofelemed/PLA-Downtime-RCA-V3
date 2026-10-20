@@ -177,8 +177,9 @@ describe('JWT hardening (plan 3.11)', () => {
       [userId],
     );
     // the token still says Engineer; roles come from the database on every request
+    // (creating events needs an event-writer role, so RolesGuard refuses a viewer first)
     const refused = await create().expect(403);
-    expect((refused.body as ErrorBody).code).toBe('READ_ONLY_ROLE');
+    expect((refused.body as ErrorBody).code).toBe('FORBIDDEN_ROLE');
     await harness.dataSource.query(
       `UPDATE users SET role = 'Engineer' WHERE id = $1`,
       [userId],

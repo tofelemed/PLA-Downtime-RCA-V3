@@ -48,10 +48,10 @@ describe('ProductionEventQueryDto (v1 GET /production-events)', () => {
     expect(parsed.page).toBeUndefined();
   });
 
-  it('coerces paging numbers and caps pageSize at 500', async () => {
-    const parsed = await parse({ page: '2', pageSize: '500' });
-    expect(parsed).toMatchObject({ page: 2, pageSize: 500 });
-    expect(await rejectedFields({ pageSize: '501' })).toContain('pageSize');
+  it('coerces paging numbers and caps pageSize at 200 (plan 1.6)', async () => {
+    const parsed = await parse({ page: '2', pageSize: '200' });
+    expect(parsed).toMatchObject({ page: 2, pageSize: 200 });
+    expect(await rejectedFields({ pageSize: '201' })).toContain('pageSize');
     expect(await rejectedFields({ page: '0' })).toContain('page');
   });
 

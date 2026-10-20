@@ -140,6 +140,7 @@ export async function appendCoding(
       eventId: event.id,
       revision: input.revision,
       reasonCodeId: event.reasonCodeId ?? null,
+      reasonWeights: event.reasonWeights ?? null,
       impactCodeId: event.impactCodeId ?? null,
       oeeCodeId: event.oeeCodeId ?? null,
       reasonCodeVersionId: versions.reason ?? null,

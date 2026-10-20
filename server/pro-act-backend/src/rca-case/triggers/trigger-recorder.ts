@@ -165,7 +165,7 @@ export async function recordCandidate(
 }
 
 /** `RCARecommended` (spec §15.4) on the outbox: badges refresh through the realtime feed. */
-async function announce(
+export async function announce(
   manager: EntityManager,
   evaluation: RcaTriggerEvaluation,
 ): Promise<void> {

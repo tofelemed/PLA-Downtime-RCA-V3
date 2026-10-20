@@ -12,6 +12,7 @@ export const TRIGGER_LABELS: Readonly<Record<string, string>> = {
   cost: 'High valued loss',
   quantity: 'Large lost quantity',
   rule: 'RCA trigger rule',
+  reevaluate: 'Recurred after closure',
 };
 
 /** Thresholds that a critical asset lowers (production thresholds; cost and repeats are never scaled). */
@@ -75,6 +76,16 @@ function consequenceText(detail: Detail): string | null {
   return value ? `event marked ${value} (${kind === 'solType' ? 'type' : 'severity'})` : marker;
 }
 
+/** D-T3 watch: incidents since the closure and the guarded rate against the case's frozen baseline. */
+function reevaluateText(detail: Detail, digits?: DigitSystem): string | null {
+  const incidents = num(detail, 'incidents');
+  const rate = text(detail, 'guardedRate');
+  const baseline = text(detail, 'baselineRate');
+  if (incidents === null || !rate || !baseline) return null;
+  const count = `${formatNumber(incidents, 0, digits)} ${incidents === 1 ? 'incident' : 'incidents'} since closure`;
+  return `${count}: ${formatDecimal(rate, 2, digits)} per 1,000 run hours (baseline ${formatDecimal(baseline, 2, digits)})`;
+}
+
 const DETAIL_TEXT: Readonly<Record<string, (detail: Detail, digits?: DigitSystem) => string | null>> = {
   duration: durationText,
   repeat: repeatText,
@@ -82,6 +93,7 @@ const DETAIL_TEXT: Readonly<Record<string, (detail: Detail, digits?: DigitSystem
   quantity: quantityText,
   cost: costText,
   consequence: consequenceText,
+  reevaluate: reevaluateText,
 };
 
 /** What the server recorded when the trigger fired, in plain words and the plant's digits (empty when nothing usable). */

@@ -11,6 +11,10 @@ import {
 } from '../../domain/events/event-classification';
 import { ClassificationBasis } from '../../code-library/classification-basis';
 import { isOpenEvent } from '../../domain/events/open-event';
+import {
+  ReasonWeight,
+  storedReasonWeights,
+} from '../../domain/events/reason-weights';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { EventFacts } from '../../production-event/revisions/event-facts';
@@ -74,6 +78,11 @@ export interface ProductionEventV2View {
   };
   planId: string | null;
   reasonCodeId: string | null;
+  /**
+   * D-T5: the reasons the stop is split across, largest first (the first is `reasonCodeId`), 8-place
+   * weights adding up to 1; null = `reasonCodeId` alone
+   */
+  reasonWeights: ReasonWeight[] | null;
   /** SME D12: explicitly under investigation (no specific reason yet) */
   investigationPending: boolean;
   /** SME D13: supervisor verification of the coding and maintenance validation of the failure detail */
@@ -176,6 +185,7 @@ export function toProductionEventV2View(
     },
     planId: event.planId ?? null,
     reasonCodeId: event.reasonCodeId ?? null,
+    reasonWeights: storedReasonWeights(event.reasonWeights),
     investigationPending: event.investigationPending ?? false,
     verification: {
       verifiedBy: event.verifiedBy ?? null,

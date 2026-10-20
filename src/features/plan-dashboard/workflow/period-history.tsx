@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, REVISION_LIFECYCLE_LABELS, useUserNames, WORKFLOW_ACTION_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { actorLabel } from '../model/display';
 import { ChangeProposalsPanel } from './change-proposals-panel';
 import { ExportPanel } from './export-panel';
@@ -29,7 +30,16 @@ export function PeriodHistory({ view, timezone }: PeriodHistoryProps) {
   const userId = useCurrentUserId();
   const columns: DataTableColumn<ApprovalActionView>[] = [
     { id: 'at', header: 'When', nowrap: true, cell: (a) => <PlantTime iso={a.at} tz={timezone} withDate /> },
-    { id: 'action', header: 'Action', cell: (a) => <span data-testid="history-action" data-action={a.action}>{labelOf(ACTION_LABELS, a.action)}</span> },
+    {
+      id: 'action',
+      header: 'Action',
+      cell: (a) => (
+        <span className="flex flex-wrap items-center gap-1">
+          <span data-testid="history-action" data-action={a.action}>{labelOf(ACTION_LABELS, a.action)}</span>
+          <SelfDecisionBadge selfDecided={a.selfDecided} kind={a.action === 'approve' ? 'approved' : 'decided'} />
+        </span>
+      ),
+    },
     { id: 'change', header: 'State', cell: (a) => `${labelOf(REVISION_LIFECYCLE_LABELS, a.fromLifecycle)} → ${labelOf(REVISION_LIFECYCLE_LABELS, a.toLifecycle)}` },
     { id: 'by', header: 'By', cell: (a) => actorLabel(a.actorId, userId, users.nameOf, a.service) },
     { id: 'reason', header: 'Reason', cell: (a) => a.reason ?? '—' },

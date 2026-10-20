@@ -1166,3 +1166,135 @@ Audit of the PI path end to end against a sample PI Web API shaped like a real o
   8. **Security defaults.** The egress allowlist is open when `CONNECTOR_EGRESS_ALLOWLIST` is empty and credential encryption falls back to a built-in key without `CREDENTIAL_ENCRYPTION_KEY`/`JWT_SECRET`. Recommend refusing to start in production without both.
   9. **Per-record mapping loads.** The normaliser loads the attribute profile, resolver and coding rules for every frame; ancestors are looked up one GET at a time. Recommend a short per-connection cache keyed by mapping versions.
   10. **Diagnostics are browser-session only.** The stage tracker's "Validate" and "Discover" reset on reload. Recommend storing the last test result on the connection.
+
+
+## 2026-10-19 — Tier 1 / Tier 2 decisions (`plans/TIER1_TIER2_PLAN.md`)
+
+- **D-T1 Rate kinds (owner: "according to our guide and standards").** Meanings follow `docs/PROACT_APPLICATION_GUIDE.md` and SME answer Q16 (`plans/SME_ANSWERS_ALL_PHASES_2026-10-14.md`, GE PLA benchmark):
+  - **nameplate:** the design reference;
+  - **demonstrated:** a rate the unit has proven it can reach;
+  - **sustained:** the approved sustainable capability, used by the capacity ledger;
+  - **planning:** the time-specific planned rate, used by the plan ledger;
+  - **budget / forecast:** imported reference rates.
+
+  The capacity-gap report shows them side by side, never adds the views together, and never lowers capability from recent performance.
+- **D-T2 v1 cutover (owner: "yes").** The v1 → v2 cutover is complete, so v1 routes with no remaining consumer may be retired (410 Gone) or scoped and paginated.
+- **D-T3 Recurrence watch (owner: agreed).** A closed case is watched for 180 days. A same-mode unplanned incident rate above the case's frozen baseline recommends "re-evaluate". The case is never reopened automatically.
+- **D-T4 Investigation depth (owner: "standard and common practice").** API RP 585 / CCPS-style tiers by consequence class:
+  - **minor:** 5-Why;
+  - **moderate:** 5-Why or fishbone, plus a team charter;
+  - **major:** logic tree or fault tree, plus a team charter and coded causes;
+  - **critical:** logic tree plus FMEA or fault tree, a team charter, coded causes and independent closure (already required).
+
+  To be confirmed against the plant's own matrix when it is available.
+- **D-T5 Weighted multi-reason stops (owner: "standard and common practice").** As in Yokogawa Exaquantum/DTA:
+  - Weights are optional, set by the person who codes the stop, and must sum to 100%. They can be entered as percent or duration.
+  - A stop crossing a day or shift boundary is split pro-rata.
+  - Weights split one stop's own loss only.
+  - Concurrent separate stops still follow the overlap policy (`first_out`), and the weighting applies inside the share the stop received.
+  - Conservation checks are unchanged.
+
+## 2026-10-19 — Tier 1 implementation (engineering defaults; `plans/TIER1_TIER2_PLAN.md`)
+
+- **1.1 Recurring causes page** at `/reliability/causes` (menu "Recurring causes", same gate as Bad actors). It shows the server ranking from `GET /v2/reports/rca-causes`; nothing is summed or re-sorted in the browser. Roles without money access get no loss column and rank by number of investigations only. The drill goes to `/rca?causeCodeId=`. **API (additive):** `GET /v2/rcas?causeCodeId=<uuid>` lists the cases that have a typed cause with that catalogue code, retired codes included, within the caller's scope.
+- **1.2 Capacity gap report.** **API (new):** `GET /v2/reports/capacity-gap?at&unitIds&productIds&limit`. It returns one row per approved profile in force at `at`, across all operating modes, at most 200 rows with a `truncated` flag. The approved rate in force is shown for each kind.
+  - Signed gaps N−D, D−S and S−P, each with ratio gap ÷ upper. Ratios S÷N and P÷S.
+  - A gap or ratio is null with a reason (`not_set`, `uom_mismatch`, `timebase_mismatch`, `zero_base`). Units are never converted.
+  - Budget and forecast are shown for reference only.
+  - The page sits under PLA analytics → "Capacity gap". "As of" means 00:00 plant time on the chosen date.
+- **1.4 Rule provenance on PATCH.** Setting a new reason code keeps the `declarative_rule` basis of axes the request doesn't write (item 8, open question 2, closed).
+- **1.6 v1 surfaces (D-T2).** Seeders, e2e specs and integration fixtures still use these routes, so they are **hardened, not retired. Public API changes:**
+  - v1 `GET /api/production-events` always returns `{items,total,page,pageSize}`: default 50 rows, max 200, and `pageSize` > 200 is a 400. The unpaged array is gone.
+  - v1 `GET /api/tasks` without `tenantId` returns the acting tenant's tasks only.
+  - v1 `GET/PUT/DELETE /api/tasks/:id` return 404 outside the acting tenant, including for SuperAdmin.
+
+  `unmapped_events` is no longer written: intake `ingestion_exceptions` is the only quarantine. The table is kept.
+
+  **Still open:** the legacy `/socket.io` gateway has no client but is injected by about 16 v1 services, so retiring it is a separate step. v1 `GET /api/production-events/:id` still relies on RLS for scope.
+- **1.5 Orphan v1 RCA tables.** Twelve entity-only folders (`fishbone-diagram` … `rca-recommendation`) are kept. Removing them requires a drop migration of tables that may hold old v1 data, so they wait for an owner decision.
+- **1.3 SuperAdmin self-decisions are visible.** One server-computed field, `selfDecided`.
+  - Source: the stored `super_admin_override` on adjustments, dispositions and uncertainty budgets. Everywhere else it is derived from actor ids, because a match can only be a SuperAdmin; everyone else gets a 403.
+  - Views that carry it: master-data and plan versions, FX, valuation policy, demand status, source authority and status mappings, the reconciliation revision and its approval history (approve, reject and bridge review, each by its own command's independence rule), change proposals, day certification, month-close history steps, RCA closure, and action completion. Baseline corrections carry `baselineCorrectionSelfDecided`.
+  - Approved-ledger CSV gains a last column `self_approved`. The PDF gains the fact line "Approval: Self-approved (SuperAdmin)".
+  - Badges: "Self-approved (SuperAdmin)" for approvals, "Self-decided (SuperAdmin)" for rejections, reviews, sign-offs and certifications, in warning tone.
+  - Not exposed yet: coding verification/validation (needs a per-event lookup on the event list), tolerance adoption, restatement posting, plan "return", rule activation (the author is not kept after activation). No new durable flag was added.
+  - Month-close marks are derived from the history window the view reads.
+
+## 2026-10-20 — Tier 2 implementation (engineering defaults on D-T3 / D-T4 / D-T5; `plans/TIER1_TIER2_PLAN.md`)
+
+- **2.1 Loss → Cause → Action → Outcome portfolio.** **API (new):** `GET /v2/reports/rca-portfolio` (`from`/`to` ≤ 400 days, `unitIds`, `causeKind` root|direct|contributing, `currency` USD|IRR, keyset `limit` ≤ 50). Page "Cause portfolio" at `/reliability/portfolio`.
+  - A case counts when it was **opened** in the window.
+  - Rows are per catalogue code of the chosen cause kind, plus an "Uncoded" row. A case counts once in every code it names, so rows are never totalled.
+  - Approved loss uses the same calculation as the case outcome and the recurring-causes report.
+  - Approved, claimed and realised figures are separate and never summed. Other-currency claims are counted, not converted.
+  - Realised difference is summed per metric over each case's latest evaluated action.
+  - Follow-up: a grouped variant of the approved-lines query, so approved impact is one statement per page instead of one per row.
+- **2.2 Recurrence watch (D-T3).**
+  - Baseline: the highest pre-action rate among the case's verified actions, with the exposure basis frozen with it. Cases without a verified action are not watched.
+  - Window: closure to now, at most 180 days.
+  - It fires when at least one same-mode incident occurs and incidents ÷ max(run hours, the action's minimum exposure, default 720 h) × 1,000 exceeds the baseline.
+  - The result is a `reevaluate` recommendation (fired after closure). A manager approver dismisses it, or reopening accepts it; the case is never reopened automatically.
+  - Migration `1794240200000-RcaRecurrenceWatch`. `GET /v2/rca-recommendations` gains `trigger` and `rcaId` filters.
+- **2.7 Investigation depth (D-T4).**
+  - New consequence class **`critical`**: migration `1794240210000`, and the `consequenceClass` enum gains `critical`. `significant` serves as the "moderate" tier.
+  - The matrix `d-t4-v1` is a code constant applied on top of the plant's `rca_policy` tiers. A deeper method satisfies a lower tier (API RP 585 "minimum rigour").
+  - Unclassified cases still get `CONSEQUENCE_CLASS_MISSING`. Cases already in Monitoring or later are never blocked.
+  - Readiness codes: `METHOD_REQUIRED` (with `methods`), `TEAM_CHARTER_REQUIRED`, `CODED_CAUSE_REQUIRED`; `rules.investigationDepth` describes the rule in force.
+  - Follow-up: the RCA policy editor does not show the `critical` tier yet.
+- **2.3 Calendar-basis downtime KPIs.**
+  - A calendar day is a plant production day: the default site's timezone and operational day start, 23 or 25 hours on a DST change, UTC midnight when there is no site.
+  - It is used only where no calculated period overlaps the unit and day. A partly calculated day stays run-based, so nothing is mixed.
+  - The response carries a separate `calendarBasis` section (calendar availability, total and unplanned downtime, stop count, MTBF on confirmed failures over calendar run time), never added into run-based totals.
+  - It is left out (with a reason in `omitted`) under approved-only, product, shift or crew, or schedule-class filters.
+  - The micro-stop and overlap rules come from the unit's `oee_policy`, or the D04 default, marked `policy: 'default'`.
+- **2.4 Accounting exceptions queue.** **API (new):** `GET /v2/reconciliation/exceptions` (operational dates ≤ 400 days, `types`, `unitIds`, `workflowStates`, keyset). A new "Exceptions" tab in Month close.
+  - It covers periods that are not approved, with eight types, read from stored state only.
+  - Residual, claim, bridge and plan-allocation conditions reflect the latest calculation, not unsaved draft decisions.
+- **2.5 RCA case PDF.** **API:** `POST /v2/exports` gains `reportType: rca_case`, `revisionSelector: case` and `rcaId` (PDF only, money roles only, 404 for a case the caller cannot read). Migration `1794240100000-ExportRcaCase`; its down leaves the enum values in place.
+  - The case is pinned at request time, so re-rendering gives the same bytes.
+  - Money appears in the display currency only.
+  - The timeline comes from the case history.
+  - Self-decided closure and actions are marked.
+- **2.6 Rules on source revisions.** When a source revision changes the event type, axes stated by a user or a reason code keep their value. Every other axis is re-filled by the active `coding_default` rules, with the `declarative_rule` basis, or else takes the event-type default. Rules are loaded only when the type actually changes (item 8, open question 1, closed).
+- **2.8 Weighted multi-reason stops (D-T5).** **API:** `PATCH /v2/production-events/{id}` and bulk-code `codes` gain `reasonWeights` (percent, or seconds for closed stops; at most 10 reasons). The event view gains `reasonWeights`. Migration `1794240400000-WeightedReasonStops`.
+  - Weights are stored to 8 places with the remainder on the largest. The primary reason is the largest weight (ties go to the one the request names).
+  - Setting a new reason code or clearing the reason removes the split. A changed split clears verification.
+  - In the engine, after `first_out` / `equal_share` allocation, a stop's segment share is split by weight into one line per (event, reason), with evidence share = segment share × weight. Conservation is unchanged, and unweighted results are byte-identical (fixtures WR01–WR04).
+  - Weights apply to stops and micro-stops, not to fractional derates or grade transitions. Upstream starvation inherits the upstream stop's weights.
+  - **`ACCOUNTING_ENGINE_VERSION` 2.8.0** and **`KPI_ENGINE_VERSION` 2.7.11**: the downtime breakdown by reason splits weighted stops by weight, and the stop count stays under the primary reason.
+  - Follow-ups:
+    - Bulk-code dialog UI has no split section yet.
+    - Merge takes the template event's split.
+
+## 2026-10-20 — v1 RCA tables dropped; Tier 2 follow-ups
+
+- **v1 RCA tables dropped (owner: "yes drop v1").** Migration `1794240500000-DropV1RcaTables` drops the ten v1 RCA tables that nothing reads or writes any more: `fishbone_diagrams`, `five_why_analyses`, `fault_tree_analyses`, `fmea_analyses`, `barrier_analyses`, `change_analyses`, `logic_tree_nodes`, `rca_analysis_configs`, `rca_evidence`, `rca_recommendations`.
+  - All ten were empty on the plant database, and no other table referenced them.
+  - The entity folders are removed.
+  - `down()` recreates the empty tables exactly as before (from `src/database/legacy/v1-rca-tables.ddl.ts`): keys, indexes, foreign keys, child-tenant triggers and RLS.
+  - `evidence_categories` and `evidence_locations` are **kept**, because the v2 evidence options read them.
+  - Still open: the dead v1 columns on `rcas` (`calculated_roi`, `effectiveness_score`, …) and the legacy PLA tables.
+- **Tier 2 follow-ups fixed.**
+  1. On the Capacity gap view the header reads "<units> · As of <plant date | now>" instead of the shared window.
+  2. The bulk-code dialog offers "Split across several reasons". It is percent only: it sends `codes.reasonWeights`, the largest share becomes the reason, and Preview stays blocked until every row has a reason and a percent.
+  3. The RCA policy editor takes its classes from `RCA_CONSEQUENCE_CLASSES`, so it shows and saves the `critical` investigation tier and the zero-repeat class. Older versions without `critical` stay valid ("not set — the default applies").
+
+## 2026-10-20 — All unused v1 tables dropped; cutover tool retired (owner: "check all other v1 tables … if not drop them all", option "A + B + C")
+
+- **How it was checked.**
+  - Every TypeORM entity (173 tables) was matched to its references, using the class and the table name, across live backend code, the cutover tool, scripts and tests, and the frontend.
+  - Name clashes were checked through imports: `ProductionLoss` is also an event type, and `DataSource` is also TypeORM's class.
+  - Row counts and incoming foreign keys were read on `proact`. No views or functions depended on the tables.
+- **Dropped:** migration `1794240600000-DropV1LegacyTables`, 25 tables. `down()` recreates them empty from `src/database/legacy/v1-legacy-tables.ddl.ts`.
+  - **v1 tables nothing used:** `stream_alerts`, `stream_connection_configs`, `stream_data_sinks`, `stream_data_sources`, `stream_metrics`, `stream_processors`, `query_history`, `historian_tags`, `pi_af_elements`, `pi_events`, `data_sources`, `production_plan_templates`.
+  - **v1 tables only the cutover tool read:** `production_losses`, `reconcile_forms`, `loss_categories`, `oee_summaries`, `rca_trigger_configs`, `unmapped_events`. The 3 superseded quarantine rows were dropped; `ingestion_exceptions` is the quarantine.
+  - **The cutover tool's own tables:** `legacy_id_crosswalk`, `legacy_reported_values`, `legacy_write_freezes`, `migration_changes`, `migration_explanations`, `migration_reports` (1 cutover report row dropped), `migration_review`.
+- **Removed code:**
+  - `src/migration-cutover/**`: the comparison, remediation, report, CLI helpers, and the global v1 write-freeze interceptor.
+  - `scripts/cutover/*`.
+  - The 13 entity folders.
+  - The cutover integration specs and their fixture.
+  - The frontend message for `LEGACY_WRITES_FROZEN`.
+  - The shared CLI argument parser moved to `src/common/cli/cli-args.ts`, together with its own `UUID_PATTERN`, because seeders and maintenance scripts still use it.
+- **Kept, because v2 still uses them:** every other v1-era table, including `units`, `assets`, `products`, `production_events`, `production_plans`, `tasks`, `pi_connections`, `pi_mappings`, `pi_sync_jobs`, `pi_sync_watermarks`, `af_bindings`, `verification_status_codes`, `evidence_categories`, `evidence_locations` and `app_settings`.
+- **Coordination:** another session's `1794240610000-DropPiAfElementDuplicateIndex` now skips when `pi_af_elements` is absent. Its `1794240600000-MeasurementSamplesInsertedIndex` shares this migration's timestamp; the two are independent, so order doesn't matter.

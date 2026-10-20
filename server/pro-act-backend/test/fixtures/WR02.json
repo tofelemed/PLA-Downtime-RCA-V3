@@ -1,0 +1,41 @@
+{
+  "id": "WR02",
+  "title": "Weighted stop overlapping another stop: first_out (and equal_share) first, then the weights inside the share the stop received",
+  "kind": "numerical",
+  "spec_ref": "Tier 2 item 2.8; D-T5: concurrent separate stops follow the overlap policy (first_out), weighting applies inside the stop's share; SME Q11 / D7",
+  "owner_subphase": "2.8",
+  "tolerance": "0.000001",
+  "inputs": {
+    "shift": "02:30-10:30 (8 h), one slice, sustained 100 t/h",
+    "stops": [
+      {
+        "id": "E1",
+        "from": "04:30",
+        "to": "06:30",
+        "reasonWeights": { "R1": "0.60000000", "R2": "0.40000000" }
+      },
+      { "id": "E2", "from": "05:30", "to": "07:30", "reasonCodeId": "R3" }
+    ]
+  },
+  "expected": {
+    "first_out": {
+      "R1": "120",
+      "R2": "80",
+      "R3": "100",
+      "availability": "300"
+    },
+    "equal_share": {
+      "R1": "90",
+      "R2": "60",
+      "R3": "150",
+      "availability": "300"
+    },
+    "sharedSegmentShares": {
+      "R1": "0.30000000",
+      "R2": "0.20000000",
+      "R3": "0.50000000"
+    },
+    "issues": "0"
+  },
+  "status": "authored"
+}

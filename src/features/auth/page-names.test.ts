@@ -31,6 +31,8 @@ const PAGE_FILES: Readonly<Record<string, string>> = {
   '/period-accounting': 'shell/period-accounting/period-accounting-page.tsx',
   '/rca': 'rca/pages/rca-list-page.tsx',
   '/reliability/bad-actors': 'rca/bad-actors/bad-actor-page.tsx',
+  '/reliability/causes': 'rca/causes-report/cause-report-page.tsx',
+  '/reliability/portfolio': 'rca/portfolio/portfolio-page.tsx',
   '/rca-knowledge-base': 'rca-knowledge/rca-knowledge-page.tsx',
   '/tasks': 'tasks/tasks-page.tsx',
   '/connectivity': 'integration-console/pages/console-page.tsx',

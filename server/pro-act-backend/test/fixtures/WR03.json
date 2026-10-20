@@ -1,0 +1,24 @@
+{
+  "id": "WR03",
+  "title": "Weighted stop crossing a shift boundary: each shift gets its part of the stop, split by the same weights (pro-rata)",
+  "kind": "numerical",
+  "spec_ref": "Tier 2 item 2.8; D-T5: a stop crossing a day or shift boundary is split pro-rata",
+  "owner_subphase": "2.8",
+  "tolerance": "0.000001",
+  "inputs": {
+    "shifts": ["02:30-06:30 (shift A)", "06:30-10:30 (shift B)"],
+    "sustainedRatePerHour": "100",
+    "stop": { "id": "E1", "from": "05:30", "to": "07:30" },
+    "enteredSeconds": { "R1": "4800", "R2": "2400" },
+    "reasonWeights": [
+      { "reasonCodeId": "R1", "weight": "0.66666667" },
+      { "reasonCodeId": "R2", "weight": "0.33333333" }
+    ]
+  },
+  "expected": {
+    "perShift": { "R1": "66.666667", "R2": "33.333333", "availability": "100" },
+    "evidenceShares": { "R1": "0.66666667", "R2": "0.33333333" },
+    "issues": "0"
+  },
+  "status": "authored"
+}

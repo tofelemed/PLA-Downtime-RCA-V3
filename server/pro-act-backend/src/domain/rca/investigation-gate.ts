@@ -5,11 +5,18 @@ import {
   InvestigationRules,
 } from './rca-policy-rules';
 import { plural } from '../../common/helpers/plural';
+import {
+  coveredByDepth,
+  depthIssues,
+  METHOD_WORDS,
+} from './investigation-depth';
 
 export interface GateIssue {
   code: string;
   field: string;
   message: string;
+  /** `METHOD_REQUIRED`: the methods any one of which meets the requirement (D-T4) */
+  methods?: AnalysisMethod[];
 }
 
 export interface FiveWhyFacts {
@@ -25,6 +32,10 @@ export interface InvestigationFacts {
   teamSize: number;
   /** analysis methods with content */
   methods: readonly AnalysisMethod[];
+  /** the written team charter (D-T4: required from the significant class on) */
+  teamCharter: string | null;
+  /** root causes with a cause code (item 7 count; D-T4: required from the major class on) */
+  codedRootCauses: number;
   fiveWhy: FiveWhyFacts | null;
   fmea: { complete: boolean } | null;
   actionCount: number;
@@ -40,17 +51,6 @@ export interface GateResult {
   /** guidance that never blocks (CA6: five levels are a prompt, not a rule) */
   advice: GateIssue[];
 }
-
-const METHOD_WORDS: Readonly<Record<AnalysisMethod, string>> = {
-  five_why: '5-Why',
-  fishbone: 'fishbone',
-  fmea: 'FMEA',
-  fault_tree: 'fault tree',
-  barrier: 'barrier analysis',
-  change: 'change analysis',
-  logic_tree: 'logic tree',
-  timeline: 'timeline',
-};
 
 const written = (text: string | null | undefined): boolean =>
   Boolean(text?.trim());
@@ -120,18 +120,21 @@ function tierIssues(
         code: 'CONSEQUENCE_CLASS_MISSING',
         field: 'consequenceClass',
         message:
-          'set the consequence class (minor, significant, major) to know the investigation tier',
+          'set the consequence class (minor, significant, major, critical) to know the investigation tier',
       },
     ];
   }
-  const tier = rules[facts.consequenceClass];
+  const consequenceClass = facts.consequenceClass;
+  const tier = rules[consequenceClass];
   const issues = tier.methodGroups
     .filter((group) => !group.some((method) => facts.methods.includes(method)))
+    .filter((group) => !coveredByDepth(consequenceClass, group))
     .map((group) => ({
       code: 'METHOD_MISSING',
       field: 'analyses',
       message: `a ${facts.consequenceClass} case needs one of: ${group.map((m) => METHOD_WORDS[m]).join(', ')}`,
     }));
+  issues.push(...depthIssues(facts));
   if (facts.teamSize < tier.minTeamMembers) {
     issues.push({
       code: 'TEAM_TOO_SMALL',
@@ -143,8 +146,8 @@ function tierIssues(
 }
 
 /**
- * CA1 "investigation accepted" gate (Analysis → Monitoring), on the server: the consequence class and
- * its method tier (CA7), a written system-level root cause, the 5-Why content checks when a 5-Why was
+ * CA1 "investigation accepted" gate (Analysis → Monitoring), on the server: the consequence class, its
+ * method tier (CA7, plant policy) and its D-T4 depth (methods, team charter, coded causes), a written system-level root cause, the 5-Why content checks when a 5-Why was
  * used (CA6: evidence and causal sufficiency, not a level count), a complete FMEA when one was used
  * (CA5: missing ratings block approval), and at least one corrective action.
  */

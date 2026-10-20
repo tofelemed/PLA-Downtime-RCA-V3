@@ -12,6 +12,7 @@ import { ProvisionalRateBadge } from '../components/provisional-rate-badge';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { FxVersionActions } from './fx-version-actions';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { fxRateText } from '../model/fx-rate-text';
 import { PolicyPerson } from '../components/policy-person';
 
@@ -51,7 +52,7 @@ function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
           {rate.approvedAt && (
             <Fact label="Approved">
               {dates.dateTime(rate.approvedAt)}
-              {rate.approvedBy && <> by <PolicyPerson id={rate.approvedBy} /></>}
+              {rate.approvedBy && <> by <PolicyPerson id={rate.approvedBy} /></>} <SelfDecisionBadge selfDecided={rate.selfDecided} />
             </Fact>
           )}
         </dl>

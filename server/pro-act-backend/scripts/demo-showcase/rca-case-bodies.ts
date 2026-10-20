@@ -83,6 +83,7 @@ export function caseBody(
     teamLeadId: ctx.ids.users.get(lead) ?? null,
     teamMemberIds: teamOf(ctx, spec),
     targetCloseDate: iso(ctx.window.today + 21 * DAY_MS),
+    ...(spec.teamCharter ? { teamCharter: spec.teamCharter } : {}),
     rootCause: spec.rootCause,
     recommendations: spec.recommendations.map((title) => ({ title })),
     logicTree: logicTree(spec),

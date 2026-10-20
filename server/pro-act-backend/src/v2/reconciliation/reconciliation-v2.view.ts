@@ -11,6 +11,8 @@ import {
 } from '../../reconciliation/manual-proposal';
 import { ProposalAfterValues } from './proposal-after-values';
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
+import { isSelfDecision } from '../../domain/approvals/self-decision';
+import { revisionSelfApproved } from '../../domain/reconciliation/self-approval';
 import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
 import { ToleranceJustification } from '../../uncertainty/tolerance-justification';
@@ -60,6 +62,11 @@ export interface RevisionWorkflowV2View {
    * first revision. They never approve it (SEPARATION_OF_DUTIES), so the UI can say why.
    */
   openedBy: string | null;
+  /**
+   * item 1.3: approved by its submitter, opener, a line author or its bridge reviewer — a SuperAdmin
+   * self-approval (owner decision 2026-10-16); false until approved
+   */
+  selfDecided: boolean;
   comment: string | null;
 }
 
@@ -160,6 +167,7 @@ export interface ReconciliationV2View {
 
 export function toRevisionWorkflowView(
   r: AccountingRevision,
+  selfDecided = false,
 ): RevisionWorkflowV2View {
   return {
     id: r.id,
@@ -184,6 +192,7 @@ export function toRevisionWorkflowView(
     cancelledAt: iso(r.cancelledAt),
     afterClose: r.afterClose,
     openedBy: r.supersedesId ? r.createdBy : null,
+    selfDecided,
     comment: r.comment,
   };
 }
@@ -210,7 +219,15 @@ export function toReconciliationView(
     utcStart: period.utcStart.toISOString(),
     utcEnd: period.utcEnd.toISOString(),
     rowVersion: revision.rowVersion,
-    revision: toRevisionWorkflowView(revision),
+    revision: toRevisionWorkflowView(
+      revision,
+      revisionSelfApproved(revision.approvedBy, {
+        submittedBy: revision.submittedBy,
+        revisionOpenedBy: revision.supersedesId ? revision.createdBy : null,
+        lineAuthors: state.lines.map((line) => line.authorId),
+        bridgeReviewer: extra.bridgeReview.review?.by ?? null,
+      }),
+    ),
     publishedRevision: extra.publishedRevision,
     baseRunId: state.run?.id ?? null,
     contentHash: contentHashOf(state),
@@ -259,10 +276,15 @@ export interface ApprovalActionV2View {
   correlationId: string | null;
   /** SME R6: a rejection's failed lines, new due time and count; other steps' context */
   detail: Record<string, unknown>;
+  /** item 1.3: an approval, rejection or bridge review of one's own submission (SuperAdmin only) */
+  selfDecided: boolean;
   at: string;
 }
 
-export function toApprovalActionView(a: ApprovalAction): ApprovalActionV2View {
+export function toApprovalActionView(
+  a: ApprovalAction,
+  selfDecided = false,
+): ApprovalActionV2View {
   return {
     id: a.id,
     revisionId: a.revisionId,
@@ -275,6 +297,7 @@ export function toApprovalActionView(a: ApprovalAction): ApprovalActionV2View {
     submittedHash: a.submittedHash,
     correlationId: a.correlationId,
     detail: a.detail ?? {},
+    selfDecided,
     at: a.createdAt.toISOString(),
   };
 }
@@ -295,6 +318,8 @@ export interface ChangeProposalV2View {
   resolvedBy: string | null;
   resolvedAt: string | null;
   resolutionReason: string | null;
+  /** item 1.3: a manual proposal accepted or dismissed by its proposer (SuperAdmin only) */
+  selfDecided: boolean;
   createdRevisionId: string | null;
   /** SME R4: who proposed a manual correction, its reason and evidence (null for a system proposal) */
   manual: ManualProposalDetail | null;
@@ -324,6 +349,7 @@ export function toProposalView(
     resolvedBy: p.resolvedBy,
     resolvedAt: iso(p.resolvedAt),
     resolutionReason: p.resolutionReason,
+    selfDecided: isSelfDecision(p.resolvedBy, [manualDetailOf(p)?.proposedBy]),
     createdRevisionId: p.createdRevisionId,
     manual: manualDetailOf(p),
     valueAfter,

@@ -9,20 +9,27 @@ import { toneOf } from '@/features/ux-kit/status-tone';
 import { statusLabel } from '../../model/rca-labels';
 import { useCaseWorkspace } from '../case-context';
 import { CAUSES_ANCHOR } from '../../model/cause-form';
+import type { GateLinks } from '../../model/gate-messages';
 import { GateList } from './gate-list';
 import { MoveControls } from './move-controls';
 import { WorkflowFacts } from './workflow-facts';
 
+const gateLinks = (basePath: string): GateLinks => ({
+  analysis: `${basePath}/analysis`,
+  definition: `${basePath}/definition`,
+  causes: `${basePath}/analysis#${CAUSES_ANCHOR}`,
+});
+
 const offersMove = (readiness: RcaCaseReadinessView, to: string) => readiness.next.some((move) => move.to === to);
 
-function Gates({ readiness, causesPath }: { readiness: RcaCaseReadinessView; causesPath: string }) {
+function Gates({ readiness, links }: { readiness: RcaCaseReadinessView; links: GateLinks }) {
   const accepting = offersMove(readiness, 'Monitoring') && readiness.status !== 'Closure Review';
   const closing = offersMove(readiness, 'Closure Review') || offersMove(readiness, 'Closed');
   return (
     <div className="space-y-3">
-      {accepting && <GateList title="Needed to accept the investigation" issues={readiness.investigation.blockers} tone="blocker" testId="investigation-blockers" />}
-      <GateList title="Advice (does not block)" issues={readiness.investigation.advice} tone="advice" testId="investigation-advice" />
-      {closing && <GateList title="Needed for closure" issues={readiness.closure.blockers} tone="blocker" testId="closure-blockers" causesPath={causesPath} />}
+      {accepting && <GateList title="Needed to accept the investigation" issues={readiness.investigation.blockers} tone="blocker" testId="investigation-blockers" links={links} />}
+      <GateList title="Advice (does not block)" issues={readiness.investigation.advice} tone="advice" testId="investigation-advice" links={links} />
+      {closing && <GateList title="Needed for closure" issues={readiness.closure.blockers} tone="blocker" testId="closure-blockers" links={links} />}
     </div>
   );
 }
@@ -55,7 +62,7 @@ export function WorkflowPanel() {
               </StatusBadge>
             </div>
             <WorkflowFacts rca={rca} readiness={readiness.data} />
-            <Gates readiness={readiness.data} causesPath={`${basePath}/analysis#${CAUSES_ANCHOR}`} />
+            <Gates readiness={readiness.data} links={gateLinks(basePath)} />
             <ApproverNote readiness={readiness.data} />
             {canWrite && <MoveControls key={`${rca.id}:${rca.rowVersion}`} readiness={readiness.data} />}
           </div>

@@ -1,10 +1,10 @@
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePostingDecision } from '@/api/v2/queries/restatement';
 import type { PostingTreatment, RestatementView } from '@/api/v2/types/restatement';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { DateInput } from '@/features/ux-kit/date-inputs/date-input';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { POSTING_TREATMENT_LABELS, POSTING_TREATMENT_OPTIONS } from '../model/restatement-labels';
@@ -21,10 +21,7 @@ export function PostingForm({ data }: { data: RestatementView }) {
   const save = () => command.submit({ periodId: data.periodId, revision: data.revision, postingDate, treatment });
   return (
     <div className="flex flex-wrap items-end gap-3 text-sm" data-testid="posting-form">
-      <div className="space-y-1">
-        <Label htmlFor={`${id}-date`}>Posting date</Label>
-        <Input id={`${id}-date`} type="date" value={postingDate} onChange={(e) => setPostingDate(e.target.value)} data-testid="posting-date" />
-      </div>
+      <DateInput id={`${id}-date`} label="Posting date" value={postingDate} onChange={setPostingDate} required textEntry />
       <div className="space-y-1">
         <Label htmlFor={`${id}-treatment`}>Treatment</Label>
         <select id={`${id}-treatment`} className={SELECT} value={treatment} onChange={(e) => setTreatment(e.target.value as PostingTreatment)} data-testid="posting-treatment">

@@ -39,10 +39,6 @@ export class ProductionEventService {
     private readonly shiftLabels: ShiftLabelsService,
   ) {}
 
-  findAll(): Promise<ProductionEvent[]> {
-    return this.search({});
-  }
-
   /** v1 reads label `shift` from the generated shift instance (plan 2.1 step 5), not the stored text. */
   async findOne(id: string): Promise<ProductionEvent | null> {
     const event = await this.eventRepository.findOne({
@@ -54,11 +50,7 @@ export class ProductionEventService {
     return labelled;
   }
 
-  /** AND-combined filters, newest first. */
-  async search(query: ProductionEventQueryDto): Promise<ProductionEvent[]> {
-    return this.shiftLabels.apply(await this.buildSearch(query).getMany());
-  }
-
+  /** AND-combined filters, newest first, one page (default 50 rows, at most 200). */
   async searchPage(
     query: ProductionEventQueryDto,
   ): Promise<PagedResult<ProductionEvent>> {

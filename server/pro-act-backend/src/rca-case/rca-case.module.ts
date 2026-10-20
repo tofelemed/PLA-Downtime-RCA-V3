@@ -16,12 +16,14 @@ import { RcaCaseCommandsService } from './rca-case-commands.service';
 import { RcaCasesService } from './rca-cases.service';
 import { RcaCaseWorkflowService } from './rca-case-workflow.service';
 import { RcaCauseReportService } from './rca-cause-report.service';
+import { RcaPortfolioService } from './portfolio/rca-portfolio.service';
 import { RcaCausesService } from './rca-causes.service';
 import { RcaHistoryService } from './rca-history.service';
 import { RcaLinksService } from './rca-links.service';
 import { RcaOccurrencesService } from './rca-occurrences.service';
 import { RcaRecommendationsService } from './rca-recommendations.service';
 import { RcaVerificationService } from './rca-verification.service';
+import { RcaRecurrenceWatchJob } from './triggers/rca-recurrence-watch.job';
 import { RcaTriggerSweepJob } from './triggers/rca-trigger-sweep.job';
 import { RcaTriggerConsumer } from './triggers/rca-trigger.consumer';
 import { RcaTriggerService } from './triggers/rca-trigger.service';
@@ -54,6 +56,7 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     RcaHistoryService,
     RcaCausesService,
     RcaCauseReportService,
+    RcaPortfolioService,
     RcaOccurrencesService,
     RcaRecommendationsService,
     RcaActionsService,
@@ -64,6 +67,7 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     RcaApprovedTriggerService,
     RcaTriggerConsumer,
     RcaTriggerSweepJob,
+    RcaRecurrenceWatchJob,
   ],
   exports: [
     RcaCasesService,
@@ -75,6 +79,7 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     RcaHistoryService,
     RcaCausesService,
     RcaCauseReportService,
+    RcaPortfolioService,
     RcaOccurrencesService,
     RcaRecommendationsService,
     RcaActionsService,
@@ -84,6 +89,7 @@ import { RcaApprovedTriggerService } from './triggers/rca-approved-trigger.servi
     RcaTriggerService,
     RcaApprovedTriggerService,
     RcaTriggerSweepJob,
+    RcaRecurrenceWatchJob,
   ],
 })
 export class RcaCaseModule {}

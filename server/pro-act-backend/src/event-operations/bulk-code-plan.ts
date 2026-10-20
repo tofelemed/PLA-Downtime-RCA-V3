@@ -13,6 +13,7 @@ import {
   OeeComponent,
   ScheduleClass,
 } from '../domain/events/event-classification';
+import { storedReasonWeights } from '../domain/events/reason-weights';
 import { union } from '../domain/time/interval-algebra';
 import { prepareUpdate } from '../production-event/event-write-model';
 import { ProductionEvent } from '../production-event/production-event.entity';
@@ -152,6 +153,7 @@ export function codingPatch(
   if (codes.reasonCodeId) {
     columns.reasonCodeId = codes.reasonCodeId;
     columns.classificationBasis = Object.keys(basis).length > 0 ? basis : null;
+    Object.assign(columns, bulkWeightColumns(event, codes));
   }
   if (values.impactCodeId && !event.impactCodeId) {
     columns.impactCodeId = values.impactCodeId;
@@ -163,13 +165,30 @@ export function codingPatch(
   return columns;
 }
 
+/**
+ * D-T5: the weights a bulk code writes — its split, or none when it sets another reason than the stored
+ * primary (a stored split of the same primary is kept).
+ */
+function bulkWeightColumns(
+  event: ProductionEvent,
+  codes: BulkCodes,
+): Partial<ProductionEvent> {
+  if (codes.reasonWeights !== undefined)
+    return { reasonWeights: codes.reasonWeights };
+  return codes.reasonCodeId !== event.reasonCodeId && event.reasonWeights
+    ? { reasonWeights: null }
+    : {};
+}
+
 /** True when the bulk coding changes anything of the event's coding (QA audit F5: "events change"). */
 export function codingChanged(
   before: CodingSnapshot,
   after: CodingSnapshot,
 ): boolean {
-  return (Object.keys(before) as Array<keyof CodingSnapshot>).some(
-    (key) => before[key] !== after[key],
+  return (Object.keys(before) as Array<keyof CodingSnapshot>).some((key) =>
+    key === 'reasonWeights'
+      ? JSON.stringify(before[key]) !== JSON.stringify(after[key])
+      : before[key] !== after[key],
   );
 }
 
@@ -178,6 +197,7 @@ export function codingSnapshot(
 ): CodingSnapshot {
   return {
     reasonCodeId: event.reasonCodeId ?? null,
+    reasonWeights: storedReasonWeights(event.reasonWeights),
     assetId: event.assetId ?? null,
     investigationPending: event.investigationPending ?? false,
     impactCodeId: event.impactCodeId ?? null,

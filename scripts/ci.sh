@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND="$ROOT/server/pro-act-backend"
-SMOKE_SPECS=(e2e/auth.spec.ts e2e/tasks.spec.ts e2e/audit-auto-log.spec.ts)
+SMOKE_SPECS=(e2e/auth.spec.ts e2e/tasks.spec.ts e2e/audit-auto-log.spec.ts e2e/event-verification-d13.spec.ts e2e/plan-dashboard-ux05.spec.ts e2e/rca-integration-rca01-03.spec.ts)
 
 RUN_LINT=1 RUN_UNIT=1 RUN_INT=1 RUN_E2E=0
 for arg in "$@"; do

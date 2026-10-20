@@ -22,7 +22,7 @@ function PeriodCell({ row, timezone, pref }: { row: PeriodSummaryView; timezone:
       {formatOperationalDate(row.localDate, pref)}
       {row.shiftName ? ` · ${row.shiftName}` : ''}
       <span className="block text-xs text-muted-foreground">
-        <PlantTime iso={row.utcStart} tz={timezone} />
+        <PlantTime iso={row.utcStart} tz={timezone} stacked />
       </span>
     </span>
   );
@@ -45,7 +45,7 @@ function DueCell({ row, timezone }: { row: PeriodSummaryView; timezone: string }
   return (
     <span data-testid="cell-due" data-stage={sla.stage} data-overdue={sla.overdue}>
       <span className="block text-xs">{SLA_STAGE_LABELS[sla.stage]}</span>
-      {sla.dueAt && sla.stage !== 'waiting_for_data' && <PlantTime iso={sla.dueAt} tz={timezone} withDate />}
+      {sla.dueAt && sla.stage !== 'waiting_for_data' && <PlantTime iso={sla.dueAt} tz={timezone} withDate stacked />}
       <SlaBadges sla={sla} />
     </span>
   );
@@ -83,7 +83,7 @@ export function periodGridColumns(timezone: string, pref: CalendarPreference): D
       id: 'calculated',
       header: 'Calculated',
       nowrap: true,
-      cell: (row) => (row.run ? <span className="text-xs"><PlantTime iso={row.run.completedAt ?? row.run.startedAt} tz={timezone} withDate /></span> : 'not yet'),
+      cell: (row) => (row.run ? <span className="text-xs"><PlantTime iso={row.run.completedAt ?? row.run.startedAt} tz={timezone} withDate stacked /></span> : 'not yet'),
     },
   ];
 }

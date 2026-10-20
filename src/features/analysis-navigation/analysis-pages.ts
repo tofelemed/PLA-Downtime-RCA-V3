@@ -16,6 +16,7 @@ export const PLA_PAGES = [
   { key: 'oee', path: '/pla-analytics/oee', label: 'OEE', name: 'OEE', icon: EntityIcon.oee, description: 'Operational and reconciled availability, performance, quality and OEE' },
   { key: 'reconciliation', path: '/pla-analytics/reconciliation', label: 'Reconciliation & data quality', name: 'Reconciliation & data quality', icon: EntityIcon.reconciliation, description: 'Period workflow, unaccounted quantities and actuals coverage' },
   { key: 'valuation', path: '/pla-analytics/valuation', label: 'Loss valuation', name: 'Loss valuation', icon: EntityIcon.cost, description: 'Financial losses, economic components and missing valuation inputs' },
+  { key: 'capacity', path: '/pla-analytics/capacity-gap', label: 'Capacity gap', name: 'Capacity gap', icon: EntityIcon.capacityGap, description: 'Approved nameplate, demonstrated, sustained and planning rates side by side, with the gap between each step' },
 ] as const;
 
 export type DowntimeView = (typeof DOWNTIME_PAGES)[number]['key'];

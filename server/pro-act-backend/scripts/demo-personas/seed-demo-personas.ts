@@ -13,7 +13,7 @@
 import { Logger } from '@nestjs/common';
 import * as dotenv from 'dotenv';
 import { Client } from 'pg';
-import { parseCliArgs } from '../../src/migration-cutover/cli/cli-args';
+import { parseCliArgs } from '../../src/common/cli/cli-args';
 import {
   DemoWorld,
   ensureDemoWorld,

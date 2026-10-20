@@ -18,7 +18,7 @@ import {
   parseCliArgs,
   stringFlag,
   tenantFlag,
-} from '../../src/migration-cutover/cli/cli-args';
+} from '../../src/common/cli/cli-args';
 import {
   emailOf,
   PERSONA_PASSWORD,

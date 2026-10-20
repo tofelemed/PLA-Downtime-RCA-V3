@@ -166,6 +166,8 @@ export interface RcaCaseView extends RcaCaseSummaryView {
   closureRequestedAt: string | null;
   closureApprovedBy: string | null;
   closureApprovedAt: string | null;
+  /** item 1.3: the closure was approved by a party of the investigation (SuperAdmin only); absent from older servers */
+  selfDecided?: boolean;
   closureNote: string | null;
   /** CA2 effectiveness frozen when closure was requested */
   effectivenessVerdict: string | null;
@@ -334,6 +336,10 @@ export interface RcaActionView {
   completedAt: string | null;
   /** who checked the evidence and marked it done (never the owner) */
   completionVerifiedBy: string | null;
+  /** item 1.3: marked done by its owner (SuperAdmin only); absent from older servers */
+  selfDecided?: boolean;
+  /** item 1.3: the baseline correction was decided by its proposer (SuperAdmin only) */
+  baselineCorrectionSelfDecided?: boolean;
   verificationWindowStart: string | null;
   verificationWindowEnd: string | null;
   /** CA4: how the completion is verified (null = not stated) */

@@ -6,6 +6,7 @@ import { useCaseWorkspace } from '../case-context';
 import { WorkflowPanel } from '../workflow/workflow-panel';
 import { CaseStepper } from './case-stepper';
 import { DefinitionSummary } from './definition-summary';
+import { ReevaluateNotice } from './reevaluate-notice';
 
 function Progress({ rca }: { rca: RcaCaseView }) {
   const analyses = useRcaAnalyses(rca.id);
@@ -19,6 +20,7 @@ export function OverviewPage() {
   const { rca } = useCaseWorkspace();
   return (
     <>
+      <ReevaluateNotice />
       <Section title="Progress" description="Where the investigation stands and what it has so far; the checklist is a guide and blocks nothing.">
         <Progress rca={rca} />
       </Section>

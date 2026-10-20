@@ -5,6 +5,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { BASIS_SHORT_LABELS, DISTRIBUTION_LABELS, labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
 /** Versions newest first with approval, supersession and change reasons (plan history), 20 per page. */
@@ -21,7 +22,14 @@ export function VersionHistory({ planId, timezone }: { planId: string; timezone:
       id: 'approved',
       header: 'Approved',
       nowrap: true,
-      cell: (v) => (v.approvedAt ? <span className="text-xs"><PlantTime iso={v.approvedAt} tz={timezone} withDate /> · {users.nameOf(v.approvedBy)}</span> : '—'),
+      cell: (v) =>
+        v.approvedAt ? (
+          <span className="text-xs">
+            <PlantTime iso={v.approvedAt} tz={timezone} withDate /> · {users.nameOf(v.approvedBy)} <SelfDecisionBadge selfDecided={v.selfDecided} />
+          </span>
+        ) : (
+          '—'
+        ),
     },
     { id: 'supersedes', header: 'Replaces', cell: (v) => (v.supersedesVersionId ? `Version ${numberOf.get(v.supersedesVersionId) ?? 'earlier'}` : '—') },
     { id: 'reason', header: 'Change reason', cell: (v) => v.changeReason ?? '—' },

@@ -28,7 +28,7 @@ test.describe('ADM-09 cutover tooling and write freeze', () => {
       const result = await call<ApiErrorBody>(helena.token, 'GET', path);
       expect([404, 405]).toContain(result.status);
     }
-    note(test.info(), 'observation', 'Plan 3.10 delivers the MIG04 comparison and the freeze as CLI scripts (scripts/cutover/*.ts); no HTTP endpoint and no UI shows a freeze or a report.');
+    note(test.info(), 'observation', 'The v1 → v2 cutover is complete and its tooling (comparison, remediation, write freeze) is retired (2026-10-20); no HTTP endpoint and no UI shows a freeze or a report.');
 
     // a v1 write on every plant is accepted (a frozen plant answers 423 LEGACY_WRITES_FROZEN)
     const lucas = await apiLogin(USERS.lucas);

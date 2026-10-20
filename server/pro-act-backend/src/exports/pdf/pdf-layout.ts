@@ -69,7 +69,7 @@ function basisNote(bases: readonly string[]): string {
 type Header = PdfPage['header'];
 
 /** Cuts blocks into pages; a table that does not fit continues on the next page under its heading. */
-class Paginator {
+export class Paginator {
   readonly pages: PdfPage[] = [];
   private used = 0;
 
@@ -99,6 +99,13 @@ class Paginator {
     }
     this.page.blocks.push(...blocks);
     this.used += cost;
+  }
+
+  /** Starts a new page when fewer than `lines` remain on a page that has content (keeps a heading with its table). */
+  ensure(lines: number): void {
+    if (this.used + lines > PAGE_LINES && this.page.blocks.length > 0) {
+      this.newPage();
+    }
   }
 
   table(heading: string, block: Extract<PdfBlock, { kind: 'table' }>): void {

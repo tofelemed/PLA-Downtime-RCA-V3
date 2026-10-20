@@ -3,6 +3,7 @@ import type { RcaCaseView } from '@/api/v2/types/rca';
 import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_VERDICT_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { useRcaFormat } from '../../use-rca-format';
 import { RunHourPolicyNote } from './run-hour-policy-note';
 
@@ -42,7 +43,11 @@ export function WorkflowFacts({ rca, readiness }: { rca: RcaCaseView; readiness:
         {readiness.linkedRecurrences === 0 ? 'None linked by the triggers' : `${readiness.linkedRecurrences} linked to this investigation by the triggers since it opened`}
       </Fact>
       {requested && <Fact label="Closure requested by">{requested}</Fact>}
-      {approved && <Fact label="Closure approved by">{approved}</Fact>}
+      {approved && (
+        <Fact label="Closure approved by" testId="workflow-closure-approved">
+          {approved} <SelfDecisionBadge selfDecided={rca.selfDecided} />
+        </Fact>
+      )}
       {rca.residualRisk && (
         <Fact label="Residual risk">
           <span className="whitespace-pre-wrap">{rca.residualRisk}</span>

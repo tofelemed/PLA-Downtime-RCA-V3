@@ -3397,6 +3397,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reconciliation/exceptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open accounting problems of the periods that are not approved: one row per period and problem type
+         * @description Types, from stored state only (nothing is recalculated on read): residual_beyond_tolerance, claim_exceeds_component, bridge_required, plan_allocation_required (flags of the latest run’s slice totals), stale_submission, substitute_source (actuals of the latest run from a substitute source), uncoded_stop_time (live stops of the period without a reason, not marked investigation pending) and duplicate_merge_pending (suggested duplicate-stop pairs whose kept stop overlaps the period). Periods of the operational dates [fromDate, toDate) in the caller’s unit scope; keyset on period start, period and type. Each row has a short message and the screen that fixes it.
+         */
+        get: operations["ReconciliationExceptionsV2Controller_list_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/period-change-proposals": {
         parameters: {
             query?: never;
@@ -3986,6 +4006,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/capacity-gap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Approved nameplate, demonstrated, sustained and planning rates side by side, with the gap between each step
+         * @description One row per approved profile (unit, product, operating mode) in force at `at` (default now), with the approved rate version of each kind in force then (budget and forecast shown as references). A kind without one is null ("not set"); nothing is inferred. gaps: nameplate − demonstrated, demonstrated − sustained, sustained − planning (decimal strings; ratio = gap / upper); ratios: sustained / nameplate and planning / sustained. Null with reason not_set, uom_mismatch, timebase_mismatch (never converted) or zero_base. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units. At most `limit` (≤ 200) rows by unit, product and mode; `truncated` when more match.
+         */
+        get: operations["CapacityGapReportV2Controller_report_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/feature-flags": {
         parameters: {
             query?: never;
@@ -4231,7 +4271,7 @@ export interface paths {
         };
         /**
          * Search cases of your scope (newest first)
-         * @description Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q). Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).
+         * @description Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), catalogue cause code of a typed cause (causeCodeId), title (q). Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).
          */
         get: operations["RcaCasesV2Controller_list_v2"];
         put?: never;
@@ -4459,6 +4499,26 @@ export interface paths {
          * @description Cases of your tenant and units (unitId narrows it; kind filters the cause kind). Top `limit` (max 50) by cases; approved loss = events and loss lines linked to those cases, approved revisions only, in the policy default valuation view (null amount when not valued, never estimated). sort=approvedLoss orders that top set by the amount in `currency` (default USD).
          */
         get: operations["RcaCauseReportV2Controller_report_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/reports/rca-portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cases of your scope opened in a window, by coded cause: approved loss, actions, verdicts, claims and realised differences
+         * @description Rows group the cases by the catalogue code of their causes of `causeKind` (root by default); cases without one form the Uncoded row (key `uncoded`). Keyset pages ordered by number of cases (`limit` ≤ 50, `cursor`). Approved loss = linked events and loss lines, approved revisions only, in `currency` (USD default, IRR); claimed avoided loss is the owners’ figure in that currency; realised difference is per verification metric. The three are never added together. Money is left out for roles without it.
+         */
+        get: operations["RcaPortfolioV2Controller_report_v2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7473,6 +7533,23 @@ export interface components {
              */
             overrideClassification: boolean;
         };
+        ReasonWeightInputDto: {
+            /**
+             * Format: uuid
+             * @description Reason (cause) code
+             */
+            reasonCodeId: string;
+            /**
+             * @description Share of the stop in percent (0 < p ≤ 100; the percents add up to 100)
+             * @example 60
+             */
+            percent?: string;
+            /**
+             * @description Share of the stop in seconds (the seconds add up to the closed stop’s duration within 1 s)
+             * @example 1800
+             */
+            seconds?: number;
+        };
         BulkCodesDto: {
             /**
              * Format: uuid
@@ -7490,6 +7567,8 @@ export interface components {
             assetId?: string;
             /** @description SME D12: no specific reason yet — the stops are explicitly under investigation (false clears the flag) */
             investigationPending?: boolean;
+            /** @description D-T5: split every selected stop across these reasons by percent (Σ 100; seconds are refused because the stops differ in length). The largest becomes reasonCodeId. 422 REASON_WEIGHTS_* on a broken rule */
+            reasonWeights?: components["schemas"]["ReasonWeightInputDto"][];
         };
         BulkCodeV2Dto: {
             /** @description Why (kept in the revisions) */
@@ -7762,6 +7841,8 @@ export interface components {
             startTime?: string;
             /** @description Why the event is changed; stored on the user revision (`change_reason`) and its coding revision */
             changeReason?: string;
+            /** @description D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s duration ±1 s). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule */
+            reasonWeights?: components["schemas"]["ReasonWeightInputDto"][] | null;
         };
         ResolveReviewItemDto: {
             /**
@@ -9227,8 +9308,11 @@ export interface components {
             reason: string;
         };
         CreateExportDto: {
-            /** @enum {string} */
-            reportType: "period_summary" | "loss_lines";
+            /**
+             * @description `period_summary` / `loss_lines`: approved period revisions. `rca_case`: one RCA case as a PDF (definition, team, status timeline, causes, analyses, actions with verification, approved / claimed / realised figures, closure approval), with revisionSelector `case` and `rcaId`; a case the caller cannot read is 404.
+             * @enum {string}
+             */
+            reportType: "period_summary" | "loss_lines" | "rca_case";
             /**
              * @description `csv`: every column, ISO UTC times, both reporting currencies. `pdf`: a printable report on the plant clock, calendar and digits, money in `currency`; at most EXPORT_PDF_MAX_SOURCES (500) period revisions (422 EXPORT_TOO_LARGE).
              * @enum {string}
@@ -9240,10 +9324,10 @@ export interface components {
              */
             currency?: "USD" | "IRR";
             /**
-             * @description `published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported.
+             * @description `published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review content is never exported. `case`: reportType rca_case only (needs rcaId only; PDF only, 422 FORMAT_NOT_SUPPORTED for CSV).
              * @enum {string}
              */
-            revisionSelector: "published" | "revision_ids";
+            revisionSelector: "published" | "revision_ids" | "case";
             /** @description Window start (inclusive), ISO 8601 */
             from?: string;
             /** @description Window end (exclusive), ISO 8601 */
@@ -9252,6 +9336,8 @@ export interface components {
             unitIds?: string[];
             /** @description Approved revision ids (revision_ids selector) */
             revisionIds?: string[];
+            /** @description The RCA case to export (reportType rca_case only) */
+            rcaId?: string;
         };
         FxRateCreateDto: {
             /** @example 2026-10-01T02:30:00Z */
@@ -9539,7 +9625,7 @@ export interface components {
              * @description SME CA7 actual or potential consequence (minor / significant / major) → investigation tier
              * @enum {string|null}
              */
-            consequenceClass?: "minor" | "significant" | "major" | null;
+            consequenceClass?: "minor" | "significant" | "major" | "critical" | null;
             /**
              * @description Medium when omitted
              * @enum {string}
@@ -9572,7 +9658,7 @@ export interface components {
              * @description SME CA7 actual or potential consequence (minor / significant / major) → investigation tier
              * @enum {string|null}
              */
-            consequenceClass?: "minor" | "significant" | "major" | null;
+            consequenceClass?: "minor" | "significant" | "major" | "critical" | null;
             /**
              * @description Medium when omitted
              * @enum {string}
@@ -15892,6 +15978,37 @@ export interface operations {
             };
         };
     };
+    ReconciliationExceptionsV2Controller_list_v2: {
+        parameters: {
+            query: {
+                /** @description Periods of operational dates on or after this date (YYYY-MM-DD, plant production day) */
+                fromDate: string;
+                /** @description Periods of operational dates before this date (exclusive, YYYY-MM-DD); ≤ 400 days after fromDate */
+                toDate: string;
+                /** @description Repeat for several types; omitted = every type */
+                types?: ("residual_beyond_tolerance" | "claim_exceeds_component" | "bridge_required" | "plan_allocation_required" | "stale_submission" | "substitute_source" | "uncoded_stop_time" | "duplicate_merge_pending")[];
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
+                /** @description Workflow state of the period; omitted = every state that is not approved */
+                workflowStates?: ("none" | "draft" | "in_review" | "stale")[];
+                /** @description nextCursor of the previous page */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     ChangeProposalsV2Controller_propose_v2: {
         parameters: {
             query?: never;
@@ -16733,6 +16850,32 @@ export interface operations {
             };
         };
     };
+    CapacityGapReportV2Controller_report_v2: {
+        parameters: {
+            query?: {
+                /** @description Instant the approved profile and rate versions must be in force at (ISO 8601 with an offset); default now */
+                at?: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
+                /** @description Repeat for several products; omitted: every product */
+                productIds?: string[];
+                /** @description Rows at most; `truncated` tells when more profiles match */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     FeatureFlagsV2Controller_list_v2: {
         parameters: {
             query?: never;
@@ -17060,6 +17203,8 @@ export interface operations {
                 assetId?: string;
                 /** @description Cases with a linked event coded with this reason */
                 reasonCodeId?: string;
+                /** @description Cases with at least one typed cause of this catalogue code (retired codes included) */
+                causeCodeId?: string;
                 /** @description Case-insensitive title search */
                 q?: string;
                 priority?: "Low" | "Medium" | "High" | "Critical";
@@ -17412,6 +17557,37 @@ export interface operations {
                 sort?: "cases" | "approvedLoss";
                 currency?: string;
                 limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    RcaPortfolioV2Controller_report_v2: {
+        parameters: {
+            query: {
+                /** @description Cases opened at or after this instant (ISO 8601 with offset); the window counts a case by its opening */
+                from: string;
+                /** @description Cases opened before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read (tenant-wide cases for a tenant-wide caller only). */
+                unitIds?: string[];
+                /** @description The cause kind whose catalogue code groups the cases; cases without such a code form the Uncoded row */
+                causeKind?: "direct" | "contributing" | "root";
+                /** @description Approved loss and claims are reported in this currency only (nothing converted) */
+                currency?: "USD" | "IRR";
+                limit?: number;
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -17978,6 +18154,10 @@ export interface operations {
                 eventIds?: string[];
                 state?: "open" | "accepted" | "dismissed";
                 unitId?: string;
+                /** @description Only recommendations of this trigger kind (e.g. `reevaluate`: the recurrence watch of closed cases, D-T3) */
+                trigger?: string;
+                /** @description Only recommendations about this case (e.g. its `reevaluate` recommendation) */
+                rcaId?: string;
             };
             header?: never;
             path?: never;

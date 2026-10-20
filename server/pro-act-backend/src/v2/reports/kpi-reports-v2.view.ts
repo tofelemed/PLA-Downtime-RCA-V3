@@ -2,6 +2,7 @@ import { formatDec } from '../../domain/actuals/decimal';
 import { combine, GroupTerms, unitOf } from '../../domain/kpi/aggregate';
 import { KpiMetric, KpiQuality, KpiUnit } from '../../domain/kpi/kpi.types';
 import { AnalyticsResponse, ListScope } from '../common/response';
+import { CalendarBasisView } from './calendar-basis-report';
 import { DataCoverageView } from './data-coverage';
 import { PeriodStats } from './report-sql';
 import { ReportScope } from './report-scope';
@@ -18,6 +19,11 @@ export interface KpiAggregateView {
   /** stored period rows behind the value, and how many of them lacked the terms */
   rows: number;
   missing: number;
+  /**
+   * plan 2.3: what the figure stands on — `calculated` (stored KPI rows of calculation runs) or `calendar`
+   * (computed from the stops over calendar time for units/days without a run). Set on the downtime summaries.
+   */
+  basis?: 'calculated' | 'calendar';
 }
 
 const dec = (value: { toFixed(): string } | null) =>
@@ -107,6 +113,11 @@ export interface DowntimeReportView {
    */
   dataCoverage: DataCoverageView;
   calculationRunIds: string[];
+  /**
+   * plan 2.3: units/days of the window without a calculation run, computed from the stops over calendar time
+   * — a separate section, never added into `summary`
+   */
+  calendarBasis: CalendarBasisView;
 }
 
 /** One breakdown of a downtime bundle (same groups and total as `/reports/downtime` would answer). */
@@ -140,6 +151,11 @@ export interface DowntimeBundleView {
    */
   dataCoverage: DataCoverageView;
   calculationRunIds: string[];
+  /**
+   * plan 2.3: units/days of the window without a calculation run, computed from the stops over calendar time
+   * — a separate section, never added into `summary`
+   */
+  calendarBasis: CalendarBasisView;
 }
 
 export interface ReliabilityRowView {

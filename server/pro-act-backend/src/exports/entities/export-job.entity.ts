@@ -1,16 +1,25 @@
 import { Column, Entity, Index } from 'typeorm';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
 import { ExportLabels } from '../export-labels';
+import { RcaCaseExportContent } from '../rca-case/rca-case-content';
 import { ExportPresentation } from '../pdf/pdf-model';
 
-export const EXPORT_REPORT_TYPES = ['period_summary', 'loss_lines'] as const;
+/** `rca_case` (item 2.5): one RCA case as a PDF, its content pinned on the job (`case_content`). */
+export const EXPORT_REPORT_TYPES = [
+  'period_summary',
+  'loss_lines',
+  'rca_case',
+] as const;
 export type ExportReportType = (typeof EXPORT_REPORT_TYPES)[number];
 
 export const EXPORT_FORMATS = ['csv', 'pdf'] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
-/** `published` = the latest approved revision of every period in the window; `revision_ids` = named approved revisions. */
-export const EXPORT_SELECTORS = ['published', 'revision_ids'] as const;
+/**
+ * `published` = the latest approved revision of every period in the window; `revision_ids` = named approved
+ * revisions; `case` = one RCA case (`rca_case` only, no revisions).
+ */
+export const EXPORT_SELECTORS = ['published', 'revision_ids', 'case'] as const;
 export type ExportSelector = (typeof EXPORT_SELECTORS)[number];
 
 export const EXPORT_JOB_STATES = [
@@ -37,6 +46,8 @@ export interface ExportFilters {
   to: string | null;
   unitIds: string[] | null;
   revisionIds: string[] | null;
+  /** `rca_case`: the exported case (absent on period exports) */
+  rcaId?: string | null;
 }
 
 const bigintAsNumber = {
@@ -92,6 +103,10 @@ export class ExportJob extends TenantScopedEntity {
   /** requester name, plant clock and reason code names pinned at request time (null on older jobs) */
   @Column({ name: 'labels', type: 'jsonb', nullable: true })
   labels: ExportLabels | null;
+
+  /** `rca_case`: the case as read when the export was requested (null for period exports) */
+  @Column({ name: 'case_content', type: 'jsonb', nullable: true })
+  caseContent: RcaCaseExportContent | null;
 
   /** content scope; null = tenant-wide (needs a tenant-wide grant to see or download) */
   @Column({ name: 'unit_ids', type: 'uuid', array: true, nullable: true })

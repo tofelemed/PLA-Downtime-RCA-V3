@@ -10,8 +10,16 @@ import {
   stringList,
 } from './policy-values';
 
-/** CA7 consequence classes of a case (actual or potential), tier 1 / 2 / 3. */
-export const CONSEQUENCE_CLASSES = ['minor', 'significant', 'major'] as const;
+/**
+ * CA7 consequence classes of a case (actual or potential), in rising severity; `critical` is the fourth
+ * tier of D-T4 (owner, 19 Oct 2026), and `significant` its moderate tier.
+ */
+export const CONSEQUENCE_CLASSES = [
+  'minor',
+  'significant',
+  'major',
+  'critical',
+] as const;
 export type ConsequenceClass = (typeof CONSEQUENCE_CLASSES)[number];
 
 /** Analysis methods a case can show (tool records, the case's logic tree and timeline). */
@@ -158,8 +166,30 @@ export const RCA_RULES_DEFAULT: RcaRules = {
       ],
       minTeamMembers: 3,
     },
+    critical: {
+      methodGroups: [
+        ['timeline'],
+        ['barrier', 'fault_tree', 'fmea'],
+        ['five_why', 'fishbone', 'logic_tree'],
+      ],
+      minTeamMembers: 3,
+    },
   },
 };
+
+/**
+ * CA2 high consequence: any repeat after the action is not effective for a listed class. A critical case
+ * is at least as strict as a major one, so policies written before the critical class (which list `major`)
+ * hold critical cases to zero repeats too.
+ */
+export function zeroRepeatApplies(
+  rules: Pick<EffectivenessRules, 'zeroRepeatClasses'>,
+  consequenceClass: string | null,
+): boolean {
+  const listed = rules.zeroRepeatClasses as readonly string[];
+  if (listed.includes(consequenceClass ?? '')) return true;
+  return consequenceClass === 'critical' && listed.includes('major');
+}
 
 const score = (value: unknown, field: string): number => {
   const parsed = integer(value, field, 1);
@@ -240,10 +270,15 @@ function parseTier(value: unknown, field: string): InvestigationTier {
   };
 }
 
+/** A version written before the critical class carries no `critical` tier: the proposed one applies. */
 export function parseInvestigation(raw: Raw): InvestigationRules {
   return {
     minor: parseTier(raw.minor, 'minor'),
     significant: parseTier(raw.significant, 'significant'),
     major: parseTier(raw.major, 'major'),
+    critical:
+      raw.critical === undefined
+        ? RCA_RULES_DEFAULT.investigation.critical
+        : parseTier(raw.critical, 'critical'),
   };
 }

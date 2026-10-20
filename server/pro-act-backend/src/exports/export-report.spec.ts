@@ -19,6 +19,7 @@ function source(): RenderSource {
     snapshotId: 'snapshot-1',
     approvedAt: '2027-03-01T12:00:00.000Z',
     sliceProducts: { [SLICE]: { productId: 'product-1', productName: 'HDPE' } },
+    selfApproved: false,
     reviewed: reviewedOf({
       reviewed: {
         utcStart: '2027-03-01T02:30:00.000Z',
@@ -371,6 +372,20 @@ describe('export report rows (plan 2.9, AN03)', () => {
       filter_revision_ids: null,
       source_revisions: 3,
     });
+  });
+
+  it('item 1.3: self_approved is the last column of both reports, true only for a self-approved revision', () => {
+    for (const type of ['period_summary', 'loss_lines'] as const) {
+      const columns = REPORT_COLUMNS[type];
+      expect(columns[columns.length - 1]).toBe('self_approved');
+      const col = columns.indexOf('self_approved');
+      const cells = (selfApproved: boolean) =>
+        new Set(
+          reportRows(type, { ...source(), selfApproved }).map((r) => r[col]),
+        );
+      expect(cells(true)).toEqual(new Set(['true']));
+      expect(cells(false)).toEqual(new Set(['false']));
+    }
   });
 
   it('refuses a snapshot without reviewed content', () => {

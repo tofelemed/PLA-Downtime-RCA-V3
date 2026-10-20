@@ -169,4 +169,43 @@ describe('v1 tasks: tenant binding', () => {
       .expect(403);
     expect((unknown.body as ErrorBody).code).toBe('TENANT_MISMATCH');
   });
+
+  it('plan 1.6: by-id routes answer 404 outside the acting tenant; an unfiltered list is the acting tenant only', async () => {
+    const admin = await member('SuperAdmin', []);
+    const inB = await http()
+      .post('/api/tasks')
+      .set(bearer(admin.token))
+      .send(taskFor(admin.id, world.tenantB))
+      .expect(201);
+    const id = (inB.body as TaskBody).id;
+    // acting in tenant A (the token tenant), the task of tenant B is not found, whatever the role
+    await http().get(`/api/tasks/${id}`).set(bearer(admin.token)).expect(404);
+    await http()
+      .put(`/api/tasks/${id}`)
+      .set(bearer(admin.token))
+      .send({ status: 'Completed' })
+      .expect(404);
+    await http()
+      .delete(`/api/tasks/${id}`)
+      .set(bearer(admin.token))
+      .expect(404);
+    const listA = await http()
+      .get('/api/tasks')
+      .set(bearer(admin.token))
+      .expect(200);
+    const tenants = (listA.body as TaskBody[]).map((task) => task.tenantId);
+    expect(tenants).not.toContain(world.tenantB);
+    // acting in tenant B, it is
+    const actingB = () => ({ 'X-Tenant-Id': world.tenantB });
+    await http()
+      .get(`/api/tasks/${id}`)
+      .set(bearer(admin.token))
+      .set(actingB())
+      .expect(200);
+    await http()
+      .delete(`/api/tasks/${id}`)
+      .set(bearer(admin.token))
+      .set(actingB())
+      .expect(200);
+  });
 });

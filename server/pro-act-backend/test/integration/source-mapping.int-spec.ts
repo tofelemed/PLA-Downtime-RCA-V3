@@ -207,13 +207,8 @@ describe('source → plant mapping (plan 1.3)', () => {
         {},
       );
       expect(result.outcome).toBe('unmapped');
-      const [quarantined] = await rows<{ event_data: string }>(
-        `SELECT event_data FROM unmapped_events WHERE source_id = $1`,
-        [webId],
-      );
-      expect(JSON.parse(quarantined.event_data)).toMatchObject({
-        status: 'ambiguous',
-      });
+      // the placement goes back to the intake handler, which quarantines it (ingestion exceptions)
+      expect(result.placement).toMatchObject({ status: 'ambiguous' });
       const events = await rows<unknown>(
         `SELECT 1 FROM production_events WHERE event_id = $1`,
         [webId],

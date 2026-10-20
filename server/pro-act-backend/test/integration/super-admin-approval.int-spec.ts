@@ -76,6 +76,36 @@ describe('SuperAdmin completes approval workflows alone', () => {
       state: 'approved',
       createdBy: actor,
       approvedBy: actor,
+      selfDecided: true,
+    });
+  });
+
+  it('item 1.3: an independent approver of a SuperAdmin draft is not a self-decision', async () => {
+    const created = await env
+      .post(
+        'profiles',
+        {
+          unitId: env.world.unitA3,
+          productId: env.products.p2,
+          operatingMode: 'self-decision-check',
+          quantityUom: 't',
+          rateTimebase: 'h',
+          effectiveFrom: '2026-10-01T00:00:00Z',
+        },
+        admin,
+      )
+      .expect(201);
+    expect(created.body).toMatchObject({ selfDecided: false });
+    const approved = await env
+      .post(
+        `profiles/${(created.body as { id: string }).id}/approve`,
+        {},
+        env.approver,
+      )
+      .expect(200);
+    expect(approved.body).toMatchObject({
+      createdBy: actor,
+      selfDecided: false,
     });
   });
 
@@ -96,7 +126,10 @@ describe('SuperAdmin completes approval workflows alone', () => {
       )
       .expect(201);
     const id = (created.body as { id: string }).id;
-    await env.post(`actuals/adjustments/${id}/approve`, {}, admin).expect(200);
+    const approved = await env
+      .post(`actuals/adjustments/${id}/approve`, {}, admin)
+      .expect(200);
+    expect(approved.body).toMatchObject({ selfDecided: true });
     await decision('actuals_adjustments', id);
     await env.post(`actuals/adjustments/${id}/approve`, {}, admin).expect(409);
   });
@@ -210,9 +243,20 @@ describe('SuperAdmin completes approval workflows alone', () => {
       const approved = await env
         .approve(submitted, admin, periodId)
         .expect(200);
-      expect((approved.body as ReconciliationBody).revision.lifecycle).toBe(
-        'approved',
-      );
+      expect((approved.body as ReconciliationBody).revision).toMatchObject({
+        lifecycle: 'approved',
+        selfDecided: true,
+      });
+      const history = await env
+        .get(`production-periods/${periodId}/approval-actions`, admin)
+        .expect(200);
+      const steps = (
+        history.body as {
+          items: Array<{ action: string; selfDecided: boolean }>;
+        }
+      ).items;
+      expect(steps.find((s) => s.action === 'approve')?.selfDecided).toBe(true);
+      expect(steps.find((s) => s.action === 'submit')?.selfDecided).toBe(false);
       const [snapshot] = await env.rows<{
         content: { submittedBy: string; approvedBy: string };
       }>('SELECT content FROM approval_snapshots WHERE revision_id = $1', [
@@ -224,7 +268,10 @@ describe('SuperAdmin completes approval workflows alone', () => {
       });
     }
     const certified = await env.post(day, {}, admin).expect(200);
-    expect(certified.body).toMatchObject({ state: 'certified' });
+    expect(certified.body).toMatchObject({
+      state: 'certified',
+      certification: { selfDecided: true },
+    });
     await env.post(day, {}, admin).expect(409);
   });
 

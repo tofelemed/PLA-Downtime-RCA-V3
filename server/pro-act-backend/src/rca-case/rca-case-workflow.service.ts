@@ -5,7 +5,6 @@ import { assertRevision } from '../common/concurrency/revision';
 import { RequestContext } from '../common/context/request-context';
 import {
   independenceConflict,
-  RcaStatus,
   statusOf,
   Transition,
   transitionOf,
@@ -19,9 +18,9 @@ import {
   RootCauseRule,
 } from '../domain/rca/close-gate';
 import {
-  GateIssue,
   GateResult,
   investigationGate,
+  InvestigationFacts,
 } from '../domain/rca/investigation-gate';
 import { RcaPolicy } from '../domain/rca/rca-policy';
 import { AccountingPoliciesService } from '../periods/accounting-policies.service';
@@ -47,36 +46,18 @@ import {
 } from './case-transition-rules';
 import { moveEventRcaState } from './event-rca-pointer';
 import { RcaCaseV2View } from './rca-case.view';
+import { depthOf, RcaCaseReadinessV2View } from './rca-case-readiness.view';
 import { RcaCasesService } from './rca-cases.service';
 import { upsertKnowledgeEntry } from './rca-knowledge';
 import { recommendationsAtClosure } from './recommendation-actions';
 import { findCase, RcaScope, scopeOf } from './rca-scope';
+import { acceptReevaluations } from './triggers/recurrence-watch-recorder';
 
-/** What the case screen shows about the next moves (RCA-01 / CA1, computed on the server). */
-export interface RcaCaseReadinessV2View {
-  rcaId: string;
-  status: RcaStatus;
-  next: Array<{ to: RcaStatus; gates: string[] }>;
-  investigation: GateResult;
-  closure: {
-    blockers: GateIssue[];
-    effectiveness: CloseReadiness['effectiveness'];
-    /** item 7: coded = a root cause linked to the cause catalogue is required (cases opened since then) */
-    rootCauseRule: RootCauseRule;
-  };
-  /** whether the caller may approve the closure (role and independence), with the reason when not */
-  approver: { canApprove: boolean; reason: string | null };
-  /** same-problem events linked to this case by the triggers since it opened (CA8 escalation) */
-  linkedRecurrences: number;
-  rules: {
-    fiveWhyGuidelineLevels: number;
-    /** CA6: root-cause phrases the investigation gate refuses on their own (e.g. "operator error") */
-    fiveWhyUnsupportedRootCauses: string[];
-    consequenceClass: string | null;
-  };
-}
+export type { RcaCaseReadinessV2View } from './rca-case-readiness.view';
 
 interface Gates {
+  /** the case's class as the gate read it (null when unclassified or not a known class) */
+  consequenceClass: InvestigationFacts['consequenceClass'];
   investigation: GateResult;
   closure: CloseReadiness;
   rootCauseRule: RootCauseRule;
@@ -142,6 +123,7 @@ export class RcaCaseWorkflowService {
         fiveWhyGuidelineLevels: policy.fiveWhy.guidelineLevels,
         fiveWhyUnsupportedRootCauses: [...policy.fiveWhy.unsupportedRootCauses],
         consequenceClass: rca.consequenceClass ?? null,
+        investigationDepth: depthOf(gates.consequenceClass),
       },
     };
   }
@@ -182,6 +164,14 @@ export class RcaCaseWorkflowService {
       ]);
       if (body.to === 'Closed')
         await this.onClosed(manager, { scope, context, id: rca.id });
+      // D-T3: reopening is the person's answer to the case's open "re-evaluate" recommendations
+      if (transition.from === 'Closed')
+        await acceptReevaluations(manager, {
+          tenantId: scope.tenantId,
+          rcaId: rca.id,
+          userId: scope.userId,
+          now: new Date(),
+        });
     });
     return this.cases.get(context, target.id);
   }
@@ -193,16 +183,18 @@ export class RcaCaseWorkflowService {
     residualRisk: string | null,
   ): Promise<Gates> {
     const actions = await caseActions(manager, rca);
-    const facts = await investigationFacts(manager, {
-      rca,
-      policy,
-      actionCount: actions.length,
-    });
     const rootCauseRule = {
       coded: rca.codedRootCauseRequired,
       codedRootCauses: await codedRootCauses(manager, rca),
     };
+    const facts = await investigationFacts(manager, {
+      rca,
+      policy,
+      actionCount: actions.length,
+      codedRootCauses: rootCauseRule.codedRootCauses,
+    });
     return {
+      consequenceClass: facts.consequenceClass,
       investigation: investigationGate(facts, policy),
       closure: closeReadiness({
         rootCause: rca.rootCause ?? null,

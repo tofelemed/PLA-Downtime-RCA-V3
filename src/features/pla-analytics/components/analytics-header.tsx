@@ -4,6 +4,8 @@ import { useScopeWaterfall } from '@/api/v2/queries/pla-analytics';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { PageHeader } from '@/features/ux-kit/page-layout';
+import { useCalendarPreference } from '@/lib/dates';
+import { asOfHeaderText } from '../capacity-gap/capacity-gap-model';
 import { exportBlockedReason, exportRequestOf, scopeToParams, waterfallQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { unitsLabel } from '../model/links';
 import { ScopeExport } from './scope-export';
@@ -13,8 +15,10 @@ import { SnapshotStatus } from './snapshot-status';
  * Title, the page status said once and the export of the shown scope (T24): the header reads the same
  * scope-waterfall response as the Waterfall view (one cached request), and the export request carries the
  * same window and units, so the page, its totals and the file name the same calculation runs.
+ * `asOfDate` (capacity gap): the view reads one instant, not a window, so the header names that plant date
+ * ('' = now) instead of the shared window and its zone badge.
  */
-export function AnalyticsHeader({ scope, title = 'Production loss analysis', description = 'Where production was lost and why, from the calculated periods of the chosen units and window.', overview = true }: { scope: AnalyticsScope; title?: string; description?: string; overview?: boolean }) {
+export function AnalyticsHeader({ scope, title = 'Production loss analysis', description = 'Where production was lost and why, from the calculated periods of the chosen units and window.', overview = true, asOfDate }: { scope: AnalyticsScope; title?: string; description?: string; overview?: boolean; asOfDate?: string }) {
   const env = useEventHubEnv();
   const query = useScopeWaterfall(overview ? waterfallQuery(scope) : null, env.timezone);
   return (
@@ -22,7 +26,7 @@ export function AnalyticsHeader({ scope, title = 'Production loss analysis', des
       title={title}
       description={description}
       actions={<HeaderActions scope={scope} overview={overview} query={query} />}
-      meta={<HeaderMetadata scope={scope} overview={overview} query={query} />}
+      meta={asOfDate === undefined ? <HeaderMetadata scope={scope} overview={overview} query={query} /> : <AsOfMetadata unitIds={scope.unitIds} asOfDate={asOfDate} />}
     />
   );
 }
@@ -48,4 +52,10 @@ function HeaderMetadata({ scope, overview, query }: HeaderDetailsProps) {
       : <ScopeHeader scopeLabel={label} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback} />}
     <p className="text-xs">Periods are grouped by the plant’s operational date and shift; several sites are compared on their own local days.</p>
   </div>;
+}
+
+function AsOfMetadata({ unitIds, asOfDate }: { unitIds: readonly string[]; asOfDate: string }) {
+  const env = useEventHubEnv();
+  const pref = useCalendarPreference();
+  return <p className="text-sm font-medium" data-testid="analytics-as-of-header">{unitsLabel(unitIds, env.unitName)} · {asOfHeaderText(asOfDate, pref)}</p>;
 }

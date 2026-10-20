@@ -24,6 +24,8 @@ import {
   SCHEDULE_CLASSES,
   ScheduleClass,
 } from '../../domain/events/event-classification';
+import { MAX_REASON_WEIGHTS } from '../../domain/events/reason-weights';
+import { ReasonWeightInputDto } from './reason-weights.dto';
 
 /** Largest bulk-coding request; above 500 it runs as a job (API04). */
 export const MAX_BULK_ITEMS = 10_000;
@@ -153,6 +155,20 @@ export class BulkCodesDto {
   @IsOptional()
   @IsBoolean()
   investigationPending?: boolean;
+
+  @ApiPropertyOptional({
+    type: [ReasonWeightInputDto],
+    maxItems: MAX_REASON_WEIGHTS,
+    description:
+      'D-T5: split every selected stop across these reasons by percent (Σ 100; seconds are refused because the ' +
+      'stops differ in length). The largest becomes reasonCodeId. 422 REASON_WEIGHTS_* on a broken rule',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_REASON_WEIGHTS)
+  @ValidateNested({ each: true })
+  @Type(() => ReasonWeightInputDto)
+  reasonWeights?: ReasonWeightInputDto[];
 }
 
 /** `POST /api/v2/production-events/bulk-code` */

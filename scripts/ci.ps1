@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $Backend = Join-Path $Root 'server\pro-act-backend'
-$SmokeSpecs = @('e2e/auth.spec.ts', 'e2e/tasks.spec.ts', 'e2e/audit-auto-log.spec.ts')
+$SmokeSpecs = @('e2e/auth.spec.ts', 'e2e/tasks.spec.ts', 'e2e/audit-auto-log.spec.ts', 'e2e/event-verification-d13.spec.ts', 'e2e/plan-dashboard-ux05.spec.ts', 'e2e/rca-integration-rca01-03.spec.ts')
 $Started = Get-Date
 
 function Invoke-Step {

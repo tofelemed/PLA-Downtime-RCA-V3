@@ -33,6 +33,7 @@ function fixture() {
     resolvedBy: null,
     resolvedAt: null,
     resolutionReason: null,
+    selfDecided: false,
     createdRevisionId: null,
     createdAt: '',
     updatedAt: '',

@@ -31,6 +31,19 @@ export interface EventSelectionView {
   items: Array<BulkTarget & { assetId: string | null }>;
 }
 
+/** D-T5: one reason of a weighted stop; `weight` is an 8-place decimal string, the weights add up to 1. */
+export interface ReasonWeightView {
+  reasonCodeId: string;
+  weight: string;
+}
+
+/** D-T5: a reason as the coder enters it on PATCH — a percent (decimal string) or seconds, one of the two. */
+export interface ReasonWeightInput {
+  reasonCodeId: string;
+  percent?: string;
+  seconds?: number;
+}
+
 export interface ProductionEventView {
   id: string;
   canonicalId: string;
@@ -54,6 +67,11 @@ export interface ProductionEventView {
   };
   planId: string | null;
   reasonCodeId: string | null;
+  /**
+   * D-T5: the reasons the stop is split across, largest first (the first is `reasonCodeId`); null / absent =
+   * `reasonCodeId` alone
+   */
+  reasonWeights?: ReasonWeightView[] | null;
   /** SME D12: explicitly under investigation (no specific reason yet) */
   investigationPending?: boolean;
   /** SME D13: supervisor verification of the coding, maintenance validation of the failure detail */

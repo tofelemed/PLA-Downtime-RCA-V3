@@ -17,6 +17,8 @@ export interface DayCertificationView {
   reopenedBy: string | null;
   reopenedAt: string | null;
   reopenReason: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
 }
 
 export interface DayView {

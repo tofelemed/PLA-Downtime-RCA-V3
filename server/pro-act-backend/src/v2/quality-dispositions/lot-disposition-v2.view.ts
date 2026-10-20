@@ -22,6 +22,8 @@ export interface LotDispositionV2View {
   authorId: string;
   decidedBy: string | null;
   decidedAt: string | null;
+  /** item 1.3: decided by its own author — the stored SuperAdmin override (owner decision 2026-10-16) */
+  selfDecided: boolean;
   decisionReason: string | null;
   supersededAt: string | null;
   createdAt: string;
@@ -55,6 +57,7 @@ export function toLotDispositionView(
     authorId: row.authorId,
     decidedBy: row.decidedBy,
     decidedAt: iso(row.decidedAt),
+    selfDecided: row.superAdminOverride,
     decisionReason: row.decisionReason,
     supersededAt: iso(row.supersededAt),
     createdAt: new Date(row.createdAt).toISOString(),

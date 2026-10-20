@@ -14,6 +14,7 @@ import {
   reportRows,
   reviewedOf,
 } from './export-report';
+import { snapshotSelfApproved } from './export-self-approval';
 import { ExportStorage, PendingObject } from './export-storage';
 import { ExportPdfWriter, exportHeaderOf } from './pdf/export-pdf';
 
@@ -45,6 +46,8 @@ interface SourceRow {
   approved_at: Date;
   slice_products: Record<string, SliceProductLabel>;
   content: Record<string, unknown>;
+  opener: string | null;
+  bridge_reviewer: string | null;
 }
 
 /** Bytes written so far: size and sha256 are computed while streaming. */
@@ -68,6 +71,7 @@ class HashingWriter {
 }
 
 function toSource(row: SourceRow): RenderSource {
+  const reviewed = reviewedOf(row.content);
   return {
     periodId: row.period_id,
     unitId: row.unit_id,
@@ -77,7 +81,11 @@ function toSource(row: SourceRow): RenderSource {
     snapshotId: row.snapshot_id,
     approvedAt: new Date(row.approved_at).toISOString(),
     sliceProducts: row.slice_products,
-    reviewed: reviewedOf(row.content),
+    reviewed,
+    selfApproved: snapshotSelfApproved(row.content, reviewed, {
+      opener: row.opener,
+      bridgeReviewer: row.bridge_reviewer,
+    }),
   };
 }
 
@@ -107,10 +115,7 @@ export class ExportRenderer {
     const target = await this.storage.openWrite(key);
     try {
       const writer = new HashingWriter(target);
-      const outcome =
-        job.format === 'pdf'
-          ? await this.writePdf(writer, job, checkpoint)
-          : await this.writeCsv(writer, job, checkpoint);
+      const outcome = await this.write(writer, job, checkpoint);
       if (outcome.status !== 'continue') {
         await target.abort();
         return { status: outcome.status, processed: outcome.processed };
@@ -128,6 +133,32 @@ export class ExportRenderer {
       await target.abort();
       throw error;
     }
+  }
+
+  private write(
+    writer: HashingWriter,
+    job: ExportJob,
+    checkpoint: CheckpointFn,
+  ): Promise<Outcome> {
+    if (job.reportType === 'rca_case')
+      return this.writeCase(writer, job, checkpoint);
+    return job.format === 'pdf'
+      ? this.writePdf(writer, job, checkpoint)
+      : this.writeCsv(writer, job, checkpoint);
+  }
+
+  /** Item 2.5: one case, drawn from the content pinned on the job; one checkpoint for the one source. */
+  private async writeCase(
+    writer: HashingWriter,
+    job: ExportJob,
+    checkpoint: CheckpointFn,
+  ): Promise<Outcome> {
+    const decision = await checkpoint(0);
+    if (decision !== 'continue') return { status: decision, processed: 0 };
+    writer.rows = await this.pdf.writeCase(job, {
+      write: (chunk) => writer.writeBytes(chunk),
+    });
+    return { status: 'continue', processed: 1 };
   }
 
   private async writeCsv(
@@ -190,7 +221,12 @@ export class ExportRenderer {
   ): Promise<SourceRow[]> {
     return this.dataSource.query(
       `SELECT s."position", s."period_id", s."unit_id", s."unit_name", s."revision_id", r."revision",
-              s."snapshot_id", a."created_at" AS approved_at, s."slice_products", a."content"
+              s."snapshot_id", a."created_at" AS approved_at, s."slice_products", a."content",
+              CASE WHEN r."supersedes_id" IS NOT NULL THEN r."created_by"::text END AS "opener",
+              (SELECT b."actor_id"::text FROM "approval_actions" b
+                WHERE b."revision_id" = s."revision_id" AND b."action" = 'bridge_review'
+                  AND b."submitted_hash" = a."submitted_hash"
+                ORDER BY b."created_at" DESC, b."id" DESC LIMIT 1) AS "bridge_reviewer"
          FROM "export_job_sources" s
          JOIN "accounting_revisions" r ON r."id" = s."revision_id"
          JOIN "approval_snapshots" a ON a."id" = s."snapshot_id"

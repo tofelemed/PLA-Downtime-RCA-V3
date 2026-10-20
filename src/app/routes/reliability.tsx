@@ -7,11 +7,14 @@ const CaseWorkspace = lazyNamedWithPreload(() => import('@/features/rca/case/cas
 const Knowledge = lazyNamedWithPreload(() => import('@/features/rca-knowledge/rca-knowledge-page'), 'RcaKnowledgePage');
 const KnowledgeEntry = lazyNamedWithPreload(() => import('@/features/rca-knowledge/knowledge-entry-page'), 'KnowledgeEntryPage');
 const BadActors = lazyNamedWithPreload(() => import('@/features/rca/bad-actors/bad-actor-page'), 'BadActorPage');
+const CauseReport = lazyNamedWithPreload(() => import('@/features/rca/causes-report/cause-report-page'), 'CauseReportPage');
+const Portfolio = lazyNamedWithPreload(() => import('@/features/rca/portfolio/portfolio-page'), 'PortfolioPage');
 
 /**
  * Reliability area: RCA cases (list, new case — also `?eventId=` from the Event Hub — and the case with
- * its sub-pages `/rca/:caseId/{evidence,analysis,actions,links,history}/…`), the knowledge base and the CA8
- * bad-actor review (`/tasks` lives in the administration routes).
+ * its sub-pages `/rca/:caseId/{evidence,analysis,actions,links,history}/…`), the knowledge base, the CA8
+ * bad-actor review, the recurring-cause ranking of item 1.1 and the cause portfolio of item 2.1 (`/tasks` lives in
+ * the administration routes).
  */
 export const RELIABILITY_ROUTES: readonly AppRoute[] = [
   { path: '/rca', element: <RcaList />, preload: RcaList.preload },
@@ -20,4 +23,6 @@ export const RELIABILITY_ROUTES: readonly AppRoute[] = [
   { path: '/rca-knowledge-base', element: <Knowledge />, preload: Knowledge.preload },
   { path: '/rca-knowledge-base/:entryId', element: <KnowledgeEntry />, preload: KnowledgeEntry.preload },
   { path: '/reliability/bad-actors', element: <BadActors />, preload: BadActors.preload },
+  { path: '/reliability/causes', element: <CauseReport />, preload: CauseReport.preload },
+  { path: '/reliability/portfolio', element: <Portfolio />, preload: Portfolio.preload },
 ];

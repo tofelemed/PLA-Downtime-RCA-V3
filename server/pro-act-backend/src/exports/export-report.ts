@@ -68,6 +68,8 @@ export interface ReviewedSnapshot {
     reasonCodeId: string | null;
     impactCodeId: string | null;
     reason: string | null;
+    /** the line's author (null = the system); absent in snapshots that predate it */
+    authorId?: string | null;
   }>;
   /** plan 2.6: valuation of the reviewed content; absent in snapshots approved before 2.6 */
   valuation?: ReviewedValuation;
@@ -84,6 +86,8 @@ export interface RenderSource {
   approvedAt: string;
   sliceProducts: Record<string, SliceProductLabel>;
   reviewed: ReviewedSnapshot;
+  /** item 1.3: the approver decided their own submission (SuperAdmin only, owner decision 2026-10-16) */
+  selfApproved: boolean;
 }
 
 /** Header facts of an export (AN03): everything here is fixed when the job is requested. */
@@ -139,6 +143,7 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
     ...VALUATION_COLUMNS,
     ...PLANT_TIME_COLUMNS,
     'actuals_quality_label',
+    'self_approved',
   ],
   loss_lines: [
     ...SOURCE_COLUMNS,
@@ -162,7 +167,10 @@ export const REPORT_COLUMNS: Record<ExportReportType, readonly string[]> = {
     'state_label',
     'reason_code',
     'reason_name',
+    'self_approved',
   ],
+  // item 2.5: an RCA case is a PDF only (a CSV request is refused)
+  rca_case: [],
 };
 
 /** Lines that add a quantity of their own (decisions on candidates are shown on the candidate rows). */
@@ -211,6 +219,10 @@ function sourceCells(source: RenderSource, sliceId: string): CsvValue[] {
     product?.productName ?? null,
   ];
 }
+
+/** Item 1.3: appended last, so files read by position keep working. */
+const selfApprovedCell = (source: RenderSource): CsvValue =>
+  source.selfApproved ? 'true' : 'false';
 
 function plantTimeCells(
   source: RenderSource,
@@ -265,6 +277,7 @@ function summaryRows(
       ...sliceValuationCells(source.reviewed.valuation, slice.sliceId),
       ...plantTimeCells(source, labels),
       actualsQualityLabel(actuals?.qualityState),
+      selfApprovedCell(source),
     ];
   });
 }
@@ -302,6 +315,7 @@ function candidateRows(
       { source: 'candidate', kind: c.kind, state: c.state },
       c,
     ),
+    selfApprovedCell(source),
   ]);
 }
 
@@ -336,6 +350,7 @@ function ownLineRows(
         { source: l.action, kind: l.kind, state: 'in_force' },
         { reasonCodeId: l.reasonCodeId, causeEventId: null },
       ),
+      selfApprovedCell(source),
     ]);
 }
 

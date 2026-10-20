@@ -1,4 +1,5 @@
 import { formatDec, toDec } from '../../domain/actuals/decimal';
+import { versionSelfApproved } from '../../domain/approvals/self-decision';
 import {
   GeneratedPeriod,
   GenerationResult,
@@ -58,6 +59,8 @@ export interface PlanVersionV2View {
   createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: approved by its own author — a SuperAdmin self-approval (owner decision 2026-10-16) */
+  selfDecided: boolean;
   supersedesVersionId: string | null;
   calendarVersionId: string | null;
   changeReason: string | null;
@@ -197,6 +200,7 @@ export function toVersionView(
     createdBy: version.createdBy,
     approvedBy: version.approvedBy,
     approvedAt: iso(version.approvedAt),
+    selfDecided: versionSelfApproved(version),
     supersedesVersionId: version.supersedesVersionId,
     calendarVersionId: version.calendarVersionId,
     changeReason: version.changeReason,

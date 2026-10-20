@@ -24,7 +24,7 @@ import { usePagedQuery } from './use-paged-query';
 import { flattenPages, useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
 
-/** Server-side case search (plan 3.9 §16.2): status, unit, asset / reason / window of linked events, title. */
+/** Server-side case search (plan 3.9 §16.2): status, unit, asset / reason / window of linked events, cause code, title. */
 export interface RcaCaseFilters {
   status?: string;
   priority?: string;
@@ -35,6 +35,8 @@ export interface RcaCaseFilters {
   unitId?: string;
   assetId?: string;
   reasonCodeId?: string;
+  /** item 1.1: cases with a typed cause of this catalogue code (retired codes included) */
+  causeCodeId?: string;
   q?: string;
   from?: string;
   to?: string;

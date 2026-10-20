@@ -6,7 +6,7 @@ import { dataStateOf, type QueryLike } from '@/features/ux-kit/data-state-of';
 import { policyVersionsLabel } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { formatRatio } from '../model/kpi-display';
+import { formatRatio, INCOMPLETE_TEXT } from '../model/kpi-display';
 
 type RunResponse = AnalyticsResponse<{ calculationRunIds: string[] }>;
 
@@ -59,7 +59,7 @@ export function ReportCard(props: ReportCardProps) {
           state={state}
           error={query.error}
           onRetry={() => query.refetch()}
-          detail={state === 'empty' ? emptyText : state === 'incomplete' ? 'Only calculated periods are counted.' : undefined}
+          detail={state === 'empty' ? emptyText : state === 'incomplete' ? INCOMPLETE_TEXT : undefined}
         >
           {children}
         </DataState>

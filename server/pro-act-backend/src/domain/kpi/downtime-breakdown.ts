@@ -1,5 +1,6 @@
 import { Dec, ZERO } from '../actuals/decimal';
 import { LossEvent } from '../accounting/accounting.types';
+import { splitAmountByReason } from '../accounting/reason-split';
 import { CauseSeconds } from './downtime-allocation';
 import { DowntimeInput, stopKindOf } from './downtime-measures';
 import { BreakdownDimension, KpiDraft, KpiScope } from './kpi.types';
@@ -55,6 +56,19 @@ function addTo(cells: Map<string, Cell>, scope: KpiScope, amount: Dec): void {
   cells.set(id, cell);
 }
 
+/**
+ * D-T5: by reason, a weighted stop's allocated seconds go to each of its reasons by weight (the parts add
+ * up exactly); every other dimension, and an unweighted stop, keeps the whole amount.
+ */
+function piecesOf(
+  part: CauseSeconds,
+  dimension: BreakdownDimension,
+): Array<{ event: LossEvent; amount: Dec }> {
+  if (dimension !== 'reason')
+    return [{ event: part.event, amount: part.seconds }];
+  return splitAmountByReason(part.event, part.seconds);
+}
+
 /** The earliest event of each occurrence starting in the window: the occurrence's cause for counting. */
 function startingCauses(input: DowntimeInput): LossEvent[] {
   const starts = new Map(
@@ -81,8 +95,9 @@ function startingCauses(input: DowntimeInput): LossEvent[] {
 /**
  * Downtime breakdown rows (KPI05, report `GET /reports/downtime`): per dimension (none, reason, impact,
  * OEE component, asset) × schedule class × stop kind, the allocated seconds (`downtime_total`, adding up
- * to the period total in every dimension) and the occurrences starting in the window (`stop_count`,
- * counted under their first event's codes).
+ * to the period total in every dimension; a weighted stop's seconds split by reason weight) and the
+ * occurrences starting in the window (`stop_count`, counted under their first event's codes — the primary
+ * reason of a weighted stop).
  */
 export function downtimeBreakdown(
   input: DowntimeInput,
@@ -93,11 +108,13 @@ export function downtimeBreakdown(
   const starting = startingCauses(input);
   for (const dimension of DIMENSIONS) {
     for (const part of allocated) {
-      addTo(
-        seconds,
-        scopeOf(input, part.event, dimension, part.scheduleClass),
-        part.seconds,
-      );
+      for (const piece of piecesOf(part, dimension)) {
+        addTo(
+          seconds,
+          scopeOf(input, piece.event, dimension, part.scheduleClass),
+          piece.amount,
+        );
+      }
     }
     for (const event of starting) {
       addTo(counts, scopeOf(input, event, dimension), new Dec(1));

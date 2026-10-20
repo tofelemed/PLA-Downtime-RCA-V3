@@ -28,6 +28,7 @@ import {
   toBulkJobView,
 } from './event-operation.view';
 import { ProductionEventsV2Service } from './production-events-v2.service';
+import { bulkReasonWeights } from './reason-weight-columns';
 
 /** Result of `POST /production-events/bulk-code`: a preview, an atomic apply, or an accepted job. */
 export type BulkCodeOutcome =
@@ -106,9 +107,12 @@ export class ProductionEventOperationsV2Service {
     dto: BulkCodeV2Dto,
   ): Promise<BulkCodeOutcome> {
     const tenantId = requireTenantId(context);
+    const { reasonWeights, ...codes } = dto.codes;
     const command: BulkCodeCommand = {
       items: dto.items,
-      codes: dto.codes,
+      codes: reasonWeights
+        ? { ...codes, ...bulkReasonWeights(reasonWeights, codes.reasonCodeId) }
+        : codes,
       reason: dto.reason,
     };
     assertSomeCode(command);
@@ -118,6 +122,11 @@ export class ProductionEventOperationsV2Service {
         command.codes.reasonCodeId,
       );
     }
+    await this.references.assertReasonCodesOwned(
+      tenantId,
+      (command.codes.reasonWeights ?? []).map((w) => w.reasonCodeId),
+      'codes.reasonWeights',
+    );
     if (dto.preview) {
       return {
         kind: 'preview',

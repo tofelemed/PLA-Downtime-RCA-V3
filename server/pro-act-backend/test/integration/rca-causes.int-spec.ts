@@ -31,7 +31,7 @@ interface CauseReport {
 /**
  * Typed causes (item 7) on real Postgres: CRUD with If-Match and the case scope, catalogue codes of the
  * plant only and never a retired one, the coded-root-cause closure rule for new cases (old cases keep the
- * free text), the lock once closure is requested, and the recurring-cause report.
+ * free text), the lock once closure is requested, the recurring-cause report and its drill to the cases.
  */
 describe('RCA typed causes', () => {
   const env = new RcaWorld();
@@ -177,6 +177,36 @@ describe('RCA typed causes', () => {
       causes: 2,
     });
     expect(report.items[0].approvedLoss.lines).toBe(0);
+  });
+
+  it('lists the cases of a cause code in scope, retired codes included', async () => {
+    const other = await env.createCase(
+      env.example({ unitId: env.world.unitA2, teamMemberIds: [] }),
+    );
+    await addCause({ causeCodeId: codeId }, other.id).expect(201);
+    const ids = async (query: string, token = env.admin) =>
+      (
+        (await env.get(`rcas?causeCodeId=${codeId}${query}`, token).expect(200))
+          .body as { items: Array<{ id: string }> }
+      ).items.map((item) => item.id);
+    expect(await ids('')).toHaveLength(3);
+    expect(await ids('')).toContain(other.id);
+    expect(await ids('', env.reliability)).not.toContain(other.id);
+    expect(await ids(`&unitId=${env.world.unitA2}`, env.reliability)).toEqual(
+      [],
+    );
+    await env.rows(
+      `UPDATE rca_cause_codes SET is_active = false WHERE id = $1`,
+      [codeId],
+    );
+    expect(await ids(`&unitId=${env.world.unitA2}`)).toEqual([other.id]);
+    await env.rows(
+      `UPDATE rca_cause_codes SET is_active = true WHERE id = $1`,
+      [codeId],
+    );
+    const unused = await catalogueCause(env, env.world.tenantA);
+    const none = await env.get(`rcas?causeCodeId=${unused}`).expect(200);
+    expect((none.body as { items: unknown[] }).items).toEqual([]);
   });
 
   it('causes are locked once closure is requested; delete needs If-Match', async () => {

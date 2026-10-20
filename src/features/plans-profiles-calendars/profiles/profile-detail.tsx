@@ -3,6 +3,7 @@ import { CAPACITY_MODEL_LABELS, labelOf, RATE_TIMEBASE_LABELS } from '@/features
 import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import type { PlanningRefs } from '../hooks/use-planning-refs';
 import { RateTable } from './rate-table';
 import { ValuationRateTable } from './valuation-rate-table';
@@ -37,7 +38,7 @@ function Facts({ profile, tz }: { profile: ProfileView; tz: string }) {
         {profile.approvedAt && (
           <>
             {' '}
-            · approved <PlantTime iso={profile.approvedAt} tz={tz} withDate />
+            · approved <PlantTime iso={profile.approvedAt} tz={tz} withDate /> <SelfDecisionBadge selfDecided={profile.selfDecided} />
           </>
         )}
       </span>

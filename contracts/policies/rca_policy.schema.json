@@ -215,7 +215,8 @@
                 "enum": [
                   "minor",
                   "significant",
-                  "major"
+                  "major",
+                  "critical"
                 ]
               }
             },
@@ -439,9 +440,44 @@
                   "minimum": 0
                 }
               }
+            },
+            "critical": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "methodGroups",
+                "minTeamMembers"
+              ],
+              "properties": {
+                "methodGroups": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "five_why",
+                        "fishbone",
+                        "fmea",
+                        "fault_tree",
+                        "barrier",
+                        "change",
+                        "logic_tree",
+                        "timeline"
+                      ]
+                    },
+                    "minItems": 1
+                  },
+                  "description": "Each group needs at least one of its methods with content."
+                },
+                "minTeamMembers": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
             }
           },
-          "description": "CA7: required methods and team size per consequence class (tier 1/2/3)."
+          "description": "CA7: required methods and team size per consequence class (tier 1/2/3; critical, D-T4, optional: versions without it use the proposed critical tier). The D-T4 depth matrix (methods, team charter, coded causes) applies on top of these tiers."
         }
       }
     }

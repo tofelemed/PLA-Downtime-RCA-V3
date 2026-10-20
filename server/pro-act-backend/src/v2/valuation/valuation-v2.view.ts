@@ -1,4 +1,5 @@
 import { Dec, formatDec, toDec } from '../../domain/actuals/decimal';
+import { versionSelfApproved } from '../../domain/approvals/self-decision';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
 import { FxRate } from '../../valuation/entities/fx-rate.entity';
 import { RevaluationRequested } from '../../valuation/valuation-events';
@@ -25,6 +26,8 @@ export interface FxRateV2View {
   createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: approved by its own author — a SuperAdmin self-approval (owner decision 2026-10-16) */
+  selfDecided: boolean;
   rowVersion: number;
   createdAt: string;
   updatedAt: string;
@@ -48,6 +51,8 @@ export interface ValuationPolicyV2View {
   /** a backdate over approved figures revalues them through change proposals */
   restateApproved: boolean;
   createdBy: string | null;
+  /** item 1.3: approved by its own author — a SuperAdmin self-approval (owner decision 2026-10-16) */
+  selfDecided: boolean;
   createdAt: string;
 }
 
@@ -73,6 +78,7 @@ export function toFxRateView(rate: FxRate): FxRateV2View {
     createdBy: rate.createdBy,
     approvedBy: rate.approvedBy,
     approvedAt: iso(rate.approvedAt),
+    selfDecided: versionSelfApproved(rate),
     rowVersion: rate.rowVersion,
     createdAt: rate.createdAt.toISOString(),
     updatedAt: rate.updatedAt.toISOString(),
@@ -108,6 +114,7 @@ export function toValuationPolicyView(
     backdateReason: policy.backdateReason,
     restateApproved: policy.restateApproved,
     createdBy: policy.createdBy,
+    selfDecided: versionSelfApproved(policy),
     createdAt: policy.createdAt.toISOString(),
   };
 }

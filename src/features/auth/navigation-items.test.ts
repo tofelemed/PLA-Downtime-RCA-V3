@@ -40,11 +40,17 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Reconciliation & data quality': ALL,
   // owner 19 Oct 2026 (QA audit): no money for operators (canViewMoney)
   'Loss valuation': NOT_OPERATOR,
+  // item 1.2: approved rate kinds side by side (quantities only, no money)
+  'Capacity gap': ALL,
   // UX audit B-5: the period grid, gated like Plans, Profiles & Calendars
   'Period accounting': NOT_OPERATOR,
   // Reliability
   'RCA Analysis': ALL,
   'Bad actors': NOT_OPERATOR,
+  // item 1.1: recurring-cause ranking, gated like Bad actors
+  'Recurring causes': NOT_OPERATOR,
+  // item 2.1: loss → cause → action → outcome, gated like Recurring causes
+  'Cause portfolio': NOT_OPERATOR,
   'Knowledge base': NOT_OPERATOR,
   Tasks: ALL,
   // Integration: owner 18 Oct 2026, SuperAdmin only (approvers reach their two review pages from the inbox)

@@ -1,3 +1,4 @@
+import { isSelfDecision } from '../../domain/approvals/self-decision';
 import { SourceAuthorityPolicy } from '../../domain/actuals/period/period-actuals.types';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
 import { parseSourceAuthority } from '../../periods/policy-bodies';
@@ -42,6 +43,8 @@ export interface SourceAuthorityVersionV2View {
   rejectedBy: string | null;
   rejectedAt: string | null;
   rejectionReason: string | null;
+  /** item 1.3: approved or rejected by its own author — a SuperAdmin self-decision (owner decision 2026-10-16) */
+  selfDecided: boolean;
   notes: string | null;
   /** commissioning backdate: the past instant it takes effect from on approval, and why (null = approval time) */
   requestedEffectiveFrom: string | null;
@@ -95,6 +98,9 @@ export function toSourceAuthorityVersionView(
     rejectedBy: row.rejectedBy,
     rejectedAt: iso(row.rejectedAt),
     rejectionReason: row.rejectionReason,
+    selfDecided: isSelfDecision(row.approvedBy ?? row.rejectedBy, [
+      row.createdBy,
+    ]),
     notes: row.notes,
     requestedEffectiveFrom: iso(row.requestedEffectiveFrom),
     backdateReason: row.backdateReason,

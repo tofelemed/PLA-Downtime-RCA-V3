@@ -132,9 +132,10 @@ function durationCell(event: ProductionEventView) {
 
 function typeCell(event: ProductionEventView) {
   return (
-    <span className="whitespace-nowrap">
+    <span className="block whitespace-nowrap">
       {labelOf(PHYSICAL_TYPE_LABELS, event.classification.physicalType)}
-      <span className="text-xs text-muted-foreground"> · {labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}</span>
+      {/* the schedule class under the kind keeps the column narrow (the table fits without scrolling) */}
+      <span className="block text-xs text-muted-foreground">{labelOf(SCHEDULE_CLASS_LABELS, event.classification.scheduleClass)}</span>
     </span>
   );
 }
@@ -147,14 +148,27 @@ function originCell(event: ProductionEventView) {
   );
 }
 
-/** Columns of the event list: start (link, sortable), duration (sortable), unit, asset, kind, reason, states, data source. */
+/** Unit name with the asset under it when the event names one (one column: most stops carry no asset). */
+function unitCell(event: ProductionEventView, context: EventColumnContext) {
+  return (
+    <div>
+      <UnitLabel unitId={event.unitId} />
+      {event.assetId && context.assetName && (
+        <div className="text-xs text-muted-foreground" data-testid="event-asset">
+          {context.assetName(event.assetId)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Columns of the event list: start (link, sortable), duration (sortable), unit with asset, kind, reason, states, data source. */
 export function eventColumns(context: EventColumnContext): DataTableColumn<ProductionEventView>[] {
   return [
     ...selectColumn(context),
     { id: 'start', header: <StartSortHeader sort={context.sort} />, headerLabel: 'Start', nowrap: true, cell: (event) => startCell(event, context) },
     { id: 'duration', header: <DurationSortHeader sort={context.sort} />, headerLabel: 'Duration', nowrap: true, align: 'right', cell: durationCell },
-    { id: 'unit', header: 'Unit', nowrap: true, cell: (event) => <UnitLabel unitId={event.unitId} /> },
-    { id: 'asset', header: 'Asset', cell: (event) => <span data-testid="event-asset">{event.assetId && context.assetName ? context.assetName(event.assetId) : '—'}</span> },
+    { id: 'unit', header: 'Unit · asset', nowrap: true, cell: (event) => unitCell(event, context) },
     { id: 'type', header: 'Type', cell: typeCell },
     { id: 'reason', header: 'Reason', cell: (event) => reasonCell(event, context) },
     { id: 'states', header: 'States', cell: (event) => <EventStateCell event={event} /> },

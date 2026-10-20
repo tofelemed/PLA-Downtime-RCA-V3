@@ -70,11 +70,12 @@ export const RCA_VERDICT_LABELS: Readonly<Record<string, string>> = {
   insufficient_evidence: 'Not enough evidence yet',
 };
 
-/** CA7 consequence classes (investigation tier). */
+/** CA7 / D-T4 consequence classes (investigation tier). */
 export const RCA_CONSEQUENCE_LABELS: Readonly<Record<string, string>> = {
   minor: 'Minor',
   significant: 'Significant',
   major: 'Major',
+  critical: 'Critical',
 };
 
 /** CA9 status of a lesson in the knowledge base. */

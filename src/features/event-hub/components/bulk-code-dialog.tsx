@@ -16,6 +16,7 @@ import { BulkReferenceError } from './bulk-reference-error';
 import { AuditReasonField } from './audit-reason-field';
 import { CommandError } from './command-error';
 import { ReasonCodeSelect } from './reason-code-select';
+import { ReasonSplitSection } from './reason-split-section';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { plural } from '@/features/ux-kit/format/plural';
 
@@ -58,8 +59,9 @@ type BulkCodeFlow = ReturnType<typeof useBulkCodeFlow>;
 function BulkCodeFields({ events, flow }: { events: readonly BulkTarget[]; flow: BulkCodeFlow }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="sm:col-span-2">
-        <ReasonCodeSelect id="bulk-reason-code" value={flow.codes.reasonCodeId} onChange={(v) => flow.edit('reasonCodeId', v)} />
+      <div className="space-y-3 sm:col-span-2">
+        {!flow.split.enabled && <ReasonCodeSelect id="bulk-reason-code" value={flow.codes.reasonCodeId} onChange={(v) => flow.edit('reasonCodeId', v)} />}
+        <ReasonSplitSection split={flow.split} percentOnly />
       </div>
       <EnumSelect id="bulk-schedule" label="Schedule class" values={SCHEDULE_CLASSES} labels={SCHEDULE_CLASS_LABELS} value={flow.codes.scheduleClass} onChange={(v) => flow.edit('scheduleClass', v)} />
       <EnumSelect id="bulk-oee" label="OEE component" values={OEE_COMPONENTS} labels={OEE_COMPONENT_LABELS} value={flow.codes.oeeComponent} onChange={(v) => flow.edit('oeeComponent', v)} />

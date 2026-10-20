@@ -6,12 +6,13 @@ import {
 import { EntityManager } from 'typeorm';
 import { RequestContext } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
+import { activeCodingRulesIn } from '../../rules/active-coding-rules';
 import { ProductionEvent } from '../production-event.entity';
 import { EventChangeMessage } from './event-change.notifier';
 import { EventReviewItem } from './event-review-item.entity';
 import { actorFromContext, RevisionActor } from './revision-actor';
 import { latestSourceRevision, lockEvent, writeEvent } from './revision-store';
-import { RevisionResult, sourceColumns } from './source-revision';
+import { RevisionResult, retypes, sourceColumns } from './source-revision';
 import { appendUserRevisions } from './user-change';
 
 export const REVIEW_DECISIONS = ['keep_override', 'accept_source'] as const;
@@ -100,12 +101,13 @@ async function acceptSource(
   const overrides = { ...(existing.userOverrides ?? {}) };
   delete overrides[field];
   const codingRevision = existing.currentCodingRevision + 1;
+  const released = { ...existing, userOverrides: overrides };
+  const facts = source?.sourceFacts ?? {};
+  const rules = retypes(released, facts, [field])
+    ? await activeCodingRulesIn(manager, existing.tenantId)
+    : [];
   const updated = await writeEvent(manager, existing.id, {
-    ...sourceColumns(
-      { ...existing, userOverrides: overrides },
-      source?.sourceFacts ?? {},
-      [field],
-    ),
+    ...sourceColumns(released, facts, [field], rules),
     userOverrides: overrides,
     currentCodingRevision: codingRevision,
   });

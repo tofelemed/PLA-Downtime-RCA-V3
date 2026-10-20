@@ -35,7 +35,7 @@ import {
 } from '../source-mapping/source-mapping.service';
 import { MasterDataCodeResolverService } from './master-data-code-resolver.service';
 import { NO_TEMPLATE_KEY } from './pi-event-mapper';
-import { PiUnmappedRecorder } from './pi-unmapped-recorder';
+import { normalizeFrame } from './pi/pi-frame-shape';
 import { piEndTime, piEndTimeIso } from './pi/pi-time';
 
 /** The fields of a PI event frame the bridge reads. */
@@ -60,8 +60,8 @@ export interface PiEventFrame {
 
 /**
  * Everything loaded once per pull: the tenant, its mapping profile and its mapping resolver.
- * `sourceSystem` names the connector the frames come from (`production_events.source`,
- * `unmapped_events.source_system`); PI unless the caller says otherwise (MQTT reuses this path, plan 1.8).
+ * `sourceSystem` names the connector the frames come from (`production_events.source`); PI unless the
+ * caller says otherwise (MQTT reuses this path, plan 1.8).
  */
 export interface FrameContext {
   tenantId: string;
@@ -95,8 +95,8 @@ interface MappedFrame {
 
 /**
  * PI event frame → production event (plan 1.3): typed attribute mapping over the field catalog (ING04),
- * exact code resolution, deterministic hierarchy mapping (ING03; unmapped and ambiguous frames are
- * quarantined in `unmapped_events` with the reason and the candidates), code-rule classification
+ * exact code resolution, deterministic hierarchy mapping (ING03; an unmapped or ambiguous frame returns
+ * its placement and candidates, which the intake handler quarantines), code-rule classification
  * defaults and then the active `coding_default` rules (plan 3.8) on create, and source revisions for
  * known events (plan 1.2).
  */
@@ -117,15 +117,16 @@ export class PiFrameIngestService {
     private readonly revisions: EventRevisionService,
     private readonly codes: MasterDataCodeResolverService,
     private readonly codeDefaults: CodeDefaultsService,
-    private readonly quarantine: PiUnmappedRecorder,
     private readonly ruleDefaults: RuleClassificationService,
   ) {}
 
   async ingest(
     context: FrameContext,
-    frame: PiEventFrame,
+    delivered: PiEventFrame,
     attributes: Readonly<Record<string, unknown>>,
   ): Promise<FrameResult> {
+    // frames retained before the primary element was read from `Links` are placed the same way on replay
+    const frame = normalizeFrame(delivered);
     const mapped = await this.mapFrame(context, frame, attributes);
     const placement = context.resolver.resolve({
       sourceId: frame.PrimaryReferencedElement?.WebId || frame.WebId,
@@ -133,11 +134,6 @@ export class PiFrameIngestService {
       afElementWebIds: elementWebIds(frame),
     });
     if (placement.status !== 'mapped') {
-      await this.quarantine.record(context, frame, {
-        attributes,
-        mapped,
-        placement,
-      });
       return {
         outcome: 'unmapped',
         diagnostics: mapped.diagnostics,
@@ -220,6 +216,7 @@ export class PiFrameIngestService {
           actorKind: 'connector',
           sourceRevision: version.sourceRevision ?? version.end?.toISOString(),
         },
+        () => this.rulesFor(context),
       );
       return {
         outcome: outcome === 'revised' ? 'updated' : 'unchanged',

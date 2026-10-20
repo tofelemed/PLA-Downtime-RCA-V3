@@ -1,6 +1,7 @@
 import { RateTimebase } from '../actuals/actuals.types';
 import { Dec } from '../actuals/decimal';
 import { QualityClasses } from '../actuals/period/quality-classes';
+import { ReasonWeight } from '../events/reason-weights';
 import { BoundedInterval } from '../time/interval-algebra';
 
 /** The two loss ledgers of ACC01 (distinct baselines). */
@@ -192,6 +193,10 @@ export interface LossEvent {
   streamId?: string | null;
   /** SME E2: set on derived starvation — the upstream unit whose stop it propagates (the cause is that stop) */
   starvedFrom?: string | null;
+  /** D-T5: the reasons a coder split the stop across (Σ weight = 1); absent / null = `reasonCodeId` alone */
+  reasonWeights?: readonly ReasonWeight[] | null;
+  /** D-T5: set on the per-reason part of a weighted stop (`splitByReasons`): its reason and weight */
+  weightedReason?: ReasonWeight | null;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */

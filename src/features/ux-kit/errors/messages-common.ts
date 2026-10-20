@@ -44,7 +44,6 @@ export const COMMON_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   METHOD_NOT_ALLOWED: { title: 'This action is not available' },
   NOT_IMPLEMENTED: { title: 'This action is not available yet' },
   V1_WRITE_GONE: { title: 'This screen can no longer save changes', text: 'Use the new screen for this task.' },
-  LEGACY_WRITES_FROZEN: { title: 'The old screens are read-only now', text: 'Use the new screen for this task.' },
 
   CONFLICT: { title: 'This was changed by someone else', text: 'Reload to see the latest version, then try again.' },
   STALE_REVISION: { title: 'This record changed since you opened it', text: 'Reload to see the latest version, then apply your change again.' },

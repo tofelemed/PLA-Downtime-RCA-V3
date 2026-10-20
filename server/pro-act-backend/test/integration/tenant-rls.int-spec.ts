@@ -177,15 +177,20 @@ describe('tenant row-level security (plan 3.11)', () => {
       .get('/api/production-events')
       .set(bearer(userB))
       .expect(200);
-    expect((listB.body as EventRow[]).map((row) => row.tenantId)).toEqual(
-      (listB.body as EventRow[]).map(() => world.tenantB),
+    const rowsB = (listB.body as { items: EventRow[] }).items;
+    expect(rowsB.map((row) => row.tenantId)).toEqual(
+      rowsB.map(() => world.tenantB),
     );
     const listAll = await request(bound.getHttpServer())
       .get('/api/production-events')
       .set(bearer(superAdmin))
       .expect(200);
     expect(
-      new Set((listAll.body as EventRow[]).map((row) => row.tenantId)),
+      new Set(
+        (listAll.body as { items: EventRow[] }).items.map(
+          (row) => row.tenantId,
+        ),
+      ),
     ).toEqual(new Set([world.tenantA, world.tenantB]));
   });
 

@@ -1,5 +1,6 @@
 import { EntityManager } from 'typeorm';
 import { RcaPolicy } from '../domain/rca/rca-policy';
+import { zeroRepeatApplies } from '../domain/rca/rca-policy-rules';
 import { ActionBaseline, BaselineMetric } from '../domain/rca/rca-verification';
 import {
   caseModeFootprint,
@@ -76,9 +77,7 @@ export async function computeBaseline(
       ...(input.policyVersion === undefined
         ? {}
         : { policyVersion: input.policyVersion }),
-      zeroRepeat: (rules.zeroRepeatClasses as readonly string[]).includes(
-        input.consequenceClass ?? '',
-      ),
+      zeroRepeat: zeroRepeatApplies(rules, input.consequenceClass),
     },
     correction: null,
   };

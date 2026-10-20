@@ -31,6 +31,7 @@ import {
 } from './candidate-derivation';
 import { loadEventRca, rcaEventIdsOf } from './event-rca';
 import { monthCloseStateOf } from './month-close-state';
+import { selfDecidedActionIds } from './action-self-decisions';
 import { proposalAfterValues } from './proposal-after-values';
 import { listResponse, ListResponse, ListScope } from '../common/response';
 import {
@@ -98,8 +99,13 @@ export class ReconciliationV2Service {
       cursor: query.cursor,
       limit: query.limit,
     });
+    const self = await selfDecidedActionIds(
+      manager,
+      period.tenantId,
+      page.items,
+    );
     return listResponse(
-      page.items.map(toApprovalActionView),
+      page.items.map((a) => toApprovalActionView(a, self.has(a.id))),
       page.nextCursor,
       this.scope(context, period),
     );

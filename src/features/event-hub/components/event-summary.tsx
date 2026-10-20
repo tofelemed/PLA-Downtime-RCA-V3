@@ -11,9 +11,11 @@ import {
 } from '@/features/ux-kit/labels';
 import { EVENT_TYPE_LABELS, FAILURE_SEVERITY_LABELS, SEVERITY_LABELS } from '@/features/ux-kit/labels/event-hub-labels';
 import { usePlantFormat } from '../hooks/use-plant-format';
+import { hasSplit } from '../model/reason-split';
 import { eventSourceText, sourceNameOf } from '../model/source-ownership';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { AccountingStateChip } from './accounting-state-chip';
+import { ReasonWeightsText } from './reason-weights-text';
 import { StateBadges } from './state-badges';
 import { UnitLabel } from './unit-label';
 import { VerificationChip } from './verification-chip';
@@ -70,7 +72,9 @@ export function EventSummary({ event }: { event: ProductionEventView }) {
           {event.assetId ? assets.nameOf(event.assetId) : '—'}
           <FromSource event={event} field="assetId" />
         </Row>
-        <Row term="Reason">{env.reasonName(event.reasonCodeId)}</Row>
+        <Row term="Reason" testId="detail-reason">
+          {hasSplit(event.reasonWeights) ? <ReasonWeightsText weights={event.reasonWeights} /> : env.reasonName(event.reasonCodeId)}
+        </Row>
         <Row term="Kind">{labelOf(PHYSICAL_TYPE_LABELS, c.physicalType)}</Row>
         <Row term="Schedule class">{labelOf(SCHEDULE_CLASS_LABELS, c.scheduleClass)}</Row>
         <Row term="OEE component">{labelOf(OEE_COMPONENT_LABELS, c.oeeComponent)}</Row>

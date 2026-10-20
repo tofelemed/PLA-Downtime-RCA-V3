@@ -6,7 +6,7 @@ import type { UnitImpactRuleView } from '@/api/v2/types/unit-impact';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { Section } from '@/features/ux-kit/page-layout';
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { PlantTimeRange } from '@/features/ux-kit/plant-time-range';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
@@ -43,9 +43,7 @@ function columnsOf({ refs, assetLabel, percent, seconds }: ColumnInput): DataTab
       header: 'Effective',
       nowrap: true,
       cell: (r) => (
-        <span className="text-xs">
-          <PlantTime iso={r.effectiveFrom} tz={refs.timezone} withDate /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={refs.timezone} withDate /> : 'open-ended'}
-        </span>
+        <PlantTimeRange className="text-xs" from={r.effectiveFrom} to={r.effectiveTo} tz={refs.timezone} />
       ),
     },
     { id: 'state', header: 'State', cell: (r) => <VersionStateBadge state={r.state} /> },

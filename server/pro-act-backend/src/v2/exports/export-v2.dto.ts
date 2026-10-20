@@ -32,7 +32,13 @@ import { LIST_LIMIT_MAX, ListQueryDto } from '../common/list-query.dto';
 
 /** `POST /exports` (§15.2): report, format, revision selector and its filters. */
 export class CreateExportDto {
-  @ApiProperty({ enum: EXPORT_REPORT_TYPES })
+  @ApiProperty({
+    enum: EXPORT_REPORT_TYPES,
+    description:
+      '`period_summary` / `loss_lines`: approved period revisions. `rca_case`: one RCA case as a PDF (definition, ' +
+      'team, status timeline, causes, analyses, actions with verification, approved / claimed / realised figures, ' +
+      'closure approval), with revisionSelector `case` and `rcaId`; a case the caller cannot read is 404.',
+  })
   @IsIn(EXPORT_REPORT_TYPES)
   reportType: ExportReportType;
 
@@ -59,7 +65,8 @@ export class CreateExportDto {
     description:
       '`published`: the latest approved revision of every period overlapping [from, to) (needs from/to, optional ' +
       'unitIds). `revision_ids`: the named approved revisions (needs revisionIds only). Draft or in-review ' +
-      'content is never exported.',
+      'content is never exported. `case`: reportType rca_case only (needs rcaId only; PDF only, 422 ' +
+      'FORMAT_NOT_SUPPORTED for CSV).',
   })
   @IsIn(EXPORT_SELECTORS)
   revisionSelector: ExportSelector;
@@ -95,6 +102,13 @@ export class CreateExportDto {
   @ArrayMaxSize(500)
   @IsUUID('all', { each: true })
   revisionIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'The RCA case to export (reportType rca_case only)',
+  })
+  @IsOptional()
+  @IsUUID()
+  rcaId?: string;
 }
 
 /** `GET /exports`: newest first. */

@@ -9,6 +9,39 @@ export interface KpiAggregateView {
   reason: string | null;
   rows: number;
   missing: number;
+  /** plan 2.3: `calculated` = stored KPI rows of calculation runs; `calendar` = from the stops over calendar time */
+  basis?: 'calculated' | 'calendar';
+}
+
+/** One plant production day of a unit reported on calendar basis (UTC bounds inside the window). */
+export interface CalendarBasisDayView {
+  localDate: string;
+  from: string;
+  to: string;
+}
+
+export interface CalendarBasisUnitView {
+  unitId: string;
+  unitName: string | null;
+  /** `default`: no OEE policy stored for the unit, the recorded defaults applied */
+  policy: 'stored' | 'default';
+  days: CalendarBasisDayView[];
+  kpis: KpiAggregateView[];
+}
+
+/**
+ * Plan 2.3: units/days of the window without a calculation run (no plan or calendar), computed by the server
+ * from the stops over calendar time. Shown apart from the run-based summary, never added to it.
+ */
+export interface CalendarBasisView {
+  basis: 'calendar';
+  label: string;
+  timezone: string;
+  operationalDayStart: string;
+  /** null = computed; otherwise the filter only calculated periods answer */
+  omitted: 'approved_only' | 'period_selection' | 'schedule_class' | null;
+  units: CalendarBasisUnitView[];
+  total: KpiAggregateView[];
 }
 
 export interface ReportGroupView {
@@ -69,6 +102,8 @@ export interface DowntimeReportView {
   summary: KpiAggregateView[];
   dataCoverage?: DataCoverageView;
   calculationRunIds: string[];
+  /** plan 2.3 (absent from older servers) */
+  calendarBasis?: CalendarBasisView;
 }
 
 export interface ReliabilityRowView {

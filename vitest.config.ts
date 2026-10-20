@@ -12,6 +12,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // room for the 5 s Testing Library waits (src/test/setup.ts) inside one test
+    testTimeout: 20_000,
     css: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: [

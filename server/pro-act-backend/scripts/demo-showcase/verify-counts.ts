@@ -194,10 +194,10 @@ export async function verifyCounts(
 ): Promise<void> {
   ctx.logger.log('— verification (read back through the API)');
   if (ctx.scenario.kind === 'partner') {
-    const events = await ctx
-      .as('operators', 0)
-      .get<unknown[]>(`/production-events?tenantId=${ctx.tenantId}`);
-    ctx.logger.log(`  v1 production events in the plant: ${events.length}`);
+    const events = await ctx.as('operators', 0).get<{
+      total: number;
+    }>(`/production-events?tenantId=${ctx.tenantId}&pageSize=1`);
+    ctx.logger.log(`  v1 production events in the plant: ${events.total}`);
     return;
   }
   const unitIds = [...ctx.ids.units.values()];

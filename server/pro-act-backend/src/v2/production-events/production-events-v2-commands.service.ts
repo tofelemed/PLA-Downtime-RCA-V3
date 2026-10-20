@@ -57,6 +57,8 @@ import {
 } from './production-event-v2-write.dto';
 import { INTERVAL_FIELDS } from './source-owned-fields';
 import { clearedReason } from './cleared-reason';
+import { reasonColumns } from './reason-columns';
+import { patchReasonWeights } from './reason-weight-columns';
 import { EventFacts } from '../../production-event/revisions/event-facts';
 import { latestSourceRevision } from '../../production-event/revisions/revision-store';
 
@@ -159,9 +161,13 @@ export class ProductionEventsV2CommandService {
       values: dto,
     });
     assertIntervalEditable(existing, dto);
+    const weighted = await patchReasonWeights(this.references, tenantId, {
+      existing,
+      dto,
+    });
     const coded = await this.withCodeDefaults(
       tenantId,
-      dto,
+      { ...dto, reasonCodeId: weighted.reasonCodeId ?? dto.reasonCodeId },
       existing.startTime,
     );
     const now = this.clock.now();
@@ -182,8 +188,9 @@ export class ProductionEventsV2CommandService {
             { ...coded.dto, ...cleared.classification },
             now,
           ),
-          ...withoutKeptImpactCode(locked, coded.columns),
+          ...reasonColumns(locked, coded),
           ...cleared.columns,
+          ...weighted,
         };
       },
       releaseOverrides: () => released,
@@ -315,18 +322,6 @@ function assertIntervalEditable(
       message: 'The interval of a source event is owned by its source system',
     });
   }
-}
-
-/** An existing impact code is never replaced by a reason default (only an empty one is filled). */
-function withoutKeptImpactCode(
-  locked: ProductionEvent,
-  columns: Partial<ProductionEvent>,
-): Partial<ProductionEvent> {
-  if (!locked.impactCodeId || columns.impactCodeId === undefined)
-    return columns;
-  const rest = { ...columns };
-  delete rest.impactCodeId;
-  return rest;
 }
 
 /**

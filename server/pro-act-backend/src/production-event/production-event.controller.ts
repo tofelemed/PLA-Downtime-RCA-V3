@@ -30,20 +30,18 @@ export class ProductionEventController {
   constructor(private readonly eventService: ProductionEventService) {}
 
   /**
-   * All filters are ANDed; `startDate`/`endDate` use overlap semantics. Returns a plain array unless
-   * `page` or `pageSize` is given, in which case the response is `{ items, total, page, pageSize }`.
+   * All filters are ANDed; `startDate`/`endDate` use overlap semantics. Always one page
+   * `{ items, total, page, pageSize }` (default 50 rows, at most 200): the unpaged array is retired
+   * (plan 1.6, D-T2). Kept for the demo seeders, e2e and integration fixtures; the app reads v2.
    */
   @Get()
   @ApiOperation({
-    summary: 'List production events (AND-combined filters, optional paging)',
+    summary: 'List production events (AND-combined filters, paged)',
   })
   findAll(
     @Query() query: ProductionEventQueryDto,
-  ): Promise<ProductionEvent[] | PagedResult<ProductionEvent>> {
-    if (query.page !== undefined || query.pageSize !== undefined) {
-      return this.eventService.searchPage(query);
-    }
-    return this.eventService.search(query);
+  ): Promise<PagedResult<ProductionEvent>> {
+    return this.eventService.searchPage(query);
   }
 
   @Get(':id')

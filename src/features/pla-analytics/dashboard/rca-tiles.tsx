@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useRcaSummary } from '@/api/v2/queries/rca-cases';
 import type { RcaCaseSummaryCounts } from '@/api/v2/types/rca';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { AnalyticsCard } from '../components/analytics-card';
 import { RCA_LIST_LINKS } from './dashboard-links';
@@ -38,6 +39,7 @@ export function RcaTiles() {
   const query = useRcaSummary();
   const data = query.data;
   const { number } = useNumberFormat();
+  const { canViewAnalysis } = useCapabilities();
   return (
     <AnalyticsCard
       title="Investigations and actions"
@@ -45,9 +47,17 @@ export function RcaTiles() {
       query={query}
       response={undefined}
       actions={
-        <Link className="text-sm underline" to={RCA_LIST_LINKS.all}>
-          Investigations
-        </Link>
+        <span className="flex gap-3">
+          {/* item 2.1: which causes cost most and whether the actions worked */}
+          {canViewAnalysis && (
+            <Link className="text-sm underline" to="/reliability/portfolio" data-testid="dashboard-rca-portfolio">
+              Cause portfolio
+            </Link>
+          )}
+          <Link className="text-sm underline" to={RCA_LIST_LINKS.all}>
+            Investigations
+          </Link>
+        </span>
       }
     >
       {data && (

@@ -1,12 +1,18 @@
 import { EnginePolicy, LossEvent } from './accounting.types';
 
+/** The policy fields the micro-stop rule reads (the engine policy, or an `oee_policy` read on its own). */
+export type MicroStopPolicy = Pick<
+  EnginePolicy,
+  'microStopSeconds' | 'microStopSecondsByAssetClass' | 'tripReasonCodes'
+>;
+
 /** SME D8: severities of a functional failure (needs maintenance, never operator-cleared). */
 const FUNCTIONAL_FAILURE = new Set(['critical', 'degraded']);
 
 const keyOf = (value: string) => value.trim().toLowerCase();
 
 /** Asset class (asset type) → threshold, keys compared without case; absent = none. */
-function classThresholds(policy: EnginePolicy): Map<string, number> {
+function classThresholds(policy: MicroStopPolicy): Map<string, number> {
   return new Map(
     Object.entries(policy.microStopSecondsByAssetClass ?? {}).map(
       ([assetClass, seconds]) => [keyOf(assetClass), seconds],
@@ -23,7 +29,7 @@ function classThresholds(policy: EnginePolicy): Map<string, number> {
  */
 export function microStopThresholdOf(
   events: readonly LossEvent[],
-  policy: EnginePolicy,
+  policy: MicroStopPolicy,
 ): number {
   const trips = new Set((policy.tripReasonCodes ?? []).map(keyOf));
   const isTrip = (e: LossEvent) =>
@@ -43,7 +49,7 @@ export function microStopThresholdOf(
 /** Threshold per occurrence id of the given events (one entry per occurrence). */
 export function occurrenceThresholds(
   events: readonly LossEvent[],
-  policy: EnginePolicy,
+  policy: MicroStopPolicy,
 ): Map<string, number> {
   const groups = new Map<string, LossEvent[]>();
   for (const event of events) {

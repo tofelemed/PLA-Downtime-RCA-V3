@@ -15,6 +15,7 @@ import { useRcaFormat } from '../use-rca-format';
 import { useUnitNames } from '../use-unit-names';
 import { useCaseWorkspace } from './case-context';
 import { CaseExportMenu } from './case-export-menu';
+import { CaseExportPdf } from './case-export-pdf';
 import { CaseTrace } from './case-trace';
 
 /**
@@ -50,7 +51,7 @@ function DeleteCase() {
   );
 }
 
-/** Title, status, priority, unit and dates of the case, its trigger event and approved loss, with export and delete. */
+/** Title, status, priority, unit and dates of the case, its trigger event and approved loss, with exports (PDF, files) and delete. */
 export function CaseHeader() {
   const { rca, readOnly } = useCaseWorkspace();
   const { unitName } = useUnitNames();
@@ -75,6 +76,7 @@ export function CaseHeader() {
       meta={meta}
       actions={
         <>
+          <CaseExportPdf />
           <CaseExportMenu />
           {!readOnly && <DeleteCase />}
         </>

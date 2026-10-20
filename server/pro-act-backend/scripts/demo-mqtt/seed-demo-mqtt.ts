@@ -25,7 +25,7 @@ import {
   parseCliArgs,
   stringFlag,
   tenantFlag,
-} from '../../src/migration-cutover/cli/cli-args';
+} from '../../src/common/cli/cli-args';
 import { DemoApiClient } from '../demo-valuation/api-client';
 import {
   DEFAULT_BROKER_URL,

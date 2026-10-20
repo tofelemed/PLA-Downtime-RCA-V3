@@ -18,6 +18,7 @@ import {
   FrameResult,
   PiFrameIngestService,
 } from './pi-frame-ingest.service';
+import { unresolvedReason } from './unresolved-reason';
 
 /** Inline callers (the PI pull) pass the mapping context they loaded once per pull. */
 export interface PiNormalizationHints {
@@ -35,8 +36,8 @@ const ERROR_CODE: Readonly<
 /**
  * Normaliser of PI event frames (plan 1.5 → 1.2/1.3): the retained frame goes through the existing
  * typed mapping, hierarchy resolution and source revision path (`PiFrameIngestService`). A frame that
- * cannot be placed is quarantined (`unknown_unit`, `mapping_ambiguous`, `mapping_invalid_target`); it is
- * also mirrored into `unmapped_events` so the v1 screens keep showing it.
+ * cannot be placed is quarantined (`unknown_unit`, `mapping_ambiguous`, `mapping_invalid_target`). A reason
+ * token that is not a code of the tenant leaves the event uncoded with an open `unknown_code` item.
  */
 @Injectable()
 export class PiIntervalHandler implements NormalizationHandler, OnModuleInit {
@@ -79,11 +80,13 @@ export class PiIntervalHandler implements NormalizationHandler, OnModuleInit {
         },
       };
     }
+    const quarantine = unresolvedReason(result, attributes);
     return {
       status: 'applied',
       outcome: result.outcome,
       canonicalEventId: result.eventId ?? null,
       detail: { diagnostics: result.diagnostics },
+      ...(quarantine ? { quarantine } : {}),
     };
   }
 

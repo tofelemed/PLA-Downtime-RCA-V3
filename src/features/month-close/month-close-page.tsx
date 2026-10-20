@@ -11,6 +11,7 @@ import { ClosePrerequisites } from './components/close-prerequisites';
 import { CloseOverview } from './components/close-overview';
 import { CloseSectionNav } from './components/close-section-nav';
 import { MonthNav } from './components/month-nav';
+import { CloseExceptions } from './exceptions/close-exceptions';
 import { closeSearch, closeSection } from './model/close-section';
 
 function MonthCloseScreen() {
@@ -45,6 +46,7 @@ function MonthCloseScreen() {
               {(['periods', 'days', 'proposals'] as const).map((part) => <TabsContent key={part} value={part}>
                 <ClosePrerequisites view={view} section={part} />
               </TabsContent>)}
+              <TabsContent value="exceptions"><CloseExceptions view={view} /></TabsContent>
               <TabsContent value="history"><CloseHistory view={view} /></TabsContent>
             </Tabs>
           )}

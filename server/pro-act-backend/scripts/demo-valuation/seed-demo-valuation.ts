@@ -21,7 +21,7 @@ import {
   parseCliArgs,
   stringFlag,
   tenantFlag,
-} from '../../src/migration-cutover/cli/cli-args';
+} from '../../src/common/cli/cli-args';
 import { DemoApiClient } from './api-client';
 import { DEFAULT_SEED, DEMO_RANGES } from './demo-random';
 import { seedImpactCoding } from './seed-impact-coding';

@@ -1,3 +1,4 @@
+import { isSelfDecision } from '../domain/approvals/self-decision';
 import { EffectivenessVerdict } from '../domain/rca/effectiveness';
 import { ActionBaseline } from '../domain/rca/rca-verification';
 import {
@@ -32,8 +33,12 @@ export interface RcaActionV2View {
   completionAttachments: CompletionAttachment[];
   hasEvidence: boolean;
   completedAt: string | null;
-  /** who checked the evidence and marked it done (never the owner) */
+  /** who checked the evidence and marked it done (never the owner, except a SuperAdmin) */
   completionVerifiedBy: string | null;
+  /** item 1.3: marked done by its own owner — a SuperAdmin self-decision (owner decision 2026-10-16) */
+  selfDecided: boolean;
+  /** item 1.3: the baseline correction was decided by its proposer (SuperAdmin only) */
+  baselineCorrectionSelfDecided: boolean;
   verificationWindowStart: string | null;
   verificationWindowEnd: string | null;
   /** CA4: how the completion is verified (null = not stated) */
@@ -101,6 +106,11 @@ export function toActionView(
     hasEvidence: hasCompletionEvidence(action),
     completedAt: iso(action.completedAt),
     completionVerifiedBy: action.completionVerifiedBy,
+    selfDecided: isSelfDecision(action.completionVerifiedBy, [action.ownerId]),
+    baselineCorrectionSelfDecided: isSelfDecision(
+      action.baseline?.correction?.decidedBy,
+      [action.baseline?.correction?.proposedBy],
+    ),
     verificationWindowStart: iso(action.verificationWindowStart),
     verificationWindowEnd: iso(action.verificationWindowEnd),
     verificationMethod: action.verificationMethod ?? null,

@@ -24,6 +24,7 @@ export const SOURCE_ATTRIBUTE_FACTS = [
 
 /** Source facts stored as structures (compared by canonical JSON, never stringified). */
 const STRUCTURED_FIELDS: ReadonlySet<string> = new Set([
+  'reasonWeights',
   'reason',
   'impactCode',
   'oeeCode',
@@ -68,6 +69,7 @@ export const SOURCE_COLUMN_FIELDS: readonly string[] = SOURCE_FIELDS.filter(
 /** Fields a user codes (reason, impact, OEE, classification, comment). */
 export const CODING_FIELDS = [
   'reasonCodeId',
+  'reasonWeights',
   'investigationPending',
   'originUnitId',
   'originAssetId',

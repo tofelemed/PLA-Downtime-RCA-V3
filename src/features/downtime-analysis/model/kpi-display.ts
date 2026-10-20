@@ -53,7 +53,27 @@ export const CONTROLLABLE_TILE: TileSpec = {
   note: 'Supplemental view: run time ÷ scheduled time with stops classed external not counted as stops',
 };
 
+/** Plan 2.3: what an incomplete downtime card counts, and where the rest of the window is reported. */
+export const INCOMPLETE_TEXT =
+  'Only calculated periods are counted here. Units/days without a plan or calendar are shown separately on calendar basis in the downtime summary.';
+
+/** Plan 2.3: the basis badge of figures computed over calendar time (the server sends the same `label`). */
+export const CALENDAR_BASIS_BADGE = 'Calendar basis — no plan or calendar for these units/days';
+
+/**
+ * Plan 2.3: tiles of the calendar-basis total (units/days without a calculation run). The availability is
+ * calendar availability, never ISO 22400 availability; values are the server's.
+ */
+export const CALENDAR_TILES: readonly TileSpec[] = [
+  { metric: 'calendar_availability', title: 'Calendar availability', kind: 'ratio', note: '1 − unplanned downtime ÷ calendar time (not ISO 22400 availability)' },
+  { metric: 'downtime_total', title: 'Total downtime', kind: 'duration', note: 'Stop time over calendar time' },
+  { metric: 'downtime_unplanned', title: 'Unplanned', kind: 'duration', note: 'Stops classed unplanned' },
+  { metric: 'stop_count', title: 'Stops', kind: 'count', note: 'Stop occurrences starting in these days' },
+  { metric: 'mtbf', title: 'MTBF', kind: 'duration', note: 'Calendar run time ÷ confirmed functional failures' },
+];
+
 const REASONS: Readonly<Record<string, string>> = {
+  no_calendar_time: 'No calendar time in the window',
   no_data: 'No calculated periods',
   no_scheduled_time: 'No scheduled time',
   no_known_time: 'No state data covers this window',

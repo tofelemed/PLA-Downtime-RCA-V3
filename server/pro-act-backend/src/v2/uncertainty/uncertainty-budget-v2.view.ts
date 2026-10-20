@@ -36,6 +36,8 @@ export interface UncertaintyBudgetV2View {
   authorId: string;
   decidedBy: string | null;
   decidedAt: string | null;
+  /** item 1.3: decided by its own author — the stored SuperAdmin override (owner decision 2026-10-16) */
+  selfDecided: boolean;
   decisionReason: string | null;
   createdAt: string;
   rowVersion: number;
@@ -76,6 +78,7 @@ export function toUncertaintyBudgetView(
     authorId: row.authorId,
     decidedBy: row.decidedBy,
     decidedAt: iso(row.decidedAt),
+    selfDecided: row.superAdminOverride,
     decisionReason: row.decisionReason,
     createdAt: new Date(row.createdAt).toISOString(),
     rowVersion: row.rowVersion,

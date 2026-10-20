@@ -24,12 +24,6 @@ export class TaskService {
     private readonly realtimeGateway: RealtimeGateway,
   ) {}
 
-  findAll(): Promise<Task[]> {
-    return this.taskRepository.find({
-      order: { dueDate: 'ASC', createdAt: 'DESC' },
-    });
-  }
-
   findWithFilters(filters: TaskQuery): Promise<Task[]> {
     const qb = this.taskRepository.createQueryBuilder('task');
 
@@ -66,8 +60,14 @@ export class TaskService {
       .getMany();
   }
 
-  findOne(id: string): Promise<Task | null> {
-    return this.taskRepository.findOne({ where: { id } });
+  /** The task in `tenantId`; a task of another tenant reads as absent (plan 1.6: not RLS alone). */
+  findOne(tenantId: string, id: string): Promise<Task | null> {
+    return this.taskRepository.findOne({ where: { id, tenantId } });
+  }
+
+  /** The task in `tenantId`, or 404. */
+  findInTenant(tenantId: string, id: string): Promise<Task> {
+    return findOrThrow(this.findOne(tenantId, id), 'Task', id);
   }
 
   async create(data: Partial<Task>): Promise<Task> {
@@ -84,7 +84,11 @@ export class TaskService {
     return saved;
   }
 
-  async update(id: string, data: Partial<Task>): Promise<Task | null> {
+  async update(
+    tenantId: string,
+    id: string,
+    data: Partial<Task>,
+  ): Promise<Task | null> {
     const patch = { ...data };
     if (patch.status === 'Completed' && !patch.completedDate) {
       patch.completedDate = new Date();
@@ -92,16 +96,16 @@ export class TaskService {
     if (patch.status && patch.status !== 'Completed') {
       patch.completedDate = undefined;
     }
-    await findOrThrow(this.findOne(id), 'Task', id);
-    await this.taskRepository.update(id, patch);
-    const updated = await findOrThrow(this.findOne(id), 'Task', id);
+    await this.findInTenant(tenantId, id);
+    await this.taskRepository.update({ id, tenantId }, patch);
+    const updated = await this.findInTenant(tenantId, id);
     this.realtimeGateway.broadcastEntityEvent('Updated', 'task', updated);
     return updated;
   }
 
-  async remove(id: string): Promise<void> {
-    await findOrThrow(this.findOne(id), 'Task', id);
-    await this.taskRepository.delete(id);
+  async remove(tenantId: string, id: string): Promise<void> {
+    await this.findInTenant(tenantId, id);
+    await this.taskRepository.delete({ id, tenantId });
     this.realtimeGateway.broadcastEntityEvent('Deleted', 'task', { id });
   }
 

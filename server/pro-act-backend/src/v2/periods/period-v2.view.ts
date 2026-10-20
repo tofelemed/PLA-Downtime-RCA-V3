@@ -112,6 +112,8 @@ export interface AdjustmentV2View {
   state: string;
   decidedBy: string | null;
   decidedAt: string | null;
+  /** item 1.3: decided by its own author — the stored SuperAdmin override (owner decision 2026-10-16) */
+  selfDecided: boolean;
   decisionReason: string | null;
   createdAt: string;
 }
@@ -208,6 +210,7 @@ export function toAdjustmentView(
     state: adjustment.state,
     decidedBy: adjustment.decidedBy,
     decidedAt: iso(adjustment.decidedAt),
+    selfDecided: adjustment.superAdminOverride,
     decisionReason: adjustment.decisionReason,
     createdAt: adjustment.createdAt.toISOString(),
   };

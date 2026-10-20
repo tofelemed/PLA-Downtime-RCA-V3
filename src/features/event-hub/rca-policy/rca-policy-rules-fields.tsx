@@ -3,7 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/features/ux-kit/form-field';
-import { ANALYSIS_METHOD_KEYS, ANALYSIS_METHOD_LABELS, CONSEQUENCE_CLASSES, percentError, type ConsequenceClass, type RcaRulesDraft } from './rca-policy-rules-draft';
+import { labelOf } from '@/features/ux-kit/labels';
+import { RCA_CONSEQUENCE_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { ANALYSIS_METHOD_KEYS, ANALYSIS_METHOD_LABELS, CONSEQUENCE_CLASSES, isOptionalTier, percentError, type ConsequenceClass, type RcaRulesDraft } from './rca-policy-rules-draft';
 
 type SetRule = <K extends keyof RcaRulesDraft>(key: K, value: RcaRulesDraft[K]) => void;
 
@@ -44,7 +46,7 @@ function EffectivenessFields({ draft, set }: Props) {
       <div className="space-y-2 sm:col-span-2">
         <p className="text-sm font-medium">Any repeat is not effective for</p>
         {CONSEQUENCE_CLASSES.map((cls) => (
-          <Check key={cls} id={`rca-zero-${cls}`} label={`${cls} consequence`} checked={draft.zeroRepeatClasses.includes(cls)} onChange={(on) => toggle(cls, on)} />
+          <Check key={cls} id={`rca-zero-${cls}`} label={`${labelOf(RCA_CONSEQUENCE_LABELS, cls)} consequence`} checked={draft.zeroRepeatClasses.includes(cls)} onChange={(on) => toggle(cls, on)} />
         ))}
       </div>
     </fieldset>
@@ -74,22 +76,32 @@ function AnalysisRuleFields({ draft, set }: Props) {
   );
 }
 
+/** One class's tier; an optional tier left empty reads "not set — the default applies". */
+function TierFields({ cls, draft, set }: Props & { cls: ConsequenceClass }) {
+  const label = labelOf(RCA_CONSEQUENCE_LABELS, cls);
+  const unset = isOptionalTier(cls) && draft.methodGroups[cls].trim() === '' && draft.minTeamMembers[cls].trim() === '';
+  const teamHint = isOptionalTier(cls) ? 'Accepting the investigation needs at least this many members; leave both fields empty to use the default.' : 'Accepting the investigation needs at least this many members.';
+  return (
+    <div className="space-y-2" data-testid={`rca-tier-${cls}`}>
+      <FormField id={`rca-methods-${cls}`} label={`${label}: method groups`} hint={unset ? 'not set — the default applies' : undefined}>
+        <Textarea id={`rca-methods-${cls}`} value={draft.methodGroups[cls]} onChange={(e) => set('methodGroups', { ...draft.methodGroups, [cls]: e.target.value })} />
+      </FormField>
+      <NumberInput id={`rca-team-${cls}`} label="Minimum team members" hint={teamHint} value={draft.minTeamMembers[cls]} onChange={(v) => set('minTeamMembers', { ...draft.minTeamMembers, [cls]: v })} />
+    </div>
+  );
+}
+
 /** CA7 methods and team size per consequence class. */
 function InvestigationFields({ draft, set }: Props) {
   return (
-    <fieldset className="grid gap-4 rounded border p-3 sm:grid-cols-3" data-testid="rca-policy-methods">
+    <fieldset className="grid gap-4 rounded border p-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="rca-policy-methods">
       <legend className="px-1 text-sm font-medium">Methods per consequence class</legend>
-      <p className="text-xs text-muted-foreground sm:col-span-3">
+      <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-4">
         One group per line, methods separated by commas; each group needs at least one of its methods. Type each method as its key:{' '}
         {ANALYSIS_METHOD_KEYS.map((key) => `${ANALYSIS_METHOD_LABELS[key]} = ${key}`).join(', ')}.
       </p>
       {CONSEQUENCE_CLASSES.map((cls) => (
-        <div key={cls} className="space-y-2">
-          <FormField id={`rca-methods-${cls}`} label={`${cls[0].toUpperCase()}${cls.slice(1)}: method groups`}>
-            <Textarea id={`rca-methods-${cls}`} value={draft.methodGroups[cls]} onChange={(e) => set('methodGroups', { ...draft.methodGroups, [cls]: e.target.value })} />
-          </FormField>
-          <NumberInput id={`rca-team-${cls}`} label="Minimum team members" hint="Accepting the investigation needs at least this many members." value={draft.minTeamMembers[cls]} onChange={(v) => set('minTeamMembers', { ...draft.minTeamMembers, [cls]: v })} />
-        </div>
+        <TierFields key={cls} cls={cls} draft={draft} set={set} />
       ))}
     </fieldset>
   );

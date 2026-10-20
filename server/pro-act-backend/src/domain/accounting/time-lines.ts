@@ -10,6 +10,7 @@ import {
   Segment,
 } from './accounting.types';
 import { autoKey } from './auto-key';
+import { causeKey } from './reason-split';
 
 /** Which rate re-bases time into quantity: sustained (capacity ledger) or planning (plan ledger). */
 export type RateBasis = 'sustained' | 'planning';
@@ -88,7 +89,8 @@ function sameGroup(a: RawEntry, b: RawEntry): boolean {
     a.kind === b.kind &&
     a.rate.id === b.rate.id &&
     a.label === b.label &&
-    (a.cause?.eventId ?? null) === (b.cause?.eventId ?? null) &&
+    (a.cause ? causeKey(a.cause) : null) ===
+      (b.cause ? causeKey(b.cause) : null) &&
     (a.share?.eq(b.share ?? -1) ?? b.share === null)
   );
 }

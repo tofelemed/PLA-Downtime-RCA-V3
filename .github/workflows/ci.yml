@@ -207,8 +207,11 @@ jobs:
         run: npm run size
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Smoke suite (login, task CRUD, audit interceptor)
-        run: npx playwright test e2e/auth.spec.ts e2e/tasks.spec.ts e2e/audit-auto-log.spec.ts
+      - name: Smoke suite (login, task CRUD, audit interceptor, stop verification, PLA approval, RCA closure)
+        # the last three seed their own unit, reason codes, plan and case in the demo tenant (Tier 1 item 1.7)
+        run: >-
+          npx playwright test e2e/auth.spec.ts e2e/tasks.spec.ts e2e/audit-auto-log.spec.ts
+          e2e/event-verification-d13.spec.ts e2e/plan-dashboard-ux05.spec.ts e2e/rca-integration-rca01-03.spec.ts
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

@@ -194,7 +194,9 @@ describe('approval detail page', () => {
     const summary = screen.getByTestId('approval-summary');
     expect(within(summary).getByText('Awaiting posting')).toBeTruthy();
     expect(summary.textContent).not.toMatch(/awaiting posting|awaiting_posting/);
-    fireEvent.change(within(form).getByTestId('posting-date'), { target: { value: '2026-11-03' } });
+    const date = within(form).getByLabelText(/Posting date/);
+    fireEvent.change(date, { target: { value: '2026-11-03' } });
+    fireEvent.blur(date);
     fireEvent.change(within(form).getByTestId('posting-treatment'), { target: { value: 'estimate_change' } });
     fireEvent.click(within(form).getByTestId('posting-save'));
     expect(posts()).toHaveLength(0);

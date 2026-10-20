@@ -1,3 +1,4 @@
+import { versionSelfApproved } from '../../domain/approvals/self-decision';
 import {
   Body,
   Controller,
@@ -110,6 +111,8 @@ export interface SourceStatusMappingV2View {
   approvedBy: string | null;
   approvedByName: string | null;
   approvedAt: string | null;
+  /** item 1.3: approved by its own author — a SuperAdmin self-approval (owner decision 2026-10-16) */
+  selfDecided: boolean;
   /** the approved version imports of this source use now */
   inForce: boolean;
   notes: string | null;
@@ -139,6 +142,7 @@ function toView(
     approvedBy: m.approvedBy,
     approvedByName: nameOf(m.approvedBy),
     approvedAt: m.approvedAt ? m.approvedAt.toISOString() : null,
+    selfDecided: versionSelfApproved(m),
     inForce: (extras.inForceIds ?? inForceIdsOf([m], new Date())).has(m.id),
     notes: m.notes,
   };

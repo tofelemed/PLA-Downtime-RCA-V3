@@ -78,7 +78,7 @@ export class RcaCasesV2Controller {
   @ApiOperation({
     summary: 'Search cases of your scope (newest first)',
     description:
-      'Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), title (q). ' +
+      'Filters: status, open (not Closed), unit, asset (case asset or a linked event), reason of a linked event, window of a linked event (from/to), catalogue cause code of a typed cause (causeCodeId), title (q). ' +
       'Each row carries its first linked event (trigger, null without one) and its action counts (total without cancelled, done, overdue).',
   })
   list(

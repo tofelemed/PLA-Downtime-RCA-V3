@@ -94,6 +94,7 @@ function source(
     snapshotId: 'snapshot-1',
     approvedAt: '2026-10-12T21:00:00.000Z',
     sliceProducts: { [SLICE]: { productId: 'p-1', productName: 'HDPE' } },
+    selfApproved: false,
     reviewed: reviewedOf({
       reviewed: {
         utcStart: '2026-10-12T02:30:00.000Z',

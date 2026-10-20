@@ -9,6 +9,7 @@ import {
 } from './accounting.types';
 import { allocateCauses } from './cause-allocator';
 import { occurrenceThresholds } from './micro-stop-threshold';
+import { splitByReasons } from './reason-split';
 import { eventsOfStream, slicePieces, StreamPiece } from './streams';
 
 /** Downtime events split by the micro-stop rule (D04 / KPI02) and planned-stop policy. */
@@ -201,8 +202,9 @@ function segmentWindow(
       exclusionKind: running ? null : exclusion || null,
       sustained: rateAt(slice.sustainedRates, part.start),
       planning: rateAt(slice.planningRates, part.start),
-      stops: causes(classified.stops),
-      microStops: causes(classified.microStops),
+      // D-T5: a weighted stop's share is split across its reasons inside the share it received
+      stops: splitByReasons(causes(classified.stops)),
+      microStops: splitByReasons(causes(classified.microStops)),
       derates: running ? activeIn(classified.derates, part, input.asOf) : [],
       transitions: causes(classified.transitions),
       ...(piece

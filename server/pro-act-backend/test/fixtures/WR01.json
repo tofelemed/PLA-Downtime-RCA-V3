@@ -1,0 +1,29 @@
+{
+  "id": "WR01",
+  "title": "Weighted multi-reason stop alone: one stop split 75 % / 25 % across two reasons",
+  "kind": "numerical",
+  "spec_ref": "Tier 2 item 2.8; D-T5 (DECISIONS 2026-10-19): weights set by the coder, sum 100 %, split only the stop's own loss; ACC05 conservation",
+  "owner_subphase": "2.8",
+  "tolerance": "0.000001",
+  "inputs": {
+    "shift": "02:30-10:30 (8 h), one slice, sustained 100 t/h, planning 90 t/h",
+    "stop": {
+      "id": "E1",
+      "from": "04:30",
+      "to": "06:30",
+      "reasonCodeId": "R1"
+    },
+    "reasonWeights": [
+      { "reasonCodeId": "R1", "weight": "0.75000000" },
+      { "reasonCodeId": "R2", "weight": "0.25000000" }
+    ]
+  },
+  "expected": {
+    "issues": "0",
+    "capacity": { "R1": "150", "R2": "50", "availability": "200" },
+    "plan": { "R1": "135", "R2": "45", "availability": "180" },
+    "evidenceShares": { "R1": "0.75000000", "R2": "0.25000000" },
+    "lines": 4
+  },
+  "status": "authored"
+}

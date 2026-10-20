@@ -44,7 +44,7 @@ const LINKED_EVENT = (condition: string) =>
 
 /**
  * v2 RCA cases (plan 3.9 step 1): tenant and unit scope from identity, keyset lists with server-side
- * search (status, unit, asset / reason / window of linked events, title), ETag reads and If-Match edits
+ * search (status, unit, asset / reason / window of linked events, cause code, title), ETag reads and If-Match edits
  * that persist the nested content. The status never comes from a body: moves go through
  * `RcaCaseWorkflowService` (RCA-01).
  */
@@ -90,6 +90,11 @@ export class RcaCasesService {
       qb.andWhere(LINKED_EVENT('e."reason_code_id" = :reasonCodeId'), {
         reasonCodeId: query.reasonCodeId,
       });
+    if (query.causeCodeId)
+      qb.andWhere(
+        `EXISTS (SELECT 1 FROM "rca_causes" c WHERE c."tenant_id" = rca.tenant_id AND c."rca_id" = rca.id AND c."cause_code_id" = :causeCodeId)`,
+        { causeCodeId: query.causeCodeId },
+      );
     if (query.from || query.to)
       qb.andWhere(
         LINKED_EVENT(

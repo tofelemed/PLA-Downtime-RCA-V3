@@ -1,0 +1,21 @@
+{
+  "id": "WR04",
+  "title": "Unweighted regression: no weights, null weights and a single 100 % reason give byte-identical lines and keys",
+  "kind": "numerical",
+  "spec_ref": "Tier 2 item 2.8: unweighted events produce byte-identical results (engine 2.8.0 = 2.7.0 without weights)",
+  "owner_subphase": "2.8",
+  "tolerance": "0.000001",
+  "inputs": {
+    "shift": "02:30-10:30 (8 h), sustained 100 t/h, planning 90 t/h",
+    "stops": [
+      { "id": "E1", "from": "04:30", "to": "06:30", "reasonCodeId": "R1" },
+      { "id": "E2", "from": "05:30", "to": "07:30", "reasonCodeId": "R3" }
+    ],
+    "variants": ["absent", "null", "single reason R1 at 1"]
+  },
+  "expected": {
+    "identical": "true",
+    "keysWithReason": "0"
+  },
+  "status": "authored"
+}

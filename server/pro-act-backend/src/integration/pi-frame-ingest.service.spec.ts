@@ -24,7 +24,6 @@ describe('PiFrameIngestService', () => {
   let findOne: jest.Mock;
   let create: jest.Mock;
   let applySourceRevision: jest.Mock;
-  let record: jest.Mock;
   let activeRules: jest.Mock;
   let placement: ResolvedMapping;
   let service: PiFrameIngestService;
@@ -33,7 +32,6 @@ describe('PiFrameIngestService', () => {
     findOne = jest.fn();
     create = jest.fn().mockResolvedValue({});
     applySourceRevision = jest.fn();
-    record = jest.fn();
     activeRules = jest.fn().mockResolvedValue([]);
     placement = {
       status: 'mapped',
@@ -59,7 +57,6 @@ describe('PiFrameIngestService', () => {
         resolveFacts: jest.fn().mockResolvedValue({ ids: {}, diagnostics: [] }),
       }),
       stub({ defaultsFor: jest.fn().mockResolvedValue({}) }),
-      stub({ record }),
       stub({ activeRules }),
     );
   });
@@ -180,16 +177,10 @@ describe('PiFrameIngestService', () => {
     expect(activeRules).not.toHaveBeenCalled();
   });
 
-  it('quarantines an ambiguous frame instead of picking a mapping', async () => {
+  it('returns an ambiguous frame for quarantine instead of picking a mapping', async () => {
     placement = { status: 'ambiguous', tier: 'pattern', candidates: [] };
 
-    expect((await ingest()).outcome).toBe('unmapped');
-
-    expect(record).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ WebId: 'EF-1' }),
-      expect.objectContaining({ placement }),
-    );
+    expect(await ingest()).toMatchObject({ outcome: 'unmapped', placement });
     expect(create).not.toHaveBeenCalled();
   });
 });

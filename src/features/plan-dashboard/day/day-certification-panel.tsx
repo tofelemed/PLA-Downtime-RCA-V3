@@ -6,6 +6,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { WORKFLOW_LABELS } from '../model/display';
 import { CertifyDayButton } from './certify-day-button';
@@ -44,6 +45,7 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">Production day {formatOperationalDate(day.localDate, pref)}</span>
         <Badge variant={day.state === 'certified' ? 'default' : 'secondary'}>{STATE_LABELS[day.state]}</Badge>
+        <SelfDecisionBadge selfDecided={day.certification?.selfDecided} kind="decided" />
         {canCertifyDay && day.state === 'ready' && (
           <CertifyDayButton day={day} disabled={certify.isPending || submitted} onCertify={() => certify.submit({ unitId, localDate })} />
         )}

@@ -1,4 +1,5 @@
 import { formatDec, toDec } from '../../domain/actuals/decimal';
+import { versionSelfApproved } from '../../domain/approvals/self-decision';
 import { ImportRowError } from '../../domain/profiles/rate-import-rows';
 import { formatRate, ratePerSecond } from '../../domain/profiles/rate-math';
 import {
@@ -22,6 +23,8 @@ export interface VersionFields {
   createdBy: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: approved by its own author — a SuperAdmin self-approval (owner decision 2026-10-16) */
+  selfDecided: boolean;
   rowVersion: number;
   createdAt: string;
   updatedAt: string;
@@ -118,6 +121,7 @@ export function versionFields(row: {
     createdBy: row.createdBy,
     approvedBy: row.approvedBy,
     approvedAt: iso(row.approvedAt),
+    selfDecided: versionSelfApproved(row),
     rowVersion: row.rowVersion,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),

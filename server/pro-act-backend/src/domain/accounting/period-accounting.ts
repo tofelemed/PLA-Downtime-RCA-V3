@@ -21,7 +21,9 @@ import { segmentSlice } from './segmentation';
 //        stream events hit only that stream, declared quantities are assigned once (no streams = 2.5.8)
 // 2.7.0: SME E2 plant flow — an upstream stop consumes buffer cover before it starves this unit; the starved
 //        time is an external availability loss charged to the upstream stop (recorded stops take precedence)
-export const ACCOUNTING_ENGINE_VERSION = '2.7.0';
+// 2.8.0: D-T5 weighted multi-reason stops — the share a stop receives in a segment (after first_out /
+//        equal_share) is split across its weighted reasons, one line per (cause event, reason); unweighted = 2.7.0
+export const ACCOUNTING_ENGINE_VERSION = '2.8.0';
 
 function computeSlices(
   input: PeriodAccountingInput,

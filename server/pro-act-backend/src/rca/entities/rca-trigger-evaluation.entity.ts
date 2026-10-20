@@ -6,6 +6,8 @@ export const TRIGGER_FIRED_ON = [
   'threshold_crossed_open',
   'closed',
   'approved',
+  /** D-T3: the recurrence watch of a closed case (trigger `reevaluate`) */
+  'after_closure',
 ] as const;
 export const TRIGGER_OUTCOMES = [
   'recommended',
@@ -27,6 +29,7 @@ export type RecommendationState = (typeof RECOMMENDATION_STATES)[number];
 @Unique('UQ_rca_trigger_evaluations_key', ['tenantId', 'idempotencyKey'])
 @Index('IDX_rca_trigger_evaluations_event', ['tenantId', 'eventId'])
 @Index('IDX_rca_trigger_evaluations_state', ['tenantId', 'state', 'firedAt'])
+@Index('IDX_rca_trigger_evaluations_rca', ['tenantId', 'rcaId', 'trigger'])
 export class RcaTriggerEvaluation extends TenantScopedEntity {
   @Column({ name: 'idempotency_key', type: 'varchar', length: 200 })
   idempotencyKey: string;
@@ -41,7 +44,7 @@ export class RcaTriggerEvaluation extends TenantScopedEntity {
   @Column({ name: 'source_version', type: 'int' })
   sourceVersion: number;
 
-  /** duration, repeat or rule */
+  /** duration, repeat, cumulative, consequence, cost, quantity, rule, or reevaluate (D-T3 watch) */
   @Column({ name: 'trigger', type: 'varchar', length: 16 })
   trigger: string;
 

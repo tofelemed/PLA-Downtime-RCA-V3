@@ -8,6 +8,7 @@ import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { ConsoleRefusal } from '../components/console-refusal';
 
 const STATE_LABELS: Readonly<Record<string, string>> = { draft: 'Draft — waiting for the source owner', approved: 'Approved', retired: 'Retired' };
@@ -60,7 +61,8 @@ export function MappingVersionCard({ version, timezone }: { version: SourceStatu
         {version.approvedAt && (
           <>
             {' '}
-            · approved by {resolvedActorText(version.approvedBy, version.approvedByName)} on <PlantTime iso={version.approvedAt} tz={timezone} withDate />
+            · approved by {resolvedActorText(version.approvedBy, version.approvedByName)} on <PlantTime iso={version.approvedAt} tz={timezone} withDate />{' '}
+            <SelfDecisionBadge selfDecided={version.selfDecided} />
           </>
         )}
       </p>

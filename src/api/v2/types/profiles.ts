@@ -35,6 +35,8 @@ export interface VersionFields {
   createdBy?: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   rowVersion: number;
   createdAt: string;
   updatedAt: string;

@@ -71,6 +71,8 @@ export interface LotDispositionView {
   authorId: string;
   decidedBy: string | null;
   decidedAt: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   decisionReason: string | null;
   supersededAt: string | null;
   createdAt: string;

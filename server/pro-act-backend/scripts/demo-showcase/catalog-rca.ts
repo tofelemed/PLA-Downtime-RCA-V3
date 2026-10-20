@@ -62,7 +62,9 @@ export interface CaseSpec {
   title: string;
   description: string;
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  consequenceClass: 'minor' | 'significant' | 'major' | null;
+  consequenceClass: 'minor' | 'significant' | 'major' | 'critical' | null;
+  /** D-T4: required from the significant class on before the investigation is accepted */
+  teamCharter?: string;
   rootCause: string | null;
   /** 5-Why chain: answer and the evidence that supports it (CA6: evidence per level, not a count) */
   fiveWhy?: ReadonlyArray<{ answer: string; evidence: string }>;
@@ -85,6 +87,8 @@ const GEARBOX: CaseSpec = {
     'Line 2 within 30 days (none of them two hours long). Oil analysis showed oxidised oil.',
   priority: 'High',
   consequenceClass: 'significant',
+  teamCharter:
+    'Find why the Extruder Line 2 gearbox bearing overheats and stop the repeat trips; lead: reliability engineer, members: maintenance planner and area operator.',
   rootCause:
     'Oil change interval (12 months) too long for the summer gearbox load: the oil oxidises and the bearing runs hot.',
   fiveWhy: [

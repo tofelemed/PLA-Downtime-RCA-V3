@@ -26,6 +26,7 @@ import {
 } from './report-sql';
 import { ReportScope } from './report-scope';
 import { dataCoverage } from './data-coverage';
+import { calendarBasisOf } from './calendar-basis-report';
 
 /** Period-level downtime KPIs of the whole scope (KPI05 / KPI06), summed in SQL (AN03). */
 const SUMMARY_METRICS: readonly KpiMetric[] = [
@@ -170,6 +171,13 @@ export function breakdownSpec(
   };
 }
 
+/** Plan 2.3: marks run-based figures `calculated`, so they are never read as calendar-basis ones. */
+export function calculatedBasis(
+  views: readonly KpiAggregateView[],
+): KpiAggregateView[] {
+  return views.map((view) => ({ ...view, basis: 'calculated' }));
+}
+
 export async function summaryOf(
   manager: EntityManager,
   scope: ReportScope,
@@ -220,9 +228,14 @@ export async function downtimeReport(
     includeMicroStops: query.includeMicroStops ?? false,
     parentReasonId: query.parentReasonId ?? null,
     ...groups,
-    summary: await summaryOf(manager, scope),
+    summary: calculatedBasis(await summaryOf(manager, scope)),
     dataCoverage: await dataCoverage(manager, scope),
     calculationRunIds: stats.runIds,
+    calendarBasis: await calendarBasisOf(
+      manager,
+      scope,
+      query.scheduleClass ?? null,
+    ),
   };
   return reportEnvelope(data, {
     scope,

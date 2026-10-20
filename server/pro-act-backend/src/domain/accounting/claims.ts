@@ -1,6 +1,7 @@
 import { Dec, secondsBetween, toDec, ZERO } from '../actuals/decimal';
 import { BoundedInterval, clip } from '../time/interval-algebra';
 import { LossEvent, Segment } from './accounting.types';
+import { causeKey } from './reason-split';
 import { TransitionSplit } from './transition-split';
 import { segmentCapacity, RateBasis, rateOf } from './time-lines';
 
@@ -25,9 +26,9 @@ function addTo(
   event: LossEvent,
   part: { start: Date; end: Date; quantity: Dec; rateId: string; share: Dec },
 ): void {
-  const existing = claims.get(event.eventId);
+  const existing = claims.get(causeKey(event));
   if (!existing) {
-    claims.set(event.eventId, {
+    claims.set(causeKey(event), {
       event,
       quantity: part.quantity,
       start: part.start,

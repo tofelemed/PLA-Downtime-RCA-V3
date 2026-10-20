@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { REEVALUATE_TRIGGER } from '@/api/v2/queries/rca-reevaluations';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { RcaRecommendationView } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,17 @@ const caseHref = (rec: RcaRecommendationView, mode?: 'existing') =>
 
 function RowActions({ rec, canWrite }: { rec: RcaRecommendationView; canWrite: boolean }) {
   if (!canWrite) return <span className="text-muted-foreground">—</span>;
+  if (rec.trigger === REEVALUATE_TRIGGER && rec.rcaId) {
+    // D-T3: the investigation exists and is closed; an independent manager approver reopens it there
+    return (
+      <span className="flex flex-wrap items-center gap-1">
+        <Button asChild size="sm" variant="outline" data-testid="recommendation-open-case">
+          <Link to={`/rca/${encodeURIComponent(rec.rcaId)}#rca-workflow`}>Open investigation</Link>
+        </Button>
+        <DismissRecommendation recommendation={rec} />
+      </span>
+    );
+  }
   return (
     <span className="flex flex-wrap items-center gap-1">
       <Button asChild size="sm" variant="outline" data-testid="recommendation-create-case">

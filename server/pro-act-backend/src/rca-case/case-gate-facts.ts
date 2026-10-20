@@ -80,10 +80,16 @@ const consequenceOf = (
     ? (value as ConsequenceClass)
     : null;
 
-/** CA1 investigation facts of a case: methods with content, 5-Why, FMEA completeness, team, actions. */
+/** CA1 investigation facts of a case: methods with content, 5-Why, FMEA completeness, team, charter, actions. */
 export async function investigationFacts(
   manager: EntityManager,
-  input: { rca: RCA; policy: RcaPolicy; actionCount: number },
+  input: {
+    rca: RCA;
+    policy: RcaPolicy;
+    actionCount: number;
+    /** root causes with a cause code (item 7 count) */
+    codedRootCauses: number;
+  },
 ): Promise<InvestigationFacts> {
   const { rca } = input;
   const { five, scored, used } = await toolFacts(manager, rca, input.policy);
@@ -94,6 +100,8 @@ export async function investigationFacts(
     consequenceClass: consequenceOf(rca.consequenceClass),
     rootCause: rca.rootCause ?? null,
     teamSize: team.size,
+    teamCharter: rca.teamCharter ?? null,
+    codedRootCauses: input.codedRootCauses,
     methods: (Object.keys(used) as AnalysisMethod[]).filter(
       (method) => used[method],
     ),

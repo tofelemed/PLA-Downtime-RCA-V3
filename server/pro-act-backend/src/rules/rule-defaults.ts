@@ -121,3 +121,93 @@ export function withRuleBasis(
   const merged: ClassificationBasis = { ...(basis ?? {}), ...fill.basis };
   return Object.keys(merged).length > 0 ? merged : null;
 }
+
+/**
+ * Item 8 open question 2: the basis after a PATCH that sets a reason code. The reason code's basis
+ * (`next`) replaces the stored one, but `declarative_rule` entries of `previous` survive for the axes the
+ * request and the reason code leave untouched (their values stay, so their provenance stays too).
+ * `replaced` lists the axes whose value this request writes (stated by the user or filled by the code).
+ */
+export function keptRuleBasis(
+  previous: ClassificationBasis | null | undefined,
+  next: ClassificationBasis | null | undefined,
+  replaced: ReadonlySet<CodeDrivenAxis>,
+): ClassificationBasis | null {
+  const merged: ClassificationBasis = { ...(next ?? {}) };
+  for (const axis of CODE_DRIVEN_AXES) {
+    const entry = previous?.[axis];
+    if (entry?.source !== 'declarative_rule' || replaced.has(axis)) continue;
+    merged[axis] = entry;
+  }
+  return Object.keys(merged).length > 0 ? merged : null;
+}
+
+/** The stored axes of an event before a source revision changed its event type. */
+export interface StoredAxes {
+  scheduleClass: string;
+  oeeComponent: string;
+  impactCodeId?: string | null;
+  classificationBasis?: ClassificationBasis | null;
+  userOverrides?: Record<string, number> | null;
+}
+
+/** Axis values and the rebuilt basis after an event-type change (item 8 open question 1). */
+export interface RetypedAxes {
+  scheduleClass: string;
+  oeeComponent: string;
+  impactCodeId: string | null;
+  classificationBasis: ClassificationBasis | null;
+}
+
+/** Bases a person or the reason code stated: an event-type change never moves them. */
+const STATED_BASIS: ReadonlySet<string> = new Set([
+  'user',
+  'code_rule',
+  'code_default',
+]);
+
+function isStatedAxis(stored: StoredAxes, axis: CodeDrivenAxis): boolean {
+  if (stored.userOverrides?.[axis] !== undefined) return true;
+  const source = stored.classificationBasis?.[axis]?.source;
+  if (source !== undefined && STATED_BASIS.has(source)) return true;
+  // an impact code the source or a person gave without a basis entry is stated too
+  return axis === 'impactCodeId' && source === undefined
+    ? Boolean(stored.impactCodeId)
+    : false;
+}
+
+/**
+ * Item 8 open question 1: a source revision changed the event type, so the write model re-derived the
+ * schedule class and OEE component (`retyped`). Axes a user override or the reason code states keep
+ * their stored value and basis. Every other axis (rule-filled before, or the event-type default) is open:
+ * the active `coding_default` rules fill it again with their `declarative_rule` basis, and an axis no rule
+ * fills takes the event-type default (no impact code) with no basis entry.
+ */
+export function retypedAxes(
+  rules: readonly ActiveCodingRule[],
+  stored: StoredAxes,
+  retyped: RuleEventSource,
+): RetypedAxes {
+  const open = new Set(
+    CODE_DRIVEN_AXES.filter((axis) => !isStatedAxis(stored, axis)),
+  );
+  const base = {
+    scheduleClass: open.has('scheduleClass')
+      ? retyped.scheduleClass
+      : stored.scheduleClass,
+    oeeComponent: open.has('oeeComponent')
+      ? retyped.oeeComponent
+      : stored.oeeComponent,
+    impactCodeId: open.has('impactCodeId')
+      ? null
+      : (stored.impactCodeId ?? null),
+  };
+  const fill = fillOpenAxes(rules, { ...retyped, ...base }, open);
+  const basis: ClassificationBasis = { ...(stored.classificationBasis ?? {}) };
+  for (const axis of open) delete basis[axis];
+  return {
+    ...base,
+    ...fill.values,
+    classificationBasis: withRuleBasis(basis, fill),
+  };
+}

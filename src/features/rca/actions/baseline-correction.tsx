@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_CORRECTION_STATUS_LABELS } from '@/features/ux-kit/labels/rca-labels';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
+import { selfDecisionKindOf } from '@/features/ux-kit/self-decision-kind';
 import { RcaErrorAlert } from '../components/rca-error-alert';
 import { useRcaApprover } from '../use-rca-approver';
 import { useOptionalCaseWorkspace } from '../case/case-context';
@@ -16,14 +18,15 @@ import { useCanWriteRca } from './use-can-write-rca';
 
 const MIN_REASON = 10;
 
-function CorrectionState({ correction }: { correction: RcaBaselineCorrection }) {
+function CorrectionState({ correction, selfDecided }: { correction: RcaBaselineCorrection; selfDecided?: boolean }) {
   const users = useUserNames();
   return (
     <p className="text-xs" data-testid="baseline-correction">
       Correction to {correction.value} ({labelOf(RCA_CORRECTION_STATUS_LABELS, correction.status).toLowerCase()}): {correction.reason}
       {correction.proposedBy ? ` · proposed by ${users.nameOf(correction.proposedBy)}` : ''}
       {correction.decidedBy ? ` · decided by ${users.nameOf(correction.decidedBy)}` : ''}
-      {correction.note ? ` · ${correction.note}` : ''}
+      {correction.note ? ` · ${correction.note}` : ''}{' '}
+      <SelfDecisionBadge selfDecided={selfDecided} kind={selfDecisionKindOf(correction.status)} />
     </p>
   );
 }
@@ -92,7 +95,7 @@ export function BaselineCorrection({ action, baseline }: { action: RcaActionView
   const canDecide = !frozen && pending && approver && (isSuperAdmin || correction?.proposedBy !== session?.user.id);
   return (
     <div className="space-y-1">
-      {correction && <CorrectionState correction={correction} />}
+      {correction && <CorrectionState correction={correction} selfDecided={action.baselineCorrectionSelfDecided} />}
       {canDecide && <DecideButtons action={action} />}
       {canWriteRca && !pending && !baseline.declared && <ProposeForm action={action} />}
     </div>

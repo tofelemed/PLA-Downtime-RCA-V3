@@ -19,7 +19,7 @@ import { RCATemplate } from '../rca-template/rca-template.entity';
 @Index('IDX_rcas_tenant_created', ['tenantId', 'createdAt'])
 @Check(
   'CHK_rcas_consequence_class',
-  `"consequence_class" IS NULL OR "consequence_class" IN ('minor', 'significant', 'major')`,
+  `"consequence_class" IS NULL OR "consequence_class" IN ('minor', 'significant', 'major', 'critical')`,
 )
 @Check(
   'CHK_rcas_effectiveness_verdict',
@@ -240,7 +240,7 @@ export class RCA {
   @Column({ name: 'created_by', type: 'uuid', nullable: true })
   createdBy?: string | null;
 
-  /** CA7: minor / significant / major (actual or potential consequence) → investigation tier */
+  /** CA7 / D-T4: minor / significant / major / critical (actual or potential consequence) → investigation tier */
   @Column({
     name: 'consequence_class',
     type: 'varchar',

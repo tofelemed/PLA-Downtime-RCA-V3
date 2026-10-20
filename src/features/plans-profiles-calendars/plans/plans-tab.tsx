@@ -5,7 +5,7 @@ import type { ApprovalState, PlanView } from '@/api/v2/types/plans';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { BASIS_SHORT_LABELS, labelOf, VERSION_STATE_LABELS } from '@/features/ux-kit/labels';
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { PlantTimeRange } from '@/features/ux-kit/plant-time-range';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ActionIcon, EntityIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
@@ -35,9 +35,7 @@ function columnsOf(refs: PlanningRefs, prefetch: (plan: PlanView) => void): Data
       header: 'Window',
       nowrap: true,
       cell: (plan) => (
-        <span className="text-xs">
-          <PlantTime iso={plan.version.validFrom} tz={refs.timezone} withDate /> → <PlantTime iso={plan.version.validTo} tz={refs.timezone} withDate />
-        </span>
+        <PlantTimeRange className="text-xs" from={plan.version.validFrom} to={plan.version.validTo} tz={refs.timezone} />
       ),
     },
     { id: 'state', header: 'State', cell: (plan) => <VersionStateBadge state={plan.version.approvalState} /> },

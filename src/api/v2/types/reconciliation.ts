@@ -31,6 +31,8 @@ export interface RevisionWorkflowView {
   afterClose: boolean;
   /** who opened this revision of an approved period (revise / accepted proposal); null for a first revision (absent from older servers) */
   openedBy?: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   comment: string | null;
 }
 
@@ -302,6 +304,8 @@ export interface ApprovalActionView {
   reason: string | null;
   submittedHash: string | null;
   correlationId: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   at: string;
 }
 
@@ -327,6 +331,8 @@ export interface ChangeProposalView {
   resolvedBy: string | null;
   resolvedAt: string | null;
   resolutionReason: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   createdRevisionId: string | null;
   /** SME R4: who proposed a manual correction, its reason and evidence (null for a system proposal) */
   manual: ManualProposalDetail | null;

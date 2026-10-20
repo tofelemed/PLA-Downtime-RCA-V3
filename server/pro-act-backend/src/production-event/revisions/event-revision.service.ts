@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { RequestContext } from '../../common/context/request-context';
+import { CodingRuleSource } from '../../rules/active-coding-rules';
 import { ProductionEvent } from '../production-event.entity';
 import {
   changeMessage,
@@ -121,14 +122,18 @@ export class EventRevisionService {
     return changeMessage(locked, locked, 1, kind);
   }
 
-  /** A connector delivered `rawFacts` for an existing event: duplicate, or a new source revision. */
+  /**
+   * A connector delivered `rawFacts` for an existing event: duplicate, or a new source revision. `rules`
+   * is the batch's cached source of active `coding_default` rules, read only on an event-type change.
+   */
   async applySourceRevision(
     eventId: string,
     rawFacts: Readonly<Record<string, unknown>>,
     provenance: SourceProvenance,
+    rules?: CodingRuleSource,
   ): Promise<SourceOutcome> {
     const { result, message } = await this.inTransaction((manager) =>
-      applySourceIn(manager, eventId, rawFacts, provenance),
+      applySourceIn(manager, eventId, rawFacts, provenance, rules),
     );
     this.publish(message, true);
     return result;

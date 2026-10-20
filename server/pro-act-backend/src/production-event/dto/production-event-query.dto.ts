@@ -14,11 +14,12 @@ import {
 } from 'class-validator';
 import { toBooleanParam } from '../../common/dto/query-param.transformers';
 
-export const PRODUCTION_EVENT_PAGE_SIZE_MAX = 500;
+export const PRODUCTION_EVENT_PAGE_SIZE_MAX = 200;
 
 /**
  * Filters for `GET /production-events`. Every provided filter is ANDed (B1); the date window uses
- * overlap semantics so running events are included (B2). `page`/`pageSize` switch the response to a page envelope.
+ * overlap semantics so running events are included (B2). The response is always one page (`page` default 1,
+ * `pageSize` default 50, at most 200; 1.6 hardening).
  */
 export class ProductionEventQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })

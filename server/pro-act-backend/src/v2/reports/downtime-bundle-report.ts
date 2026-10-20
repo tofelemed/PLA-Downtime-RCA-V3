@@ -18,6 +18,8 @@ import {
 import { breakdownGroups, periodStats, policyVersions } from './report-sql';
 import { ReportScope } from './report-scope';
 import { dataCoverage } from './data-coverage';
+import { calendarBasisOf } from './calendar-basis-report';
+import { calculatedBasis } from './downtime-report';
 
 type Metric = (typeof DOWNTIME_METRICS)[number];
 type ScheduleClass = (typeof SCHEDULE_CLASSES)[number];
@@ -107,10 +109,11 @@ export async function downtimeBundleReport(
   const data: DowntimeBundleView = {
     includeMicroStops,
     scheduleClass,
-    summary,
+    summary: calculatedBasis(summary),
     views,
     dataCoverage: await dataCoverage(manager, scope),
     calculationRunIds: stats.runIds,
+    calendarBasis: await calendarBasisOf(manager, scope, scheduleClass),
   };
   return reportEnvelope(data, {
     scope,

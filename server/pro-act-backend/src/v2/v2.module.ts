@@ -15,6 +15,7 @@ import { RcaCasesV2Controller } from './rca/rca-cases-v2.controller';
 import { RcaHistoryV2Controller } from './rca/rca-history-v2.controller';
 import { RcaCaseCausesV2Controller } from './rca/rca-case-causes-v2.controller';
 import { RcaCauseReportV2Controller } from './reports/rca-cause-report-v2.controller';
+import { RcaPortfolioV2Controller } from './reports/rca-portfolio-v2.controller';
 import { RcaLinksV2Controller } from './rca/rca-links-v2.controller';
 import { RcaOccurrencesV2Controller } from './rca/rca-occurrences-v2.controller';
 import { RcaCaseWorkspaceV2Controller } from './rca/rca-case-workspace-v2.controller';
@@ -116,6 +117,8 @@ import { LossAttributionV2Service } from './accounting/loss-attribution-v2.servi
 import { LossLinesV2Controller } from './accounting/loss-lines-v2.controller';
 import { ReconciliationModule } from '../reconciliation/reconciliation.module';
 import { ReconciliationV2Controller } from './reconciliation/reconciliation-v2.controller';
+import { ReconciliationExceptionsV2Controller } from './reconciliation/exceptions-v2.controller';
+import { ReconciliationExceptionsService } from './reconciliation/exceptions-v2.service';
 import { ChangeProposalsV2Controller } from './reconciliation/change-proposals-v2.controller';
 import { ReconciliationV2Service } from './reconciliation/reconciliation-v2.service';
 import { ActualsAdjustmentsV2Controller } from './periods/actuals-adjustments-v2.controller';
@@ -155,6 +158,8 @@ import { FinanceTextCorrectionsV2Controller } from './valuation/finance-text-cor
 import { ValuationPoliciesV2Controller } from './valuation/valuation-policies-v2.controller';
 import { BadActorReportV2Controller } from './reports/bad-actor-v2.controller';
 import { BadActorReportV2Service } from './reports/bad-actor-v2.service';
+import { CapacityGapReportV2Controller } from './reports/capacity-gap-v2.controller';
+import { CapacityGapReportV2Service } from './reports/capacity-gap-v2.service';
 import { LossValueReportV2Controller } from './reports/loss-value-v2.controller';
 import { LossValueReportV2Service } from './reports/loss-value-v2.service';
 import { FeatureFlagsModule } from '../feature-flags/feature-flags.module';
@@ -307,6 +312,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     EventAttributedLossesV2Controller,
     LossLinesV2Controller,
     ReconciliationV2Controller,
+    ReconciliationExceptionsV2Controller,
     ChangeProposalsV2Controller,
     ExportsV2Controller,
     DeliveriesV2Controller,
@@ -317,6 +323,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     ValuationPoliciesV2Controller,
     LossValueReportV2Controller,
     BadActorReportV2Controller,
+    CapacityGapReportV2Controller,
     FeatureFlagsV2Controller,
     SessionBootstrapV2Controller,
     RulesV2Controller,
@@ -324,6 +331,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     RcaHistoryV2Controller,
     RcaCaseCausesV2Controller,
     RcaCauseReportV2Controller,
+    RcaPortfolioV2Controller,
     RcaLinksV2Controller,
     RcaOccurrencesV2Controller,
     RcaCaseWorkspaceV2Controller,
@@ -370,9 +378,11 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     PeriodAccountingV2Service,
     LossAttributionV2Service,
     ReconciliationV2Service,
+    ReconciliationExceptionsService,
     KpiReportsV2Service,
     LossValueReportV2Service,
     BadActorReportV2Service,
+    CapacityGapReportV2Service,
     PeriodOverviewService,
     PlaReportsV2Service,
     ActivitySummaryV2Service,

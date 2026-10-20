@@ -238,3 +238,36 @@ describe('codingChanged (QA audit F5: a preview counts real changes only)', () =
     ).toBe(true);
   });
 });
+
+describe('weighted reasons in bulk coding (D-T5)', () => {
+  const split = [
+    { reasonCodeId: 'r1', weight: '0.60000000' },
+    { reasonCodeId: 'r2', weight: '0.40000000' },
+  ];
+
+  it('writes the split with its primary and shows it in the snapshot', () => {
+    const columns = codingPatch(
+      event('a'),
+      { reasonCodeId: 'r1', reasonWeights: split },
+      {},
+    );
+    expect(columns).toMatchObject({ reasonCodeId: 'r1', reasonWeights: split });
+    const before = codingSnapshot(event('a'));
+    const after = codingSnapshot({ ...event('a'), ...columns });
+    expect(after.reasonWeights).toEqual(split);
+    expect(codingChanged(before, after)).toBe(true);
+    expect(
+      codingChanged(after, codingSnapshot({ ...event('a'), ...columns })),
+    ).toBe(false);
+  });
+
+  it('removes a stored split when another reason is coded, keeps it for the same primary', () => {
+    const weighted = event('w', { reasonCodeId: 'r1', reasonWeights: split });
+    expect(codingPatch(weighted, { reasonCodeId: 'r9' }, {})).toMatchObject({
+      reasonWeights: null,
+    });
+    expect(
+      'reasonWeights' in codingPatch(weighted, { reasonCodeId: 'r1' }, {}),
+    ).toBe(false);
+  });
+});

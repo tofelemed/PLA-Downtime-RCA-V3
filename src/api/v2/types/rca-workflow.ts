@@ -5,7 +5,8 @@
  */
 import type { RcaStatus } from './rca';
 
-export const RCA_CONSEQUENCE_CLASSES = ['minor', 'significant', 'major'] as const;
+/** CA7 / D-T4 consequence classes in rising severity (`significant` is the moderate tier of D-T4). */
+export const RCA_CONSEQUENCE_CLASSES = ['minor', 'significant', 'major', 'critical'] as const;
 export type RcaConsequenceClass = (typeof RCA_CONSEQUENCE_CLASSES)[number];
 
 export const RCA_ACTION_TYPES = ['repair', 'design_change', 'procedure_change', 'instrument_change', 'training', 'other'] as const;
@@ -18,6 +19,18 @@ export interface RcaGateIssue {
   code: string;
   field: string;
   message: string;
+  /** `METHOD_REQUIRED` (D-T4): the analysis methods any one of which meets the requirement */
+  methods?: string[];
+}
+
+/** D-T4 investigation depth of the case's consequence class (server matrix, versioned). */
+export interface RcaInvestigationDepth {
+  version: string;
+  /** each group needs one of its methods with content */
+  methodGroups: string[][];
+  teamCharter: boolean;
+  codedCauses: boolean;
+  independentClosure: boolean;
 }
 
 /**
@@ -44,6 +57,8 @@ export interface RcaCaseReadinessView {
     /** CA6: root-cause phrases the investigation gate refuses on their own (policy, e.g. "operator error") */
     fiveWhyUnsupportedRootCauses: string[];
     consequenceClass: string | null;
+    /** D-T4 requirement of the class; null while unclassified (absent from older servers) */
+    investigationDepth?: RcaInvestigationDepth | null;
   };
 }
 

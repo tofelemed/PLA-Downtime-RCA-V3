@@ -101,15 +101,18 @@ export async function exposureWindow(
   return { ...window, exposureSeconds: String(seconds), exposureBasis: basis };
 }
 
-const INCIDENTS_SQL = (key: string) => `WITH incidents AS (
-  SELECT COALESCE(e."occurrence_id", e."id") AS "occ", e."physical_type", e."start_time", e."end_time"
+const INCIDENTS_CTE = (key: string) => `WITH incidents AS (
+  SELECT COALESCE(e."occurrence_id", e."id") AS "occ", e."id", e."occurrence_id", e."unit_id",
+         e."physical_type", e."start_time", e."end_time"
     FROM "production_events" e
    WHERE e."tenant_id" = $1 AND e."start_time" >= $2 AND e."start_time" < $3
      AND e."physical_state" IN ('open', 'closed')
      AND (e."event_type" = 'FailureWO' OR (e."physical_type" = 'downtime' AND e."schedule_class" = 'unplanned'))
      AND (CASE WHEN cardinality($4::text[]) > 0 THEN e."asset_id"::text = ANY($4::text[])
                ELSE e."unit_id"::text = ANY($5::text[]) END)
-     AND (cardinality($6::text[]) = 0 OR ${key} = ANY($6::text[])))
+     AND (cardinality($6::text[]) = 0 OR ${key} = ANY($6::text[])))`;
+
+const INCIDENTS_SQL = (key: string) => `${INCIDENTS_CTE(key)}
 SELECT (SELECT count(DISTINCT "occ") FROM incidents)::int AS "n",
        (SELECT sum(EXTRACT(EPOCH FROM (LEAST(COALESCE("end_time", $3), $3) - "start_time")))
           FROM incidents WHERE "physical_type" = 'downtime')::text AS "seconds"`;
@@ -190,4 +193,35 @@ function coverageFields(
         ? null
         : formatDec(new Dec(exposure.coverage).toDecimalPlaces(4)),
   };
+}
+
+/** The latest same-mode unplanned incident of a window (the event a recurrence-watch recommendation names). */
+export interface LatestIncident {
+  eventId: string;
+  occurrenceId: string | null;
+  unitId: string;
+}
+
+const LATEST_SQL = (key: string) => `${INCIDENTS_CTE(key)}
+SELECT "id"::text AS "eventId", "occurrence_id"::text AS "occurrenceId", "unit_id"::text AS "unitId"
+  FROM incidents ORDER BY "start_time" DESC, "id" DESC LIMIT 1`;
+
+export async function latestIncident(
+  manager: EntityManager,
+  input: ExposureRequest,
+): Promise<LatestIncident | null> {
+  const { footprint } = input;
+  if (footprint.unitIds.length === 0) return null;
+  const rows: LatestIncident[] = await manager.query(
+    LATEST_SQL(failureModeKeySql(footprint.match)),
+    [
+      input.tenantId,
+      input.from,
+      input.to,
+      footprint.assetIds,
+      footprint.unitIds,
+      footprint.modeKeys,
+    ],
+  );
+  return rows[0] ?? null;
 }

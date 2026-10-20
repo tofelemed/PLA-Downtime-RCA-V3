@@ -84,9 +84,10 @@ test.describe('ADM-07 legacy screens on Partner Plant (flags off)', () => {
     await expect(page.getByRole('heading', { name: 'Event Hub', level: 1 })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath('adm-07a-event-hub.png'), fullPage: true });
     await createV1EventViaApi(lucas);
-    const events = await call<V1Event[]>(lucas.token, 'GET', `/production-events?tenantId=${PLANTS.partner.id}`);
+    // the v1 list answers one page, newest first (plan 1.6)
+    const events = await call<{ items: V1Event[] }>(lucas.token, 'GET', `/production-events?tenantId=${PLANTS.partner.id}&pageSize=200`);
     expect(events.status).toBe(200);
-    const kept = events.body.find((event) => event.description === EVENT_DESCRIPTION);
+    const kept = events.body.items.find((event) => event.description === EVENT_DESCRIPTION);
     expect(kept).toBeTruthy();
     expect(kept?.tenantId).toBe(PLANTS.partner.id);
     expect(kept?.source).toBe('Manual');

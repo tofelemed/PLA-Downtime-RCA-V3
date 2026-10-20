@@ -1,5 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsDecimal,
   IsIn,
@@ -13,7 +16,10 @@ import {
   MaxLength,
   Min,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { MAX_REASON_WEIGHTS } from '../../domain/events/reason-weights';
+import { ReasonWeightInputDto } from './reason-weights.dto';
 import {
   IMPACT_MODES,
   OEE_COMPONENTS,
@@ -377,4 +383,21 @@ export class PatchProductionEventV2Dto extends ProductionEventV2EditableDto {
   @IsString()
   @MaxLength(1000)
   changeReason?: string;
+
+  @ApiPropertyOptional({
+    type: [ReasonWeightInputDto],
+    nullable: true,
+    maxItems: MAX_REASON_WEIGHTS,
+    description:
+      'D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s ' +
+      'duration ±1 s). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if ' +
+      'reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsArray()
+  @ArrayMaxSize(MAX_REASON_WEIGHTS)
+  @ValidateNested({ each: true })
+  @Type(() => ReasonWeightInputDto)
+  reasonWeights?: ReasonWeightInputDto[] | null;
 }

@@ -4,7 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Asset } from '../../asset/asset.entity';
 import { Product } from '../../product/product.entity';
 import { ProductionEvent } from '../../production-event/production-event.entity';
@@ -137,6 +137,20 @@ export class EventReferencesValidator {
     if ((await this.assets.countBy(where)) === 0) {
       throw invalidReference('originAssetId');
     }
+  }
+
+  /** D-T5: 422 INVALID_REFERENCE (`field`) unless every reason code of a split is the tenant's. */
+  async assertReasonCodesOwned(
+    tenantId: string,
+    reasonCodeIds: readonly string[],
+    field = 'reasonWeights',
+  ): Promise<void> {
+    if (reasonCodeIds.length === 0) return;
+    const found = await this.reasons.countBy({
+      id: In([...reasonCodeIds]),
+      tenantId,
+    });
+    if (found !== new Set(reasonCodeIds).size) throw invalidReference(field);
   }
 
   /** 422 INVALID_REFERENCE unless the reason code is in the tenant's own library. */

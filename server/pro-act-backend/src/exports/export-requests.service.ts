@@ -31,6 +31,8 @@ import { presentationOf } from './export-presentation';
 import { ExportReadsService } from './export-reads.service';
 import { namedRevisionUnits, pinNamed, pinPublished } from './export-sources';
 import { PdfCurrency } from './pdf/pdf-model';
+import { RcaCaseExportContent } from './rca-case/rca-case-content';
+import { RcaCaseContentService } from './rca-case/rca-case-content.service';
 
 const DAY_MS = 86_400_000;
 
@@ -42,6 +44,8 @@ export interface ExportRequest {
   to?: string;
   unitIds?: string[];
   revisionIds?: string[];
+  /** `rca_case`: the case to export */
+  rcaId?: string;
   /** PDF only: the reporting currency money is printed in (USD by default) */
   currency?: PdfCurrency;
 }
@@ -50,6 +54,8 @@ export interface ExportRequest {
 interface ExportPlan {
   filters: ExportFilters;
   unitIds: string[] | null;
+  /** `rca_case`: the case as read now */
+  caseContent?: RcaCaseExportContent;
   pin: (
     manager: EntityManager,
     ids: { tenantId: string; jobId: string },
@@ -94,6 +100,7 @@ export class ExportRequestsService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly reads: ExportReadsService,
+    private readonly caseContent: RcaCaseContentService,
   ) {}
 
   async request(
@@ -116,6 +123,7 @@ export class ExportRequestsService {
           revisionSelector: body.revisionSelector,
           filters: plan.filters,
           presentation,
+          caseContent: plan.caseContent ?? null,
           unitIds: plan.unitIds,
           requestedBy: userId,
           state: 'queued',
@@ -162,9 +170,55 @@ export class ExportRequestsService {
     tenantId: string,
     body: ExportRequest,
   ): Promise<ExportPlan> {
+    if (body.reportType === 'rca_case' || body.revisionSelector === 'case')
+      return this.casePlan(context, body);
+    if (body.rcaId)
+      throw invalidSelector('rcaId goes with reportType rca_case only');
     return body.revisionSelector === 'published'
       ? this.publishedPlan(context, tenantId, body)
       : this.namedPlan(context, tenantId, body);
+  }
+
+  /**
+   * Item 2.5: one RCA case as a PDF. The case is read through the case services with the caller's scope
+   * (404 when the caller may not read it) and pinned on the job; its unit is the job's content scope (a
+   * tenant-wide case gives a tenant-wide job).
+   */
+  private async casePlan(
+    context: RequestContext,
+    body: ExportRequest,
+  ): Promise<ExportPlan> {
+    const extra =
+      body.from || body.to || body.unitIds?.length || body.revisionIds?.length;
+    if (
+      body.reportType !== 'rca_case' ||
+      body.revisionSelector !== 'case' ||
+      !body.rcaId ||
+      extra
+    ) {
+      throw invalidSelector(
+        'reportType rca_case goes with revisionSelector case and rcaId only',
+      );
+    }
+    if (body.format !== 'pdf')
+      throw invalid(
+        'FORMAT_NOT_SUPPORTED',
+        'an RCA case is exported as PDF only',
+      );
+    const rcaId = body.rcaId;
+    const { content, unitId } = await this.caseContent.read(context, rcaId);
+    return {
+      filters: {
+        from: null,
+        to: null,
+        unitIds: null,
+        revisionIds: null,
+        rcaId,
+      },
+      unitIds: unitId ? [unitId] : null,
+      caseContent: content,
+      pin: () => Promise.resolve(1),
+    };
   }
 
   private async publishedPlan(
@@ -268,6 +322,7 @@ export class ExportRequestsService {
           format: job.format,
           revisionSelector: job.revisionSelector,
           unitIds: job.unitIds,
+          ...(job.filters.rcaId ? { rcaId: job.filters.rcaId } : {}),
         },
       },
     ]);

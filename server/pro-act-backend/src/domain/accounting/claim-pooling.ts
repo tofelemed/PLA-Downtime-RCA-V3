@@ -2,6 +2,7 @@ import { Decimal } from 'decimal.js';
 import { Dec, ZERO } from '../actuals/decimal';
 import { Ledger, SliceInput } from './accounting.types';
 import { Claim, sumOf } from './claims';
+import { causeKey } from './reason-split';
 
 /** Components whose causes claim part of a total computed at the production boundary. */
 export type PooledKind = 'performance' | 'quality';
@@ -76,9 +77,9 @@ export class ClaimRecorder implements ClaimPool {
 function mergeByEvent(claims: readonly Claim[]): Claim[] {
   const merged = new Map<string, Claim>();
   for (const claim of claims) {
-    const existing = merged.get(claim.event.eventId);
+    const existing = merged.get(causeKey(claim.event));
     if (!existing) {
-      merged.set(claim.event.eventId, {
+      merged.set(causeKey(claim.event), {
         ...claim,
         rateVersionIds: [...claim.rateVersionIds],
       });

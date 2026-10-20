@@ -11,6 +11,8 @@ import { ExportRenderer } from './export-renderer';
 import { ExportRequestsService } from './export-requests.service';
 import { ExportStorage } from './export-storage';
 import { ExportPdfWriter } from './pdf/export-pdf';
+import { RcaCaseModule } from '../rca-case/rca-case.module';
+import { RcaCaseContentService } from './rca-case/rca-case-content.service';
 
 /**
  * Exports and downstream delivery of plan 2.9 (AN03, API04, WF03, D12): immutable CSV and PDF report exports
@@ -19,11 +21,15 @@ import { ExportPdfWriter } from './pdf/export-pdf';
  * contracts are validated by the outbox relay (`common/domain-events`).
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([ExportJob, ExportJobSource, AuditEntry])],
+  imports: [
+    TypeOrmModule.forFeature([ExportJob, ExportJobSource, AuditEntry]),
+    RcaCaseModule,
+  ],
   providers: [
     ExportStorage,
     ExportRenderer,
     ExportPdfWriter,
+    RcaCaseContentService,
     ExportReadsService,
     ExportRequestsService,
     ExportJobsService,

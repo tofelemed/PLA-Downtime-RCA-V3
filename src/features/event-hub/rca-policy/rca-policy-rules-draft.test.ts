@@ -37,4 +37,23 @@ describe('RCA policy workflow rules form (effectiveness, FMEA, 5-Why, methods)',
     const older = { ...RULES.effectiveness, minimumCoverage: undefined };
     expect(rulesDraftOf({ ...RULES, effectiveness: older }).minimumCoveragePercent).toBe('95');
   });
+
+  it('D-T4: shows and saves the optional critical tier and critical in zero-repeat classes; older versions stay valid', () => {
+    const older = rulesDraftOf(RULES);
+    expect(older.methodGroups.critical).toBe('');
+    expect(older.minTeamMembers.critical).toBe('');
+    expect(rulesInputOf(older, RULES)?.investigation).not.toHaveProperty('critical');
+    const withCritical: RcaPolicyRules = {
+      ...RULES,
+      effectiveness: { ...RULES.effectiveness, zeroRepeatClasses: ['major', 'critical'] },
+      investigation: { ...RULES.investigation, critical: { methodGroups: [['timeline'], ['fault_tree', 'barrier']], minTeamMembers: 4 } },
+    };
+    expect(rulesDraftOf(withCritical).zeroRepeatClasses).toEqual(['major', 'critical']);
+    expect(rulesInputOf(rulesDraftOf(withCritical), withCritical)).toEqual(withCritical);
+    const edited = { ...older, zeroRepeatClasses: [...older.zeroRepeatClasses, 'critical' as const], methodGroups: { ...older.methodGroups, critical: 'timeline' }, minTeamMembers: { ...older.minTeamMembers, critical: '5' } };
+    const input = rulesInputOf(edited, RULES);
+    expect(input?.investigation.critical).toEqual({ methodGroups: [['timeline']], minTeamMembers: 5 });
+    expect(input?.effectiveness.zeroRepeatClasses).toEqual(['major', 'critical']);
+    expect(rulesInputOf({ ...edited, minTeamMembers: { ...edited.minTeamMembers, critical: '' } }, RULES)).toBeNull();
+  });
 });

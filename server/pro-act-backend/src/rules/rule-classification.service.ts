@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager } from 'typeorm';
 import { CodeDrivenAxis } from '../code-library/classification-basis';
+import { activeCodingRulesIn } from './active-coding-rules';
 import {
   ActiveCodingRule,
   fillOpenAxes,
@@ -25,14 +26,7 @@ export class RuleClassificationService {
 
   /** The versions in force of the tenant's active `coding_default` rules, in evaluation order. */
   activeRules(tenantId: string): Promise<ActiveCodingRule[]> {
-    return this.manager.query<ActiveCodingRule[]>(
-      `SELECT r."id", v."version", v."definition"
-         FROM "rules" r
-         JOIN "rule_versions" v ON v."rule_id" = r."id" AND v."version" = r."active_version"
-        WHERE r."tenant_id" = $1 AND r."kind" = 'coding_default' AND r."state" = 'active'
-        ORDER BY r."priority", r."name"`,
-      [tenantId],
-    );
+    return activeCodingRulesIn(this.manager, tenantId);
   }
 
   async proposals(

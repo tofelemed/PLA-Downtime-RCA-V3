@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ExportJob } from '../entities/export-job.entity';
 import { ExportHeader, RenderSource } from '../export-report';
+import { rcaCaseDocumentOf } from '../rca-case/rca-case-pdf';
 import { basisText, sourceSection } from './pdf-content';
 import { drawDocument } from './pdf-draw';
 import { PdfFonts, resolvePdfFonts } from './pdf-fonts';
@@ -69,6 +70,19 @@ export class ExportPdfWriter {
     sink: PdfSink,
   ): Promise<number> {
     const { model, rowCount } = pdfDocumentOf(job, sources, this.fonts());
+    const surface = await this.surfaces(sink, model.info);
+    await drawDocument(model, surface);
+    return rowCount;
+  }
+
+  /** Item 2.5: the PDF of an `rca_case` job from its pinned case content and presentation. */
+  async writeCase(job: ExportJob, sink: PdfSink): Promise<number> {
+    if (!job.presentation) {
+      throw new Error(`PDF export ${job.id} has no pinned presentation`);
+    }
+    const fonts = this.fonts();
+    const presentation = drawnPresentation(job.presentation, fonts);
+    const { model, rowCount } = rcaCaseDocumentOf(job, presentation);
     const surface = await this.surfaces(sink, model.info);
     await drawDocument(model, surface);
     return rowCount;

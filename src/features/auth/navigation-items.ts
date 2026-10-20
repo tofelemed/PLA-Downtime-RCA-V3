@@ -105,6 +105,8 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   // operators see their RCA actions and the investigations they belong to, read-only (Marun E2E owner rule)
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewOperations', description: 'Root cause investigations' },
   { name: 'Bad actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },
+  { name: 'Recurring causes', href: '/reliability/causes', icon: EntityIcon.recurringCause, section: 'reliability', capability: 'canViewAnalysis', description: 'Cause codes ranked by investigations and their approved loss' },
+  { name: 'Cause portfolio', href: '/reliability/portfolio', icon: EntityIcon.rcaPortfolio, section: 'reliability', capability: 'canViewAnalysis', description: 'Approved loss, actions and outcomes of investigations by coded cause' },
   { name: 'Knowledge base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track tasks' },
   // owner 18 Oct 2026: the whole Integration section is SuperAdmin-only (menu and routes); approvers of Source

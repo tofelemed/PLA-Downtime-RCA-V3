@@ -160,6 +160,7 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
     const approved = (await env.approve(view).expect(200))
       .body as ReconciliationBody;
     expect(approved.revision.lifecycle).toBe('approved');
+    expect(approved.revision.selfDecided).toBe(false);
     expect(approved.publishedRevision).toBe(1);
     const [snapshot] = await env.rows<{
       submitted_hash: string;
@@ -231,13 +232,18 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
     const actions = await env
       .get(`production-periods/${env.periodB1}/approval-actions`)
       .expect(200);
-    expect(
-      (
-        actions.body as {
-          items: Array<{ action: string; reason: string | null }>;
-        }
-      ).items.map((a) => a.action),
-    ).toEqual(['reject', 'submit', 'save_draft']);
+    const items = (
+      actions.body as {
+        items: Array<{ action: string; selfDecided: boolean }>;
+      }
+    ).items;
+    expect(items.map((a) => a.action)).toEqual([
+      'reject',
+      'submit',
+      'save_draft',
+    ]);
+    // item 1.3: the SuperAdmin's rejection of its own submission is marked; the other steps are not
+    expect(items.map((a) => a.selfDecided)).toEqual([true, false, false]);
   });
 
   it('RC-01: an author of a reviewed line cannot approve; an independent approver can', async () => {
@@ -254,7 +260,19 @@ describe('reconciliation submission and approval (plan 2.8)', () => {
       .expect(403);
     expect((author.body as ApiError).code).toBe('SEPARATION_OF_DUTIES');
     const independent = env.user('TenantAdmin');
-    await env.approve(submitted, independent, env.periodB1).expect(200);
+    const approved = await env
+      .approve(submitted, independent, env.periodB1)
+      .expect(200);
+    expect((approved.body as ReconciliationBody).revision.selfDecided).toBe(
+      false,
+    );
+    const history = await env
+      .get(`production-periods/${env.periodB1}/approval-actions`)
+      .expect(200);
+    const approval = (
+      history.body as { items: Array<{ action: string; selfDecided: boolean }> }
+    ).items.find((a) => a.action === 'approve');
+    expect(approval?.selfDecided).toBe(false);
   });
 
   it('T36: a user holding both roles cannot approve their own submission; cancel keeps the draft auditable', async () => {

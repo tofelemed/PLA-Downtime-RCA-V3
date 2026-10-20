@@ -12,7 +12,7 @@
  * Env: MARUN_TRAIN_PASSWORD (required), PROACT_API_URL (default http://localhost:$PORT).
  */
 import * as dotenv from 'dotenv';
-import { parseCliArgs } from '../../src/migration-cutover/cli/cli-args';
+import { parseCliArgs } from '../../src/common/cli/cli-args';
 import { ensureRoles, findUser, removeExtraRoles } from './step-people';
 import { emailOf, PEOPLE, PLANT } from './train-catalog';
 import { TrainContext } from './train-context';

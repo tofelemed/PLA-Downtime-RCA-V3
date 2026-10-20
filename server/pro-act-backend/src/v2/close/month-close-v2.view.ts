@@ -14,6 +14,7 @@ import {
   MaterialityFinding,
 } from '../../domain/close/materiality';
 import { overdueStages } from '../../domain/close/month-close-machine';
+import { monthCloseSelfDecisions } from '../../domain/close/month-close-self-decisions';
 
 export interface PersonV2View {
   id: string;
@@ -28,6 +29,11 @@ export interface MonthCloseActionV2View {
   actor: PersonV2View | null;
   reason: string | null;
   detail: Record<string, unknown>;
+  /**
+   * item 1.3: a materiality review or finance sign-off by a signer of the same cycle — a SuperAdmin
+   * self-decision (owner decision 2026-10-16)
+   */
+  selfDecided: boolean;
   createdAt: string;
 }
 
@@ -122,6 +128,21 @@ function personOf(
   names: Record<string, string>,
 ): PersonV2View | null {
   return id ? { id, name: names[id] ?? null } : null;
+}
+
+function historyOf(snapshot: MonthCloseSnapshot): MonthCloseActionV2View[] {
+  const self = monthCloseSelfDecisions(snapshot.history);
+  return snapshot.history.map((h) => ({
+    id: h.id,
+    action: h.action,
+    fromState: h.fromState,
+    toState: h.toState,
+    actor: personOf(h.actorId, snapshot.names),
+    reason: h.reason,
+    detail: h.detail,
+    selfDecided: self.has(h.id),
+    createdAt: h.createdAt.toISOString(),
+  }));
 }
 
 function signOffsOf(
@@ -224,16 +245,7 @@ export function toMonthCloseView(
     },
     reopenCount: context.row?.reopenCount ?? 0,
     comment: context.row?.comment ?? null,
-    history: snapshot.history.map((h) => ({
-      id: h.id,
-      action: h.action,
-      fromState: h.fromState,
-      toState: h.toState,
-      actor: personOf(h.actorId, snapshot.names),
-      reason: h.reason,
-      detail: h.detail,
-      createdAt: h.createdAt.toISOString(),
-    })),
+    history: historyOf(snapshot),
     asOf: snapshot.asOf.toISOString(),
   };
 }

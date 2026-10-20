@@ -83,6 +83,9 @@ export class RcaRecommendationsService {
       qb.andWhere('t.unitId = ANY(:units::uuid[])', { units: scope.units });
     if (query.unitId)
       qb.andWhere('t.unitId = :unitId', { unitId: query.unitId });
+    if (query.trigger)
+      qb.andWhere('t.trigger = :trigger', { trigger: query.trigger });
+    if (query.rcaId) qb.andWhere('t.rcaId = :rcaId', { rcaId: query.rcaId });
     if (query.eventIds?.length)
       qb.andWhere('t.eventId = ANY(:eventIds::uuid[])', {
         eventIds: query.eventIds,

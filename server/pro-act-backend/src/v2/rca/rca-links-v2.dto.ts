@@ -90,6 +90,24 @@ export class RcaRecommendationV2ListQueryDto extends ListQueryDto {
   @IsOptional()
   @IsUUID()
   unitId?: string;
+
+  @ApiPropertyOptional({
+    maxLength: 16,
+    description:
+      'Only recommendations of this trigger kind (e.g. `reevaluate`: the recurrence watch of closed cases, D-T3)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(16)
+  trigger?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Only recommendations about this case (e.g. its `reevaluate` recommendation)',
+  })
+  @IsOptional()
+  @IsUUID()
+  rcaId?: string;
 }
 
 export class RcaRecommendationDismissV2Dto {

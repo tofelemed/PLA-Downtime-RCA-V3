@@ -1,4 +1,6 @@
+import { independenceConflict } from '../domain/rca/case-workflow';
 import { RCA } from '../rca/rca.entity';
+import { partiesOf } from './case-transition-rules';
 import { RcaCaseListFacts } from './rca-case-list-facts';
 import { RecommendationActionRef } from './recommendation-actions';
 import { RcaEventDiagram, readEventDiagram } from './rca-case-diagram';
@@ -60,6 +62,11 @@ export interface RcaCaseV2View extends RcaCaseSummaryV2View {
   closureRequestedAt: string | null;
   closureApprovedBy: string | null;
   closureApprovedAt: string | null;
+  /**
+   * item 1.3: the closure was approved by someone not independent of the investigation (creator, lead,
+   * team member, requester or past investigator) — a SuperAdmin self-decision (owner decision 2026-10-16)
+   */
+  selfDecided: boolean;
   closureNote: string | null;
   /** CA2 effectiveness frozen when closure was requested */
   effectivenessVerdict: string | null;
@@ -110,6 +117,9 @@ export function toRcaCaseView(
     closureRequestedAt: iso(rca.closureRequestedAt),
     closureApprovedBy: rca.closureApprovedBy ?? null,
     closureApprovedAt: iso(rca.closureApprovedAt),
+    selfDecided: rca.closureApprovedBy
+      ? independenceConflict(rca.closureApprovedBy, partiesOf(rca)) !== null
+      : false,
     closureNote: rca.closureNote ?? null,
     effectivenessVerdict: rca.effectivenessVerdict ?? null,
   };

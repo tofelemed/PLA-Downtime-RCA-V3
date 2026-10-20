@@ -55,6 +55,8 @@ export interface PlanVersionView {
   createdBy?: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
+  /** item 1.3: server-derived SuperAdmin self-decision (owner decision 2026-10-16); absent from older servers */
+  selfDecided?: boolean;
   supersedesVersionId: string | null;
   calendarVersionId: string | null;
   changeReason: string | null;

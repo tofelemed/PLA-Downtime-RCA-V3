@@ -14,6 +14,7 @@ import { DEFAULT_BASIS_LABELS, DEMAND_RULE_LABELS, FX_DATE_RULE_LABELS, FX_POLIC
 import { POLICY_STATUS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
 import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { ActionIcon } from '@/lib/icons';
 import { currenciesLabel, policyStatus } from '../model/policy-status';
 import { PolicyPerson } from '../components/policy-person';
@@ -50,7 +51,7 @@ function PolicyFacts({ policy }: { policy: ValuationPolicyView }) {
       {policy.approvedAt && (
         <Fact label="Approved">
           {dates.dateTime(policy.approvedAt)}
-          {policy.approvedBy && <> by <PolicyPerson id={policy.approvedBy} /></>}
+          {policy.approvedBy && <> by <PolicyPerson id={policy.approvedBy} /></>} <SelfDecisionBadge selfDecided={policy.selfDecided} />
         </Fact>
       )}
       {bodyText(policy.body.timeBasisRule) === 'independent_components' && (
