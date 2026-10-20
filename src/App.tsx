@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { UnsavedChangesDialogHost } from "@/features/ux-kit/unsaved-changes-dialog-host";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Layout } from "./components/Layout";
 import { LoginForm } from "./components/LoginForm";
@@ -20,6 +20,8 @@ import { RealtimeBridge } from "./features/v2-foundation/realtime-bridge";
 import { SessionRecovery } from "./features/auth/session-recovery";
 import { PeriodDraftBoundary } from "./features/plan-dashboard/period-draft-boundary";
 import { RcaDraftBoundary } from "./features/rca/rca-draft-boundary";
+import { RouteErrorBoundary } from "@/features/ux-kit/errors/route-error-boundary";
+import { GlobalErrorListeners } from "@/features/ux-kit/errors/global-error-listeners";
 
 const queryClient = createAppQueryClient();
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -93,31 +95,52 @@ const AppRoutes = () => (
   </Routes>
 );
 
+/**
+ * Full-page error boundary around every route (also the login screen, the 404 page and the shell itself):
+ * a crash outside a page's own boundary still shows "Something went wrong" with Refresh / Go to dashboard
+ * (router link), resets on navigation, and a 401 ends the session instead.
+ */
+const AppRouteBoundary = ({ children }: { children: ReactNode }) => {
+  const { pathname } = useLocation();
+  const { expireSession } = useAuth();
+  return (
+    <RouteErrorBoundary resetKey={pathname} onAuthFailure={expireSession} fullPage>
+      {children}
+    </RouteErrorBoundary>
+  );
+};
+
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <UnsavedChangesDialogHost />
-      <AuthProvider>
-        <PlantSelectionProvider>
-          <DisplayCurrencyProvider>
-            <CalendarPreferenceProvider>
-              <V2SessionBridge />
-              <PeriodDraftBoundary />
-              <RcaDraftBoundary />
-              <RealtimeBridge />
-              <BrowserRouter>
-                <CrumbReachFromRoutes routes={PROTECTED_ROUTES}>
-                  <AppRoutes />
-                </CrumbReachFromRoutes>
-              </BrowserRouter>
-            </CalendarPreferenceProvider>
-          </DisplayCurrencyProvider>
-        </PlantSelectionProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  // outermost: a crash in the providers above the router (no router link possible there)
+  <RouteErrorBoundary resetKey="app" fullPage navigation="document">
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <UnsavedChangesDialogHost />
+        <AuthProvider>
+          <PlantSelectionProvider>
+            <DisplayCurrencyProvider>
+              <CalendarPreferenceProvider>
+                <GlobalErrorListeners />
+                <V2SessionBridge />
+                <PeriodDraftBoundary />
+                <RcaDraftBoundary />
+                <RealtimeBridge />
+                <BrowserRouter>
+                  <AppRouteBoundary>
+                    <CrumbReachFromRoutes routes={PROTECTED_ROUTES}>
+                      <AppRoutes />
+                    </CrumbReachFromRoutes>
+                  </AppRouteBoundary>
+                </BrowserRouter>
+              </CalendarPreferenceProvider>
+            </DisplayCurrencyProvider>
+          </PlantSelectionProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </RouteErrorBoundary>
 );
 
 export default App;

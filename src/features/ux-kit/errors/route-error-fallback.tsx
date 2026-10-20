@@ -1,57 +1,78 @@
 import { Link } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ActionIcon, StatusIcon } from '@/lib/icons';
 import { isChunkLoadError } from './chunk-load-error';
 import { describeError } from './describe-error';
+import { ErrorDevDetails } from './error-dev-details';
 import { SupportReference } from './support-reference';
 
 export interface RouteErrorFallbackProps {
   error: unknown;
   /** full page reload (default `window.location.reload()`) */
   onReload?: () => void;
+  /** a full-screen page (the app-level boundary) instead of a block inside the app shell */
+  fullPage?: boolean;
+  /**
+   * `router` (default): "Go to dashboard" is a router link. `document`: a plain link, for the outermost
+   * boundary that sits above the router (a crash there may have taken the router down with it).
+   */
+  navigation?: 'router' | 'document';
 }
 
+const DASHBOARD = '/dashboard';
 const reloadPage = () => window.location.reload();
 
 const TEXT = {
   chunk: {
-    title: 'This page needs to reload',
-    text: 'The app was updated or the connection dropped while the page was loading. Reload to continue.',
+    title: 'This page needs to refresh',
+    text: 'The app was updated or the connection dropped while the page was loading. Refresh to continue.',
   },
   crash: {
-    title: 'This page could not be displayed',
-    text: 'Something went wrong on this page. Reload it, or go to the dashboard. If it keeps happening, contact support.',
+    title: 'Something went wrong',
+    text: 'This page could not be displayed. Refresh it, or go to the dashboard. If it keeps happening, contact support.',
   },
 } as const;
 
+function DashboardLink({ navigation }: { navigation: 'router' | 'document' }) {
+  return (
+    <Button asChild type="button" variant="outline" size="sm">
+      {navigation === 'router' ? <Link to={DASHBOARD}>Go to dashboard</Link> : <a href={DASHBOARD}>Go to dashboard</a>}
+    </Button>
+  );
+}
+
 /**
- * What a crashed page shows inside the app shell (header and menu stay usable): a plain explanation,
- * "Reload" and "Go to dashboard", and "Copy support reference" when the failure came from a request.
- * A chunk-load failure (new deployment, dropped connection) asks for a reload instead.
+ * What a crash shows: a plain explanation, "Refresh" and "Go to dashboard", and "Copy support reference"
+ * when the failure came from a request — never the technical message (that appears in development builds
+ * only). Inside the app shell the header and menu stay usable; `fullPage` covers the whole screen. A
+ * chunk-load failure (new deployment, dropped connection) asks for a refresh instead.
  */
-export function RouteErrorFallback({ error, onReload = reloadPage }: RouteErrorFallbackProps) {
+export function RouteErrorFallback({ error, onReload = reloadPage, fullPage = false, navigation = 'router' }: RouteErrorFallbackProps) {
   const text = isChunkLoadError(error) ? TEXT.chunk : TEXT.crash;
   const reference = describeError(error).reference;
   const Icon = StatusIcon.error;
-  const ReloadIcon = ActionIcon.refresh;
+  const RefreshIcon = ActionIcon.refresh;
   return (
-    <div className="mx-auto max-w-2xl py-8" data-testid="route-error">
-      <Alert variant="destructive" role="alert">
+    <div
+      className={cn(fullPage ? 'flex min-h-screen items-center justify-center bg-background p-4' : 'mx-auto max-w-2xl py-8')}
+      data-testid="route-error"
+    >
+      <Alert variant="destructive" role="alert" className={cn(fullPage && 'max-w-xl')}>
         <Icon className="h-4 w-4" aria-hidden="true" />
         <AlertTitle>{text.title}</AlertTitle>
         <AlertDescription>
           <p>{text.text}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button type="button" size="sm" onClick={onReload}>
-              <ReloadIcon aria-hidden="true" />
-              Reload
+              <RefreshIcon aria-hidden="true" />
+              Refresh
             </Button>
-            <Button asChild type="button" variant="outline" size="sm">
-              <Link to="/dashboard">Go to dashboard</Link>
-            </Button>
+            <DashboardLink navigation={navigation} />
             <SupportReference reference={reference} />
           </div>
+          <ErrorDevDetails error={error} />
         </AlertDescription>
       </Alert>
     </div>

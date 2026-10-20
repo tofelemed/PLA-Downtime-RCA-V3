@@ -36,14 +36,16 @@ describe('RouteErrorBoundary', () => {
     vi.restoreAllMocks();
   });
 
-  it('a throwing page shows the fallback while the shell around it stays, and Reload reloads', () => {
+  it('a throwing page shows the fallback while the shell around it stays, and Refresh reloads', () => {
     const onReload = vi.fn();
     render(<Harness error={new Error('boom')} onReload={onReload} />);
-    expect(screen.getByText('This page could not be displayed')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong');
     expect(screen.getByRole('button', { name: 'Other page' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Go to dashboard' })).toHaveAttribute('href', '/dashboard');
-    expect(screen.queryByText('boom')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
+    // users never see the technical message; development builds show it behind "Technical details"
+    expect(screen.getByText(/This page could not be displayed/)).not.toHaveTextContent('boom');
+    expect(screen.getByTestId('error-dev-details')).toHaveTextContent('boom');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(onReload).toHaveBeenCalledTimes(1);
   });
 
@@ -57,7 +59,7 @@ describe('RouteErrorBoundary', () => {
   it('asks for a reload when the page chunk failed to load', () => {
     const error = new TypeError('Failed to fetch dynamically imported module: /assets/page-abc.js');
     render(<Harness error={error} onReload={vi.fn()} />);
-    expect(screen.getByText('This page needs to reload')).toBeInTheDocument();
+    expect(screen.getByText('This page needs to refresh')).toBeInTheDocument();
   });
 
   it('recognises chunk-load failures only', () => {

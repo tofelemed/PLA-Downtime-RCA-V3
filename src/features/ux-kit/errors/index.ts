@@ -14,3 +14,5 @@ export { InlineError, type InlineErrorProps } from './inline-error';
 export { isChunkLoadError } from './chunk-load-error';
 export { RouteErrorBoundary, type RouteErrorBoundaryProps } from './route-error-boundary';
 export { RouteErrorFallback, type RouteErrorFallbackProps } from './route-error-fallback';
+export { isAuthFailure } from './auth-failure';
+export { GlobalErrorListeners } from './global-error-listeners';

@@ -49,7 +49,7 @@ function useDrawer(pathname: string, drawerMode: boolean) {
  * opened from the header, 1024–1279 px an icon rail by default (UX audit H-1).
  */
 export const Layout = ({ children }: LayoutProps) => {
-  const { session } = useAuth();
+  const { session, expireSession } = useAuth();
   const { pathname } = useLocation();
   const savedNav = useNavState(session?.user.id ?? null);
   const mode = useShellMode();
@@ -83,7 +83,7 @@ export const Layout = ({ children }: LayoutProps) => {
           </aside>
         )}
         <main ref={mainRef} id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 outline-none md:p-6">
-          <RouteErrorBoundary resetKey={pathname}>
+          <RouteErrorBoundary resetKey={pathname} onAuthFailure={expireSession}>
             <PlantAccessGuard><EquipmentSetupProvider><SetupJourneyBar />{children}</EquipmentSetupProvider></PlantAccessGuard>
           </RouteErrorBoundary>
           <HighlightTarget />
