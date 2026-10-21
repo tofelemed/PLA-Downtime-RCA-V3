@@ -78,7 +78,7 @@ describe('My work page (UX audit §5.7)', () => {
     open();
     const table = await screen.findByRole('table', { name: 'My reconciliation queue: Overdue' });
     expect(within(table).getByTestId('no-plan')).toHaveTextContent('No approved plan covers this period');
-    expect(within(table).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning?tab=plans');
+    expect(within(table).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning');
   });
 
   it('QA re-test N9: an empty queue shows only the empty state, without a table header', async () => {

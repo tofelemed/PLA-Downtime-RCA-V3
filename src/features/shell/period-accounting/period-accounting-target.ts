@@ -1,7 +1,7 @@
 import type { PlanView } from '@/api/v2/types/plans';
 
 /** Where the plan list opens when the plan cannot be chosen for the user. */
-export const PLAN_LIST_PATH = '/planning?tab=plans';
+export const PLAN_LIST_PATH = '/planning';
 
 export type PeriodAccountingTarget =
   | { kind: 'plan'; to: string }

@@ -14,6 +14,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { formatDuration } from '@/features/ux-kit/format/duration';
 import { formatPlantTime } from '@/features/ux-kit/format/plant-time';
+import { useCalendarPreference } from '@/lib/dates';
 import { labelOf, SIGNAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { ACTUALS_SOURCE_LABELS } from '@/features/plan-dashboard/model/actuals-labels';
 import { coverageSummaryText } from './model/coverage-text';
@@ -22,6 +23,7 @@ import { plural } from '@/features/ux-kit/format/plural';
 
 function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; connectionId: string; timezone: string }) {
   const numbers = useNumberFormat();
+  const calendarPreference = useCalendarPreference();
   const authority = useSourceAuthorityInForce(unitId);
   const [range, setRange] = useState<InstantRange>(() => rollingWindow(DAY_MS));
   const coverage = useUnitStateCoverage(range.from && range.to ? { unitId, from: range.from, to: range.to } : null);
@@ -46,16 +48,16 @@ function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; con
       <h3 className="font-medium">Stored state coverage</h3>
       <DateRangeInput label="Coverage period" timeZone={timezone} value={range} onChange={setRange} />
       <DataState state={dataStateOf(coverage)} error={coverage.error} onRetry={() => void coverage.refetch()}>
-        {coverage.data && <p>{coverageSummaryText(coverage.data, (seconds) => formatDuration(seconds, 'long', numbers.digits), (iso) => formatPlantTime(iso, timezone, true))}</p>}
+        {coverage.data && <p>{coverageSummaryText(coverage.data, (seconds) => formatDuration(seconds, 'long', numbers.digits), (iso) => formatPlantTime(iso, timezone, true, calendarPreference))}</p>}
       </DataState>
       <Link className="underline" to={`/master-data/unit-state?unitId=${unitId}`}>Configure Unit State rules and heartbeat</Link>
     </div>
     <DerivedStopPreview key={unitId} unitId={unitId} timezone={timezone} />
     <nav aria-label="Remaining extruder setup" className="flex flex-wrap gap-3">
       <Link className="underline" to={`/master-data/stop-policy?unitId=${unitId}`}>Stop-engine settings</Link>
-      <Link className="underline" to="/planning?tab=profiles">Profiles and approved rates</Link>
-      <Link className="underline" to="/planning?tab=calendars">Published calendars</Link>
-      <Link className="underline" to="/planning?tab=plans">Plans and period accounting</Link>
+      <Link className="underline" to="/setup/profiles">Profiles and approved rates</Link>
+      <Link className="underline" to="/setup/calendars">Published calendars</Link>
+      <Link className="underline" to="/planning">Plans and period accounting</Link>
       <Link className="underline" to="/finance">Valuation and FX</Link>
     </nav>
     <p className="text-muted-foreground">Use Signals → Preview quantity to inspect actual stored output samples, quality and coverage. In the plan period, recalculate and review the ledgers, coding gate and valuation before submitting or approving.</p>

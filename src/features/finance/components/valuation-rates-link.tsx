@@ -8,16 +8,16 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
  */
 export function ValuationRatesLink() {
   const { canViewAnalysis } = useCapabilities();
-  const page = pageNameOf('/planning');
+  const page = pageNameOf('/setup/profiles');
   return (
     <p className="text-sm text-muted-foreground" data-testid="valuation-rates-link">
       Valuation rates (margins, costs, price differences) are kept on each production profile:{' '}
       {canViewAnalysis ? (
-        <Link className="underline" to="/planning?tab=profiles">
-          {page} › Profiles & rates
+        <Link className="underline" to="/setup/profiles">
+          Setup › {page}
         </Link>
       ) : (
-        `${page} › Profiles & rates`
+        `Setup › ${page}`
       )}
       .
     </p>

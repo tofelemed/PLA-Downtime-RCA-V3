@@ -7,7 +7,7 @@ import { useProfile } from '../hooks/use-profile-reads';
 import { ProfileDetail } from './profile-detail';
 import { operatingModeLabel } from '../model/plan-labels';
 
-const BACK = { to: '/planning?tab=profiles', label: 'Profiles & rates' };
+const BACK = { to: '/setup/profiles', label: 'Profiles & rates' };
 
 /** `/planning/profiles/:profileId`: one profile version with its rates, valuation rates and approvals. */
 export function ProfilePage() {

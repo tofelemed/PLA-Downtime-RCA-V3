@@ -16,7 +16,7 @@ export function LegacyValues({ children }: { children: ReactNode }) {
       description={
         <>
           Kept from the previous version; calculations do not use them. Rates and ideal times come from{' '}
-          <Link className="underline" to="/planning?tab=profiles">
+          <Link className="underline" to="/setup/profiles">
             production profiles
           </Link>
           .

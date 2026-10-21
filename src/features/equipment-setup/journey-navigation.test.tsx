@@ -41,7 +41,7 @@ describe('ordered equipment setup navigation', () => {
     expect(screen.getAllByRole('heading', { level: 3, hidden: true })).toHaveLength(19);
     expect(document.querySelectorAll('details')).toHaveLength(6);
     expect(document.querySelectorAll('details[open]')).toHaveLength(1);
-    expect(screen.queryByRole('navigation', { name: 'Master data sections' })).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Pages of this setup area' })).toBeNull();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(SETUP_STEPS.map((step) => step.id)).toEqual(['plant', 'unit', 'assets', 'products', 'codes', 'stop-policy', 'impact', 'calendar', 'profiles', 'connection', 'signals', 'state', 'authority', 'finance', 'telemetry', 'plan', 'events', 'period', 'analysis']);
     open('Plant and display settings');

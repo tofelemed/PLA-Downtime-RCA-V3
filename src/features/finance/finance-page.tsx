@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { DataState } from '@/features/ux-kit/data-state';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { RecalculationNotice } from './components/recalculation-notice';
 import { ValuationRatesLink } from './components/valuation-rates-link';
@@ -20,7 +21,7 @@ function FinanceScreen() {
     <Page width="wide">
       <div className="space-y-6" data-testid="finance">
         <PageHeader
-          title="Finance"
+          title={pageNameOf('/finance')}
           description={`Valuation policy, exchange rates and product demand of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
         />
         <ValuationRatesLink />

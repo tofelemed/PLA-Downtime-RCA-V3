@@ -103,7 +103,8 @@ test.describe('ADM-10 security spot-checks as an Operator', () => {
     await expect(page.getByText("You don't have permission to access the admin panel.")).toBeVisible({ timeout: 60_000 });
     await page.goto('/master-data');
     await expect(page.getByRole('region', { name: 'Your pages' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Master data sections' }).getByRole('link', { name: 'Standby equipment' })).toBeVisible();
-    await expect(page.getByRole('navigation', { name: 'Master data sections' }).getByRole('link', { name: 'Units', exact: true })).toHaveCount(0);
+    // his pages are listed on the overview; Setup shows only the entries he can open (21 Oct 2026)
+    await expect(page.getByRole('region', { name: 'Your pages' }).getByRole('link', { name: 'Standby equipment' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Main menu' }).locator('a[href="/master-data/units"]')).toHaveCount(0);
   });
 });

@@ -8,7 +8,7 @@ import { EntityIcon } from '@/lib/icons';
 import { usePlanningRefs } from '../hooks/use-planning-refs';
 import { PlanDetail } from './plan-detail';
 
-const BACK = { to: '/planning?tab=plans', label: 'Plans' };
+const BACK = { to: '/planning', label: 'Plans' };
 
 /** `/planning/plans/:planId`: one plan — current version, preview, generation, approval and history. */
 export function PlanPage() {

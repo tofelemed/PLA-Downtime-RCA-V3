@@ -13,14 +13,15 @@ describe('routeTrail', () => {
 
   it('Module › parent › page: the parent is the back link inside the module', () => {
     expect(routeTrail('/plans/p1/periods/x1', 'Period 3 Oct', { to: '/plans/p1', label: 'HDPE plan' })).toEqual({
-      crumbs: [{ label: 'Plans, profiles & calendars', to: '/planning' }, { label: 'HDPE plan', to: '/plans/p1' }, { label: 'Period 3 Oct' }],
+      crumbs: [{ label: 'Plans', to: '/planning' }, { label: 'HDPE plan', to: '/plans/p1' }, { label: 'Period 3 Oct' }],
       keepBack: false,
     });
   });
 
   it('a back link to the module page itself is one crumb in the page\'s own words (keeps its tab)', () => {
+    // since 21 Oct 2026 Codes & rules is the Setup entry "Codes & failures": its name, then the tab
     expect(routeTrail('/master-data/codes-rules/rules/r1', 'Rule', { to: '/master-data/codes-rules?tab=rules', label: 'Rules' })?.crumbs).toEqual([
-      { label: 'Master data', to: '/master-data' },
+      { label: 'Codes & failures', to: '/master-data/codes-rules' },
       { label: 'Rules', to: '/master-data/codes-rules?tab=rules' },
       { label: 'Rule' },
     ]);
@@ -63,7 +64,7 @@ describe('PageHeader breadcrumbs', () => {
   it('a sub-page gets the automatic trail instead of the plain back link', () => {
     at('/finance/policies/p1', <PageHeader title="Valuation policy version 2" back={{ to: '/finance?tab=policies', label: 'Valuation policies' }} />);
     const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(trail).getByRole('link', { name: 'Finance' })).toHaveAttribute('href', '/finance');
+    expect(within(trail).getByRole('link', { name: 'Valuation' })).toHaveAttribute('href', '/finance');
     expect(within(trail).getByRole('link', { name: 'Valuation policies' })).toHaveAttribute('href', '/finance?tab=policies');
     expect(within(trail).getByText('Valuation policy version 2')).toHaveAttribute('aria-current', 'page');
     expect(screen.getAllByRole('link', { name: 'Valuation policies' })).toHaveLength(1);

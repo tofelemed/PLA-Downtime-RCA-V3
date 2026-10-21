@@ -8,7 +8,7 @@ import type { PlanFormMode } from '../hooks/use-plan-form';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
 import { PlanForm } from './plan-form';
 
-const LIST = '/planning?tab=plans';
+const LIST = '/planning';
 
 function Form({ mode, refs, back }: { mode: PlanFormMode; refs: PlanningRefs; back: string }) {
   const navigate = useNavigate();

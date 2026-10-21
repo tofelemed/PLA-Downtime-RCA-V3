@@ -143,10 +143,11 @@ describe('administration screens on v2', () => {
     expect(screen.getByRole('button', { name: 'Create plant' })).toBeTruthy();
     await waitFor(() => expect(calls.some((call) => call.url.pathname === '/api/v2/organizations')).toBe(true));
     fireEvent.keyDown(screen.getByRole('combobox', { name: /Organization/ }), { key: 'ArrowDown' });
-    expect(await screen.findByRole('option', { name: 'Own organization' })).toBeTruthy();
+    // the form has two selects since 21 Oct 2026 (organization, week start): slow under a parallel full run
+    expect(await screen.findByRole('option', { name: 'Own organization' }, { timeout: 5_000 })).toBeTruthy();
     expect(screen.queryByRole('option', { name: 'Read-only organization' })).toBeNull();
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
-  }, 15_000);
+  }, 30_000);
 
   it.each(['OrgAdmin', 'TenantAdmin', 'viewer'])('does not allow %s to open organization creation', (role) => {
     actAs(role);

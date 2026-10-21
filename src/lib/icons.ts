@@ -108,6 +108,11 @@ import {
   Users,
   Workflow,
   Wrench,
+  Barcode,
+  BookMarked,
+  CalendarDays,
+  Hammer,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 
@@ -232,6 +237,12 @@ export const EntityIcon = {
   reconciliation: Scale,
   settings: Settings,
   administration: ShieldCheck,
+  /** Setup entries (owner 21 Oct 2026) */
+  shiftCalendar: CalendarDays,
+  codeLibrary: Barcode,
+  productionRules: SlidersHorizontal,
+  rcaLibrary: BookMarked,
+  workOrder: Hammer,
 } as const satisfies Record<string, AppIcon>;
 
 /** Chrome of the app shell and of pagers / disclosures (not domain meanings). */

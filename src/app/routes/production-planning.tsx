@@ -5,8 +5,10 @@ import type { AppRoute } from './route-types';
 const Approvals = lazyNamedWithPreload(() => import('@/features/approvals/approval-inbox-page'), 'ApprovalInboxPage');
 const ApprovalDetail = lazyNamedWithPreload(() => import('@/features/approvals/approval-detail-page'), 'ApprovalDetailPage');
 
-/** Plans, profiles & calendars: the list page and its record / form sub-pages. */
+/** Plans (Production) and the profiles / calendars pages of Setup: the list pages and their record / form sub-pages. */
 const Planning = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/planning-page'), 'PlanningPage');
+const SetupProfiles = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/planning-page'), 'SetupProfilesPage');
+const SetupCalendars = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/planning-page'), 'SetupCalendarsPage');
 const PlanPage = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/plans/plan-page'), 'PlanPage');
 const NewPlan = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/plans/plan-form-page'), 'NewPlanPage');
 const EditPlanVersion = lazyNamedWithPreload(() => import('@/features/plans-profiles-calendars/plans/plan-form-page'), 'EditPlanVersionPage');
@@ -33,13 +35,16 @@ const MeasurementUncertainty = lazyNamedWithPreload(() => import('@/features/mea
 
 /**
  * Planning routes of the production area (owned by the planning track; spread into `PRODUCTION_ROUTES`).
- * The old `/production-plans` list now lives in `/planning?tab=plans`; its links keep working.
+ * The old `/production-plans` list now lives in `/planning`; its links keep working.
  */
 export const PLANNING_ROUTES: readonly AppRoute[] = [
   { path: '/approvals', element: <Approvals />, preload: Approvals.preload },
   { path: '/approvals/:kind/:id', element: <ApprovalDetail />, preload: ApprovalDetail.preload },
-  { path: '/production-plans', element: <Navigate to="/planning?tab=plans" replace />, preload: Planning.preload },
+  { path: '/production-plans', element: <Navigate to="/planning" replace />, preload: Planning.preload },
   { path: '/planning', element: <Planning />, preload: Planning.preload },
+  // Setup → Profiles & rates and Calendars & crews (owner 21 Oct 2026); sub-pages keep their /planning/… paths
+  { path: '/setup/profiles', element: <SetupProfiles />, preload: SetupProfiles.preload },
+  { path: '/setup/calendars', element: <SetupCalendars />, preload: SetupCalendars.preload },
   { path: '/planning/plans/new', element: <NewPlan />, preload: NewPlan.preload },
   { path: '/planning/plans/:planId', element: <PlanPage />, preload: PlanPage.preload },
   { path: '/planning/plans/:planId/versions/new', element: <NewPlanVersion />, preload: NewPlanVersion.preload },

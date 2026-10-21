@@ -203,7 +203,7 @@ describe('month-close contracts retained during section restructuring', () => {
     const notice = await screen.findByTestId('uncovered-days');
     expect(notice).toHaveTextContent('2 production days have no approved plan.');
     expect(notice).toHaveTextContent('not counted above');
-    expect(within(notice).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning?tab=plans');
+    expect(within(notice).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning');
     expect(within(notice).getAllByRole('row')).toHaveLength(3);
     await userEvent.click(screen.getByRole('tab', { name: 'Periods' }));
     expect(await screen.findByTestId('pending-open')).toHaveAttribute('href', '/plans/plan-a/periods/p-9');

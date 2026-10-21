@@ -12,14 +12,15 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { MasterDataNav } = await import('./master-data-nav');
 const { MasterDataOverviewPage } = await import('../overview/master-data-overview-page');
 
-const wrap = (node: ReactNode) =>
+const wrap = (node: ReactNode, path = '/master-data') =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-      <MemoryRouter initialEntries={['/master-data']}>{node}</MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>{node}</MemoryRouter>
     </QueryClientProvider>,
   );
 
-const linkNames = () => within(screen.getByRole('navigation', { name: 'Master data sections' })).getAllByRole('link').map((l) => l.textContent);
+const LINKS = { name: 'Pages of this setup area' };
+const linkNames = () => within(screen.getByRole('navigation', LINKS)).getAllByRole('link').map((l) => l.textContent);
 
 describe('master-data links by capability', () => {
   afterEach(() => {
@@ -27,25 +28,34 @@ describe('master-data links by capability', () => {
     actAs('SuperAdmin');
   });
 
-  it('a master-data admin sees every section and Codes & rules', () => {
+  // owner 21 Oct 2026: the link row shows the pages of the current Setup entry only
+  it.each([
+    ['/master-data/assets', ['Production units', 'Assets', 'Products', 'Plant hierarchy', 'Plant flow']],
+    ['/master-data/failure-dictionary', ['Codes & rules', 'Failure dictionary']],
+    ['/master-data/unit-state', ['Stop and plan policy', 'Standby equipment', 'Unit impact rules', 'Unit state']],
+    ['/master-data/rca/causes', ['RCA templates', 'Cause library', 'Verification checklists']],
+  ])('a master-data admin on %s sees the pages of that setup entry', (path, names) => {
     actAs('master_data_admin');
-    wrap(<MasterDataNav />);
-    expect(linkNames()).toEqual([
-      'Overview', 'Production units', 'Assets', 'Products', 'Plant hierarchy', 'Codes & rules', 'RCA templates', 'Cause library', 'Verification checklists',
-      'Failure dictionary', 'Plant flow', 'Stop and plan policy', 'Standby equipment', 'Unit impact rules', 'Work-order operations', 'Unit state',
-    ]);
+    wrap(<MasterDataNav />, path);
+    expect(linkNames()).toEqual(names);
+  });
+
+  it('a single-page entry (Work-order operations) has no link row', () => {
+    actAs('master_data_admin');
+    wrap(<MasterDataNav />, '/master-data/work-orders');
+    expect(screen.queryByRole('navigation', LINKS)).toBeNull();
   });
 
   it('a reliability engineer sees the pages it writes and the failure dictionary it reads (re-test N9)', () => {
     actAs('reliability_engineer');
-    wrap(<MasterDataNav />);
-    expect(linkNames()).toEqual(['Overview', 'Codes & rules', 'Failure dictionary', 'Standby equipment', 'Unit impact rules', 'Work-order operations']);
+    wrap(<MasterDataNav />, '/master-data/standby-equipment');
+    expect(linkNames()).toEqual(['Standby equipment', 'Unit impact rules']);
   });
 
-  it('an operator sees every page it can open, Codes & rules included (QA L1)', () => {
+  it('an operator sees every page it can open, and no row for a single page (QA L1)', () => {
     actAs('operator');
-    wrap(<MasterDataNav />);
-    expect(linkNames()).toEqual(['Overview', 'Codes & rules', 'Standby equipment']);
+    wrap(<MasterDataNav />, '/master-data/standby-equipment');
+    expect(screen.queryByRole('navigation', LINKS)).toBeNull();
   });
 
   it('the overview of an approver without master-data rights lists its pages instead of refusing', () => {

@@ -29,7 +29,7 @@ export interface CalendarEditorProps {
 
 type Editor = ReturnType<typeof useCalendarEditor>;
 
-const CALENDAR_LIST = '/planning?tab=calendars';
+const CALENDAR_LIST = '/setup/calendars';
 
 function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
   const { draft, errors } = editor;

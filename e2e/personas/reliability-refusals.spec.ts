@@ -68,7 +68,9 @@ test.describe('Reliability engineer — refusals, validation, persistence', () =
     await expect(nav.getByRole('link', { name: 'RCA Analysis' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Knowledge base' })).toBeVisible();
     await expect(nav.getByRole('link', { name: 'Event Hub' })).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Master data' })).toBeVisible();
+    // standby log and work orders: Setup › Production rules and Reliability › Work-order operations (21 Oct 2026)
+    await expect(nav.getByRole('link', { name: 'Production rules' })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Work-order operations' })).toBeVisible();
     await expect(nav.getByRole('link', { name: /User management|Admin panel|Settings/ })).toHaveCount(0);
   });
 

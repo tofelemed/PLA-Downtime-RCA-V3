@@ -13,7 +13,7 @@ import { draftOf, newCalendarDraft, type CalendarDraft } from '../model/calendar
 import { CalendarEditor } from './calendar-editor';
 import { CalendarPreviewPanel } from './calendar-preview-panel';
 
-const LIST = '/planning?tab=calendars';
+const LIST = '/setup/calendars';
 const BACK = { to: LIST, label: 'Calendars & crews' };
 
 interface WorkspaceProps {

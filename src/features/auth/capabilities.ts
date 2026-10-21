@@ -31,6 +31,14 @@ export interface Capabilities {
    * reliability pages; each section retains its own capability gate
    */
   canReachMasterData: boolean;
+  /** Setup → Plant & equipment (units, assets, products, hierarchy, plant flow; 21 Oct 2026) */
+  canReachPlantEquipment: boolean;
+  /** Setup → Codes & failures (code libraries and rules, failure dictionary) */
+  canReachCodesSetup: boolean;
+  /** Setup → Production rules (stop and plan policy, unit impact rules, standby equipment, unit state) */
+  canReachProductionRules: boolean;
+  /** Reliability → Work-order operations */
+  canReachWorkOrders: boolean;
   canUseIntegrationConsole: boolean;
   /**
    * owner 18 Oct 2026: the Integration section (Connectivity, Source Status Rules, Source Priority, Enhanced
@@ -164,7 +172,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canReachDelegationsOnly' | 'canReachApprovals' | 'canReachSetupGuide' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canReachPlantEquipment' | 'canReachCodesSetup' | 'canReachProductionRules' | 'canReachWorkOrders' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canReachDelegationsOnly' | 'canReachApprovals' | 'canReachSetupGuide' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -237,6 +245,12 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     canManageMasterData,
     canReachMasterData:
       canViewAnalysis || canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteWorkOrders || writes.canWriteStateMappings || writes.canWriteUnitImpactRules,
+    // each Setup entry is listed for whoever may open one of its pages (the same rules as the page gates)
+    canReachPlantEquipment: canManageMasterData || writes.canWriteProfiles,
+    canReachCodesSetup: held.length > 0 || canManageMasterData || writes.canValidateFailures,
+    canReachProductionRules:
+      canManageMasterData || writes.canWriteOeePolicy || writes.canWriteStandby || writes.canWriteUnitImpactRules || writes.canWriteStateMappings,
+    canReachWorkOrders: canManageMasterData || writes.canWriteWorkOrders,
     canUseIntegrationConsole: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin', 'integration_admin']),
     canReachIntegration: isSuperAdmin,
     canReviewSourcePriority: isSuperAdmin || writes.canApproveSourceAuthority,

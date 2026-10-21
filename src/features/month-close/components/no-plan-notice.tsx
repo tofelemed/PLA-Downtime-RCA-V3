@@ -17,7 +17,7 @@ export function NoPlanLink({ text = NO_PLAN_TEXT }: { text?: string }) {
       {canViewAnalysis && (
         <>
           {' · '}
-          <Link to="/planning?tab=plans" className="underline underline-offset-2" onClick={(event) => event.stopPropagation()}>
+          <Link to="/planning" className="underline underline-offset-2" onClick={(event) => event.stopPropagation()}>
             Open Plans
           </Link>
         </>

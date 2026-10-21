@@ -1,7 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { cn } from '@/lib/utils';
-import { visibleMasterDataSections } from './master-data-sections';
+import { masterDataGroupOf, visibleMasterDataSections } from './master-data-sections';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -10,14 +10,17 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   );
 
 /**
- * The master-data sections the user may open as one wrapping row of links (sub-pages instead of
- * overflowing tabs); codes and rules belong here; users stay in User Management.
+ * The pages of the current Setup entry the user may open, as one wrapping row of links ("Plant & equipment":
+ * units, assets, products, hierarchy, plant flow; 21 Oct 2026). Nothing when the entry has a single page.
  */
 export function MasterDataNav() {
   const capabilities = useCapabilities();
+  const group = masterDataGroupOf(useLocation().pathname);
+  const sections = visibleMasterDataSections(capabilities).filter((section) => section.group === group);
+  if (sections.length < 2) return null;
   return (
-    <nav aria-label="Master data sections" className="flex flex-wrap items-center gap-1 border-b pb-2">
-      {visibleMasterDataSections(capabilities).map((section) => (
+    <nav aria-label="Pages of this setup area" className="flex flex-wrap items-center gap-1 border-b pb-2">
+      {sections.map((section) => (
         <NavLink key={section.to} to={section.to} end={section.end} className={linkClass}>
           {section.label}
         </NavLink>

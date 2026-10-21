@@ -4,7 +4,7 @@ import type { FeatureFlagKey } from '@/api/v2/types/flags';
 import type { Capabilities, CapabilityKey } from './capabilities';
 
 /** Sidebar sections, in display order (docs/UI_UX_AUDIT.md §1). */
-export type NavSectionKey = 'overview' | 'production' | 'downtime' | 'pla' | 'reliability' | 'integration' | 'administration';
+export type NavSectionKey = 'overview' | 'production' | 'downtime' | 'pla' | 'reliability' | 'setup' | 'integration' | 'administration';
 
 export interface NavSection {
   key: NavSectionKey;
@@ -18,6 +18,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   { key: 'downtime', label: 'Downtime analysis', icon: EntityIcon.downtime },
   { key: 'pla', label: 'Production loss analysis (PLA)', icon: EntityIcon.lossAnalysis },
   { key: 'reliability', label: 'Reliability', icon: EntityIcon.rcaCase },
+  { key: 'setup', label: 'Setup', icon: EntityIcon.equipmentSetup },
   { key: 'integration', label: 'Integration', icon: EntityIcon.integration },
   { key: 'administration', label: 'Administration', icon: EntityIcon.administration },
 ];
@@ -54,12 +55,13 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Reports', href: '/reports', icon: EntityIcon.report, section: 'overview', capability: 'canViewAnalysis', description: 'OEE, loss, downtime and reconciliation reports' },
   { name: 'Event Hub', href: '/events', icon: EntityIcon.event, section: 'production', capability: 'canViewOperations', description: 'Stops and production events' },
   {
-    name: 'Plans, profiles & calendars',
+    // owner 21 Oct 2026: plans are made every period, so they stay here; profiles and calendars moved to Setup
+    name: 'Plans',
     href: '/planning',
     icon: EntityIcon.planning,
     section: 'production',
     capability: 'canViewAnalysis',
-    description: 'Production plans and their period accounting, profiles, rates and calendars',
+    description: 'Production plans, their versions and period accounting',
     activeAlso: ['/plans/'],
   },
   {
@@ -108,23 +110,23 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Recurring causes', href: '/reliability/causes', icon: EntityIcon.recurringCause, section: 'reliability', capability: 'canViewAnalysis', description: 'Cause codes ranked by investigations and their approved loss' },
   { name: 'Cause portfolio', href: '/reliability/portfolio', icon: EntityIcon.rcaPortfolio, section: 'reliability', capability: 'canViewAnalysis', description: 'Approved loss, actions and outcomes of investigations by coded cause' },
   { name: 'Knowledge base', href: '/rca-knowledge-base', icon: EntityIcon.knowledge, section: 'reliability', capability: 'canViewAnalysis', description: 'Closed investigations and lessons learned' },
+  { name: 'Work-order operations', href: '/master-data/work-orders', icon: EntityIcon.workOrder, section: 'reliability', capability: 'canReachWorkOrders', description: 'CMMS operations behind mean active repair time' },
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track tasks' },
+  // owner 21 Oct 2026: everything that sets a plant up, in the order of the setup guide's phases
+  { name: 'Equipment setup guide', label: 'Setup guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'setup', capability: 'canReachSetupGuide', description: 'Six phases from equipment records to the first approved period and analysis' },
+  { name: 'Plant & equipment', href: '/master-data/units', icon: EntityIcon.asset, section: 'setup', capability: 'canReachPlantEquipment', activeAlso: ['/master-data/assets', '/master-data/products', '/master-data/hierarchy', '/master-data/plant-flow'], description: 'Production units, assets, products, the plant hierarchy and plant flow' },
+  { name: 'Codes & failures', href: '/master-data/codes-rules', icon: EntityIcon.codeLibrary, section: 'setup', capability: 'canReachCodesSetup', activeAlso: ['/master-data/failure-dictionary', '/codes-admin'], description: 'Code libraries, reason codes, automatic rules and the failure dictionary' },
+  { name: 'Production rules', href: '/master-data/stop-policy', icon: EntityIcon.productionRules, section: 'setup', capability: 'canReachProductionRules', activeAlso: ['/master-data/unit-impact-rules', '/master-data/standby-equipment', '/master-data/unit-state'], description: 'Stop and plan policy, unit impact rules, standby equipment and unit state' },
+  { name: 'Calendars & crews', href: '/setup/calendars', icon: EntityIcon.shiftCalendar, section: 'setup', capability: 'canViewAnalysis', activeAlso: ['/planning/calendars'], description: 'Shift calendars, crews and rotations' },
+  { name: 'Profiles & rates', href: '/setup/profiles', icon: EntityIcon.product, section: 'setup', capability: 'canViewAnalysis', activeAlso: ['/planning/profiles'], description: 'Unit and product profiles, production rates, grade transitions and streams' },
+  { name: 'RCA library', href: '/master-data/rca/templates', icon: EntityIcon.rcaLibrary, section: 'setup', capability: 'canManageMasterData', activeAlso: ['/master-data/rca/'], description: 'Investigation templates, the cause library and verification checklists' },
+  { name: 'Valuation', href: '/finance', icon: EntityIcon.finance, section: 'setup', capability: 'canViewAnalysis', description: 'Valuation policy and exchange rates' },
   // owner 18 Oct 2026: the whole Integration section is SuperAdmin-only (menu and routes); approvers of Source
   // Priority / Source Status Rules reach those two review pages from the approvals inbox (route gates below)
   { name: 'Connectivity', href: '/connectivity', icon: EntityIcon.connection, section: 'integration', capability: 'canReachIntegration', description: 'Connections, ingestion jobs and mappings' },
   { name: 'Source status rules', href: '/connectivity/source-status', icon: EntityIcon.rule, section: 'integration', capability: 'canReachIntegration', description: 'Which source statuses count as the released record, per source system' },
   { name: 'Source priority', href: '/connectivity/source-authority', icon: EntityIcon.library, section: 'integration', capability: 'canReachIntegration', description: 'Which measurement source counts for each unit, and the versions waiting for approval' },
   { name: 'Enhanced historian', href: '/enhanced-historian', icon: EntityIcon.historian, section: 'integration', capability: 'canReachIntegration', description: 'Time series of plant signals' },
-  { name: 'Equipment setup guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'administration', capability: 'canReachSetupGuide', description: 'Six phases from equipment records to the first approved period and analysis' },
-  { name: 'Master data', href: '/master-data', icon: EntityIcon.masterData, section: 'administration', capability: 'canReachMasterData', activeAlso: ['/codes-admin'], description: 'Plant records, codes, rules and reliability data' },
-  {
-    name: 'Finance',
-    href: '/finance',
-    icon: EntityIcon.finance,
-    section: 'administration',
-    capability: 'canViewAnalysis',
-    description: 'Valuation policy and exchange rates',
-  },
   { name: 'User management', href: '/users', icon: EntityIcon.team, section: 'administration', capability: 'canUseUserManagement', activeAlso: ['/permissions'], description: 'Users, permissions and approval delegations' },
   // SME R1 / R6: administrators record delegations for anyone (User management › Delegations), approval-role
   // holders for themselves: QA re-test 2026-10-19, their own entry instead of "User management"

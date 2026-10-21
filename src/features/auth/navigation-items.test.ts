@@ -7,7 +7,7 @@ import { activeNavItem, groupNavigationItems, isNavItemActive, NAV_SECTIONS, NAV
 /**
  * The menu of each legacy demo user in its home plant (one legacy-role list per item): the menu
  * Navigation.tsx listed before capabilities, except where an item now follows its page gate or the
- * server's read roles (Admin Panel, Enhanced Historian, Audit Logs; APPLICATION_LOGIC_GUIDE §23).
+ * server's read roles (Admin Panel, Enhanced Historian, Audit Logs; APPLICATION_LOGIC_GUIDE Â§23).
  */
 const ALL = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager', 'Analyst', 'Engineer', 'Operator'];
 const NOT_OPERATOR = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'Manager', 'Analyst', 'Engineer'];
@@ -20,7 +20,8 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   Reports: NOT_OPERATOR,
   // Production
   'Event Hub': ALL,
-  'Plans, profiles & calendars': NOT_OPERATOR,
+  // owner 21 Oct 2026: plans stay here; profiles and calendars moved to Setup
+  Plans: NOT_OPERATOR,
   // EXPERT_REVIEW Area 3: my reconciliation queue (period writers, R-C) and month close (analysis roles, R-B)
   // Marun E2E: operators own RCA actions and tasks, so they reach My work and RCA Analysis
   'My work': ALL,
@@ -52,18 +53,25 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   // item 2.1: loss → cause → action → outcome, gated like Recurring causes
   'Cause portfolio': NOT_OPERATOR,
   'Knowledge base': NOT_OPERATOR,
+  // from master data (21 Oct 2026): master-data administrators and work-order writers (Manager)
+  'Work-order operations': [...ADMINS, 'Manager'],
   Tasks: ALL,
+  // Setup (owner 21 Oct 2026), in the order of the setup guide's phases; each entry is listed for whoever may
+  // open one of its pages (Manager = profile and stop-policy writer; Operator = standby log writer)
+  // QA re-test 19 Oct (L16): the guide is a configuration journey, not for operations-only roles
+  'Equipment setup guide': NOT_OPERATOR,
+  'Plant & equipment': [...ADMINS, 'Manager'],
+  'Codes & failures': ALL,
+  'Production rules': [...ADMINS, 'Manager', 'Operator'],
+  'Calendars & crews': NOT_OPERATOR,
+  'Profiles & rates': NOT_OPERATOR,
+  'RCA library': ADMINS,
+  Valuation: NOT_OPERATOR,
   // Integration: owner 18 Oct 2026, SuperAdmin only (approvers reach their two review pages from the inbox)
   Connectivity: ['SuperAdmin'],
   'Source status rules': ['SuperAdmin'],
   'Source priority': ['SuperAdmin'],
   'Enhanced historian': ['SuperAdmin'],
-  // Administration: Master Data also for the writers of its reliability pages (Manager = manager_approver:
-  // stop and plan policy; Operator = operator: standby log); they see only those pages' links
-  // QA re-test 19 Oct (L16): a configuration journey, not for operations-only roles
-  'Equipment setup guide': NOT_OPERATOR,
-  'Master data': ALL,
-  Finance: NOT_OPERATOR,
   // QA re-test 19 Oct: administrators; approval-role holders (Manager = manager_approver) record their own
   // delegations under "Approval delegations" (SME R1 / R6)
   'User management': ADMINS,
@@ -100,22 +108,26 @@ describe('navigation items by capability', () => {
     expect(menuFor(manager, null)).toEqual(menuFor(legacyUser('Manager')));
   });
 
-  it('Codes & Rules and Finance are v2 only: listed without any feature flag', () => {
+  it('Codes & failures and Valuation are v2 only: listed without any feature flag', () => {
     const names = visibleNavigationItems(capabilitiesOf(['SuperAdmin']), {}).map((item) => item.name);
-    expect(names).toContain('Master data');
+    expect(names).toContain('Codes & failures');
     expect(names).not.toContain('Codes & Rules');
-    expect(names).toContain('Finance');
+    expect(names).toContain('Valuation');
     expect(names).toContain('Dashboard');
   });
 
-  it('a master_data_admin (legacy Analyst) gains Master Data and nothing else', () => {
+  it('a master_data_admin (legacy Analyst) gains the setup pages it administers', () => {
     const charlotte: RoleSubject = { ...legacyUser('Analyst'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'master_data_admin' }] };
-    expect(menuFor(charlotte)).toEqual(menuFor(legacyUser('Analyst')));
+    const gained = menuFor(charlotte).filter((name) => !menuFor(legacyUser('Analyst')).includes(name));
+    expect(gained).toEqual(['Work-order operations', 'Plant & equipment', 'Production rules', 'RCA library']);
   });
 
   it('an integration_admin (legacy Engineer) gains no Integration item: the section is SuperAdmin-only (owner 18 Oct 2026)', () => {
     const elena: RoleSubject = { ...legacyUser('Engineer'), scopes: [{ tenantId: HOME, role: 'production_engineer' }, { tenantId: HOME, role: 'integration_admin' }] };
-    expect(menuFor(elena)).toEqual(menuFor(legacyUser('Engineer')));
+    // no Integration item; it writes unit-state mappings and work orders, so those Setup / Reliability pages
+    // (21 Oct 2026)
+    const gained = menuFor(elena).filter((name) => !menuFor(legacyUser('Engineer')).includes(name));
+    expect(gained).toEqual(['Work-order operations', 'Production rules']);
   });
 
   it('only SuperAdmin sees the Integration section; production accounting reaches Source Priority / Status Rules by route only', () => {
@@ -131,10 +143,13 @@ describe('navigation items by capability', () => {
     expect([admin.canReachIntegration, admin.canReviewSourcePriority, admin.canReviewSourceStatusRules]).toEqual([false, false, false]);
   });
 
-  it('Master Data is listed for master-data admins and for every writer of one of its reliability pages', () => {
-    const roleSets = [['master_data_admin'], ['manager_approver'], ['reliability_engineer'], ['operator'], ['integration_admin'], ['production_engineer'], ['viewer']];
-    const listed = roleSets.map((roles) => visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON).some((item) => item.name === 'Master data'));
-    expect(listed).toEqual([true, true, true, true, true, true, true]);
+  it('each setup page group is listed for whoever may open one of its pages (21 Oct 2026)', () => {
+    const roleSets = [['master_data_admin'], ['manager_approver'], ['reliability_engineer'], ['operator'], ['viewer']];
+    const listed = (name: string) => roleSets.map((roles) => visibleNavigationItems(capabilitiesOf(roles), FLAGS_ON).some((item) => item.name === name));
+    expect(listed('Production rules')).toEqual([true, true, true, true, false]);
+    expect(listed('Work-order operations')).toEqual([true, true, true, false, false]);
+    expect(listed('RCA library')).toEqual([true, false, false, false, false]);
+    expect(listed('Codes & failures')).toEqual([true, true, true, true, true]);
     for (const roles of roleSets) {
       const c = capabilitiesOf(roles);
       expect(c.canReachMasterData, roles.join()).toBe(c.canViewAnalysis || c.canManageMasterData || c.canWriteOeePolicy || c.canWriteStandby || c.canWriteWorkOrders || c.canWriteStateMappings);
@@ -169,7 +184,8 @@ describe('navigation items by capability', () => {
     expect(menuFor(amara)).not.toContain('Audit log');
     expect(menuFor(amara)).not.toContain('Enhanced historian');
     // standby log and CMMS work orders
-    expect(menuFor(amara)).toContain('Master data');
+    expect(menuFor(amara)).toContain('Production rules');
+    expect(menuFor(amara)).toContain('Work-order operations');
   });
 
   it('a viewer in another plant sees the read screens only', () => {
@@ -223,13 +239,14 @@ describe('navigation sections', () => {
   });
 
   it.each([
-    ['SuperAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'integration', 'administration']],
+    ['SuperAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup', 'integration', 'administration']],
     // owner 18 Oct 2026: the Integration section is SuperAdmin-only
-    ['TenantAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
-    ['Manager', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
-    ['Engineer', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
-    // operators keep the standby log: Master Data (its standby page) brings the administration section
-    ['Operator', ['overview', 'production', 'downtime', 'pla', 'reliability', 'administration']],
+    ['TenantAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup', 'administration']],
+    ['Manager', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup', 'administration']],
+    // engineers and operators have no administration page any more (master data and finance moved to Setup)
+    ['Engineer', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup']],
+    // operators keep the standby log (Production rules) and read the code libraries (Codes & failures)
+    ['Operator', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup']],
   ])('a %s sees only the sections that hold one of its items', (role, sections) => {
     expect(sectionsOf(role)).toEqual(sections);
   });
@@ -242,8 +259,8 @@ describe('navigation sections', () => {
     const byHref = (href: string) => NAVIGATION_ITEMS.find((item) => item.href === href)!;
     expect(isNavItemActive(byHref('/equipment-setup'), '/equipment-setup')).toBe(true);
     expect(isNavItemActive(byHref('/admin'), '/equipment-setup')).toBe(false);
-    expect(isNavItemActive(byHref('/master-data'), '/equipment-setup')).toBe(false);
-    expect(byHref('/equipment-setup').section).toBe('administration');
+    expect(isNavItemActive(byHref('/master-data/units'), '/equipment-setup')).toBe(false);
+    expect(byHref('/equipment-setup').section).toBe('setup');
     expect(isNavItemActive(byHref('/rca'), '/rca')).toBe(true);
     expect(isNavItemActive(byHref('/rca'), '/rca/cases/1')).toBe(true);
     expect(isNavItemActive(byHref('/rca'), '/rca-knowledge-base')).toBe(false);
@@ -259,6 +276,15 @@ describe('navigation sections', () => {
     ['/connectivity', '/connectivity'],
     ['/connectivity/jobs', '/connectivity'],
     ['/plans/p1/periods/x', '/planning'],
+    // Setup entries own their pages and the /planning sub-pages of profiles and calendars (21 Oct 2026)
+    ['/planning/calendars/v1', '/setup/calendars'],
+    ['/planning/profiles/p1/edit', '/setup/profiles'],
+    ['/planning/plans/p1', '/planning'],
+    ['/master-data/assets/a1', '/master-data/units'],
+    ['/master-data/failure-dictionary', '/master-data/codes-rules'],
+    ['/master-data/unit-state', '/master-data/stop-policy'],
+    ['/master-data/rca/causes', '/master-data/rca/templates'],
+    ['/master-data/work-orders', '/master-data/work-orders'],
   ])('one highlighted item for %s: the longest match (%s)', (pathname, href) => {
     expect(activeNavItem(NAVIGATION_ITEMS, pathname)?.href).toBe(href);
   });

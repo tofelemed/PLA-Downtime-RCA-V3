@@ -20,7 +20,7 @@ const KINDS = [
   { value: 'forecast', label: 'Forecast (daily)' },
   { value: 'mpc', label: 'MPC (becomes sustained)' },
 ];
-const LIST = '/planning?tab=profiles';
+const LIST = '/setup/profiles';
 const HEADER = 'unitCode,productCode,operatingMode,rate,timebase,effectiveFrom,effectiveTo';
 type ImportKind = 'budget' | 'forecast' | 'mpc';
 const START = { kind: 'forecast', externalId: '', csv: '' };

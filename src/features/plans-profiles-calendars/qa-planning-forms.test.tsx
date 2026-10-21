@@ -184,7 +184,7 @@ describe('QA planning: forms, reasons and URL state', () => {
     const button = screen.getByRole('button', { name: 'Import' });
     expect(button.hasAttribute('disabled')).toBe(true);
     expect(screen.getByTestId('disabled-reason').textContent).toMatch(/Choose a file/);
-    expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe('/planning?tab=profiles');
+    expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe('/setup/profiles');
   });
 
   it('Import rates asks before Cancel leaves a typed document reference (P-5 re-test)', () => {

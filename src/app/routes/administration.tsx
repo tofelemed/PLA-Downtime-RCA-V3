@@ -54,7 +54,7 @@ const AuditEntry = lazyNamedWithPreload(() => import('@/features/audit/audit-ent
 const EquipmentSetup = lazyNamedWithPreload(() => import('@/features/equipment-setup/equipment-setup-page'), 'EquipmentSetupPage');
 
 /** Administration area: master data, codes, finance, users, permissions, audit, settings (T5, T7, T8). */
-export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
+const ROUTES: readonly AppRoute[] = [
   { path: '/master-data', element: <MasterData />, preload: MasterData.preload },
   { path: '/equipment-setup', element: <EquipmentSetup />, preload: EquipmentSetup.preload },
   { path: '/master-data/setup', element: <AdministrationRedirect kind="setup" /> },
@@ -111,3 +111,12 @@ export const ADMINISTRATION_ROUTES: readonly AppRoute[] = [
   { path: '/settings', element: <AdministrationRedirect kind="settings" /> },
   { path: '/codes-admin/*', element: <AdministrationRedirect kind="codes" /> },
 ];
+
+/**
+ * The pages keep the gate they had under the one "Master data" menu entry (`canReachMasterData`; each page
+ * checks its own writers): since 21 Oct 2026 they are listed under several Setup entries with narrower menu
+ * capabilities, which must not narrow who may open them by link.
+ */
+export const ADMINISTRATION_ROUTES: readonly AppRoute[] = ROUTES.map((route) =>
+  route.path.startsWith('/master-data') && !route.requires ? { ...route, requires: 'canReachMasterData' as const } : route,
+);

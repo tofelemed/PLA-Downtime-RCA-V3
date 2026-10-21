@@ -9,6 +9,7 @@ import { IconButton } from '@/features/ux-kit/icon-button';
 import { CALENDAR_SYSTEM_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
+import { weekStartLabel } from '@/features/settings/week-start-choices';
 import { useCommandFeedback } from '../shared/use-command-feedback';
 
 function DeleteButton({ name, kind, onConfirm }: { name: string; kind: 'organization' | 'plant'; onConfirm: () => Promise<unknown> }) {
@@ -70,7 +71,7 @@ function usePlantColumns(): ReadonlyArray<DataTableColumn<PlantView>> {
     { id: 'org', header: 'Organization', cell: (plant) => plant.organizationName ?? '—' },
     { id: 'zone', header: 'Time zone', cell: (plant) => plant.timezone ?? 'From its sites', nowrap: true },
     { id: 'calendar', header: 'Calendar', cell: (plant) => labelOf(CALENDAR_SYSTEM_LABELS, plant.calendarSystem), nowrap: true },
-    { id: 'week', header: 'Week starts', cell: (plant) => (plant.weekStart === 'saturday' ? 'Saturday' : 'Monday'), nowrap: true },
+    { id: 'week', header: 'Week starts', cell: (plant) => weekStartLabel(plant.weekStart), nowrap: true },
     {
       id: 'actions',
       header: <span className="sr-only">Actions</span>,
@@ -110,7 +111,7 @@ export function PlantsSection() {
       </Section>
       <Section
         title="Plants"
-        description={<>Plants you administer. Units, assets and products are managed in <Link className="underline" to="/master-data">Master data</Link>; people in <Link className="underline" to="/users">Users</Link>.</>}
+        description={<>Plants you administer. Units, assets and products are managed in <Link className="underline" to="/master-data/units">Setup › Plant &amp; equipment</Link>; people in <Link className="underline" to="/users">Users</Link>.</>}
         actions={mayAddPlant && <Button asChild variant="outline"><Link to="/admin/plants/new"><ActionIcon.add aria-hidden="true" />Add plant</Link></Button>}
       >
         <DataTable caption="Plants" columns={plantColumns} rows={plants.rows} getRowKey={(plant) => plant.id} pager={plants.pager} status={plants.status} />

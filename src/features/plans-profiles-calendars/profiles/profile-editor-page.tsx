@@ -6,7 +6,7 @@ import { usePlanningRefs } from '../hooks/use-planning-refs';
 import { useProfile } from '../hooks/use-profile-reads';
 import { ProfileEditor } from './profile-editor';
 
-const LIST = '/planning?tab=profiles';
+const LIST = '/setup/profiles';
 
 /** `/planning/profiles/new`: a new draft profile version. */
 export function NewProfilePage() {

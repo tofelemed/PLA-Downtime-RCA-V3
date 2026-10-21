@@ -9,7 +9,7 @@ import { PlanSummary } from './components/plan-summary';
 import { usePlanContext } from './hooks/use-plan-context';
 import { periodGridTitle } from './model/period-title';
 
-const BACK = { to: '/planning?tab=plans', label: 'Plans' };
+const BACK = { to: '/planning', label: 'Plans' };
 
 /**
  * `/plans/:planId` — the plan's period accounting: a paged grid of its production periods with the
@@ -23,7 +23,7 @@ export function PlanDashboardPage() {
   const { tenantId, zone, plan, state, unitName } = usePlanContext(planId);
   if (!tenantId) return <DataState state="no-permission" detail="Choose a plant to open its plans." />;
   if (state !== 'ready' || !plan.data) {
-    const detail = state === 'error' ? 'This plan has no versioned plan yet. Create it under Plans, profiles & calendars to account its periods.' : undefined;
+    const detail = state === 'error' ? 'This plan has no versioned plan yet. Create it under Production › Plans to account its periods.' : undefined;
     return (
       <Page>
         <PageHeader title={periodGridTitle(null)} back={BACK} />

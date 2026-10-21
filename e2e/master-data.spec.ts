@@ -20,14 +20,20 @@ test.describe('Master Data Management', () => {
     await fixture.cleanup();
   });
 
-  test('the overview links every section and Codes & rules, without tabs', async ({ page }) => {
+  // owner 21 Oct 2026: master data is listed under Setup; each entry's pages link to each other
+  test('Setup lists the plant-data entries, and Plant & equipment links its pages, without tabs', async ({ page }) => {
     await loginViaAPI(page);
-    await page.goto('/master-data');
-    await expect(page.getByRole('heading', { level: 1, name: 'Master data' })).toBeVisible({ timeout: 30_000 });
-    const sections = page.getByRole('navigation', { name: 'Master data sections' });
-    for (const name of ['Units', 'Assets', 'Products', 'Plant hierarchy', 'RCA templates', 'Cause library', 'Verification checklists', 'Codes & rules']) {
-      await expect(sections.getByRole('link', { name, exact: true })).toBeVisible();
+    await page.goto('/master-data/assets');
+    const menu = page.getByRole('navigation', { name: 'Main menu' });
+    // the collapsed sidebar's links have no accessible name: find them by address
+    for (const href of ['/master-data/units', '/master-data/codes-rules', '/master-data/stop-policy', '/master-data/rca/templates']) {
+      await expect(menu.locator(`a[href="${href}"]`)).toHaveCount(1);
     }
+    const pages = page.getByRole('navigation', { name: 'Pages of this setup area' });
+    for (const name of ['Production units', 'Assets', 'Products', 'Plant hierarchy', 'Plant flow']) {
+      await expect(pages.getByRole('link', { name, exact: true })).toBeVisible({ timeout: 30_000 });
+    }
+    await expect(pages.getByRole('link', { name: 'RCA templates' })).toHaveCount(0);
     await expect(page.getByRole('tablist')).toHaveCount(0);
   });
 

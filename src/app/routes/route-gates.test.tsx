@@ -17,8 +17,8 @@ describe('withMenuGates', () => {
   it('a route needs the capability of the menu item its path belongs to (longest match)', () => {
     const gated = withMenuGates([route('/finance/policies/:policyId'), route('/plans/:planId/periods/:periodId/*'), route('/connectivity/source-status'), route('/month-close'), route('/period-accounting')]);
     expect(gated.map((r) => [r.requires, r.gateTitle])).toEqual([
-      ['canViewAnalysis', 'Finance'],
-      ['canViewAnalysis', 'Plans, profiles & calendars'],
+      ['canViewAnalysis', 'Valuation'],
+      ['canViewAnalysis', 'Plans'],
       ['canReachIntegration', 'Source status rules'],
       ['canViewAnalysis', 'Month close'],
       ['canViewAnalysis', 'Period accounting'],

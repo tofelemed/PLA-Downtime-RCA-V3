@@ -64,9 +64,9 @@ describe('AppSidebar', () => {
     expect(within(nav).queryByRole('link', { name: 'Overview' })).toBeNull();
     // label in name (WCAG 2.5.3): a short label keeps the fuller name
     expect(within(nav).getByRole('link', { name: 'PLA trends' })).toHaveTextContent('Trends');
-    const plans = within(nav).getByRole('link', { name: 'Plans, profiles & calendars' });
+    const plans = within(nav).getByRole('link', { name: 'Plans' });
     expect(plans).toHaveAttribute('aria-current', 'page');
-    expect(plans).toHaveAttribute('title', 'Plans, profiles & calendars');
+    expect(plans).toHaveAttribute('title', 'Plans');
     expect(plans.querySelector('span')).toHaveClass('line-clamp-2');
     expect(plans.querySelector('span')).not.toHaveClass('truncate');
   });

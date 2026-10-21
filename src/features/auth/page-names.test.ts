@@ -25,6 +25,8 @@ const PAGE_FILES: Readonly<Record<string, string>> = {
   '/reports': 'pla-analytics/reports/reports-header.tsx',
   '/events': 'event-hub/event-hub-page.tsx',
   '/planning': 'plans-profiles-calendars/planning-page.tsx',
+  '/setup/profiles': 'plans-profiles-calendars/planning-page.tsx',
+  '/setup/calendars': 'plans-profiles-calendars/planning-page.tsx',
   '/my-queue': 'month-close/my-queue-page.tsx',
   '/month-close': 'month-close/month-close-page.tsx',
   '/measurement-uncertainty': 'measurement-uncertainty/uncertainty-page.tsx',
@@ -40,7 +42,6 @@ const PAGE_FILES: Readonly<Record<string, string>> = {
   '/connectivity/source-authority': 'integration-console/source-authority/source-authority-page.tsx',
   '/enhanced-historian': 'integration-console/historian/historian-page.tsx',
   '/equipment-setup': 'equipment-setup/equipment-setup-page.tsx',
-  '/master-data': 'master-data/overview/master-data-overview-page.tsx',
   '/finance': 'finance/finance-page.tsx',
   '/users': 'users/user-management-page.tsx',
   '/delegations': 'delegations/delegations-page.tsx',
@@ -63,7 +64,8 @@ describe('page names (QA M9)', () => {
   it.each(Object.entries(PAGE_FILES))('the h1 of %s is its menu name', (href, file) => {
     const text = source(file);
     const name = pageNameOf(href);
-    expect(text.includes(`title="${name}"`) || text.includes(`title={pageNameOf('${href}')}`)).toBe(true);
+    // a page shared by several menu entries (Plans / Profiles & rates / Calendars & crews) names each by pageNameOf
+    expect(text.includes(`title="${name}"`) || text.includes(`title: pageNameOf('${href}')`) || text.includes(`title={pageNameOf('${href}')}`)).toBe(true);
   });
 
   it('a section and one of its pages never share a name (QA_SHELL: "Reliability" twice)', () => {
