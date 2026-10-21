@@ -44,7 +44,9 @@ function tenantRow(id: string): Tenant {
 
 function setup() {
   const rows = new Map([TENANT_A, TENANT_B].map((id) => [id, tenantRow(id)]));
+  const outbox = jest.fn(() => Promise.resolve({ identifiers: [] }));
   const repository = {
+    manager: { insert: outbox },
     findOneBy: jest.fn(({ id }: { id: string }) => {
       const row = rows.get(id);
       return Promise.resolve(row ? { ...row } : null);
@@ -56,11 +58,13 @@ function setup() {
     }),
   };
   const gateway = { broadcastEntityEvent: jest.fn() };
+  const auditLog = { recordChange: jest.fn(() => Promise.resolve(null)) };
   const service = new TenantService(
     repository as unknown as Repository<Tenant>,
     gateway as unknown as RealtimeGateway,
+    auditLog as never,
   );
-  return { service, repository, gateway };
+  return { service, repository, gateway, auditLog, outbox };
 }
 
 const PERSIAN = { calendarSystem: 'persian', digits: 'persian' } as const;
@@ -73,6 +77,34 @@ function errorOf(work: Promise<unknown>): Promise<unknown> {
 }
 
 describe('TenantService.updateDisplaySettings', () => {
+  it('audits the change with old and new values under the edited plant, and tells its users (21 Oct 2026)', async () => {
+    const { service, auditLog, outbox } = setup();
+    await service.updateDisplaySettings(
+      caller('SuperAdmin', { tenantId: TENANT_B }),
+      TENANT_A,
+      { digits: 'persian', weekStart: 'wednesday' },
+    );
+    expect(auditLog.recordChange).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        entityType: 'Tenant',
+        entityId: TENANT_A,
+        tenantId: TENANT_A,
+        changes: {
+          digits: { from: 'latin', to: 'persian' },
+          weekStart: { from: 'monday', to: 'wednesday' },
+        },
+      }),
+    );
+    expect(outbox).toHaveBeenCalledWith(expect.anything(), [
+      expect.objectContaining({
+        tenantId: TENANT_A,
+        aggregateType: 'plant_settings',
+        type: 'PlantSettingsChanged',
+      }),
+    ]);
+  });
+
   it.each([
     ['SuperAdmin', caller('SuperAdmin', { tenantId: null })],
     ['a TenantAdmin of the tenant', caller('TenantAdmin')],

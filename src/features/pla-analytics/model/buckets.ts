@@ -1,4 +1,5 @@
 import type { TrendGroup } from '@/api/v2/types/pla-analytics';
+import { monthLabelOf } from '@/features/month-close/model/month-label';
 import { formatOperationalDate, toDigits, type CalendarDisplayOptions } from '@/lib/dates';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -13,8 +14,8 @@ function monthEnd(year: number, month: number): string {
 
 /**
  * Display label of a server bucket key (site-local operational dates, AN03): a day in the plant calendar,
- * "<day> <shift>", "Week 40 of 2026" (ISO) or "Week from <Saturday>" (Saturday weeks), or a month as its date range (server buckets stay Gregorian, so a
- * Persian calendar shows the range instead of a month name). Unknown keys are returned as they are.
+ * "<day> <shift>", "Week 40 of 2026" (ISO) or "Week from <first day>" (weeks not starting on Monday), or a month: on a Persian-calendar plant the server keys months in
+ * that calendar (`1405-07`), shown as "Mehr 1405"; Gregorian months show as their date range. Unknown keys are returned as they are.
  */
 export function bucketLabel(key: string | null, groupBy: TrendGroup | string, pref: CalendarDisplayOptions): string {
   if (!key) return '—';
@@ -24,9 +25,10 @@ export function bucketLabel(key: string | null, groupBy: TrendGroup | string, pr
   }
   const week = WEEK.exec(key);
   if (week) return toDigits(`Week ${Number(week[2])} of ${week[1]}`, pref.digits);
-  // a plant whose week starts on Saturday (DT-10) keys each week by its first day
+  // a plant whose week does not start on Monday (DT-10) keys each week by its first day
   if (groupBy === 'week' && DATE.test(key)) return `Week from ${formatOperationalDate(key, pref)}`;
   const month = MONTH.exec(key);
+  if (month && pref.calendar === 'persian') return monthLabelOf(key, 'persian', pref.digits ?? 'latin');
   if (month) {
     const start = `${key}-01`;
     return `${formatOperationalDate(start, pref)} – ${formatOperationalDate(monthEnd(Number(month[1]), Number(month[2])), pref)}`;

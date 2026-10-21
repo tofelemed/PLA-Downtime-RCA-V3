@@ -9,6 +9,8 @@ export const PUBLIC_ROUTE_ALLOWLIST: ReadonlySet<string> = new Set([
   'AuthController.logout',
   'AuthController.validateToken',
   'HealthController.check',
+  // the sign-in page's name, logo and browser icon (settings audit, 21 Oct 2026)
+  'BrandingPublicV2Controller.publicView',
 ]);
 
 /**

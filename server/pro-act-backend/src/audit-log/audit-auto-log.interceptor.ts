@@ -10,6 +10,7 @@ import { Observable, tap } from 'rxjs';
 import { AuditLogService } from './audit-log.service';
 import { SKIP_AUDIT_KEY } from './skip-audit.decorator';
 import { AUDIT_READ_KEY } from './audit-read.decorator';
+import { CLIENT_AUDITED_KEY } from './client-audited.decorator';
 import {
   isPreviewBody,
   SKIP_AUDIT_PREVIEW_KEY,
@@ -21,6 +22,8 @@ import {
   resolveAuditTarget,
   shouldSkipAudit,
 } from './audit-auto-log.config';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface JwtUser {
   userId: string;
@@ -74,7 +77,10 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    if (request.headers?.['x-client-audited'] === 'true') {
+    if (
+      request.headers?.['x-client-audited'] === 'true' &&
+      this.allowsClientAudit(context)
+    ) {
       return next.handle();
     }
 
@@ -94,6 +100,16 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
           },
         );
       }),
+    );
+  }
+
+  /** `X-Client-Audited` counts only on `@ClientAudited()` routes; elsewhere the server always audits. */
+  private allowsClientAudit(context: ExecutionContext): boolean {
+    return (
+      this.reflector.getAllAndOverride<boolean>(CLIENT_AUDITED_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true
     );
   }
 
@@ -164,7 +180,18 @@ export class AuditAutoLogInterceptor implements NestInterceptor {
       ? ` [${subresource.kind}${subresource.id ? ` ${subresource.id}` : ''}]`
       : '';
 
+    // a change to a plant's own record (`PUT|PATCH /tenants/:id`) belongs to that plant, not to the plant the
+    // caller acts in; a create or delete stays with the caller's plant (the row must outlive a deleted plant)
+    const routeId = request.params?.id;
+    const ownPlant =
+      entityType === 'Tenant' &&
+      (method === 'PUT' || method === 'PATCH') &&
+      typeof routeId === 'string' &&
+      UUID.test(routeId)
+        ? routeId
+        : undefined;
     const tenantId =
+      ownPlant ||
       (typeof body.tenantId === 'string' && body.tenantId) ||
       (typeof reqBody.tenantId === 'string' && reqBody.tenantId) ||
       user.tenantId ||

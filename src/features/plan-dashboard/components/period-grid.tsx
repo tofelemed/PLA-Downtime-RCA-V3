@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { usePeriodSummaryList } from '@/api/v2/queries/period-summaries';
 import type { PeriodSummaryView } from '@/api/v2/types/period-overview';
 import { DataTable } from '@/features/ux-kit/data-table';
-import { useCalendarPreference } from '@/lib/dates';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { usePeriodGrid, type PeriodGridQuery } from '../hooks/use-period-grid';
 import { gridWindow, parseGridParams, planDateBounds, residualStatesOf, withGridParam, type GridParamKey, type ResidualFilter } from '../model/period-grid-params';
 import { periodGridColumns } from './period-grid-columns';
@@ -39,7 +39,7 @@ function GridTable({ list, timezone, filtered, onOpen }: { list: ListState } & P
       density="compact"
       empty={{ title: 'No periods', text: filtered ? 'No production periods match these filters.' : 'No production periods in the plan window yet: generate and approve the plan first.' }}
       onRowClick={onOpen}
-      rowLabel={(row) => `Open period ${row.localDate}${row.shiftName ? ` ${row.shiftName}` : ''}`}
+      rowLabel={(row) => `Open period ${formatOperationalDate(row.localDate, pref)}${row.shiftName ? ` ${row.shiftName}` : ''}`}
     />
   );
 }

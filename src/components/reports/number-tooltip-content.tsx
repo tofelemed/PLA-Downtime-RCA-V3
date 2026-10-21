@@ -19,7 +19,7 @@ interface TooltipItem {
  * with the browser locale): colour swatch, series label from the chart config, value right-aligned.
  */
 export function NumberTooltipContent({ chartConfig, ...props }: NumberTooltipContentProps) {
-  const { number } = useNumberFormat();
+  const { axis } = useNumberFormat();
   const formatter = (value: unknown, name: unknown, item: TooltipItem): ReactNode => {
     const key = String(name);
     const label = chartConfig[key]?.label ?? key;
@@ -29,7 +29,7 @@ export function NumberTooltipContent({ chartConfig, ...props }: NumberTooltipCon
           <span className="h-2.5 w-2.5 shrink-0 rounded-[2px]" style={{ background: item.color ?? item.payload?.fill }} />
           {label}
         </span>
-        <span className="font-mono font-medium tabular-nums text-foreground">{typeof value === 'number' ? number(value, 2) : String(value)}</span>
+        <span className="font-mono font-medium tabular-nums text-foreground">{typeof value === 'number' ? axis(value) : String(value)}</span>
       </div>
     );
   };

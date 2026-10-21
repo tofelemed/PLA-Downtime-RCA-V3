@@ -2,13 +2,13 @@ import { useState, type ReactNode } from 'react';
 import { useShiftHandover } from '@/api/v2/queries/shift-handover';
 import type { ShiftHandoverView } from '@/api/v2/types/ops-reports';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useShiftOptions } from '@/features/downtime-analysis/model/use-shift-options';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
 import type { AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataState } from '@/features/ux-kit/data-state';
+import { DateInput } from '@/features/ux-kit/date-inputs/date-input';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { formatTime, useCalendarPreference } from '@/lib/dates';
 import { EventStatusRows } from '../daily/event-status-rows';
@@ -55,9 +55,9 @@ function HandoverBody({ data, timeZone }: { data: ShiftHandoverView; timeZone: s
 function ShiftPicker(props: { localDate: string; shiftName: string; shifts: Array<{ value: string; label: string }>; onDate: (v: string) => void; onShift: (v: string) => void }) {
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <div className="space-y-1">
-        <Label htmlFor="handover-date">Plant date</Label>
-        <Input id="handover-date" type="date" value={props.localDate} onChange={(e) => props.onDate(e.target.value)} className="w-44" />
+      {/* the plant calendar and digits, like every other date field (settings audit, 21 Oct 2026) */}
+      <div className="w-44">
+        <DateInput id="handover-date" label="Plant date" value={props.localDate} onChange={props.onDate} />
       </div>
       <div className="space-y-1">
         <Label htmlFor="handover-shift">Shift</Label>

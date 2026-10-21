@@ -69,7 +69,7 @@ export class AuditLogsV2Controller {
   @ApiOperation({
     summary: `CSV of the filtered entries (newest first, at most ${AUDIT_EXPORT_MAX_ROWS} rows)`,
     description:
-      'Times in ISO 8601 UTC. `X-Export-Truncated: true` when more entries matched.',
+      'Times in ISO 8601 UTC, and on the plant clock with its offset. `X-Export-Truncated: true` when more entries matched.',
   })
   @ApiProduces('text/csv')
   async export(
@@ -77,14 +77,17 @@ export class AuditLogsV2Controller {
     @Query() query: AuditFiltersDto,
     @Res({ passthrough: true }) response: Response,
   ): Promise<string> {
-    const { rows, truncated } = await this.audit.exportRows(ctx, query);
+    const { rows, truncated, timezone } = await this.audit.exportRows(
+      ctx,
+      query,
+    );
     response.setHeader('Content-Type', 'text/csv; charset=utf-8');
     response.setHeader(
       'Content-Disposition',
       'attachment; filename="audit-log.csv"',
     );
     response.setHeader('X-Export-Truncated', String(truncated));
-    return auditCsv(rows);
+    return auditCsv(rows, timezone);
   }
 
   @Get(':id')

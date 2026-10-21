@@ -186,7 +186,7 @@ export function authHint(response: Pick<AxiosResponse, 'headers'>): string {
   if (!offered) return ' (check the user name and password)';
   if (/\bbasic\b/i.test(offered))
     return ' (Basic authentication refused: check the user name and password)';
-  return ` (the server offers ${offered} only; Pro-Act signs in with HTTP Basic — enable Basic authentication on the PI Web API)`;
+  return ` (the server offers ${offered} only; Traverse Forge signs in with HTTP Basic — enable Basic authentication on the PI Web API)`;
 }
 
 function kindOfStatus(status: number): PiFailureKind {

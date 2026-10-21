@@ -130,6 +130,20 @@ export class AppSettingsService {
     }
   }
 
+  /**
+   * An application-wide value (no plant, no user) without a caller: only for values every visitor may see,
+   * such as the public part of the branding on the sign-in page.
+   */
+  async getAppWideValue(key: string): Promise<unknown> {
+    const setting = await this.settingsRepository.findOneBy({ key });
+    if (!setting || setting.tenantId || setting.userId) return undefined;
+    try {
+      return JSON.parse(setting.value) as unknown;
+    } catch {
+      return setting.value;
+    }
+  }
+
   setValue(
     key: string,
     value: unknown,

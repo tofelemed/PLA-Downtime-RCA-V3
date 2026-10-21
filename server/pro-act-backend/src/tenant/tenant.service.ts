@@ -12,6 +12,16 @@ import { Tenant } from './tenant.entity';
 import { RealtimeGateway } from '../realtime.gateway';
 import { RequestContext } from '../common/context/request-context';
 import { memberTenantIds } from '../auth/roles/grant-policy';
+import { AuditLogService } from '../audit-log/audit-log.service';
+import { changedFields } from '../audit-log/settings-change';
+import { announcePlantSettings } from '../realtime/settings-notices';
+
+/** Audit labels of the plant display settings. */
+const DISPLAY_SETTING_LABELS = {
+  calendarSystem: 'calendar',
+  digits: 'digits',
+  weekStart: 'week start',
+};
 
 @Injectable()
 export class TenantService {
@@ -19,6 +29,7 @@ export class TenantService {
     @InjectRepository(Tenant)
     private readonly tenantRepository: Repository<Tenant>,
     private readonly realtimeGateway: RealtimeGateway,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   findAll(): Promise<Tenant[]> {
@@ -85,7 +96,8 @@ export class TenantService {
 
   /**
    * Calendar, digit display and week start of one tenant. Same rule as a tenant-owned app setting: SuperAdmin,
-   * or a TenantAdmin / manager approver acting in that tenant. Only these two columns change.
+   * or a TenantAdmin / manager approver acting in that tenant. Only these columns change; the change is
+   * audited with its old and new values under the edited plant.
    */
   async updateDisplaySettings(
     caller: RequestContext,
@@ -113,6 +125,21 @@ export class TenantService {
       ...tenant,
       ...changes,
     };
+    await this.auditLog.recordChange(caller, {
+      entityType: 'Tenant',
+      entityId: tenant.id,
+      tenantId: tenant.id,
+      organizationId: tenant.organizationId ?? null,
+      subject: `Changed plant settings of ${tenant.name}`,
+      changes: changedFields(tenant, updated, [
+        'calendarSystem',
+        'digits',
+        'weekStart',
+      ]),
+      labels: DISPLAY_SETTING_LABELS,
+    });
+    // every open screen of the plant refetches (week buckets, dates and labels follow these settings)
+    await announcePlantSettings(this.tenantRepository.manager, tenant.id);
     this.realtimeGateway.broadcastEntityEvent('Updated', 'tenant', updated);
     return updated;
   }

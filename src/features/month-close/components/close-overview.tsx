@@ -1,3 +1,4 @@
+import { displayCount } from '@/features/ux-kit/format/plural';
 import { Link } from 'react-router-dom';
 import type { MonthCloseView } from '@/api/v2/types/month-close';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -10,9 +11,9 @@ import { UncoveredDays } from './no-plan-notice';
 function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: URLSearchParams }) {
   const { prerequisites: p, policy } = view;
   const counts: Array<{ section: CloseSection; label: string; count: number; detail: string }> = [
-    { section: 'periods', label: 'Periods not approved', count: p.pendingCount, detail: `${p.approved} of ${p.periods} approved` },
+    { section: 'periods', label: 'Periods not approved', count: p.pendingCount, detail: `${displayCount(p.approved)} of ${displayCount(p.periods)} approved` },
     { section: 'days', label: 'Days not certified', count: p.days - p.certifiedDays,
-      detail: policy.requireCertifiedDays ? `${p.certifiedDays} of ${p.days} certified` : 'Certification does not block close under this policy' },
+      detail: policy.requireCertifiedDays ? `${displayCount(p.certifiedDays)} of ${displayCount(p.days)} certified` : 'Certification does not block close under this policy' },
     { section: 'proposals', label: 'Open proposals', count: p.openProposalCount,
       detail: view.state === 'locked' ? 'Review through the after-close correction workflow'
         : policy.blockOnOpenProposals ? 'Settle open proposals before closing' : 'Open proposals do not block close under this policy' },

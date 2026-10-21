@@ -36,7 +36,7 @@ function useColumns(months: readonly string[], metric: Metric, labelOf: (s: Reli
     },
     ...months.map((month): DataTableColumn<ReliabilitySeriesView> => ({
       id: month,
-      header: monthLabelOf(month, 'gregorian', pref.digits),
+      header: monthLabelOf(month, pref.calendar, pref.digits),
       align: 'right',
       nowrap: true,
       cell: (s) => value(s.months.find((m) => m.month === month)?.row[metric]),

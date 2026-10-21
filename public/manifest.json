@@ -1,8 +1,7 @@
-
 {
   "name": "Traverse Forge",
   "short_name": "Traverse Forge",
-  "description": "Enterprise-grade Asset Performance Management platform for managing production loss and root cause analysis",
+  "description": "Production loss accounting, downtime analysis and root cause analysis",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -10,12 +9,15 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
     }
   ],
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "scope": "/",
   "lang": "en"
 }

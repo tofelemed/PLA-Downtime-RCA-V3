@@ -16,6 +16,7 @@ const SKIPPED = ['components/ui/'];
 const ALLOWLIST = new Set([
   'features/admin/branding/branding-section.tsx', // the tenant's brand colours
   'features/master-data/rca/checklist-detail-page.tsx', // a checklist's user-picked colour
+  'features/shell/brand-colors.ts', // turns the tenant's brand colours into tokens and a readable black / white
 ]);
 const PALETTE =
   'amber|red|green|emerald|blue|sky|slate|gray|violet|yellow|orange|rose|lime|teal|indigo|zinc|neutral|stone|purple|pink|cyan|fuchsia';

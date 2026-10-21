@@ -9,6 +9,20 @@ import {
   tenantRequired,
 } from '../common/context/request-context';
 import { tenantMismatch } from '../auth/guards/tenant-binding.guard';
+import { changeSummary, FieldChanges } from './settings-change';
+
+/** A settings change written by the service that made it (old and new values; no auto-audit duplicate). */
+export interface SettingsChangeAudit {
+  entityType: string;
+  entityId: string;
+  /** the plant the change belongs to (the edited plant, not the caller's acting plant); null = app-wide */
+  tenantId: string | null;
+  organizationId: string | null;
+  /** "Changed plant settings of Marun HDPE" */
+  subject: string;
+  changes: FieldChanges;
+  labels?: Readonly<Record<string, string>>;
+}
 
 export interface AuditLogQuery {
   tenantId?: string;
@@ -135,6 +149,29 @@ export class AuditLogService {
     await this.auditLogRepository.insert(log);
     this.realtimeGateway.broadcastEntityEvent('Created', 'auditLog', log);
     return log;
+  }
+
+  /**
+   * Records a settings change with each changed field's old and new value (details JSON `{message,
+   * changes}`); nothing is written when no field changed.
+   */
+  async recordChange(
+    caller: RequestContext,
+    change: SettingsChangeAudit,
+  ): Promise<AuditLog | null> {
+    if (!caller.userId || !Object.keys(change.changes).length) return null;
+    return this.create({
+      userId: caller.userId,
+      action: 'UPDATE',
+      entityType: change.entityType,
+      entityId: change.entityId,
+      details: JSON.stringify({
+        message: changeSummary(change.subject, change.changes, change.labels),
+        changes: change.changes,
+      }),
+      tenantId: change.tenantId ?? undefined,
+      organizationId: change.organizationId ?? undefined,
+    });
   }
 
   async update(id: string, data: Partial<AuditLog>): Promise<AuditLog | null> {

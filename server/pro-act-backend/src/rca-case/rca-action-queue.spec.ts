@@ -76,7 +76,7 @@ describe('cross-case RCA action list (UX F-7)', () => {
 
   it('defines overdue as open or in progress past a due date (null-safe)', () => {
     expect(actionOverdueSql('a')).toBe(
-      `(a."due_date" IS NOT NULL AND a."due_date" < now() AND a."status"::text IN ('open', 'in_progress'))`,
+      `(a."due_date" IS NOT NULL AND a."due_date" + interval '1 day' <= now() AND a."status"::text IN ('open', 'in_progress'))`,
     );
   });
 

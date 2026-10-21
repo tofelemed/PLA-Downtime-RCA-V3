@@ -1,4 +1,5 @@
 import { EntityManager } from 'typeorm';
+import { exportBrandOf } from './export-brand';
 import { defaultSiteOf } from '../close/close-calendar';
 import {
   CALENDAR_SYSTEMS,
@@ -53,5 +54,6 @@ export async function presentationOf(
     calendar: calendarOf(tenant?.calendar_system ?? ''),
     digits: digitsOf(tenant?.digits ?? ''),
     currency: currency ?? DEFAULT_PDF_CURRENCY,
+    brand: await exportBrandOf(manager),
   };
 }

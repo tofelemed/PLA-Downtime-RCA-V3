@@ -2,6 +2,7 @@ import { Workbook, Worksheet } from 'exceljs';
 import { ExportPresentation } from '../pdf/pdf-model';
 import { plantDateTime, plantRange } from '../pdf/plant-format';
 import { PdfSink } from '../pdf/pdf-surface';
+import { productNameOf, themeOf } from './report-pdf-kit';
 import {
   ReportCell,
   ReportColumn,
@@ -17,8 +18,12 @@ export interface ReportXlsxInput {
   generatedAt: Date;
 }
 
-const NAVY = 'FF1F3A8A';
 const RED = 'FFD62828';
+
+/** The accent colour of titles and table headers as ARGB: the pinned branding's primary colour, else navy. */
+function accentOf(presentation: ExportPresentation): string {
+  return `FF${themeOf(presentation.brand).navy.replace('#', '').toUpperCase()}`;
+}
 const MUTED = 'FF6B7280';
 
 /** Excel number format of a column type. */
@@ -116,7 +121,7 @@ function title(
   row: number,
   text: string,
   size: number,
-  color = NAVY,
+  color: string,
 ): void {
   const cell = sheet.getCell(row, 1);
   cell.value = text;
@@ -145,7 +150,7 @@ function summarySheet(
     });
     row = 6;
   }
-  title(sheet, row, document.title, 16);
+  title(sheet, row, document.title, 16, accentOf(presentation));
   sheet.getCell(row + 1, 1).value = document.subtitle;
   sheet.getCell(row + 1, 1).font = { color: { argb: MUTED } };
   if (document.provisional)
@@ -181,9 +186,9 @@ function summarySheet(
   for (const section of document.sections) {
     row += 1;
     if (section.kind === 'kpis')
-      row = kpiRows(sheet, row, section, presentation.timezone);
+      row = kpiRows(sheet, row, section, presentation);
     else if (section.kind === 'facts' || section.kind === 'text') {
-      title(sheet, row, section.title, 11);
+      title(sheet, row, section.title, 11, accentOf(presentation));
       const lines =
         section.kind === 'facts'
           ? section.rows
@@ -202,9 +207,10 @@ function kpiRows(
   sheet: Worksheet,
   start: number,
   section: ReportKpis,
-  timeZone: string | null,
+  presentation: ExportPresentation,
 ): number {
-  title(sheet, start, section.title, 11);
+  const timeZone = presentation.timezone;
+  title(sheet, start, section.title, 11, accentOf(presentation));
   let row = start + 1;
   for (const item of section.items) {
     sheet.getCell(row, 1).value = item.label;
@@ -234,6 +240,7 @@ function tableSheet(
       ? `${section.title} (provisional)`
       : section.title,
     13,
+    accentOf(input.presentation),
   );
   if (section.note) {
     sheet.getCell(2, 1).value = section.note;
@@ -247,7 +254,11 @@ function tableSheet(
         ? `${column.label} (${column.unit})`
         : column.label;
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: accentOf(input.presentation) },
+    };
     cell.alignment = { vertical: 'middle', wrapText: true };
     const width = Math.max(
       12,
@@ -286,7 +297,7 @@ export async function writeReportXlsx(
   sink: PdfSink,
 ): Promise<number> {
   const book = new Workbook();
-  book.creator = 'Pro-Act';
+  book.creator = productNameOf(input.presentation.brand);
   book.created = input.generatedAt;
   book.modified = input.generatedAt;
   const taken = new Set<string>();

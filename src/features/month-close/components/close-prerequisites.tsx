@@ -1,3 +1,4 @@
+import { displayCount } from '@/features/ux-kit/format/plural';
 import { Link } from 'react-router-dom';
 import type { MonthCloseView } from '@/api/v2/types/month-close';
 import { DataTable } from '@/features/ux-kit/data-table';
@@ -9,7 +10,7 @@ import { dayColumns, pendingColumns, proposalColumns } from './prerequisite-colu
 
 function SampleDisclosure({ shown, total }: { shown: number; total: number }) {
   if (shown === 0 && total > 0) return <p role="status" className="text-sm">{total} records reported; sample rows are unavailable.</p>;
-  return <p className="text-sm text-muted-foreground">{shown < total ? `First ${shown} of ${total} shown. The server limits this sample to 50 records.` : `All ${total} shown.`}</p>;
+  return <p className="text-sm text-muted-foreground">{shown < total ? `First ${displayCount(shown)} of ${displayCount(total)} shown. The server limits this sample to ${displayCount(50)} records.` : `All ${displayCount(total)} shown.`}</p>;
 }
 
 function PendingPeriods({ view }: { view: MonthCloseView }) {

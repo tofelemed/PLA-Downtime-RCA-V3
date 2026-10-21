@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { AppSettingsService } from './app-settings.service';
@@ -15,6 +16,20 @@ import { UpdateAppSettingsDto } from './dto/update-app-settings.dto';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
 import { ReadOnlyAllowed } from '../auth/decorators/read-only-allowed.decorator';
+
+/**
+ * Keys this generic route never writes: the branding is validated and audited only by `PUT|DELETE /v2/branding`
+ * (settings audit, 21 Oct 2026: a value written here skipped the colour and image checks).
+ */
+const V2_OWNED_KEYS: ReadonlySet<string> = new Set(['branding']);
+
+function refuseV2OwnedKey(key: string): void {
+  if (!V2_OWNED_KEYS.has(key)) return;
+  throw new UnprocessableEntityException({
+    code: 'SETTING_V2_ONLY',
+    message: `Change "${key}" with its own screen (v2), not through this route`,
+  });
+}
 
 /**
  * Settings scoped by owner (plan 3.11): application-wide keys are SuperAdmin-only to change, tenant keys
@@ -46,6 +61,7 @@ export class AppSettingsController {
     @Body() data: CreateAppSettingsDto,
     @Ctx() ctx: RequestContext,
   ): Promise<AppSettings> {
+    refuseV2OwnedKey(data.key);
     return this.settingsService.create(data, ctx);
   }
 
@@ -56,11 +72,13 @@ export class AppSettingsController {
     @Body() data: UpdateAppSettingsDto,
     @Ctx() ctx: RequestContext,
   ): Promise<AppSettings | null> {
+    refuseV2OwnedKey(key);
     return this.settingsService.update(key, data, ctx);
   }
 
   @Delete(':key')
   remove(@Param('key') key: string, @Ctx() ctx: RequestContext): Promise<void> {
+    refuseV2OwnedKey(key);
     return this.settingsService.remove(key, ctx);
   }
 
@@ -76,6 +94,7 @@ export class AppSettingsController {
     @Body() body: { value: unknown },
     @Ctx() ctx: RequestContext,
   ): Promise<AppSettings> {
+    refuseV2OwnedKey(key);
     return this.settingsService.setValue(key, body.value, ctx);
   }
 

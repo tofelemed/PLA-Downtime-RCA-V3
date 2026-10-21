@@ -49,7 +49,9 @@ test.describe('Audit auto-log interceptor', () => {
     await request.delete(`${API}/tasks/${created.id}`, { headers });
   });
 
-  test('X-Client-Audited header skips auto-audit', async ({ request }) => {
+  // settings audit 21 Oct 2026: the header counts only on routes that declare a client audit (@ClientAudited),
+  // so a caller cannot switch the server audit off for an ordinary write
+  test('X-Client-Audited header does not skip the audit of an ordinary write', async ({ request }) => {
     const loginRes = await request.post(`${API}/auth/login`, {
       data: { email: 'test@example.com', password: 'Test123!@#' },
     });
@@ -82,7 +84,7 @@ test.describe('Audit auto-log interceptor', () => {
       { headers: { Authorization: `Bearer ${access_token}`, 'X-Tenant-Id': tenantId } },
     );
     const logs = await auditRes.json();
-    expect(logs.length).toBe(0);
+    expect(logs.length).toBe(1);
 
     await request.delete(`${API}/tasks/${created.id}`, {
       headers: { Authorization: `Bearer ${access_token}` },

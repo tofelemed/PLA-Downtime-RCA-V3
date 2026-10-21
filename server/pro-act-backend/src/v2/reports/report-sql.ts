@@ -38,17 +38,26 @@ export const SHOWN = `WITH shown AS (
            WHERE ps."period_id" = p."id" AND ps."tenant_id" = p."tenant_id"
              AND ps."product_id"::text IN (SELECT jsonb_array_elements_text($5::jsonb->'productIds')))))`;
 
+/**
+ * The plant month (`YYYY-MM`) of a local date in the plant's own calendar: Solar Hijri months on a Persian
+ * plant (`jalali_month_key`, `1405-07`), Gregorian otherwise ($1 = tenant; settings audit, 21 Oct 2026).
+ */
+export function plantMonthSql(dateSql: string): string {
+  return `CASE WHEN (SELECT t."calendar_system" FROM "tenants" t WHERE t."id"::text = $1::text) = 'persian'
+    THEN jalali_month_key(${dateSql}) ELSE to_char(${dateSql}, 'YYYY-MM') END`;
+}
+
 /** Site-local grouping keys (AN03): the period's stored operational date and shift label, never UTC. */
 export const TIME_GROUPS: Readonly<Record<string, string>> = {
   period: `s."period_id"::text`,
   shift: `s."local_date"::text || ' ' || COALESCE(s."shift_name", '')`,
   day: `s."local_date"::text`,
-  // the plant's week (DT-10): ISO key for Monday weeks, the Saturday's date for Iranian weeks; $1 = tenant
+  // the plant's week (DT-10): ISO key for Monday weeks, else the date of the week's first day; $1 = tenant
   week: weekKeySql(
     `s."local_date"`,
     `(SELECT t."week_start" FROM "tenants" t WHERE t."id"::text = $1::text)`,
   ),
-  month: `to_char(s."local_date", 'YYYY-MM')`,
+  month: plantMonthSql(`s."local_date"`),
   unit: `s."unit_id"::text`,
   crew: `s."crew_id"::text`,
 };

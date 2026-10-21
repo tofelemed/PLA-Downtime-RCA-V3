@@ -151,5 +151,7 @@ describe('PLA analytics views and dashboard window (UI guidelines §2, §8)', ()
     expect(bucketLabel('2026-10-10', 'week', {})).toBe('Week from 2026-10-10');
     expect(bucketLabel('2026-10-10', 'week', { calendar: 'persian' })).toBe('Week from 1405/07/18');
     expect(bucketLabel('2026-02', 'month', {})).toBe('2026-02-01 – 2026-02-28');
+    // a Persian-calendar plant's months are keyed in that calendar by the server (21 Oct 2026)
+    expect(bucketLabel('1405-07', 'month', { calendar: 'persian', digits: 'latin' })).toBe('Mehr 1405');
   });
 });

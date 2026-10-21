@@ -1,4 +1,5 @@
 import { MoneyOnly } from '../../auth/money/money.decorators';
+import { exportFileName } from '../../exports/export-file-name';
 import { ReadOnlyAllowed } from '../../auth/decorators/read-only-allowed.decorator';
 import {
   Body,
@@ -195,7 +196,7 @@ export class ExportsV2Controller {
     const pdf = job.format === 'pdf';
     return new StreamableFile(stream, {
       type: pdf ? 'application/pdf' : 'text/csv; charset=utf-8',
-      disposition: `attachment; filename="proact-${job.reportType}-${job.id}.${job.format}"`,
+      disposition: `attachment; filename="${exportFileName(job, job.reportType)}"`,
       length: job.sizeBytes ?? undefined,
     });
   }

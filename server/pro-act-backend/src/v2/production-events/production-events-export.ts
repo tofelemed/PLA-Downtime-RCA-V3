@@ -8,6 +8,7 @@ import {
 import { scopedQuery } from '../../common/query/scoped-query';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { CSV_BOM, csvRow, CsvValue } from '../../exports/csv';
+import { plantIso } from '../../exports/export-words';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { CursorCodec } from '../common/cursor-codec';
 import { toDecimalString } from '../common/decimal-string.transformer';
@@ -247,7 +248,8 @@ export async function exportEventsCsv(
     if (batch.length < BATCH) break;
   }
   return {
-    filename: `production-events-${new Date(query.from).toISOString().slice(0, 10)}.csv`,
+    // the plant day the window starts on (a Tehran midnight is 20:30 UTC the day before)
+    filename: `production-events-${(plantIso(new Date(query.from).toISOString(), timezone) ?? new Date(query.from).toISOString()).slice(0, 10)}.csv`,
     content: Buffer.from(parts.join(''), 'utf8'),
   };
 }

@@ -13,6 +13,7 @@ import { PlantAccessGuard } from '@/features/v2-foundation/plant-access-guard';
 import { RouteErrorBoundary } from '@/features/ux-kit/errors/route-error-boundary';
 import { HighlightTarget } from '@/features/ux-kit/highlight-target';
 import { useSyncAppName } from '@/features/ux-kit/page-layout/app-name';
+import { useBrandAppearance } from '@/features/shell/use-brand-appearance';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -58,6 +59,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const branding = useBranding(Boolean(session));
   const mainRef = useRef<HTMLElement>(null);
   useSyncAppName(branding?.appName);
+  useBrandAppearance(branding);
   useRouteFocus(pathname, mainRef);
 
   if (!session) return <div>{children}</div>;

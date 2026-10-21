@@ -5,7 +5,7 @@ export const ERROR_CODE_INFO: Record<IngestionErrorCode, { label: string; sugges
   unknown_unit: {
     label: 'Source not mapped to a unit',
     suggestion:
-      'Bind the source element to a unit ("Bind source to a unit" below, or the connection → Discovery and mapping → Sample records → Bind element), or add a rule under Connectivity → Source mappings; then replay this record. If the element is not accounted in Pro-Act, mark it irrecoverable.',
+      'Bind the source element to a unit ("Bind source to a unit" below, or the connection → Discovery and mapping → Sample records → Bind element), or add a rule under Connectivity → Source mappings; then replay this record. If the element is not accounted in Traverse Forge, mark it irrecoverable.',
   },
   unknown_template: { label: 'Unknown template', suggestion: 'Map the template in the attribute mapping editor, then replay.' },
   unknown_code: {

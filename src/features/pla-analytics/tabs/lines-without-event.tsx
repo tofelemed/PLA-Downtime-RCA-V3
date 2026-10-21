@@ -5,7 +5,7 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { NoPlanLink } from '@/features/month-close/components/no-plan-notice';
 import { periodPath } from '@/features/plan-dashboard/model/period-navigation';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { plural } from '@/features/ux-kit/format/plural';
+import { displayCount, plural } from '@/features/ux-kit/format/plural';
 import { humanize } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useCalendarPreference, type CalendarPreference } from '@/lib/dates';
@@ -48,7 +48,7 @@ export function LinesWithoutEvent({ scope }: { scope: AnalyticsScope }) {
   const query = useLinesWithoutEvent(linesWithoutEventQuery(scope), env.timezone);
   const data = query.data?.data;
   if (!data || data.total === 0) return null;
-  const shown = data.items.length < data.total ? ` (the ${data.items.length} largest)` : '';
+  const shown = data.items.length < data.total ? ` (the ${displayCount(data.items.length)} largest)` : '';
   return (
     <section className="space-y-2" data-testid="lines-without-event" aria-label="Loss lines with no event">
       <h3 className="text-sm font-semibold">Loss lines with no event</h3>

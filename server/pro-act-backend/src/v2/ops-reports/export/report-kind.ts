@@ -28,6 +28,8 @@ export interface BuildInput<Q> {
   query: Q;
   /** the requester may see money: value sections are included */
   money: boolean;
+  /** the reporting currency the export shows money in (never converted; other currencies are left out) */
+  currency: string;
   services: ReportServices;
 }
 

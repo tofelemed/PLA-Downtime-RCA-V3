@@ -2,7 +2,7 @@ import type { BadActorQuery } from '@/api/v2/queries/bad-actors';
 import type { BadActorGroupBy, BadActorItemView, BadActorRankBy, BadActorReportView, BadActorTriggerState, BadActorTriggerView } from '@/api/v2/types/bad-actors';
 import { formatDate, type DateDisplayOptions } from '@/lib/dates';
 import type { StartRcaContext } from '../model/start-rca';
-import { plural } from '@/features/ux-kit/format/plural';
+import { displayCount, plural } from '@/features/ux-kit/format/plural';
 
 /** Choices of the CA8 bad-actor review; ranking, window and trigger state are the server's. */
 export interface BadActorFilters {
@@ -110,7 +110,7 @@ export function excludedPeriodsNote(report: Pick<BadActorReportView, 'valuationS
   const uncovered = report.uncoveredPeriods ?? 0;
   const waiting = Math.max(0, report.periods - report.approvedPeriods - uncovered);
   const parts: string[] = [];
-  if (waiting > 0) parts.push(`${waiting} of ${plural(report.periods, 'period', 'periods')} not approved yet, so their loss is not included`);
+  if (waiting > 0) parts.push(`${displayCount(waiting)} of ${plural(report.periods, 'period', 'periods')} not approved yet, so their loss is not included`);
   if (uncovered > 0) parts.push(`${plural(uncovered, 'period', 'periods')} not included: No approved plan covers ${uncovered === 1 ? 'this period' : 'these periods'}`);
   return parts.join('; ');
 }

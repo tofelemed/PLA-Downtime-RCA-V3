@@ -2,6 +2,7 @@ import { usePeriodSla } from '@/api/v2/queries/period-sla';
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { roleLabel } from '@/features/ux-kit/labels';
+import { DurationText } from '@/features/ux-kit/duration-text';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { HOLD_KIND_LABELS, SLA_STAGE_LABELS } from '../model/sla-labels';
 import { failedLineLabel } from '../model/failed-lines';
@@ -9,7 +10,6 @@ import { HoldControls } from './hold-controls';
 import { SlaBadges } from './sla-badges';
 import { SlaDataState } from './sla-data-state';
 
-const hours = (seconds: number) => `${Math.floor(seconds / 3600)} h`;
 
 /**
  * Deadlines of the period (SME R3 / R6): the server's due times, overdue verdict and escalation, the open
@@ -32,8 +32,8 @@ export function SlaPanel({ view, timezone }: { view: ReconciliationView; timezon
       </div>
       {sla.stage !== 'done' && (
         <p>
-          Submit by <PlantTime iso={sla.submitDueAt} tz={timezone} withDate /> · approve by <PlantTime iso={sla.approveDueAt} tz={timezone} withDate /> · open for {hours(sla.ageSeconds)}
-          {sla.pausedSeconds > 0 ? ` (${hours(sla.pausedSeconds)} waiting for data not counted)` : ''}
+          Submit by <PlantTime iso={sla.submitDueAt} tz={timezone} withDate /> · approve by <PlantTime iso={sla.approveDueAt} tz={timezone} withDate /> · open for <DurationText seconds={sla.ageSeconds} />
+          {sla.pausedSeconds > 0 && <> (<DurationText seconds={sla.pausedSeconds} /> waiting for data not counted)</>}
         </p>
       )}
       {openHold && (

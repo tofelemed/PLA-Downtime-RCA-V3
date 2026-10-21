@@ -14,6 +14,8 @@ const NO_USAGE: PlantTimezoneUsage = {
   productionEvents: 0,
   signalSamples: 0,
   calculatedPeriods: 0,
+  publishedCalendars: 0,
+  shiftInstances: 0,
 };
 
 function context(patch: Partial<RequestContext> = {}): RequestContext {
@@ -74,6 +76,8 @@ function setup(options: { usage?: PlantTimezoneUsage; affected?: number }) {
       return chain;
     },
     transaction: <T>(work: (m: unknown) => Promise<T>) => work(manager),
+    // outbox notice of the change (PlantSettingsChanged)
+    insert: jest.fn(() => Promise.resolve({ identifiers: [] })),
   };
   const organizationService = {
     findOneVisible: jest.fn((_ctx: RequestContext, id: string) =>
@@ -94,6 +98,7 @@ function setup(options: { usage?: PlantTimezoneUsage; affected?: number }) {
     { manager, findOne: () => Promise.resolve(plant()) } as never,
     organizationService as unknown as OrganizationService,
     hierarchy as unknown as HierarchyV2Service,
+    { recordChange: jest.fn(() => Promise.resolve(null)) } as never,
   );
   return { service, updates, queries };
 }
@@ -147,6 +152,8 @@ describe('HierarchyEditV2Service', () => {
       productionEvents: 12,
       signalSamples: 0,
       calculatedPeriods: 2,
+      publishedCalendars: 0,
+      shiftInstances: 0,
     };
     const { service, updates } = setup({ usage });
     await expect(
@@ -171,6 +178,8 @@ describe('HierarchyEditV2Service', () => {
       productionEvents: 1,
       signalSamples: 1,
       calculatedPeriods: 0,
+      publishedCalendars: 0,
+      shiftInstances: 0,
     };
     const editor = setup({ usage });
     expect(await editor.service.getPlant(context(), PLANT)).toMatchObject({
@@ -197,6 +206,8 @@ describe('timezoneLockReason', () => {
       productionEvents: 1,
       signalSamples: 10_000,
       calculatedPeriods: 3,
+      publishedCalendars: 0,
+      shiftInstances: 0,
     };
     expect(timezoneLockReason(usage)).toContain(
       'production events, signal samples and calculated periods',

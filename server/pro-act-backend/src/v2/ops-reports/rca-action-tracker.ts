@@ -50,7 +50,7 @@ const CASES = `FROM "rcas" r WHERE r."tenant_id" = $1 AND ($2::uuid[] IS NULL OR
 
 const OPEN_CASES_SQL = `SELECT r."status" AS "status", ${AGE('r."created_at"')} AS "age",
        count(*)::int AS "count",
-       count(*) FILTER (WHERE r."target_completion_date" < now())::int AS "overdue"
+       count(*) FILTER (WHERE r."target_completion_date" + interval '1 day' <= now())::int AS "overdue"
   ${CASES} AND r."status" IS DISTINCT FROM 'Closed'
  GROUP BY 1, 2`;
 
@@ -63,9 +63,13 @@ const OPEN_ACTIONS_SQL = `SELECT CASE WHEN ${actionOverdueSql('a')} THEN 'overdu
    AND a."status"::text IN ('open', 'in_progress')
  GROUP BY 1, 2`;
 
-/** $3, $4 window. On time = completed before the end of the due date's day (UTC). */
+/**
+ * $3, $4 window. On time = completed before the end of the due plant day: `due_date` is the instant that
+ * day starts in the plant's zone, so it ends 24 h later (settings audit, 21 Oct 2026; before, the UTC day
+ * was used and a Tehran due day ended at 03:30 local).
+ */
 const CLOSED_ACTIONS_SQL = `SELECT count(*)::int AS "done", count(a."due_date")::int AS "with_due",
-       count(*) FILTER (WHERE a."completed_at" < date_trunc('day', a."due_date") + interval '1 day')::int AS "on_time"
+       count(*) FILTER (WHERE a."completed_at" < a."due_date" + interval '1 day')::int AS "on_time"
   FROM "rca_actions" a JOIN "rcas" r ON r."id" = a."rca_id" AND r."tenant_id" = $1
  WHERE a."tenant_id" = $1 AND ($2::uuid[] IS NULL OR r."unit_id" = ANY($2::uuid[]))
    AND a."status"::text = 'done' AND a."completed_at" >= $3 AND a."completed_at" < $4`;

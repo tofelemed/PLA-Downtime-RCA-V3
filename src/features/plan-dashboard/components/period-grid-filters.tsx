@@ -19,8 +19,8 @@ const SELECT = 'h-9 max-w-full rounded-md border border-input bg-background px-2
 
 /** Server filters of the period grid: workflow state, Unaccounted, shown revision and "Go to date" (a plant date in the plan). */
 export function PeriodGridFilters({ params, onParam, view, onView, bounds }: PeriodGridFiltersProps) {
-  const { calendar } = useCalendarPreference();
-  const outside = outsidePlanMessage(params.date, bounds, (date) => dateToText(date, calendar));
+  const { calendar, digits } = useCalendarPreference();
+  const outside = outsidePlanMessage(params.date, bounds, (date) => dateToText(date, calendar, digits));
   return (
     <div className="flex flex-wrap items-end gap-3 text-sm">
       <label className="min-w-0 max-w-full space-y-1">

@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { Tenant } from './tenant.entity';
@@ -18,6 +19,23 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { assertOrganizationWritable } from '../auth/roles/org-access';
 import { Ctx } from '../common/context/ctx.decorator';
 import { RequestContext } from '../common/context/request-context';
+import { SkipAudit } from '../audit-log/skip-audit.decorator';
+
+/**
+ * Plant settings the v1 update no longer writes: the time zone has a lock and a default-site sync
+ * (`PATCH /v2/tenants/:id`), calendar and digits are audited display settings (`PATCH /v2/tenants/:id/display-settings`).
+ */
+const V2_ONLY_FIELDS = ['timezone', 'calendarSystem', 'digits'] as const;
+
+function refuseV2OnlyFields(data: UpdateTenantDto): void {
+  const fields = V2_ONLY_FIELDS.filter((field) => data[field] !== undefined);
+  if (!fields.length) return;
+  throw new UnprocessableEntityException({
+    code: 'PLANT_SETTING_V2_ONLY',
+    message: `Change ${fields.join(', ')} in Plant settings (v2), not through this route`,
+    details: { fields },
+  });
+}
 
 /**
  * Reads list what the caller may see (SuperAdmin all, OrgAdmin its organization, everyone else the
@@ -64,19 +82,26 @@ export class TenantController {
   @Roles('SuperAdmin', 'OrgAdmin')
   @ApiBody({ type: UpdateTenantDto })
   @ApiResponse({ status: 200, description: 'Update tenant', type: Tenant })
+  @ApiResponse({
+    status: 422,
+    description:
+      'PLANT_SETTING_V2_ONLY: timezone, calendarSystem and digits change only through the v2 plant routes',
+  })
   async update(
     @Ctx() ctx: RequestContext,
     @Param('id') id: string,
     @Body() data: UpdateTenantDto,
   ): Promise<Tenant | null> {
+    refuseV2OnlyFields(data);
     await this.writable(ctx, id);
     if (data.organizationId)
       assertOrganizationWritable(ctx, data.organizationId);
     return this.tenantService.update(id, data);
   }
 
-  /** No `@Roles`: who may write is the tenant-setting rule, checked in the service. */
+  /** No `@Roles`: who may write is the tenant-setting rule, checked in the service (which audits the change). */
   @Put(':id/display-settings')
+  @SkipAudit()
   @ApiBody({ type: UpdateTenantDisplaySettingsDto })
   @ApiResponse({
     status: 200,

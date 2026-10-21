@@ -21,7 +21,10 @@ import { WeekStart } from '../domain/calendar/week-start';
   `"calendar_system" IN ('gregorian', 'persian')`,
 )
 @Check('CHK_tenants_digits', `"digits" IN ('latin', 'persian')`)
-@Check('CHK_tenants_week_start', `"week_start" IN ('monday', 'saturday')`)
+@Check(
+  'CHK_tenants_week_start',
+  `"week_start" IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')`,
+)
 export class Tenant {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -94,7 +97,7 @@ export class Tenant {
   })
   digits: DigitSystem;
 
-  /** First day of the reporting week: 'monday' (ISO) or 'saturday' (Iranian plants), DT-10. */
+  /** First day of the reporting week, any weekday (DT-10; Monday = ISO weeks, Saturday for Iranian plants). */
   @Column({
     name: 'week_start',
     type: 'varchar',

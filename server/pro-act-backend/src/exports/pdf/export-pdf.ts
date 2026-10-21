@@ -93,9 +93,13 @@ export class ExportPdfWriter {
 
   /**
    * An operating report (`ops_report`): its pinned document as a designed PDF or an Excel workbook, with
-   * the report logo, the pinned presentation and the request time (so re-rendering reproduces the file).
+   * the branding logo (else the report logo), the pinned presentation and the request time (so re-rendering reproduces the file).
    */
-  async writeReport(job: ExportJob, sink: PdfSink): Promise<number> {
+  async writeReport(
+    job: ExportJob,
+    sink: PdfSink,
+    brandLogo: Buffer | null = null,
+  ): Promise<number> {
     if (!job.presentation || !job.reportContent) {
       throw new Error(`report export ${job.id} has no pinned document`);
     }
@@ -103,7 +107,8 @@ export class ExportPdfWriter {
     const base = {
       document: job.reportContent,
       presentation: drawnPresentation(job.presentation, fonts),
-      logo: reportLogo(),
+      // the configured branding logo, else the original report logo (owner 21 Oct 2026)
+      logo: brandLogo ?? reportLogo(),
       generatedAt: job.createdAt,
     };
     return job.format === 'xlsx'

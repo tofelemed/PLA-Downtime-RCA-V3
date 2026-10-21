@@ -4,23 +4,11 @@ import { PlantSelector } from '@/features/plant-selector/plant-selector';
 import { NotificationBell } from '@/features/notifications/notification-bell';
 import { APP_TITLE } from '@/features/ux-kit/page-layout/use-document-title';
 import { UiIcon } from '@/lib/icons';
+import { BrandMark } from './brand-mark';
 import { LiveIndicator } from './live-indicator';
 import { UserBadge } from './user-badge';
 
 const DEFAULT_NAME = APP_TITLE;
-
-function BrandMark({ branding }: { branding: BrandingSettings | undefined }) {
-  const initials = branding?.logoInitials || 'TF';
-  return (
-    <span
-      className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md text-xs font-bold text-white"
-      style={{ background: branding?.primaryColor || 'hsl(var(--primary))' }}
-      aria-hidden
-    >
-      {branding?.logoUrl ? <img src={branding.logoUrl} alt="" className="h-full w-full object-contain" /> : initials}
-    </span>
-  );
-}
 
 /**
  * The one-row app header (h-14, sticky): brand, plant scope, display currency, live-update state and
@@ -50,7 +38,11 @@ function MenuButton({ open, onOpen }: { open: boolean; onOpen: () => void }) {
 
 export function AppHeader({ branding, navigation }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-header flex h-14 items-center gap-2 border-b bg-background px-3 print:hidden sm:gap-4 sm:px-4">
+    // the branding's secondary colour accents the header (the built-in border colour while none is stored)
+    <header
+      className="sticky top-0 z-header flex h-14 items-center gap-2 border-b bg-background px-3 print:hidden sm:gap-4 sm:px-4"
+      style={{ borderBottomColor: 'hsl(var(--brand-secondary, var(--border)))' }}
+    >
       {navigation && <MenuButton open={navigation.open} onOpen={navigation.onOpen} />}
       <div className="flex min-w-0 items-center gap-2">
         <BrandMark branding={branding} />

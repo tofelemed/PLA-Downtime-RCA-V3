@@ -83,22 +83,26 @@ describe('v2 administration: pure rules', () => {
     expect(readableSummary('Changed role')).toBe('Changed role');
   });
 
-  it('writes RFC 4180 CSV and neutralizes spreadsheet formulas', () => {
-    const csv = auditCsv([
-      {
-        id: 'a',
-        timestamp: '2026-10-12T00:00:00.000Z',
-        actorId: 'u',
-        actorName: null,
-        action: 'UPDATE',
-        entityType: 'Task',
-        entityId: 'e',
-        message: '=HYPERLINK("x")',
-        details: null,
-      },
-    ]);
+  it('writes RFC 4180 CSV with UTC and plant-clock times, and neutralizes spreadsheet formulas', () => {
+    const csv = auditCsv(
+      [
+        {
+          id: 'a',
+          timestamp: '2026-10-12T00:00:00.000Z',
+          actorId: 'u',
+          actorName: null,
+          action: 'UPDATE',
+          entityType: 'Task',
+          entityId: 'e',
+          message: '=HYPERLINK("x")',
+          details: null,
+        },
+      ],
+      'Asia/Tehran',
+    );
+    expect(csv.split('\r\n')[0]).toContain('"Time (UTC)","Time (plant)"');
     expect(csv.split('\r\n')[1]).toBe(
-      '"2026-10-12T00:00:00.000Z","Unknown user","UPDATE","Task","e","\'=HYPERLINK(""x"")"',
+      '"2026-10-12T00:00:00.000Z","2026-10-12T03:30:00+03:30","Unknown user","UPDATE","Task","e","\'=HYPERLINK(""x"")"',
     );
   });
 

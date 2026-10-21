@@ -1,3 +1,4 @@
+import type { ExportBrand } from '../export-brand';
 import {
   CalendarSystem,
   DigitSystem,
@@ -19,6 +20,8 @@ export interface ExportPresentation {
   calendar: CalendarSystem;
   digits: DigitSystem;
   currency: PdfCurrency;
+  /** the configured branding at request time; absent on older jobs and while none is stored */
+  brand?: ExportBrand | null;
 }
 
 /** One column of a table: its label, share of the table width and alignment. */

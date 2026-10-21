@@ -174,3 +174,26 @@ export function lossTable(
     ]),
   };
 }
+
+/**
+ * The document in one reporting currency (settings audit, 21 Oct 2026: the export's currency choice changed
+ * only the cover label): every table with a "Currency" column keeps the rows in `currency` and the rows
+ * without a currency; amounts are never converted. A table left empty says so.
+ */
+export function inReportingCurrency(
+  document: ReportDocument,
+  currency: string,
+): ReportDocument {
+  const sections = document.sections.map((section) => {
+    if (section.kind !== 'table') return section;
+    const column = section.columns.findIndex((c) => c.label === 'Currency');
+    if (column < 0 || section.rows.length === 0) return section;
+    const rows = section.rows.filter(
+      (row) => row[column] === null || row[column] === currency,
+    );
+    if (rows.length === section.rows.length) return section;
+    const empty = rows.length === 0 ? ` Not reported in ${currency}.` : '';
+    return { ...section, rows, note: `${section.note ?? ''}${empty}`.trim() };
+  });
+  return { ...document, sections };
+}

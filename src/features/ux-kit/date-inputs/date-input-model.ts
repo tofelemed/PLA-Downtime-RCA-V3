@@ -1,5 +1,6 @@
 import {
   type CalendarSystem,
+  type DigitSystem,
   formatOperationalDate,
   isoDateToJalali,
   jalaliToIsoDate,
@@ -61,10 +62,13 @@ export function parseDateText(text: string, calendar: CalendarSystem): ParsedDat
   return { value: iso, error: null };
 }
 
-/** ISO date → the text shown in the field (`1405/07/20` / `2026-10-12`); `''` for empty or invalid. */
-export function dateToText(isoDate: string, calendar: CalendarSystem): string {
+/**
+ * ISO date → the text shown in the field (`1405/07/20` / `2026-10-12`), in the plant's digits (typed Persian
+ * digits parse back, `parseDateText`); `''` for empty or invalid.
+ */
+export function dateToText(isoDate: string, calendar: CalendarSystem, digits: DigitSystem = 'latin'): string {
   if (!isoDate || !isoDateToJalali(isoDate)) return '';
-  return formatOperationalDate(isoDate, { calendar });
+  return formatOperationalDate(isoDate, { calendar, digits });
 }
 
 /** Error text when `isoDate` lies outside `[min, max]` (ISO dates), else null. */

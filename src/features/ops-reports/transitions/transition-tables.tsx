@@ -10,10 +10,12 @@ const duration = (seconds: string | null) => (seconds === null ? '—' : <Durati
 
 /** Seconds over (+, red) or under (−) a standard. */
 function SignedDuration({ seconds }: { seconds: string }) {
-  const over = !seconds.startsWith('-') && seconds !== '0';
+  const over = !seconds.startsWith('-') && Number(seconds) !== 0;
+  // exactly on standard: no sign (never "−0 s")
+  const sign = Number(seconds) === 0 ? '' : over ? '+' : '−';
   return (
     <span className={over ? 'font-medium text-destructive' : ''} data-testid="transition-excess" data-over={over}>
-      {over ? '+' : '−'}
+      {sign}
       <DurationText seconds={seconds.replace(/^-/, '')} />
     </span>
   );
@@ -33,7 +35,7 @@ const PAIR_COLUMNS: Array<DataTableColumn<TransitionPairView>> = [
   { id: 'mean', header: 'Mean', align: 'right', nowrap: true, cell: (p) => duration(p.meanSeconds) },
   { id: 'best', header: 'Best', align: 'right', nowrap: true, cell: (p) => duration(p.bestSeconds) },
   { id: 'worst', header: 'Worst', align: 'right', nowrap: true, cell: (p) => duration(p.worstSeconds) },
-  { id: 'over', header: 'Over standard', align: 'right', nowrap: true, cell: (p) => <>{p.overStandard} of {p.withStandard}</> },
+  { id: 'over', header: 'Over standard', align: 'right', nowrap: true, cell: (p) => <><NumberText value={p.overStandard} /> of <NumberText value={p.withStandard} /></> },
   { id: 'excess', header: 'Mean excess', align: 'right', nowrap: true, cell: (p) => (p.meanExcessSeconds === null ? '—' : <SignedDuration seconds={p.meanExcessSeconds} />) },
 ];
 

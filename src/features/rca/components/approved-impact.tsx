@@ -3,6 +3,7 @@ import { currencyDigits, entriesInCurrency } from '@/features/display-currency/m
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { humanize } from '@/features/ux-kit/labels';
 import { basisSentence, valueBasisLabel } from '@/features/ux-kit/labels/value-basis';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { plural } from '@/features/ux-kit/format/plural';
@@ -55,7 +56,7 @@ function ApprovedImpactValues({ impact, viewNote }: ApprovedImpactProps) {
           <li key={row.currency}>
             {row.currency}:{' '}
             {row.amount === null ? (
-              <span className="text-muted-foreground">Not valued ({row.unvaluedLines} of {row.valuedLines + row.unvaluedLines} lines without a value)</span>
+              <span className="text-muted-foreground">Not valued (<NumberText value={row.unvaluedLines} /> of <NumberText value={row.valuedLines + row.unvaluedLines} /> lines without a value)</span>
             ) : (
               <Quantity value={row.amount} uom={row.currency} fractionDigits={currencyDigits(row.currency)} />
             )}

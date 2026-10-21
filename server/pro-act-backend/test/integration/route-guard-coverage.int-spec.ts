@@ -133,6 +133,11 @@ describe('route guard coverage (B14, plan 0.4)', () => {
     expect(v2.map((entry) => `${entry.method} ${entry.path}`)).toContain(
       'GET /production-events',
     );
-    expect(v2.every((entry) => entry.guarded)).toBe(true);
+    // every v2 route is guarded, except the reviewed public ones (the sign-in branding, 21 Oct 2026)
+    expect(
+      v2
+        .filter((entry) => !PUBLIC_ROUTE_ALLOWLIST.has(routeKey(entry)))
+        .every((entry) => entry.guarded),
+    ).toBe(true);
   });
 });

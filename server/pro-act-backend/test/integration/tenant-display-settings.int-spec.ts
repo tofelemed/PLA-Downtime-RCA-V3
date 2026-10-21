@@ -82,4 +82,42 @@ describe('tenant display settings', () => {
     }).expect(404);
     expect(foreign.body).toMatchObject({ code: 'NOT_FOUND' });
   });
+
+  it('audits the change with old and new values under the edited plant (21 Oct 2026)', async () => {
+    await put(tokens.adminA, world.tenantA, { digits: 'persian' }).expect(200);
+    const [row] = await harness.dataSource.query<
+      Array<{ tenant_id: string; entity_type: string; details: string }>
+    >(
+      `SELECT "tenant_id", "entity_type", "details" FROM "audit_logs"
+        WHERE "entity_id" = $1 AND "details" LIKE '%digits%' ORDER BY "timestamp" DESC LIMIT 1`,
+      [world.tenantA],
+    );
+    expect(row).toMatchObject({
+      tenant_id: world.tenantA,
+      entity_type: 'Tenant',
+    });
+    const details = JSON.parse(row.details) as {
+      message: string;
+      changes: Record<string, { from: unknown; to: unknown }>;
+    };
+    expect(details.changes).toEqual({
+      digits: { from: 'latin', to: 'persian' },
+    });
+    expect(details.message).toContain('digits latin → persian');
+  });
+
+  it('the v1 tenant update no longer writes the time zone, calendar or digits (422)', async () => {
+    const superAdmin = token(world.tenantA, 'SuperAdmin');
+    const refused = await http()
+      .put(`/api/tenants/${world.tenantA}`)
+      .set(bearer(superAdmin))
+      .send({ timezone: 'Europe/Berlin' })
+      .expect(422);
+    expect(refused.body).toMatchObject({ code: 'PLANT_SETTING_V2_ONLY' });
+    await http()
+      .put(`/api/tenants/${world.tenantA}`)
+      .set(bearer(superAdmin))
+      .send({ digits: 'latin' })
+      .expect(422);
+  });
 });

@@ -34,7 +34,12 @@ describe('month to date (R1)', () => {
 
 describe('twelve-month window (R12)', () => {
   it('starts at the first production day eleven months before the window’s last month', () => {
-    expect(twelveMonthWindow({ to: '2026-10-18T02:30:00.000Z' }, '06:00', 'Asia/Tehran')?.from).toBe('2025-11-01T02:30:00.000Z');
-    expect(twelveMonthWindow({ to: '2027-01-10T02:30:00.000Z' }, '06:00', 'Asia/Tehran')?.from).toBe('2026-02-01T02:30:00.000Z');
+    const gregorian = { dayStart: '06:00', timeZone: 'Asia/Tehran', calendar: 'gregorian' } as const;
+    expect(twelveMonthWindow({ to: '2026-10-18T02:30:00.000Z' }, gregorian)?.from).toBe('2025-11-01T02:30:00.000Z');
+    expect(twelveMonthWindow({ to: '2027-01-10T02:30:00.000Z' }, gregorian)?.from).toBe('2026-02-01T02:30:00.000Z');
+    // a Persian-calendar plant counts Solar Hijri months: 17 Oct 2026 is 25 Mehr 1405, so the window opens
+    // on 1 Aban 1404 (23 Oct 2025), as the server groups its months (settings audit, 21 Oct 2026)
+    const persian = { ...gregorian, calendar: 'persian' } as const;
+    expect(twelveMonthWindow({ to: '2026-10-18T02:30:00.000Z' }, persian)?.from).toBe('2025-10-23T02:30:00.000Z');
   });
 });

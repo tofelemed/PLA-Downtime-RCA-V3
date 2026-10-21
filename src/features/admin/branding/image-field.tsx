@@ -3,6 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FormField } from '../shared/form-field';
 
+/** Image types every browser draws (HEIC, TIFF and the like do not). */
+const WEB_IMAGES = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp', 'image/gif', 'image/x-icon', 'image/vnd.microsoft.icon'];
+
 /** Inline images must stay small: the branding request is limited to 1 MiB in total. */
 const MAX_IMAGE_BYTES = 280 * 1024;
 
@@ -22,7 +25,7 @@ export function ImageField({ label, value, disabled, onChange }: ImageFieldProps
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) return setError('Choose an image file.');
+    if (!WEB_IMAGES.includes(file.type)) return setError('Choose a PNG, JPEG, SVG, WebP, GIF or ICO image (report exports print PNG and JPEG logos).');
     if (file.size > MAX_IMAGE_BYTES) return setError('Choose an image smaller than 280 KB.');
     setError(null);
     const reader = new FileReader();
@@ -36,7 +39,7 @@ export function ImageField({ label, value, disabled, onChange }: ImageFieldProps
       </FormField>
       <div className="flex flex-wrap items-center gap-3">
         <Label htmlFor={ids.file} className="sr-only">{`Upload ${label.toLowerCase()}`}</Label>
-        <Input id={ids.file} type="file" accept="image/*" className="max-w-xs" disabled={disabled} onChange={upload} />
+        <Input id={ids.file} type="file" accept={WEB_IMAGES.join(',')} className="max-w-xs" disabled={disabled} onChange={upload} />
         {value && (
           <button type="button" className="text-sm underline" disabled={disabled} onClick={() => onChange('')}>
             Clear

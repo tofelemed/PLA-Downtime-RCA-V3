@@ -290,6 +290,8 @@ export interface CreateOrganizationInput {
 export interface CreatePlantInput extends CreateOrganizationInput {
   organizationId: string;
   timezone: string;
+  /** first day of the reporting week; omitted = Saturday for Iranian plants, Monday otherwise */
+  weekStart?: string;
 }
 
 /** `GET /v2/branding`. */

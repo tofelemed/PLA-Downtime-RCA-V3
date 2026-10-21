@@ -9,6 +9,7 @@ import { StatusIcon } from '@/lib/icons';
 import { LOGIN_COPY } from '@/features/login/login-copy';
 import { LoginHeroPanel } from '@/features/login/login-hero-panel';
 import { useLoginDocumentTitle } from '@/features/login/use-login-document-title';
+import { useSignInBranding } from '@/features/login/use-sign-in-branding';
 
 const FIELD_LABEL = 'text-xs font-semibold tracking-[0.15em] text-foreground';
 
@@ -18,7 +19,9 @@ export const LoginForm: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  useLoginDocumentTitle(LOGIN_COPY.documentTitle);
+  const branding = useSignInBranding();
+  const appName = branding?.appName ?? 'Traverse Forge';
+  useLoginDocumentTitle(`Sign in · ${appName}`);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +40,17 @@ export const LoginForm: React.FC = () => {
       <main className="flex flex-1 items-center justify-center px-4 py-8 sm:px-8 md:px-10 md:py-12">
         <div className="w-full max-w-md">
           <div className="mb-6">
-            <p className="text-sm font-bold tracking-[0.2em] text-foreground">{LOGIN_COPY.appName}</p>
-            <p className="mt-1 font-mono text-xs tracking-[0.1em] text-muted-foreground lg:tracking-[0.2em]">
-              {LOGIN_COPY.appSubtitle}
-            </p>
+            <div className="flex items-center gap-3">
+              {branding?.logoUrl && <img src={branding.logoUrl} alt="" className="h-10 w-10 object-contain" data-testid="sign-in-logo" />}
+              <div>
+                <p className="text-sm font-bold tracking-[0.2em] text-foreground" data-testid="sign-in-app-name">{branding ? branding.appName.toUpperCase() : LOGIN_COPY.appName}</p>
+                {(branding ? branding.appSubtitle : LOGIN_COPY.appSubtitle) && (
+                  <p className="mt-1 font-mono text-xs tracking-[0.1em] text-muted-foreground lg:tracking-[0.2em]">
+                    {branding ? branding.appSubtitle?.toUpperCase() : LOGIN_COPY.appSubtitle}
+                  </p>
+                )}
+              </div>
+            </div>
             <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">{LOGIN_COPY.heading}</h1>
           </div>
 

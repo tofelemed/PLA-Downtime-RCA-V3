@@ -12,9 +12,9 @@ import {
   Min,
 } from 'class-validator';
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 /** An https/http address or an inline image (`data:image/...;base64,`), as the logo field accepts. */
-const IMAGE_SOURCE =
+export const IMAGE_SOURCE =
   /^(https?:\/\/\S+|data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+)$/;
 /** Inline images stay under the 1 MiB request limit together (two images of at most 400 000 characters). */
 export const IMAGE_MAX_LENGTH = 400_000;
@@ -122,6 +122,27 @@ export class BrandingV2Dto {
   @Min(0)
   @Max(1)
   logoBackgroundOpacity?: number;
+}
+
+/** `GET /v2/branding/public`: what the sign-in page shows before anyone signs in (no sizes, no audit data). */
+export class BrandingPublicV2View {
+  @ApiProperty()
+  appName: string;
+
+  @ApiPropertyOptional()
+  appSubtitle?: string;
+
+  @ApiPropertyOptional()
+  logoUrl?: string;
+
+  @ApiPropertyOptional()
+  logoInitials?: string;
+
+  @ApiPropertyOptional()
+  primaryColor?: string;
+
+  @ApiPropertyOptional()
+  faviconUrl?: string;
 }
 
 /** `GET /v2/branding`: the stored branding over the defaults. */

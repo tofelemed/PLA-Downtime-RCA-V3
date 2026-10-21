@@ -13,7 +13,7 @@ import {
 } from './rca-evidence-options';
 import { templateLogicTree } from './rca-case-template';
 import { RcaCaseV2View } from './rca-case.view';
-import { RcaCasesService } from './rca-cases.service';
+import { OVERDUE, RcaCasesService } from './rca-cases.service';
 import { findCase, invalidBody, scopeOf } from './rca-scope';
 import { assertCaseNotClosed } from './case-closed';
 
@@ -70,7 +70,7 @@ export class RcaCaseCommandsService {
       critical: string;
     }> = await this.dataSource.query(
       `SELECT rca.status, count(*) AS count,
-                count(*) FILTER (WHERE rca.target_completion_date < now() AND rca.status IS DISTINCT FROM 'Closed') AS overdue,
+                count(*) FILTER (WHERE ${OVERDUE}) AS overdue,
                 count(*) FILTER (WHERE rca.priority = 'Critical' AND rca.status IS DISTINCT FROM 'Closed') AS critical
            FROM "rcas" rca
           WHERE rca.tenant_id = $1 AND ($2::uuid[] IS NULL OR rca.unit_id = ANY($2::uuid[]))

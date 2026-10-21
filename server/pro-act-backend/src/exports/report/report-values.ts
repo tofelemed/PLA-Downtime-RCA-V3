@@ -25,6 +25,22 @@ const MONTHS = [
   'Dec',
 ];
 
+/** Solar Hijri month names, as the screens write them (`src/lib/dates/plant-month.ts`). */
+const JALALI_MONTHS = [
+  'Farvardin',
+  'Ordibehesht',
+  'Khordad',
+  'Tir',
+  'Mordad',
+  'Shahrivar',
+  'Mehr',
+  'Aban',
+  'Azar',
+  'Dey',
+  'Bahman',
+  'Esfand',
+];
+
 export interface CellFormat {
   type: ReportValueType;
   places?: number;
@@ -54,11 +70,24 @@ function localDate(value: string, format: PlantFormat): string {
   return plantDate(`${value}T12:00:00Z`, { ...format, timezone: 'UTC' });
 }
 
+/**
+ * A plant month key as words: the server keys a Persian-calendar plant's months in that calendar
+ * (`1405-07` = Mehr 1405; settings audit, 21 Oct 2026), every other plant's in the Gregorian one.
+ */
 function month(value: string, format: PlantFormat): string {
   const [year, m] = value.split('-');
-  const name = MONTHS[Number(m) - 1];
+  const names = format.calendar === 'persian' ? JALALI_MONTHS : MONTHS;
+  const name = names[Number(m) - 1];
   return name ? toPlantDigits(`${name} ${year}`, format.digits) : value;
 }
+
+/** A plant date (`YYYY-MM-DD`) for a title or sentence, on the plant's calendar and digits. */
+export const plantDayText = (isoDate: string, format: PlantFormat): string =>
+  localDate(isoDate, format);
+
+/** A month key (`YYYY-MM`, in `format.calendar`) for a title or sentence: "Mehr 1405" / "Oct 2026". */
+export const plantMonthText = (key: string, format: PlantFormat): string =>
+  month(key, format);
 
 /** A cell as printed in the PDF, on the plant's calendar, clock and digits. */
 export function printCell(

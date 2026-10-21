@@ -1,4 +1,9 @@
 import { Dec } from '../../src/domain/actuals/decimal';
+import {
+  WEEK_STARTS,
+  weekKey,
+  weekKeySql,
+} from '../../src/domain/calendar/week-start';
 import { AccountingPoliciesService } from '../../src/periods/accounting-policies.service';
 import { parseReconciliationTolerance } from '../../src/periods/engine-policy-bodies';
 import { policyBodiesInForce } from '../../src/periods/policy-bodies-in-force';
@@ -322,6 +327,51 @@ describe('PLA analytics reads (plan 3.6)', () => {
       `downtime?${scope}&groupBy=week`,
     );
     expect(iso.data.groups.map((g) => g.key)).toEqual(['2027-W09']);
+  });
+
+  it('any day can start the week (owner 21 Oct 2026): saved through Plant settings, used by the SQL reports', async () => {
+    const tenant = env.world.tenantA;
+    const save = (weekStart: string) =>
+      env
+        .http()
+        .patch(`/api/v2/tenants/${tenant}/display-settings`)
+        .set('Authorization', `Bearer ${env.admin}`)
+        .send({ weekStart });
+    try {
+      await save('wednesday').expect(200);
+      const [stored] = await env.rows<{ week_start: string }>(
+        `SELECT "week_start" FROM "tenants" WHERE "id" = $1`,
+        [tenant],
+      );
+      expect(stored.week_start).toBe('wednesday');
+      // Monday 1 Mar 2027 belongs to the week Wednesday 24 Feb – Tuesday 2 Mar
+      const downtime = await read<{ groups: Array<{ key: string | null }> }>(
+        `downtime?${scope}&groupBy=week`,
+      );
+      expect(downtime.data.groups.map((g) => g.key)).toEqual(['2027-02-24']);
+      await save('someday').expect(422);
+    } finally {
+      await env.rows(
+        `UPDATE "tenants" SET "week_start" = 'monday' WHERE "id" = $1`,
+        [tenant],
+      );
+    }
+  });
+
+  it('the SQL week key equals the TypeScript one for every start day over a year', async () => {
+    const rows = await env.rows<{ day: string; start: string; key: string }>(
+      `SELECT to_char(d, 'YYYY-MM-DD') AS "day", w AS "start",
+              ${weekKeySql('d::date', 'w')} AS "key"
+         FROM generate_series('2026-12-20'::date, '2027-12-31'::date, interval '1 day') d,
+              unnest($1::text[]) w`,
+      [[...WEEK_STARTS]],
+    );
+    expect(rows).toHaveLength(377 * 7);
+    for (const row of rows) {
+      expect(row.key).toBe(
+        weekKey(row.day, row.start as (typeof WEEK_STARTS)[number]),
+      );
+    }
   });
 
   it('reconciliation status: workflow, residual state, age and overdue periods at a fixed asOf', async () => {

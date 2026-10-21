@@ -106,8 +106,9 @@ describe('app settings scope (plan 3.11)', () => {
     await setValue(tokens.viewer, own, {}).expect(403);
   });
 
+  // an application-wide key other than `branding`, which only `PUT /v2/branding` writes (21 Oct 2026)
   it('lets only a SuperAdmin change application-wide settings, readable by everyone', async () => {
-    const denied = await setValue(tokens.adminA, 'branding', {
+    const denied = await setValue(tokens.adminA, 'appNotice', {
       appName: 'X',
     }).expect(403);
     expect((denied.body as { code: string }).code).toBe('SETTING_NOT_WRITABLE');
@@ -116,14 +117,14 @@ describe('app settings scope (plan 3.11)', () => {
       .set(bearer(tokens.a))
       .send({ key: 'anything', value: 'v' })
       .expect(403);
-    await setValue(tokens.superAdmin, 'branding', {
-      appName: 'Pro-Act',
+    await setValue(tokens.superAdmin, 'appNotice', {
+      appName: 'Traverse Forge',
     }).expect(201);
-    expect((await getValue(tokens.b, 'branding')).body).toEqual({
-      appName: 'Pro-Act',
+    expect((await getValue(tokens.b, 'appNotice')).body).toEqual({
+      appName: 'Traverse Forge',
     });
     await http()
-      .delete('/api/app-settings/branding')
+      .delete('/api/app-settings/appNotice')
       .set(bearer(tokens.a))
       .expect(403);
   });
@@ -153,7 +154,7 @@ describe('app settings scope (plan 3.11)', () => {
       .set(bearer(tokens.b))
       .expect(200);
     const keysB = (listB.body as Setting[]).map((setting) => setting.key);
-    expect(keysB).toContain('branding');
+    expect(keysB).toContain('appNotice');
     expect(keysB).not.toContain('plantSelection');
     expect(keysB).not.toContain(tabKey(world.tenantA, ids.a));
     const listA = await http()
@@ -163,7 +164,7 @@ describe('app settings scope (plan 3.11)', () => {
     const keysA = (listA.body as Setting[]).map((setting) => setting.key);
     expect(keysA).toEqual(
       expect.arrayContaining([
-        'branding',
+        'appNotice',
         'plantSelection',
         tabKey(world.tenantA, ids.a),
       ]),

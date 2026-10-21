@@ -122,7 +122,11 @@ export class AuditLogsV2Service {
   async exportRows(
     context: RequestContext,
     query: AuditFiltersDto,
-  ): Promise<{ rows: AuditEntryV2View[]; truncated: boolean }> {
+  ): Promise<{
+    rows: AuditEntryV2View[];
+    truncated: boolean;
+    timezone: string;
+  }> {
     const rows = await this.filtered(context, query)
       .orderBy('log.timestamp', 'DESC')
       .addOrderBy('log.id', 'DESC')
@@ -132,6 +136,7 @@ export class AuditLogsV2Service {
     return {
       rows: await this.toViews(requireTenantId(context), kept),
       truncated: rows.length > AUDIT_EXPORT_MAX_ROWS,
+      timezone: await this.plantTimezone(requireTenantId(context)),
     };
   }
 

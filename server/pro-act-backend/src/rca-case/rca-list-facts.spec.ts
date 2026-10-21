@@ -80,7 +80,9 @@ describe('RCA list facts (UX U3: trigger and action counts on GET /v2/rcas)', ()
 
   it('counts cancelled actions out of the total and uses the shared overdue rule', () => {
     expect(CASE_LIST_FACTS_SQL).toContain(`a."status"::text <> 'cancelled'`);
-    expect(CASE_LIST_FACTS_SQL).toContain(`a."due_date" < now()`);
+    expect(CASE_LIST_FACTS_SQL).toContain(
+      `a."due_date" + interval '1 day' <= now()`,
+    );
     expect(CASE_LIST_FACTS_SQL).toContain('ORDER BY k."linked_at", k."id"');
   });
 });

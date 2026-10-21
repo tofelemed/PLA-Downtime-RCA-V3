@@ -13,7 +13,19 @@ export type WorkRecipient = 'assignee' | 'escalation';
 export interface WorkItem {
   kind: WorkItemKind;
   id: string;
+  /**
+   * As stored: a task's due instant is the end of its due plant day; an RCA action's is the START of its
+   * due plant day (the day is due in full, so it is overdue only once that day is over).
+   */
   dueAt: Date;
+}
+
+const DAY_MS = 86_400_000;
+
+/** The instant an item becomes overdue: the end of an RCA action's due plant day, a task's due instant. */
+export function overdueFrom(item: WorkItem): number {
+  const stored = item.dueAt.getTime();
+  return item.kind === 'rca_action' ? stored + DAY_MS : stored;
 }
 
 /** Lead time before the due date and age past it at which an overdue item escalates (milliseconds). */
@@ -48,7 +60,7 @@ export function workItemNotices(
   asOf: Date,
   timings: WorkTimings,
 ): WorkNotice[] {
-  const due = item.dueAt.getTime();
+  const due = overdueFrom(item);
   const now = asOf.getTime();
   const base = `${KEY_PREFIX[item.kind]}:${item.id}`;
   const dueIso = item.dueAt.toISOString();

@@ -159,7 +159,9 @@ describe('work and downtime reminders (item 6)', () => {
         ids.rca,
         ids.owner,
         ids.outsiderOwner,
-        DUE,
+        // an action's due_date is the START of its due plant day and the day is due in full (21 Oct 2026):
+        // the action whose day ends at DUE is stored a day earlier, so it falls due with the task
+        new Date(DUE.getTime() - DAY_MS),
       ],
     );
     await sql(

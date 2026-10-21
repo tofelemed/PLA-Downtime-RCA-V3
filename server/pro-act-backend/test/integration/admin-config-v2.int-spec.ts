@@ -373,7 +373,7 @@ describe('v2 administration: attributes, hierarchy, branding', () => {
     await http()
       .patch(`/api/v2/tenants/${world.plantA}/display-settings`)
       .set(bearer(adminA.token))
-      .send({ weekStart: 'sunday' })
+      .send({ weekStart: 'someday' })
       .expect(422);
     await http()
       .patch(`/api/v2/tenants/${world.plantA}/display-settings`)
@@ -427,5 +427,37 @@ describe('v2 administration: attributes, hierarchy, branding', () => {
         .expect(200),
     );
     expect(reset.isStored).toBe(false);
+  });
+
+  it('settings audit 21 Oct 2026: public sign-in branding, clearable subtitle, no branding through v1', async () => {
+    const saved = bodyOf(
+      await http()
+        .put('/api/v2/branding')
+        .set(bearer(superAdmin.token))
+        .send({ appName: 'Plant OS', appSubtitle: '', logoInitials: '' })
+        .expect(200),
+    );
+    // cleared on purpose: the defaults do not come back
+    expect(saved).toMatchObject({ appSubtitle: '', logoInitials: '' });
+    const signIn = await http().get('/api/v2/branding/public').expect(200);
+    expect(signIn.headers['cache-control']).toContain('max-age');
+    expect(bodyOf(signIn)).toEqual({
+      appName: 'Plant OS',
+      appSubtitle: '',
+      logoInitials: '',
+      primaryColor: '#2563eb',
+    });
+    const refused = await http()
+      .post('/api/app-settings/branding/value')
+      .set(bearer(superAdmin.token))
+      .send({
+        value: { appName: 'Sneaky', primaryColor: 'url(https://x.test)' },
+      })
+      .expect(422);
+    expect(refused.body).toMatchObject({ code: 'SETTING_V2_ONLY' });
+    await http()
+      .delete('/api/v2/branding')
+      .set(bearer(superAdmin.token))
+      .expect(200);
   });
 });

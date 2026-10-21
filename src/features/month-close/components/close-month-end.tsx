@@ -1,10 +1,12 @@
 import type { MonthCloseView } from '@/api/v2/types/month-close';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 
 const LISTED = 10;
 
 function MissingPeriods({ view }: { view: MonthCloseView }) {
   const { missingPeriodCount: count, missingPeriods: list } = view.prerequisites;
+  const pref = useCalendarPreference();
   if (count === 0) return null;
   const shown = list.slice(0, LISTED);
   const more = count - shown.length;
@@ -16,7 +18,7 @@ function MissingPeriods({ view }: { view: MonthCloseView }) {
       <ul className="list-disc pl-5 text-xs text-muted-foreground">
         {shown.map((m) => (
           <li key={`${m.unitId}-${m.utcStart}`}>
-            {m.unitName ?? 'Unit'} · {m.localDate} · shift {m.shiftName}
+            {m.unitName ?? 'Unit'} · {formatOperationalDate(m.localDate, pref)} · shift {m.shiftName}
           </li>
         ))}
         {more > 0 && <li>and {more} more</li>}

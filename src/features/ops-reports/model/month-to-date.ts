@@ -41,15 +41,27 @@ export function monthToDateWindow(window: { to: string }, days: PlantDays): { fr
   return from ? { from, to: window.to } : null;
 }
 
+/** The first date (Gregorian `YYYY-MM-DD`) of the plant month 11 months before the one holding `date`. */
+function twelveMonthsBack(date: string, calendar: FinancialCalendar): string | null {
+  if (calendar === 'persian') {
+    const jalali = isoDateToJalali(date);
+    if (!jalali) return null;
+    const index = jalali.jy * 12 + jalali.jm - 1 - 11;
+    return jalaliToIsoDate(Math.floor(index / 12), (index % 12) + 1, 1);
+  }
+  const index = Number(date.slice(0, 4)) * 12 + Number(date.slice(5, 7)) - 1 - 11;
+  return `${String(Math.floor(index / 12)).padStart(4, '0')}-${String((index % 12) + 1).padStart(2, '0')}-01`;
+}
+
 /**
- * The 12 calendar months ending with the month the window ends in (R12 scorecard, months as the server
- * groups them: `YYYY-MM` of the plant date), from that first production day to the window's end.
+ * The 12 plant months ending with the month the window ends in (R12 scorecard, months as the server groups
+ * them: Solar Hijri months on a Persian-calendar plant, Gregorian otherwise), from that first production
+ * day to the window's end.
  */
-export function twelveMonthWindow(window: { to: string }, dayStart: string, timeZone: string): { from: string; to: string } | null {
-  const last = lastProductionDate(window.to, dayStart, timeZone);
-  if (!last) return null;
-  const index = Number(last.slice(0, 4)) * 12 + Number(last.slice(5, 7)) - 1 - 11;
-  const first = `${String(Math.floor(index / 12)).padStart(4, '0')}-${String((index % 12) + 1).padStart(2, '0')}-01`;
-  const from = plantLocalToUtc(`${first}T${dayStart}`, timeZone);
+export function twelveMonthWindow(window: { to: string }, days: PlantDays): { from: string; to: string } | null {
+  const last = lastProductionDate(window.to, days.dayStart, days.timeZone);
+  const first = last ? twelveMonthsBack(last, days.calendar) : null;
+  if (!first) return null;
+  const from = plantLocalToUtc(`${first}T${days.dayStart}`, days.timeZone);
   return from ? { from, to: window.to } : null;
 }

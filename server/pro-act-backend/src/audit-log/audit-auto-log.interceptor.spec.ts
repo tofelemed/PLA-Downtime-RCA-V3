@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { lastValueFrom, of } from 'rxjs';
 import { AuditAutoLogInterceptor } from './audit-auto-log.interceptor';
 import { AuditLogService } from './audit-log.service';
+import { CLIENT_AUDITED_KEY } from './client-audited.decorator';
 import { isPreviewBody } from './skip-audit-preview.decorator';
 import { ProductionEventOperationsV2Controller } from '../v2/production-events/production-event-operations-v2.controller';
 
@@ -109,5 +110,64 @@ describe('AuditAutoLogInterceptor dry runs (QA audit F5)', () => {
     expect(isPreviewBody({ preview: true })).toBe(true);
     expect(isPreviewBody({ preview: 'true' })).toBe(false);
     expect(isPreviewBody(null)).toBe(false);
+  });
+});
+
+describe('AuditAutoLogInterceptor and X-Client-Audited (settings audit, 21 Oct 2026)', () => {
+  const plantB = '3c0e7a52-2d4b-4f6c-9a8e-1b2c3d4e5f60';
+
+  async function run(
+    request: Record<string, unknown>,
+    handler: () => void = function handler() {},
+  ): Promise<jest.Mock> {
+    const create = jest.fn().mockResolvedValue(undefined);
+    const interceptor = new AuditAutoLogInterceptor(
+      { create } as unknown as AuditLogService,
+      new Reflector(),
+    );
+    const context = {
+      getHandler: () => handler,
+      getClass: () => class Controller {},
+      switchToHttp: () => ({ getRequest: () => request }),
+    } as unknown as ExecutionContext;
+    const next: CallHandler = { handle: () => of({ id: 'x' }) };
+    await lastValueFrom(interceptor.intercept(context, next));
+    await new Promise((resolve) => setImmediate(resolve));
+    return create;
+  }
+
+  const write = (headers: Record<string, string>) => ({
+    method: 'POST',
+    originalUrl: '/api/v2/tasks',
+    params: {},
+    body: { title: 'Check pump' },
+    user: { userId: 'u-1', tenantId: 't-1' },
+    headers,
+  });
+
+  it('ignores the header on an ordinary route: the server still audits', async () => {
+    const create = await run(write({ 'x-client-audited': 'true' }));
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('honours the header on a @ClientAudited() route', async () => {
+    const handler = function clientAudited() {};
+    Reflect.defineMetadata(CLIENT_AUDITED_KEY, true, handler);
+    const create = await run(write({ 'x-client-audited': 'true' }), handler);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('files a write to a plant record under that plant, not the plant the caller acts in', async () => {
+    const create = await run({
+      method: 'PUT',
+      originalUrl: `/api/tenants/${plantB}`,
+      params: { id: plantB },
+      body: { name: 'Plant B' },
+      user: { userId: 'u-1', tenantId: 't-1' },
+      headers: {},
+    });
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ entityType: 'Tenant', tenantId: plantB }),
+    );
   });
 });

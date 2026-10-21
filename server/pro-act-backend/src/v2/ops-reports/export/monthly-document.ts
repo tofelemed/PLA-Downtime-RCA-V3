@@ -17,6 +17,8 @@ import { LossValueReportView } from '../../reports/loss-value-report';
 import { resolveReportScope } from '../../reports/report-scope';
 import { RestatementsView } from '../restatements-report';
 import { documentOf, lossTable } from './document-parts';
+import { presentationOf } from '../../../exports/export-presentation';
+import { plantMonthText } from '../../../exports/report/report-values';
 import {
   BuildInput,
   BuiltReport,
@@ -39,12 +41,12 @@ export class MonthlyExportQueryDto extends ReportWindowQueryDto {
 const signed = (who: { name: string | null } | null, at: string | null) =>
   who ? `${who.name ?? 'someone'} · ${at ?? ''}` : 'not yet';
 
-function certification(view: MonthCloseV2View): ReportFacts {
+function certification(view: MonthCloseV2View, monthText: string): ReportFacts {
   const p = view.prerequisites;
   const s = view.signOffs;
   return {
     kind: 'facts',
-    title: `Certification · ${view.monthKey} (${view.calendar})`,
+    title: `Certification · ${monthText}`,
     rows: [
       ['Month close state', view.state.replace(/_/g, ' ')],
       ['Periods approved', `${p.approved} of ${p.periods}`],
@@ -196,8 +198,17 @@ async function build(
       services.ops.restatements(context, windowOf(query)),
       valueSections(input),
     ]);
+  // the financial month in its own calendar and the plant's digits ("Mehr 1405"), never a raw key
+  const closeView = close ? toMonthCloseView(close) : null;
+  const format = await presentationOf(manager, scope.tenantId, undefined);
+  const monthText = closeView
+    ? plantMonthText(closeView.monthKey, {
+        ...format,
+        calendar: closeView.calendar === 'persian' ? 'persian' : 'gregorian',
+      })
+    : null;
   const sections: ReportSection[] = [
-    ...(close ? [certification(toMonthCloseView(close))] : []),
+    ...(closeView && monthText ? [certification(closeView, monthText)] : []),
     waterfallTable(waterfall.data),
     lossTable(
       'Losses by category (quantity)',
@@ -214,7 +225,7 @@ async function build(
     scope,
     {
       kind: 'monthly',
-      title: `Monthly loss accounting statement${query.month ? ` · ${query.month}` : ''}`,
+      title: `Monthly loss accounting statement${monthText ? ` · ${monthText}` : ''}`,
       subtitle:
         'Certification, capacity waterfall, losses by category and reason, loss value and restatements',
       money,

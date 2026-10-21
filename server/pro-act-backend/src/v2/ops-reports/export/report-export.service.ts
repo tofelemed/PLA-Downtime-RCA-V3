@@ -10,6 +10,8 @@ import {
 import { createValidationPipe } from '../../../common/validation/validation-pipe.factory';
 import { ExportJob } from '../../../exports/entities/export-job.entity';
 import { presentationOf } from '../../../exports/export-presentation';
+import { DEFAULT_PDF_CURRENCY } from '../../../exports/pdf/pdf-model';
+import { inReportingCurrency } from './document-parts';
 import { ProductionPeriod } from '../../../periods/entities/production-period.entity';
 import { requireUser } from '../../../reconciliation/revision-access';
 import { PlaReportsV2Service } from '../../pla-reports/pla-reports-v2.service';
@@ -69,8 +71,13 @@ export class ReportExportService {
       context,
       query,
       money: canViewMoney(context),
+      currency: body.currency ?? DEFAULT_PDF_CURRENCY,
       services: this.services,
     });
+    const document = inReportingCurrency(
+      built.document,
+      body.currency ?? DEFAULT_PDF_CURRENCY,
+    );
     return this.periods.manager.transaction(async (manager) => {
       const job = await manager.save(
         manager.create(ExportJob, {
@@ -85,7 +92,7 @@ export class ReportExportService {
             revisionIds: null,
           },
           presentation: await presentationOf(manager, tenantId, body.currency),
-          reportContent: built.document,
+          reportContent: document,
           unitIds: built.unitIds,
           requestedBy: userId,
           state: 'queued',
@@ -112,7 +119,7 @@ export class ReportExportService {
             report: kind,
             format: job.format,
             unitIds: job.unitIds,
-            provisional: built.document.provisional,
+            provisional: document.provisional,
           },
         },
       ]);

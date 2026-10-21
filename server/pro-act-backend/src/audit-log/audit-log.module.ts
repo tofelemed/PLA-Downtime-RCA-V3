@@ -1,16 +1,13 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuditLog } from './audit-log.entity';
-import { AuditLogService } from './audit-log.service';
+import { AuditLogCoreModule } from './audit-log-core.module';
 import { AuditLogController } from './audit-log.controller';
 import { AuditAutoLogInterceptor } from './audit-auto-log.interceptor';
 import { RolesGuard } from '../auth/guards/roles.guard';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AuditLog])],
+  imports: [AuditLogCoreModule],
   providers: [
-    AuditLogService,
     AuditAutoLogInterceptor,
     RolesGuard,
     {
@@ -19,6 +16,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
     },
   ],
   controllers: [AuditLogController],
-  exports: [AuditLogService],
+  exports: [AuditLogCoreModule],
 })
 export class AuditLogModule {}

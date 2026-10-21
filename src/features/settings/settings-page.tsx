@@ -31,7 +31,7 @@ export function SettingsPage({ embedded = false }: { embedded?: boolean }) {
 
   return (
     <SectionPage embedded={embedded} title="Plant settings" description={tenant.data ? `Settings of ${tenant.data.name}` : undefined}>
-      <Section title="Date and number display" description="Applies to every screen of this plant, for every user. Exports stay in ISO format (UTC).">
+      <Section title="Date and number display" description="Applies to every screen and PDF export of this plant, for every user. CSV exports keep ISO dates.">
         <DataState state={state} error={tenant.error} onRetry={() => void tenant.refetch()}>
           <CalendarSettingsForm saved={saved} timeZone={zone.timezone} canEdit={canManagePlantSettings} />
         </DataState>
@@ -39,7 +39,7 @@ export function SettingsPage({ embedded = false }: { embedded?: boolean }) {
       <Section title="Reporting week" description="Weekly trends and reports group the plant's days from this weekday on.">
         <DataState state={state} error={tenant.error} onRetry={() => void tenant.refetch()}>
           <WeekStartForm
-            saved={tenant.data?.weekStart ?? 'monday'}
+            saved={tenant.data?.weekStart ?? ''}
             canEdit={canManagePlantSettings}
             pending={saveWeek.isPending}
             error={saveWeek.error}

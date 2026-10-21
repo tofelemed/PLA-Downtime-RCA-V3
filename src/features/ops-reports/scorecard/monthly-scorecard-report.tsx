@@ -10,26 +10,26 @@ import { findKpi, kpiText, shareText } from '@/features/pla-analytics/model/disp
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { formatCurrencyAmount } from '@/features/display-currency/money-format';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
-import { useCalendarPreference } from '@/lib/dates';
+import { useCalendarPreference, type DigitSystem } from '@/lib/dates';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
 import { twelveMonthWindow } from '../model/month-to-date';
 import { ReportExportBar } from '../components/report-export-bar';
 
-/** The money lost in the display currency (else the first currency), or why there is none. */
-function moneyText(month: ScorecardMonthView, currency: string): string {
-  const value = month.lossValue.find((v) => v.currency === currency) ?? month.lossValue[0];
-  if (!value) return '—';
-  return value.amount === null ? 'Not fully valued' : formatCurrencyAmount(value.amount, value.currency ?? currency);
+/** The money lost in the display currency (never another one, never converted), or why there is none. */
+function moneyText(month: ScorecardMonthView, currency: string, digits: DigitSystem): string {
+  const value = month.lossValue.find((v) => v.currency === currency);
+  if (!value) return month.lossValue.length ? `Not reported in ${currency}` : '—';
+  return value.amount === null ? 'Not fully valued' : formatCurrencyAmount(value.amount, currency, digits);
 }
 
 function useColumns(): Array<DataTableColumn<ScorecardMonthView>> {
-  const { digits } = useCalendarPreference();
+  const { calendar, digits } = useCalendarPreference();
   const { currency } = useDisplayCurrency();
   const { canViewMoney } = useCapabilities();
   const kpi = (metric: string) => (m: ScorecardMonthView) => <LocalizedNumber text={kpiText(findKpi(m.oee, metric), digits)} />;
   const output = (field: 'utilisation' | 'lossShare' | 'planAttainment') => (m: ScorecardMonthView) => <LocalizedNumber text={m.output.length === 1 ? shareText(m.output[0][field], digits) : m.output.length ? 'Several units of measure' : '—'} />;
   return [
-    { id: 'month', header: 'Month', nowrap: true, cell: (m) => <span data-testid="scorecard-month">{monthLabelOf(m.month, 'gregorian', digits)}</span> },
+    { id: 'month', header: 'Month', nowrap: true, cell: (m) => <span data-testid="scorecard-month">{monthLabelOf(m.month, calendar, digits)}</span> },
     { id: 'oee', header: 'OEE', align: 'right', cell: kpi('oee') },
     { id: 'availability', header: 'Availability', align: 'right', cell: kpi('availability') },
     { id: 'performance', header: 'Performance', align: 'right', cell: kpi('performance') },
@@ -37,7 +37,7 @@ function useColumns(): Array<DataTableColumn<ScorecardMonthView>> {
     { id: 'utilisation', header: 'Utilisation', align: 'right', cell: output('utilisation') },
     { id: 'lossShare', header: 'Capacity lost', align: 'right', cell: output('lossShare') },
     { id: 'attainment', header: 'Plan attainment', align: 'right', cell: output('planAttainment') },
-    ...(canViewMoney ? [{ id: 'money', header: 'Loss value', align: 'right' as const, nowrap: true, cell: (m: ScorecardMonthView) => moneyText(m, currency) }] : []),
+    ...(canViewMoney ? [{ id: 'money', header: 'Loss value', align: 'right' as const, nowrap: true, cell: (m: ScorecardMonthView) => moneyText(m, currency, digits) }] : []),
   ];
 }
 
@@ -49,7 +49,8 @@ function useColumns(): Array<DataTableColumn<ScorecardMonthView>> {
 export function MonthlyScorecardReport({ scope, dayStart }: { scope: AnalyticsScope; dayStart: string }) {
   const env = useEventHubEnv();
   const columns = useColumns();
-  const span = twelveMonthWindow(scope, dayStart, env.timezone);
+  const { calendar } = useCalendarPreference();
+  const span = twelveMonthWindow(scope, { dayStart, timeZone: env.timezone, calendar });
   const months = span ? { ...scope, ...span, windowLabel: '12 months' } : null;
   const query = useMonthlyScorecard(months ? scopeBase(months) : null, env.timezone);
   const data = query.data?.data;

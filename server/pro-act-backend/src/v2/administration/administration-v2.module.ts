@@ -1,3 +1,4 @@
+import { AuditLogCoreModule } from '../../audit-log/audit-log-core.module';
 import { Module, Type } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppSettingsModule } from '../../app-settings/app-settings.module';
@@ -19,6 +20,7 @@ import { UsersModule } from '../../users/users.module';
 import { AuditLogsV2Controller } from './audit-logs/audit-logs-v2.controller';
 import { AuditLogsV2Service } from './audit-logs/audit-logs-v2.service';
 import { BrandingV2Controller } from './branding/branding-v2.controller';
+import { BrandingPublicV2Controller } from './branding/branding-public-v2.controller';
 import { BrandingV2Service } from './branding/branding-v2.service';
 import { PlaceNamesService } from './common/place-names.service';
 import { CustomAttributesV2Controller } from './custom-attributes/custom-attributes-v2.controller';
@@ -77,6 +79,7 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
   OrganizationsV2Controller,
   PlantsV2Controller,
   BrandingV2Controller,
+  BrandingPublicV2Controller,
 ];
 
 /** Services of the administration API (owner requirement "v2 only" for the administration screens). */
@@ -100,6 +103,7 @@ export const ADMINISTRATION_V2_CONTROLLERS: Type<unknown>[] = [
     OrganizationModule,
     TenantModule,
     AppSettingsModule,
+    AuditLogCoreModule,
   ],
   providers: ADMINISTRATION_V2_PROVIDERS,
   exports: ADMINISTRATION_V2_PROVIDERS,

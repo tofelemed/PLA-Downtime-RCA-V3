@@ -1,5 +1,6 @@
 import type { ChangeProposalView } from '@/api/v2/types/reconciliation';
-import { formatCurrencyAmount } from '@/features/display-currency/money-format';
+import { entriesInCurrency, formatCurrencyAmount } from '@/features/display-currency/money-format';
+import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { DEFAULT_BASIS_LABELS, labelOf, REVISION_LIFECYCLE_LABELS } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { proposalValuesOf, type ProposalAmount, type ProposalValues as Values } from '../model/proposal-labels';
@@ -10,10 +11,13 @@ function AmountText({ amount }: { amount: ProposalAmount }) {
   return <>{formatCurrencyAmount(amount.amount, amount.currency, digits)}</>;
 }
 
+/** The amounts in the display currency (USD / IRR switch; all of them when none is in it; never converted). */
 function Amounts({ values }: { values: Values }) {
+  const { currency } = useDisplayCurrency();
+  const shown = entriesInCurrency(values.amounts, (a) => a.currency, currency);
   return (
     <>
-      {values.amounts.map((a, i) => (
+      {shown.map((a, i) => (
         <span key={a.currency}>
           {i > 0 && ' · '}
           <AmountText amount={a} />

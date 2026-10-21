@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useEffect, useId, useState } from 'react';
 import { Input } from '@/components/ui/input';
-import type { CalendarSystem } from '@/lib/dates';
+import { useCalendarPreference, type CalendarSystem } from '@/lib/dates';
 import { boundsError, dateToText, parseDateText } from './date-input-model';
 import { describedBy } from './described-by';
 import { FieldMessages } from './field-messages';
@@ -27,22 +27,23 @@ export interface PersianDateFieldProps {
  * text visible with an inline error.
  */
 export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error, calendar = 'persian' }: PersianDateFieldProps) {
-  const [text, setText] = useState(() => dateToText(value, calendar));
+  const { digits } = useCalendarPreference();
+  const [text, setText] = useState(() => dateToText(value, calendar, digits));
   const [ownError, setOwnError] = useState<string | null>(null);
   const hintId = useId();
   const errorId = useId();
 
   useEffect(() => {
-    setText(dateToText(value, calendar));
+    setText(dateToText(value, calendar, digits));
     setOwnError(null);
-  }, [value, calendar]);
+  }, [value, calendar, digits]);
 
   const commit = () => {
     const parsed = parseDateText(text, calendar);
     const problem = parsed.error ?? boundsError(parsed.value, calendar, min, max);
     setOwnError(problem);
     if (problem) return;
-    setText(dateToText(parsed.value, calendar));
+    setText(dateToText(parsed.value, calendar, digits));
     if (parsed.value !== value) onChange(parsed.value);
   };
 

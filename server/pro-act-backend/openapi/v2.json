@@ -20195,7 +20195,7 @@
     },
     "/api/v2/audit-logs/export": {
       "get": {
-        "description": "Times in ISO 8601 UTC. `X-Export-Truncated: true` when more entries matched.",
+        "description": "Times in ISO 8601 UTC, and on the plant clock with its offset. `X-Export-Truncated: true` when more entries matched.",
         "operationId": "AuditLogsV2Controller_export_v2",
         "parameters": [
           {
@@ -21156,6 +21156,29 @@
           }
         ],
         "summary": "Back to the default branding (super administrators)",
+        "tags": [
+          "v2 · Branding"
+        ]
+      }
+    },
+    "/api/v2/branding/public": {
+      "get": {
+        "description": "No sign-in needed: only what every visitor of the sign-in page sees.",
+        "operationId": "BrandingPublicV2Controller_publicView_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandingPublicV2View"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Name, subtitle, logo, colour and browser icon for the sign-in page",
         "tags": [
           "v2 · Branding"
         ]
@@ -32894,7 +32917,12 @@
             "type": "string",
             "enum": [
               "monday",
-              "saturday"
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
             ],
             "description": "First day of the reporting week; when omitted on create: saturday for Asia/Tehran or the Persian calendar, else monday (ISO)"
           }
@@ -32927,7 +32955,12 @@
             "type": "string",
             "enum": [
               "monday",
-              "saturday"
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday"
             ],
             "description": "First day of the reporting week: monday (ISO 8601) or saturday (Iranian week, weekend Thursday–Friday)"
           }
@@ -33093,6 +33126,32 @@
             "type": "number",
             "minimum": 0,
             "maximum": 1
+          }
+        },
+        "required": [
+          "appName"
+        ]
+      },
+      "BrandingPublicV2View": {
+        "type": "object",
+        "properties": {
+          "appName": {
+            "type": "string"
+          },
+          "appSubtitle": {
+            "type": "string"
+          },
+          "logoUrl": {
+            "type": "string"
+          },
+          "logoInitials": {
+            "type": "string"
+          },
+          "primaryColor": {
+            "type": "string"
+          },
+          "faviconUrl": {
+            "type": "string"
           }
         },
         "required": [

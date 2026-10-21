@@ -24,7 +24,7 @@ export async function fetchKnowledgeForExport(filters: RcaKnowledgeFilters): Pro
 
 /** CSV of the entries (names, never ids; dates ISO / UTC). */
 export function knowledgeCsv(entries: readonly RcaKnowledgeView[]): string {
-  const header = ['Title', 'Problem', 'Root cause', 'Recommendations', 'Unit', 'Asset', 'Quality', 'Published', 'Helpful', 'Not helpful', 'Closed at'];
+  const header = ['Title', 'Problem', 'Root cause', 'Recommendations', 'Unit', 'Asset', 'Quality', 'Published', 'Helpful', 'Not helpful', 'Closed at (UTC)'];
   const rows = entries.map((e) => [
     e.title,
     e.problemStatement ?? e.description,

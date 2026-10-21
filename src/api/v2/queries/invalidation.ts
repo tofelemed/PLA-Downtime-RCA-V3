@@ -89,15 +89,27 @@ function overlapPredicate(change: ChangeNotice['window']) {
   };
 }
 
+/**
+ * Notice of a plant's settings or identity (backend `PlantSettingsChanged`); it has no resource family on
+ * purpose, so every query of the plant refetches (dates, week buckets and labels follow the settings).
+ */
+export const PLANT_SETTINGS = 'plant_settings';
+
 /** A refetch already running for a query is kept, not restarted (a burst of notices → one request). */
 const KEEP_RUNNING_FETCH = { cancelRefetch: false } as const;
 
 /** Invalidates the cached results a change can affect, one tenant only; returns the resources touched. */
 export async function invalidateForChange(queryClient: QueryClient, notice: ChangeNotice): Promise<readonly V2Resource[] | null> {
   const inboxRefresh = refreshApprovalInbox(queryClient, notice.tenantId);
+  // a branding change (`admin_config` notice `BrandingChanged`) also reaches the shell's branding, kept
+  // under its own app-wide key (`useBranding`)
+  if (notice.entityType === 'admin_config') void queryClient.invalidateQueries({ queryKey: ['v2', 'app', 'branding'] }, KEEP_RUNNING_FETCH);
   const resources = resourcesFor(notice.entityType);
   if (!resources) {
-    await Promise.all([inboxRefresh, queryClient.invalidateQueries({ queryKey: v2Keys.all(notice.tenantId) }, KEEP_RUNNING_FETCH)]);
+    // a plant's own settings or name changed: the header's plant directory (names, zones) reloads too
+    const directory =
+      notice.entityType === PLANT_SETTINGS ? queryClient.invalidateQueries({ queryKey: ['v2', 'directory'] }, KEEP_RUNNING_FETCH) : Promise.resolve();
+    await Promise.all([inboxRefresh, directory, queryClient.invalidateQueries({ queryKey: v2Keys.all(notice.tenantId) }, KEEP_RUNNING_FETCH)]);
     return null;
   }
   await Promise.all([inboxRefresh, ...resources.map((resource) =>

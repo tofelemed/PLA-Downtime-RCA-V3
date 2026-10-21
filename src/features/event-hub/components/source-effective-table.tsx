@@ -62,7 +62,7 @@ export function SourceEffectiveTable({ revisions, overriddenFields, current = {}
           {factLabel(row.field)}
           {row.overridden && (
             <Badge variant="outline" className="ml-2" data-testid="override-badge">
-              {row.changedBy ? `Changed by ${users.nameOf(row.changedBy)}` : 'Changed in Pro-Act'}
+              {row.changedBy ? `Changed by ${users.nameOf(row.changedBy)}` : 'Changed in Traverse Forge'}
             </Badge>
           )}
           {row.differs && <span className="sr-only"> (differs from the source)</span>}

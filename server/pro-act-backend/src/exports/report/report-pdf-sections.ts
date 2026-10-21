@@ -10,7 +10,7 @@ import {
   PAGE,
   ReportPdfDoc,
   shrinkToFit,
-  THEME,
+  ReportTheme,
 } from './report-pdf-kit';
 import { printCell } from './report-values';
 
@@ -24,6 +24,8 @@ export interface DrawContext {
   bold: string;
   regular: string;
   format: PlantFormat;
+  /** report colours: the pinned branding's, else the original ones (`themeOf`) */
+  theme: ReportTheme;
 }
 
 const LEFT = PAGE.margin;
@@ -42,15 +44,15 @@ export function sectionTitle(
 ): void {
   ensure(ctx, note ? 48 : 36);
   const { doc } = ctx;
-  doc.rect(LEFT, ctx.y + 1, 3, 12).fill(THEME.red);
+  doc.rect(LEFT, ctx.y + 1, 3, 12).fill(ctx.theme.red);
   doc
     .font(ctx.bold)
     .fontSize(11)
-    .fillColor(THEME.navy)
+    .fillColor(ctx.theme.navy)
     .text(ctx.text(title), LEFT + 9, ctx.y, { lineBreak: false });
   ctx.y += 18;
   if (note) {
-    doc.font(ctx.regular).fontSize(8).fillColor(THEME.muted);
+    doc.font(ctx.regular).fontSize(8).fillColor(ctx.theme.muted);
     const text = ctx.text(note);
     const height = doc.heightOfString(text, { width: WIDTH });
     doc.text(text, LEFT, ctx.y, { width: WIDTH });
@@ -72,9 +74,9 @@ export function drawKpis(ctx: DrawContext, section: ReportKpis): void {
     }
     const x = LEFT + (index % perRow) * (width + gap);
     const { doc } = ctx;
-    doc.roundedRect(x, ctx.y, width, height, 4).fill(THEME.tile);
-    doc.rect(x, ctx.y, 3, height).fill(THEME.navy);
-    doc.font(ctx.regular).fontSize(8).fillColor(THEME.muted);
+    doc.roundedRect(x, ctx.y, width, height, 4).fill(ctx.theme.tile);
+    doc.rect(x, ctx.y, 3, height).fill(ctx.theme.navy);
+    doc.font(ctx.regular).fontSize(8).fillColor(ctx.theme.muted);
     doc.text(fitText(doc, ctx.text(item.label), width - 14), x + 9, ctx.y + 6, {
       lineBreak: false,
     });
@@ -82,13 +84,13 @@ export function drawKpis(ctx: DrawContext, section: ReportKpis): void {
       printCell(item.value, item, ctx.format) +
         (item.unit && item.type !== 'money' ? ` ${item.unit}` : ''),
     );
-    doc.font(ctx.bold).fillColor(THEME.ink);
+    doc.font(ctx.bold).fillColor(ctx.theme.ink);
     shrinkToFit(doc, value, width - 14, { max: 15, min: 9 });
     doc.text(fitText(doc, value, width - 14), x + 9, ctx.y + 19, {
       lineBreak: false,
     });
     if (item.caption) {
-      doc.font(ctx.regular).fontSize(7).fillColor(THEME.muted);
+      doc.font(ctx.regular).fontSize(7).fillColor(ctx.theme.muted);
       doc.text(
         fitText(doc, ctx.text(item.caption), width - 14),
         x + 9,
@@ -108,11 +110,11 @@ export function drawFacts(ctx: DrawContext, section: ReportFacts): void {
     doc
       .font(ctx.bold)
       .fontSize(8.5)
-      .fillColor(THEME.muted)
+      .fillColor(ctx.theme.muted)
       .text(ctx.text(label), LEFT, ctx.y, { width: 170, lineBreak: false });
     doc
       .font(ctx.regular)
-      .fillColor(THEME.ink)
+      .fillColor(ctx.theme.ink)
       .text(fitText(doc, ctx.text(value), WIDTH - 180), LEFT + 180, ctx.y, {
         lineBreak: false,
       });
@@ -124,7 +126,7 @@ export function drawFacts(ctx: DrawContext, section: ReportFacts): void {
 export function drawText(ctx: DrawContext, section: ReportText): void {
   sectionTitle(ctx, section.title);
   const { doc } = ctx;
-  doc.font(ctx.regular).fontSize(9).fillColor(THEME.ink);
+  doc.font(ctx.regular).fontSize(9).fillColor(ctx.theme.ink);
   for (const paragraph of section.paragraphs) {
     const text = ctx.text(paragraph);
     const height = doc.heightOfString(text, { width: WIDTH });
@@ -158,7 +160,7 @@ function headerRow(
   xs: Array<{ x: number; width: number }>,
 ): void {
   const { doc } = ctx;
-  doc.rect(LEFT, ctx.y, WIDTH, ROW + 2).fill(THEME.navy);
+  doc.rect(LEFT, ctx.y, WIDTH, ROW + 2).fill(ctx.theme.navy);
   doc.font(ctx.bold).fontSize(7.5).fillColor('#FFFFFF');
   section.columns.forEach((column, i) => {
     const label = column.unit
@@ -185,7 +187,7 @@ export function drawTable(ctx: DrawContext, section: ReportTable): void {
     doc
       .font(ctx.regular)
       .fontSize(8)
-      .fillColor(THEME.muted)
+      .fillColor(ctx.theme.muted)
       .text(ctx.text('Nothing for these dates.'), LEFT + 4, ctx.y + 4, {
         lineBreak: false,
       });
@@ -197,8 +199,9 @@ export function drawTable(ctx: DrawContext, section: ReportTable): void {
       ctx.newPage();
       headerRow(ctx, section, xs);
     }
-    if (index % 2 === 1) doc.rect(LEFT, ctx.y, WIDTH, ROW).fill(THEME.zebra);
-    doc.font(ctx.regular).fontSize(7.5).fillColor(THEME.ink);
+    if (index % 2 === 1)
+      doc.rect(LEFT, ctx.y, WIDTH, ROW).fill(ctx.theme.zebra);
+    doc.font(ctx.regular).fontSize(7.5).fillColor(ctx.theme.ink);
     section.columns.forEach((column, i) => {
       const { x, width } = xs[i];
       const text = ctx.text(printCell(row[i] ?? null, column, ctx.format));
@@ -211,7 +214,7 @@ export function drawTable(ctx: DrawContext, section: ReportTable): void {
     ctx.y += ROW;
   });
   doc
-    .strokeColor(THEME.rule)
+    .strokeColor(ctx.theme.rule)
     .lineWidth(0.5)
     .moveTo(LEFT, ctx.y)
     .lineTo(LEFT + WIDTH, ctx.y)

@@ -1,4 +1,5 @@
 import { type DigitSystem, localizeNumber } from '@/lib/dates';
+import { formatCurrencyAmount } from '@/features/display-currency/money-format';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { labelOf } from '@/features/ux-kit/labels';
 import { RCA_CONSEQUENCE_LABELS } from '@/features/ux-kit/labels/rca-labels';
@@ -33,7 +34,7 @@ export function triggerText(policy: RcaPolicyVersion, duration: (seconds: number
       : 'no cumulative trigger',
     policy.costThreshold === null || !policy.costCurrency
       ? 'no money limit'
-      : `approved value from ${number(policy.costThreshold, digits)} ${policy.costCurrency}`,
+      : `approved value from ${formatCurrencyAmount(String(policy.costThreshold), policy.costCurrency, digits)}`,
   ];
   return parts.join(' · ');
 }

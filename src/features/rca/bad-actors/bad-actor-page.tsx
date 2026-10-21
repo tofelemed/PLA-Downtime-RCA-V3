@@ -1,3 +1,4 @@
+import { NumberText } from '@/features/ux-kit/number-text';
 import { useSearchParams } from 'react-router-dom';
 import { useBadActorReport } from '@/api/v2/queries/bad-actors';
 import type { BadActorReportView } from '@/api/v2/types/bad-actors';
@@ -64,7 +65,7 @@ function ReportNote({ report }: { report: BadActorReportView }) {
   return (
     <div className="space-y-1 text-xs text-muted-foreground" data-testid="bad-actor-window">
       <p>
-        Rolling {report.windowDays} days: {reviewWindowDates(report, { timeZone: dates.timezone, ...preference })} (plant dates, both included). {valueBasisLabel(report.view)}
+        Rolling <NumberText value={report.windowDays} /> days: {reviewWindowDates(report, { timeZone: dates.timezone, ...preference })} (plant dates, both included). {valueBasisLabel(report.view)}
         {excluded ? `; ${excluded}` : ''}.
       </p>
       <p data-testid="bad-actor-basis">{basisSentence(report.basis)}</p>

@@ -36,6 +36,7 @@ import {
 import { PlantDetailV2View, PlantV2View } from './hierarchy-v2.view';
 import { HierarchyEditV2Service } from './hierarchy-edit-v2.service';
 import { HierarchyV2Service } from './hierarchy-v2.service';
+import { SkipAudit } from '../../../audit-log/skip-audit.decorator';
 
 /** Plants (tenants) of the caller's reach: create, edit (name, description, time zone), display settings. */
 @ApiTags('v2 · Plants')
@@ -77,6 +78,7 @@ export class PlantsV2Controller {
   }
 
   @Patch(':id')
+  @SkipAudit()
   @Roles('SuperAdmin', 'OrgAdmin')
   @UseInterceptors(ETagInterceptor)
   @ApiHeader({ name: 'If-Match', required: true })
@@ -115,6 +117,7 @@ export class PlantsV2Controller {
   }
 
   @Patch(':id/display-settings')
+  @SkipAudit()
   @ApiOperation({
     summary: 'Calendar system and digits of a plant',
     description:

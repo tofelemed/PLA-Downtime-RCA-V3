@@ -1,4 +1,5 @@
 import { roleLabel } from '@/features/ux-kit/labels';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { StatusIcon } from '@/lib/icons';
 
@@ -35,7 +36,7 @@ export function SlaBadges({ sla }: { sla: SlaFlags }) {
       )}
       {sla.rejectionEscalated && (
         <StatusBadge tone="neutral" data-testid="sla-rejections">
-          Rejected {sla.rejections}×
+          Rejected <NumberText value={sla.rejections} />×
         </StatusBadge>
       )}
     </span>

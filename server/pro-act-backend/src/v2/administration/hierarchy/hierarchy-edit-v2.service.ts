@@ -24,6 +24,9 @@ import { OrganizationService } from '../../../organization/organization.service'
 import { Tenant } from '../../../tenant/tenant.entity';
 import { UpdateOrganizationV2Dto, UpdatePlantV2Dto } from './hierarchy-v2.dto';
 import { HierarchyV2Service } from './hierarchy-v2.service';
+import { AuditLogService } from '../../../audit-log/audit-log.service';
+import { changedFields } from '../../../audit-log/settings-change';
+import { announcePlantSettings } from '../../../realtime/settings-notices';
 import {
   OrganizationV2View,
   PlantDetailV2View,
@@ -82,6 +85,7 @@ export class HierarchyEditV2Service {
     @InjectRepository(Tenant) private readonly plants: Repository<Tenant>,
     private readonly organizationService: OrganizationService,
     private readonly hierarchy: HierarchyV2Service,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async getOrganization(
@@ -167,8 +171,28 @@ export class HierarchyEditV2Service {
         }
         await conditionalUpdate(manager, Tenant, id, expectedVersion, changes);
         await syncDefaultSite(manager, plant, changes);
+        // the plant's users see the new name / time zone without a reload
+        if (Object.keys(changes).length)
+          await announcePlantSettings(manager, id);
       }),
     );
+    // audited here with old and new values, under the edited plant (the route skips the auto-audit); the
+    // row belongs to that plant, which need not be the plant the caller acts in
+    const audit = () =>
+      this.auditLog.recordChange(context, {
+        entityType: 'Tenant',
+        entityId: id,
+        tenantId: id,
+        organizationId: plant.organizationId,
+        subject: `Changed plant ${plant.name}`,
+        changes: changedFields(plant, { ...plant, ...changes }, [
+          'name',
+          'description',
+          'timezone',
+        ]),
+        labels: { timezone: 'time zone' },
+      });
+    await outsideTenantBinding(context, audit);
     return this.getPlant(context, id);
   }
 }

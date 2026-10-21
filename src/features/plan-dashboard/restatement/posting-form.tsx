@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DateInput } from '@/features/ux-kit/date-inputs/date-input';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { POSTING_TREATMENT_LABELS, POSTING_TREATMENT_OPTIONS } from '../model/restatement-labels';
 
 const TREATMENTS: PostingTreatment[] = ['correction', 'estimate_change', 'other_adjustment', 'no_posting'];
@@ -18,6 +19,7 @@ export function PostingForm({ data }: { data: RestatementView }) {
   const id = useId();
   const [postingDate, setPostingDate] = useState('');
   const [treatment, setTreatment] = useState<PostingTreatment>('correction');
+  const pref = useCalendarPreference();
   const save = () => command.submit({ periodId: data.periodId, revision: data.revision, postingDate, treatment });
   return (
     <div className="flex flex-wrap items-end gap-3 text-sm" data-testid="posting-form">
@@ -39,7 +41,7 @@ export function PostingForm({ data }: { data: RestatementView }) {
           </Button>
         }
         title="Save this posting decision?"
-        description={`Posting date ${postingDate}, treatment: ${POSTING_TREATMENT_LABELS[treatment]}. The decision is final: a later change needs a new restatement.`}
+        description={`Posting date ${formatOperationalDate(postingDate, pref)}, treatment: ${POSTING_TREATMENT_LABELS[treatment]}. The decision is final: a later change needs a new restatement.`}
         confirmLabel="Save posting"
         onConfirm={save}
       />

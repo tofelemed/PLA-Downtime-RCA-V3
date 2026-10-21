@@ -1,3 +1,4 @@
+import { exportFileName } from '../../../exports/export-file-name';
 import {
   Body,
   Controller,
@@ -109,7 +110,7 @@ export class ReportExportsV2Controller {
     const kind = job.reportContent?.kind ?? 'report';
     return new StreamableFile(stream, {
       type: CONTENT_TYPES[job.format] ?? 'application/octet-stream',
-      disposition: `attachment; filename="proact-${kind}-${job.id}.${job.format}"`,
+      disposition: `attachment; filename="${exportFileName(job, kind)}"`,
       length: job.sizeBytes ?? undefined,
     });
   }

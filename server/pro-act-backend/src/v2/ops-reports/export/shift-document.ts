@@ -5,6 +5,8 @@ import { ShiftHandoverView } from '../shift-handover';
 import { eventStatusTable } from './daily-document';
 import { documentOf, productionTable } from './document-parts';
 import { BuildInput, BuiltReport, ReportKind } from './report-kind';
+import { presentationOf } from '../../../exports/export-presentation';
+import { plantDayText } from '../../../exports/report/report-values';
 
 const CODING: Readonly<Record<string, string>> = {
   uncoded: 'Not coded',
@@ -94,7 +96,8 @@ async function build(
     scope,
     {
       kind: 'shift',
-      title: `Shift handover · ${query.localDate} · shift ${query.shiftName}`,
+      // the date on the plant's calendar and digits, like the cover (settings audit, 21 Oct 2026)
+      title: `Shift handover · ${plantDayText(query.localDate, await presentationOf(manager, scope.tenantId, undefined))} · shift ${query.shiftName}`,
       subtitle: 'Output, events, coding and notes for the next shift',
       money,
     },

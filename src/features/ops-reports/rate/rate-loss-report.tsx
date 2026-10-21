@@ -21,7 +21,7 @@ function RateLossTrend({ scope }: { scope: AnalyticsScope }) {
   const query = useRateLoss(scopeBase(scope), env.timezone);
   const data = query.data?.data;
   const columns: Array<DataTableColumn<RateLossMonthView>> = [
-    { id: 'month', header: 'Month', cell: (m) => <span data-testid="rate-loss-month">{monthLabelOf(m.month, 'gregorian', pref.digits)}</span> },
+    { id: 'month', header: 'Month', cell: (m) => <span data-testid="rate-loss-month">{monthLabelOf(m.month, pref.calendar, pref.digits)}</span> },
     { id: 'equivalent', header: 'Equivalent downtime', align: 'right', nowrap: true, cell: (m) => seconds(m.equivalentDowntime) },
     { id: 'performance', header: 'Performance', align: 'right', nowrap: true, cell: (m) => <LocalizedNumber text={kpiText(m.performance, pref.digits)} /> },
   ];

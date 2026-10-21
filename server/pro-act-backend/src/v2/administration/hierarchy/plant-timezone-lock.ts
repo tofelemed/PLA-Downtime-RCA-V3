@@ -9,12 +9,17 @@ export interface PlantTimezoneUsage {
   productionEvents: number;
   signalSamples: number;
   calculatedPeriods: number;
+  /** published (or retired) shift-calendar versions: their shifts were set in the plant's zone */
+  publishedCalendars: number;
+  /** generated shifts, whose start and end instants come from the calendar's zone */
+  shiftInstances: number;
 }
 
 /**
  * One query per kind; `limit` caps each count. Signal samples are found through the plant's signals (the
  * sample table is keyed by signal, not by tenant); calculated periods are production periods with a
- * calculation run or an accounting revision.
+ * calculation run or an accounting revision. Published calendar versions and generated shifts count too
+ * (settings audit, 21 Oct 2026): a zone change would leave them in the old zone.
  */
 const USAGE_SQL = (limit: number) => `
   SELECT
@@ -27,7 +32,11 @@ const USAGE_SQL = (limit: number) => `
        WHERE p."tenant_id" = $1
          AND (EXISTS (SELECT 1 FROM "calculation_runs" r WHERE r."period_id" = p."id")
            OR EXISTS (SELECT 1 FROM "accounting_revisions" a WHERE a."period_id" = p."id"))
-       LIMIT ${limit}) x)::int AS "calculatedPeriods"`;
+       LIMIT ${limit}) x)::int AS "calculatedPeriods",
+    (SELECT count(*) FROM (SELECT 1 FROM "calendar_versions" c
+       WHERE c."tenant_id" = $1 AND c."state"::text <> 'draft' LIMIT ${limit}) x)::int AS "publishedCalendars",
+    (SELECT count(*) FROM (SELECT 1 FROM "shift_instances" i
+       WHERE i."tenant_id" = $1 LIMIT ${limit}) x)::int AS "shiftInstances"`;
 
 /** Usage of the plant's time zone, each kind counted up to `limit` (1 = "is there any"). */
 export async function plantTimezoneUsage(
@@ -45,7 +54,9 @@ export function isTimezoneLocked(usage: PlantTimezoneUsage): boolean {
   return (
     usage.productionEvents > 0 ||
     usage.signalSamples > 0 ||
-    usage.calculatedPeriods > 0
+    usage.calculatedPeriods > 0 ||
+    usage.publishedCalendars > 0 ||
+    usage.shiftInstances > 0
   );
 }
 
@@ -91,6 +102,24 @@ export function timezoneLockReason(
         usage.calculatedPeriods,
         'calculated period',
         'calculated periods',
+        exact,
+      ),
+    );
+  if (usage.publishedCalendars > 0)
+    parts.push(
+      plural(
+        usage.publishedCalendars,
+        'published shift calendar',
+        'published shift calendars',
+        exact,
+      ),
+    );
+  if (usage.shiftInstances > 0)
+    parts.push(
+      plural(
+        usage.shiftInstances,
+        'generated shift',
+        'generated shifts',
         exact,
       ),
     );

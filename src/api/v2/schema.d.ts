@@ -5934,7 +5934,7 @@ export interface paths {
         };
         /**
          * CSV of the filtered entries (newest first, at most 10000 rows)
-         * @description Times in ISO 8601 UTC. `X-Export-Truncated: true` when more entries matched.
+         * @description Times in ISO 8601 UTC, and on the plant clock with its offset. `X-Export-Truncated: true` when more entries matched.
          */
         get: operations["AuditLogsV2Controller_export_v2"];
         put?: never;
@@ -6158,6 +6158,26 @@ export interface paths {
         post?: never;
         /** Back to the default branding (super administrators) */
         delete: operations["BrandingV2Controller_reset_v2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/branding/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Name, subtitle, logo, colour and browser icon for the sign-in page
+         * @description No sign-in needed: only what every visitor of the sign-in page sees.
+         */
+        get: operations["BrandingPublicV2Controller_publicView_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -10481,7 +10501,7 @@ export interface components {
              * @description First day of the reporting week; when omitted on create: saturday for Asia/Tehran or the Persian calendar, else monday (ISO)
              * @enum {string}
              */
-            weekStart?: "monday" | "saturday";
+            weekStart?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
         };
         PlantDisplaySettingsV2Dto: {
             /** @enum {string} */
@@ -10492,7 +10512,7 @@ export interface components {
              * @description First day of the reporting week: monday (ISO 8601) or saturday (Iranian week, weekend Thursday–Friday)
              * @enum {string}
              */
-            weekStart?: "monday" | "saturday";
+            weekStart?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
         };
         BrandingV2View: {
             appName: string;
@@ -10538,6 +10558,14 @@ export interface components {
             logoContainerRadius?: number;
             logoContainerPadding?: number;
             logoBackgroundOpacity?: number;
+        };
+        BrandingPublicV2View: {
+            appName: string;
+            appSubtitle?: string;
+            logoUrl?: string;
+            logoInitials?: string;
+            primaryColor?: string;
+            faviconUrl?: string;
         };
         RcaCriticalAssetsDto: {
             criticalities: string[];
@@ -20492,6 +20520,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrandingV2View"];
+                };
+            };
+        };
+    };
+    BrandingPublicV2Controller_publicView_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandingPublicV2View"];
                 };
             };
         };

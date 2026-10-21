@@ -4,6 +4,8 @@ import type { MonthCloseView } from '@/api/v2/types/month-close';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { MonthNav } from '@/features/month-close/components/month-nav';
+import { monthLabelOf } from '@/features/month-close/model/month-label';
+import { useCalendarPreference } from '@/lib/dates';
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { EconomicBreakdownCard } from '@/features/pla-analytics/reports/economic-breakdown-card';
 import { LossValueCard } from '@/features/pla-analytics/reports/loss-value-card';
@@ -43,6 +45,7 @@ export function MonthlyStatement({ scope, dayStart }: { scope: AnalyticsScope; d
   const query = useMonthClose(month);
   const view = query.data;
   const span = view ? monthWindow(view, dayStart, env.timezone) : null;
+  const pref = useCalendarPreference();
   return (
     <div className="space-y-4" data-testid="monthly-statement">
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
@@ -50,7 +53,7 @@ export function MonthlyStatement({ scope, dayStart }: { scope: AnalyticsScope; d
         <ReportExportBar kind="monthly" query={view && span ? { ...scopeBase({ ...scope, ...span }), month: view.monthKey } : null} timezone={env.timezone} />
       </div>
       <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
-        {view && span && <StatementBody view={view} scope={{ ...scope, ...span, windowLabel: view.monthKey }} />}
+        {view && span && <StatementBody view={view} scope={{ ...scope, ...span, windowLabel: monthLabelOf(view.monthKey, view.calendar, pref.digits) }} />}
       </DataState>
     </div>
   );

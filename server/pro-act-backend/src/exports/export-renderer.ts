@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { brandLogoOf } from './export-brand';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { createHash, Hash } from 'crypto';
 import { once } from 'events';
@@ -171,9 +172,11 @@ export class ExportRenderer {
   ): Promise<Outcome> {
     const decision = await checkpoint(0);
     if (decision !== 'continue') return { status: decision, processed: 0 };
-    writer.rows = await this.pdf.writeReport(job, {
-      write: (chunk) => writer.writeBytes(chunk),
-    });
+    writer.rows = await this.pdf.writeReport(
+      job,
+      { write: (chunk) => writer.writeBytes(chunk) },
+      await brandLogoOf(this.dataSource.manager),
+    );
     return { status: 'continue', processed: 1 };
   }
 

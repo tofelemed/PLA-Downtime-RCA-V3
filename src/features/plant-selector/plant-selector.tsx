@@ -10,6 +10,7 @@ import { EntityIcon, UiIcon, type AppIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization } from '@/api/v2/types/plant-directory';
 import { PlantTree } from './plant-tree';
 import { usePlantDirectory } from './use-plant-directory';
+import { refreshedSelection } from './selection-refresh';
 
 interface Crumb {
   icon: AppIcon;
@@ -44,6 +45,16 @@ function useDefaultSelection(directory: ReturnType<typeof usePlantDirectory>) {
   }, [directory, loading, selection, session, setSelection]);
 }
 
+/** Keeps the stored selection's plant / organisation names and zone in step with the directory (renames). */
+function useSelectionNames(directory: ReturnType<typeof usePlantDirectory>) {
+  const { selection, setSelection, loading } = usePlantSelection();
+  useEffect(() => {
+    if (loading || directory.isLoading) return;
+    const next = refreshedSelection(selection, directory.tenants, directory.organizations);
+    if (next) setSelection(next);
+  }, [directory, loading, selection, setSelection]);
+}
+
 /**
  * Header plant selector: the scope every screen acts on. Loads only organisations and selectable
  * plants up front; units and assets load when a node is opened. Fully keyboard operable.
@@ -53,6 +64,7 @@ export function PlantSelector() {
   const { selection, setSelection, loading } = usePlantSelection();
   const [open, setOpen] = useState(false);
   useDefaultSelection(directory);
+  useSelectionNames(directory);
 
   if (loading || directory.isLoading) return <Skeleton className="h-5 w-40" role="status" aria-label="Loading plants" />;
   const crumbs = crumbsOf(selection, directory.organizations);

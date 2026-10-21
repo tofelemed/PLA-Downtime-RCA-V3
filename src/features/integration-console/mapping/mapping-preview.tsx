@@ -1,5 +1,6 @@
 import type { AttributeMappingPreviewView } from '@/api/v2/types/integration-mappings';
 import { DurationText } from '@/features/ux-kit/duration-text';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { formatValue } from '../model/mapping-draft';
 
@@ -20,7 +21,7 @@ function FieldList({ title, values, testId }: { title: string; values: Record<st
               <dd>
                 {name === DURATION_FACT && typeof value === 'number' ? (
                   <>
-                    <DurationText seconds={value} /> ({value} s)
+                    <DurationText seconds={value} /> (<NumberText value={value} /> s)
                   </>
                 ) : (
                   formatValue(value)

@@ -14,12 +14,21 @@ const at = (offsetMs: number) => new Date(due.getTime() + offsetMs);
 
 /** Item 6: due / overdue reminders of RCA actions and tasks, escalated once after 7 days overdue. */
 describe('workItemNotices', () => {
+  // an RCA action's due_date is the start of its due plant day; the day is due in full (21 Oct 2026)
+  const end = (ms: number) => at(DAY + ms);
+
+  it('on its due plant day an RCA action is due, not yet overdue', () => {
+    expect(workItemNotices(action, at(HOUR), timings)).toEqual([
+      expect.objectContaining({ kind: 'rca_action_due', level: 0 }),
+    ]);
+  });
+
   it('owes nothing before the lead time', () => {
-    expect(workItemNotices(action, at(-2 * DAY - 1), timings)).toEqual([]);
+    expect(workItemNotices(action, end(-2 * DAY - 1), timings)).toEqual([]);
   });
 
   it('inside the lead time: the owner is told it is due, keyed on the due date', () => {
-    expect(workItemNotices(action, at(-2 * DAY), timings)).toEqual([
+    expect(workItemNotices(action, end(-2 * DAY), timings)).toEqual([
       {
         kind: 'rca_action_due',
         recipient: 'assignee',
@@ -29,8 +38,8 @@ describe('workItemNotices', () => {
     ]);
   });
 
-  it('from the due date: overdue to the owner only, until the escalation age', () => {
-    const notices = workItemNotices(action, at(0), timings);
+  it('once the due plant day is over: overdue to the owner only, until the escalation age', () => {
+    const notices = workItemNotices(action, end(0), timings);
     expect(notices).toEqual([
       {
         kind: 'rca_action_overdue',
@@ -39,11 +48,11 @@ describe('workItemNotices', () => {
         dedupeKey: 'rca-action:a1:overdue:2027-03-10T12:00:00.000Z:1',
       },
     ]);
-    expect(workItemNotices(action, at(7 * DAY - 1), timings)).toHaveLength(1);
+    expect(workItemNotices(action, end(7 * DAY - 1), timings)).toHaveLength(1);
   });
 
   it('7 days overdue: the escalation addressee is told too (an item first seen late owes both levels)', () => {
-    const notices = workItemNotices(action, at(7 * DAY), timings);
+    const notices = workItemNotices(action, end(7 * DAY), timings);
     expect(notices.map((n) => [n.recipient, n.level])).toEqual([
       ['assignee', 1],
       ['escalation', 2],

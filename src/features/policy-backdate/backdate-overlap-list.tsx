@@ -1,5 +1,6 @@
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { overlapOf } from './backdate-model';
 
 const TITLES = {
@@ -10,6 +11,7 @@ const TITLES = {
 /** The periods a refused backdate overlaps (409 BACKDATE_OVERLAPS_CALCULATION / _APPROVED_VALUE); nothing otherwise. */
 export function BackdateOverlapList({ error }: { error: unknown }) {
   const { timezone } = usePlantTimezone();
+  const pref = useCalendarPreference();
   const overlap = overlapOf(error);
   if (!overlap || overlap.periods.length === 0) return null;
   const more = overlap.total - overlap.periods.length;
@@ -19,7 +21,7 @@ export function BackdateOverlapList({ error }: { error: unknown }) {
       <ul className="list-disc pl-5">
         {overlap.periods.map((period) => (
           <li key={period.periodId}>
-            {period.unitName} · {period.localDate}
+            {period.unitName} · {formatOperationalDate(period.localDate, pref)}
             {period.shiftName && ` · ${period.shiftName}`} (<PlantTime iso={period.utcStart} tz={timezone} withDate /> – <PlantTime iso={period.utcEnd} tz={timezone} withDate />)
           </li>
         ))}

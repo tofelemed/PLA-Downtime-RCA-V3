@@ -21,7 +21,12 @@ export function toAuditFilters(values: AuditUrlFilters): AuditFilters {
   };
 }
 
-/** `traverse-forge-audit-log-<from day>-to-<to day>.csv`: plant days in the name, ISO / UTC times inside. */
+/**
+ * `traverse-forge-audit-log-<from day>-to-<last day>.csv`: plant days in the name, ISO / UTC times inside. `to`
+ * is the exclusive end, so the name shows the last day included (the day of `to` − 1 ms).
+ */
 export function auditExportFileName(filters: AuditFilters, timezone: string): string {
-  return exportFileName(['audit-log', plantFileDay(filters.from, timezone), 'to', plantFileDay(filters.to, timezone)]);
+  const end = Date.parse(filters.to);
+  const last = Number.isNaN(end) ? filters.to : new Date(end - 1).toISOString();
+  return exportFileName(['audit-log', plantFileDay(filters.from, timezone), 'to', plantFileDay(last, timezone)]);
 }

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { WEEK_START_CHOICES } from '@/features/settings/week-start-choices';
 import { StatusIcon } from '@/lib/icons';
 import { FormField } from '../shared/form-field';
 import { PageGate } from '../shared/page-gate';
@@ -15,11 +16,14 @@ import { HIERARCHY_FIELD_VOCABULARY } from './hierarchy-field-vocabulary';
 
 const BACK = { to: '/admin?tab=plants', label: 'Admin panel' };
 const CODE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+/** the server picks the week start: Saturday for Iranian plants (Asia/Tehran), Monday otherwise */
+const AUTO_WEEK = 'auto';
 
 type Kind = 'organization' | 'plant';
 
 interface Values extends HierarchyFieldValues {
   organizationId: string;
+  weekStart: string;
 }
 
 function validate(values: Values, plant: boolean): HierarchyFieldErrors {
@@ -47,7 +51,8 @@ function HierarchyForm({ kind }: { kind: Kind }) {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const orgId = useId();
-  const [values, setValues] = useState<Values>({ code: '', name: '', description: '', organizationId: params.get('organizationId') ?? '', timezone: '' });
+  const weekId = useId();
+  const [values, setValues] = useState<Values>({ code: '', name: '', description: '', organizationId: params.get('organizationId') ?? '', timezone: '', weekStart: AUTO_WEEK });
   const [errors, setErrors] = useState<HierarchyFieldErrors>({});
   const organizations = useOrganizations();
   const writable = useMemo(() => (organizations.data?.items ?? []).filter((org) => org.canAddPlants), [organizations.data]);
@@ -63,7 +68,7 @@ function HierarchyForm({ kind }: { kind: Kind }) {
     if (Object.keys(found).length) return;
     const base = { code: values.code, name: values.name.trim(), ...(values.description.trim() ? { description: values.description.trim() } : {}) };
     try {
-      if (plant) await feedback(() => createPlant.submit({ ...base, organizationId: values.organizationId, timezone: values.timezone }), 'Plant created');
+      if (plant) await feedback(() => createPlant.submit({ ...base, organizationId: values.organizationId, timezone: values.timezone, ...(values.weekStart === AUTO_WEEK ? {} : { weekStart: values.weekStart }) }), 'Plant created');
       else await feedback(() => createOrg.submit(base), 'Organization created');
       navigate(BACK.to);
     } catch {
@@ -84,6 +89,17 @@ function HierarchyForm({ kind }: { kind: Kind }) {
             </FormField>
           )}
           <HierarchyFields values={values} errors={errors} set={set} plant={plant} />
+          {plant && (
+            <FormField htmlFor={weekId} label="First day of the week" hint="Weekly trends and reports group the days from it; it can be changed later in Plant settings.">
+              <Select value={values.weekStart} onValueChange={(weekStart) => set({ weekStart })}>
+                <SelectTrigger id={weekId}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={AUTO_WEEK}>Automatic (Saturday for Asia/Tehran, otherwise Monday)</SelectItem>
+                  {WEEK_START_CHOICES.map((choice) => <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
           <div className="flex gap-2 sm:col-span-2">
             <Button type="submit" disabled={busy} aria-busy={busy || undefined}>
               {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}

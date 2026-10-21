@@ -1,8 +1,11 @@
-/** Display text for the sign-in page. Labels only: field ids, names and validation live in LoginForm. */
+/**
+ * Display text for the sign-in page. Labels only: field ids, names and validation live in LoginForm. The name and
+ * subtitle are the fallback while the configured branding (`useSignInBranding`) is not known.
+ */
 export const LOGIN_COPY = {
   documentTitle: 'Sign in · Traverse Forge',
   heroTitle: 'PRODUCTION ASSURANCE',
-  heroSubtitle: 'TRAVERSE LOSS · DOWNTIME · ROOT CAUSE',
+  heroSubtitle: 'PRODUCTION LOSS · DOWNTIME · ROOT CAUSE',
   appName: 'TRAVERSE FORGE',
   appSubtitle: 'PRODUCTION LOSS ACCOUNTING · DOWNTIME · RCA',
   noticeLead: 'Authorized use notice:',

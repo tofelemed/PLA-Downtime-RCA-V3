@@ -106,7 +106,14 @@ describe('shared work-item notifications', () => {
     await sql(
       `INSERT INTO rca_actions (id, tenant_id, row_version, rca_id, title, owner_id, due_date, status)
        VALUES ($1, $2, 1, $3, 'Replace bearing', $4, $5, 'open')`,
-      [ids.action, tenantA, ids.rca, ids.owner, DUE],
+      // an action's due_date is the start of its due plant day (21 Oct 2026): the day ending at DUE
+      [
+        ids.action,
+        tenantA,
+        ids.rca,
+        ids.owner,
+        new Date(DUE.getTime() - 86_400_000),
+      ],
     );
     await sql(
       `INSERT INTO tasks (id, title, assigned_to, assigned_by, priority, status, due_date, organization_id, tenant_id)

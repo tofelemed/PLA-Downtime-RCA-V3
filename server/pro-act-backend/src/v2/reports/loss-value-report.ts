@@ -18,7 +18,7 @@ import {
   LossValueGroup,
   LossValueReportQueryDto,
 } from './loss-value-v2.dto';
-import { params, periodStats, SHOWN } from './report-sql';
+import { params, periodStats, plantMonthSql, SHOWN } from './report-sql';
 import { ReportScope } from './report-scope';
 
 export interface CurrencyValueView {
@@ -80,7 +80,7 @@ const GROUPS: Readonly<Record<Exclude<LossValueGroup, 'component'>, string>> = {
   kind: `t."kind"::text`,
   unit: `s."unit_id"::text`,
   day: `s."local_date"::text`,
-  month: `to_char(s."local_date", 'YYYY-MM')`,
+  month: plantMonthSql(`s."local_date"`),
 };
 
 const BASIS =

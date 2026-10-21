@@ -247,7 +247,7 @@ async function plan(
 async function scorecard(
   input: BuildInput<ReportWindowQueryDto>,
 ): Promise<BuiltReport> {
-  const { manager, context, query, services, money } = input;
+  const { manager, context, query, services, money, currency } = input;
   const scope = await resolveReportScope(manager, context, query);
   const [response, themes] = await Promise.all([
     services.ops.monthlyScorecard(context, windowOf(query)),
@@ -260,8 +260,9 @@ async function scorecard(
     m.oee.find((k) => k.metric === metric)?.value ?? null;
   const single = (m: (typeof response.data.months)[number]) =>
     m.output.length === 1 ? m.output[0] : null;
+  // the export's reporting currency only (never the first of several, never converted)
   const money0 = (m: (typeof response.data.months)[number]) =>
-    m.lossValue[0] ?? null;
+    m.lossValue.find((value) => value.currency === currency) ?? null;
   const sections: ReportSection[] = [
     {
       kind: 'table',

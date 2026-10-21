@@ -36,7 +36,8 @@ import { assertCaseNotClosed } from './case-closed';
 import { findCase, invalidBody, scopeOf } from './rca-scope';
 
 /** target close date passed while the case is not closed */
-export const OVERDUE = `(rca.target_completion_date IS NOT NULL AND rca.target_completion_date < now() AND rca.status IS DISTINCT FROM 'Closed')`;
+/** Past the target plant day (stored as the instant that day starts, so it ends 24 h later) and not closed. */
+export const OVERDUE = `(rca.target_completion_date IS NOT NULL AND rca.target_completion_date + interval '1 day' <= now() AND rca.status IS DISTINCT FROM 'Closed')`;
 
 const LINKED_EVENT = (condition: string) =>
   `EXISTS (SELECT 1 FROM "rca_case_links" k JOIN "production_events" e ON e."id"::text = k."target_id"

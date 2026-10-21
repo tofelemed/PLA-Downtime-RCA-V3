@@ -11,6 +11,7 @@ import { RequestContext } from '../../../common/context/request-context';
 import { TenantQueryParamGuard } from '../../common/tenant-query-param.guard';
 import { BrandingV2Dto, BrandingV2View } from './branding-v2.dto';
 import { BrandingV2Service } from './branding-v2.service';
+import { SkipAudit } from '../../../audit-log/skip-audit.decorator';
 
 /** Application-wide branding (name, logo, colours): read by everyone, written by super administrators. */
 @ApiTags('v2 · Branding')
@@ -28,6 +29,7 @@ export class BrandingV2Controller {
   }
 
   @Put()
+  @SkipAudit()
   @Roles('SuperAdmin')
   @ApiOperation({ summary: 'Store the branding (super administrators)' })
   @ApiOkResponse({ type: BrandingV2View })
@@ -39,6 +41,7 @@ export class BrandingV2Controller {
   }
 
   @Delete()
+  @SkipAudit()
   @Roles('SuperAdmin')
   @ApiOperation({
     summary: 'Back to the default branding (super administrators)',

@@ -8,8 +8,9 @@ import {
   fitText,
   loadReportPdfKit,
   PAGE,
+  productNameOf,
   ReportPdfDoc,
-  THEME,
+  themeOf,
 } from './report-pdf-kit';
 import {
   DrawContext,
@@ -36,6 +37,7 @@ function header(
   fonts: { bold: string; regular: string },
 ): void {
   const { document, presentation } = input;
+  const theme = themeOf(presentation.brand);
   const left = PAGE.margin;
   let x = left;
   if (input.logo) {
@@ -45,9 +47,9 @@ function header(
   doc
     .font(fonts.bold)
     .fontSize(17)
-    .fillColor(THEME.navy)
+    .fillColor(theme.navy)
     .text(text(document.title), x, 26, { lineBreak: false });
-  doc.font(fonts.regular).fontSize(9).fillColor(THEME.muted);
+  doc.font(fonts.regular).fontSize(9).fillColor(theme.muted);
   doc.text(fitText(doc, text(document.subtitle), 430), x, 48, {
     lineBreak: false,
   });
@@ -58,12 +60,12 @@ function header(
     doc.font(fonts.bold).fontSize(9);
     const width = doc.widthOfString(text(STAMP)) + 16;
     const stampX = PAGE.width - PAGE.margin - width;
-    doc.roundedRect(stampX, 26, width, 18, 3).fill(THEME.stamp);
+    doc.roundedRect(stampX, 26, width, 18, 3).fill(theme.stamp);
     doc
       .fillColor('#FFFFFF')
       .text(text(STAMP), stampX + 8, 31, { lineBreak: false });
   }
-  doc.rect(left, 82, PAGE.width - 2 * left, 2).fill(THEME.red);
+  doc.rect(left, 82, PAGE.width - 2 * left, 2).fill(theme.red);
 }
 
 function coverFacts(ctx: DrawContext, input: ReportPdfInput): void {
@@ -87,17 +89,17 @@ function coverFacts(ctx: DrawContext, input: ReportPdfInput): void {
   const height = rows.length * 13 + 12;
   doc
     .roundedRect(PAGE.margin, ctx.y, PAGE.width - 2 * PAGE.margin, height, 4)
-    .fill(THEME.zebra);
+    .fill(ctx.theme.zebra);
   rows.forEach(([label, value], i) => {
     const y = ctx.y + 7 + i * 13;
     doc
       .font(ctx.bold)
       .fontSize(8.5)
-      .fillColor(THEME.muted)
+      .fillColor(ctx.theme.muted)
       .text(ctx.text(label), PAGE.margin + 10, y, { lineBreak: false });
     doc
       .font(ctx.regular)
-      .fillColor(THEME.ink)
+      .fillColor(ctx.theme.ink)
       .text(fitText(doc, ctx.text(value), 640), PAGE.margin + 90, y, {
         lineBreak: false,
       });
@@ -112,16 +114,17 @@ function footers(
   regular: string,
 ): number {
   const range = doc.bufferedPageRange();
+  const theme = themeOf(input.presentation.brand);
   for (let i = 0; i < range.count; i += 1) {
     doc.switchToPage(range.start + i);
     doc
-      .strokeColor(THEME.rule)
+      .strokeColor(theme.rule)
       .lineWidth(0.5)
       .moveTo(PAGE.margin, PAGE.footerTop)
       .lineTo(PAGE.width - PAGE.margin, PAGE.footerTop)
       .stroke();
-    doc.font(regular).fontSize(7.5).fillColor(THEME.muted);
-    const left = `Pro-Act · ${input.presentation.plantName} · ${input.document.title}${input.document.provisional ? ` · ${STAMP}` : ''}`;
+    doc.font(regular).fontSize(7.5).fillColor(theme.muted);
+    const left = `${productNameOf(input.presentation.brand)} · ${input.presentation.plantName} · ${input.document.title}${input.document.provisional ? ` · ${STAMP}` : ''}`;
     doc.text(fitText(doc, text(left), 600), PAGE.margin, PAGE.footerTop + 8, {
       lineBreak: false,
     });
@@ -136,7 +139,7 @@ function footers(
 }
 
 /**
- * Draws a report export (owner 2026-10-20): A4 landscape, the Marun logo, title and plant on every page,
+ * Draws a report export (owner 2026-10-20): A4 landscape, the logo (branding's, else Marun's), title and plant on every page,
  * the provisional stamp when draft figures are in it, the window and units on the first page, then the
  * sections — KPI tiles, facts, text and tables whose header row repeats on each page — and a footer with
  * the page number. Returns the number of table rows printed.
@@ -155,7 +158,7 @@ export async function writeReportPdf(
     info: {
       Title: input.document.title,
       Subject: input.document.subtitle,
-      Creator: 'Pro-Act',
+      Creator: productNameOf(input.presentation.brand),
       CreationDate: input.generatedAt,
     },
   });
@@ -174,6 +177,7 @@ export async function writeReportPdf(
     text,
     ...fonts,
     format: input.presentation,
+    theme: themeOf(input.presentation.brand),
     newPage: () => {
       doc.addPage();
       header(doc, input, text, fonts);

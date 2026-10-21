@@ -44,7 +44,7 @@ function columnsOf(timezone: string, withActions: boolean): DataTableColumn<Valu
   const columns: DataTableColumn<ValuationRateView>[] = [
     { id: 'basis', header: 'Basis', cell: (r) => <span data-testid="valuation-row">{labelOf(VALUATION_BASIS_LABELS, r.basis)}</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (r) => `Version ${r.version}` },
-    { id: 'value', header: 'Value', align: 'right', nowrap: true, cell: (r) => <Quantity value={r.value} uom={r.currency ? `${r.currency}/${r.perUom}` : `${r.perUom}/${r.perUom}`} /> },
+    { id: 'value', header: 'Value', align: 'right', nowrap: true, cell: (r) => <Quantity value={r.value} uom={r.currency ? `${r.currency}/${r.perUom}` : `per ${r.perUom}`} /> },
     {
       id: 'effective',
       header: 'Effective',

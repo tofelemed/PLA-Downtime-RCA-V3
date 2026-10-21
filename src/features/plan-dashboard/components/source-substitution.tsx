@@ -1,4 +1,5 @@
 import type { RankedSourceView, SourceSubstitutionView } from '@/api/v2/types/periods';
+import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ACTUALS_SOURCE_LABELS, SOURCE_CLASS_LABELS, SUBSTITUTION_REASON_LABELS } from '../model/actuals-labels';
@@ -8,7 +9,6 @@ const sourceText = (ref: RankedSourceView) => {
   return `${what} (rank ${ref.rank}${ref.boundary ? `, ${ref.boundary}` : ''})`;
 };
 
-const lagText = (seconds: number) => (seconds % 3600 === 0 ? `${seconds / 3600} h` : seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`);
 
 /**
  * SME E7: the substitution flag of a slice as the server decided it — which lower-ranked source (or the
@@ -25,7 +25,7 @@ export function SourceSubstitution({ substitution }: { substitution: SourceSubst
       {bridge && (
         <span data-testid="cross-boundary">
           {' '}
-          Measured at {bridge.fromBoundary ?? 'another boundary'}, {text(lagText(bridge.lagSeconds))} later, stock change accounted for ({bridge.evidenceRef}).
+          Measured at {bridge.fromBoundary ?? 'another boundary'}, <DurationText seconds={bridge.lagSeconds} /> later, stock change accounted for ({bridge.evidenceRef}).
         </span>
       )}
     </p>

@@ -12,6 +12,7 @@ import type { DowntimeFilters, DowntimeMetric } from '../model/downtime-filters'
 import { formatCount, formatRatio } from '../model/kpi-display';
 import { barAction, barLabel, drillCrumbs, paretoQuery, type DrillSelection } from '../model/reason-drill';
 import { reasonStartRca } from '../model/start-rca-context';
+import { useRcaWindowText } from '../hooks/use-rca-window-text';
 import { ReportCard } from './report-card';
 
 const ParetoChart = lazy(() => import('./charts/pareto-chart').then((module) => ({ default: module.ParetoChart })));
@@ -81,7 +82,7 @@ export function ReasonPareto({ filters, onChange, onEvents }: ReasonParetoProps)
 }
 
 function ReasonStartRca({ group, label, filters }: { group: DowntimeGroupView; label: string; filters: DowntimeFilters }) {
-  const context = reasonStartRca(group, label, filters);
+  const context = reasonStartRca(group, label, filters, useRcaWindowText(filters));
   return context ? <StartRcaLink context={context} label={`Start investigation for ${label}`} /> : null;
 }
 

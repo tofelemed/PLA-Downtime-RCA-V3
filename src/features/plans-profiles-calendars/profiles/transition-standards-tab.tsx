@@ -5,6 +5,7 @@ import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { TransitionStandardView } from '@/api/v2/types/profiles';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { DurationText } from '@/features/ux-kit/duration-text';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -14,7 +15,6 @@ import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
-import { hoursOfSeconds } from '../model/transition-standard-form';
 import { TransitionStandardForm } from './transition-standard-form';
 import { VersionActions } from './version-actions';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
@@ -37,7 +37,7 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<TransitionStandardView>[
     { id: 'catalyst', header: 'Catalyst family', nowrap: true, cell: (s) => s.catalystFamily ?? <span className="text-muted-foreground">any</span> },
     { id: 'mode', header: 'Operating mode', nowrap: true, cell: (s) => s.operatingMode ? operatingModeLabel(s.operatingMode) : <span className="text-muted-foreground">any</span> },
     { id: 'version', header: 'Version', nowrap: true, cell: (s) => `Version ${s.version}` },
-    { id: 'reference', header: 'Reference', align: 'right', nowrap: true, cell: (s) => <LocalizedNumber text={`${hoursOfSeconds(s.referenceSeconds)} h`} /> },
+    { id: 'reference', header: 'Reference', align: 'right', nowrap: true, cell: (s) => <DurationText seconds={s.referenceSeconds} /> },
     {
       id: 'offgrade',
       header: 'Reference off-grade',
