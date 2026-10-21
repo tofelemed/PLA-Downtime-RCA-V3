@@ -14,7 +14,8 @@ interface Point {
   valueText: string;
 }
 
-const COLOURS = { total: 'hsl(var(--primary))', loss: 'hsl(var(--destructive))', gain: 'hsl(var(--success))' } as const;
+// totals neutral, losses red, gains green (waterfall convention); never the branding colour (owner 21 Oct 2026)
+const COLOURS = { total: 'hsl(var(--chart-8))', loss: 'hsl(var(--destructive))', gain: 'hsl(var(--success))' } as const;
 
 const toneOf = (bar: WaterfallBarView): keyof typeof COLOURS => {
   if (bar.kind === 'total') return 'total';

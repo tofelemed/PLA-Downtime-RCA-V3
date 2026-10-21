@@ -53,7 +53,7 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
               name === 'cumulative' ? formatRatio(item.payload?.group.cumulativeShare, 1, digits) : format(value)
             }
           />
-          <Bar yAxisId="value" dataKey="value" fill="hsl(var(--primary))" onClick={(point: { payload?: Point }) => point.payload && onBar(point.payload.group)} cursor="pointer">
+          <Bar yAxisId="value" dataKey="value" fill="hsl(var(--chart-1))" onClick={(point: { payload?: Point }) => point.payload && onBar(point.payload.group)} cursor="pointer">
             <LabelList dataKey="value" position="top" formatter={format} fontSize={11} />
           </Bar>
           <Line yAxisId="share" dataKey="cumulative" stroke="hsl(var(--destructive))" dot />
