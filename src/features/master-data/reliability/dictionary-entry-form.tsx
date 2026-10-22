@@ -55,8 +55,8 @@ export function DictionaryEntryForm({ classes, onAdded }: DictionaryEntryFormPro
     }
   };
   return (
-    <form className="grid gap-3 sm:grid-cols-3" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="dictionary-entry-form">
-      <div className="sm:col-span-3 empty:hidden">{feedback.alert}</div>
+    <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="dictionary-entry-form">
+      <div className="sm:col-span-2 empty:hidden">{feedback.alert}</div>
       <div className="space-y-1">
         <Label htmlFor="entry-kind">List</Label>
         <select id="entry-kind" className={SELECT_CLASS} value={draft.kind} onChange={(e) => set('kind', e.target.value as DictionaryKind)}>
@@ -86,11 +86,11 @@ export function DictionaryEntryForm({ classes, onAdded }: DictionaryEntryFormPro
         <Label htmlFor="entry-name">Name</Label>
         <Input id="entry-name" value={draft.name} maxLength={255} onChange={(e) => set('name', e.target.value)} />
       </div>
-      <label className="flex items-center gap-2 self-end text-sm">
+      <label className="flex items-center gap-2 text-sm sm:col-span-2">
         <input type="checkbox" checked={draft.isPending} onChange={(e) => set('isPending', e.target.checked)} />
         Pending / unknown choice
       </label>
-      <div className="flex items-end justify-end gap-2 sm:col-span-3">
+      <div className="flex items-end justify-end gap-2 sm:col-span-2">
         {onAdded && <Button type="button" variant="outline" disabled={!ready} onClick={() => void submit(true)}>Save and add another</Button>}
         <Button type="submit" disabled={!ready}>Add entry</Button>
       </div>
