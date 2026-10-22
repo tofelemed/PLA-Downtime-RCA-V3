@@ -85,10 +85,13 @@ test.describe('Manager persona — codes and declarative rules (/codes-admin)', 
     // a new mapping version leaves the historical one unchanged (the reason code's "Default mappings" tab)
     await openCode(page, 'reason-codes', CHILD);
     await page.getByTestId('tab-code-mappings').click();
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
     await page.getByTestId('mr-kind').selectOption('reason_to_schedule_class');
     await page.getByTestId('mr-target').selectOption('planned');
     await page.getByTestId('mr-save').click();
     await expect(page.locator('[data-testid="mr-row"][data-version="1"]')).toHaveAttribute('data-target', 'planned');
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
+    await page.getByTestId('mr-kind').selectOption('reason_to_schedule_class');
     await page.getByTestId('mr-target').selectOption('unplanned');
     await page.getByTestId('mr-save').click();
     await expect(page.locator('[data-testid="mr-row"][data-version="2"]')).toHaveAttribute('data-target', 'unplanned');

@@ -111,15 +111,19 @@ test.describe('Master data admin — codes, default mappings and declarative rul
     expect(itemsOf(oee.body).some((entry) => entry.code === OEE)).toBe(true);
 
     await openMappings(page, CHILD);
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
     await page.getByTestId('mr-kind').selectOption('reason_to_oee');
     await page.getByTestId('mr-target').selectOption('availability');
     await page.getByTestId('mr-save').click();
     await expect(mappingRow(page, 'reason_to_oee', 1)).toHaveAttribute('data-target', 'availability', { timeout: 20_000 });
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
+    await page.getByTestId('mr-kind').selectOption('reason_to_oee');
     await page.getByTestId('mr-target').selectOption('performance');
     await page.getByTestId('mr-save').click();
     await expect(mappingRow(page, 'reason_to_oee', 2)).toHaveAttribute('data-target', 'performance', { timeout: 20_000 });
     await expect(mappingRow(page, 'reason_to_oee', 1)).toHaveAttribute('data-target', 'availability'); // history kept
 
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
     await page.getByTestId('mr-kind').selectOption('reason_to_impact');
     await page.getByTestId('mr-target').selectOption({ label: `${IMP} — ${PREFIX}impact` });
     await page.getByTestId('mr-save').click();

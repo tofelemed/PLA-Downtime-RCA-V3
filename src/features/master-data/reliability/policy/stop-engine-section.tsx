@@ -8,11 +8,13 @@ import { backdateBodyOf, backdateErrors, EMPTY_BACKDATE } from '@/features/polic
 import { CommissioningBackdateFields } from '@/features/policy-backdate/commissioning-backdate-fields';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { isSeedNote } from '@/features/ux-kit/format/built-in-default';
 import { SaveFailureAlert } from '@/features/ux-kit/save-result';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
-import { usePolicySaveFeedback, type PolicySaveFeedback } from './use-policy-save-feedback';
+import { PolicySection } from './policy-section';
+import { StopEngineSummary } from './stop-engine-summary';
+import { usePolicyEditor } from './use-policy-editor';
+import type { PolicySaveFeedback } from './use-policy-save-feedback';
 
 const SECONDS = [
   ['debounceSeconds', 'Stop debounce (seconds)'],
@@ -24,11 +26,10 @@ const recordLabel = (backdated: boolean) => (backdated ? 'Record stop-engine set
 interface SettingsFormProps {
   policy: StopEnginePolicy;
   unitId: string;
-  canWrite: boolean;
   saving: PolicySaveFeedback;
 }
-/** The settings in force as an editable draft; a recorded version remounts it (keyed by the version) with the saved values. */
-function SettingsForm({ policy, unitId, canWrite, saving }: SettingsFormProps) {
+/** A new version, starting from the settings in force; it opens in the section's side panel. */
+function SettingsForm({ policy, unitId, saving }: SettingsFormProps) {
   const [values, setValues] = useState<StopEngineSettings>(policy);
   const [notes, setNotes] = useState(isSeedNote(policy.notes) ? '' : policy.notes ?? '');
   const failure = saving.feedback.failure;
@@ -50,26 +51,27 @@ function SettingsForm({ policy, unitId, canWrite, saving }: SettingsFormProps) {
   return <div className="space-y-3">
     <SaveFailureAlert error={failure} />
     <BackdateOverlapList error={failure} />
-    <fieldset disabled={!canWrite || command.isPending} className="grid gap-3 sm:grid-cols-2">
+    <fieldset disabled={command.isPending} className="grid gap-3 sm:grid-cols-2">
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={values.deriveFromState} onChange={(e) => setValues({ ...values, deriveFromState: e.target.checked })} />Derive stops from unit state</label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={values.autoMergeDuplicates} onChange={(e) => setValues({ ...values, autoMergeDuplicates: e.target.checked })} />Automatically merge unique cross-source duplicates</label>
       {SECONDS.map(([key, label]) => <label key={key} className="space-y-1 text-sm">{label}<Input type="number" min={0} max={86400} step={1} value={Number.isFinite(values[key]) ? values[key] : ''} onChange={(e) => setValues({ ...values, [key]: e.target.value === '' ? Number.NaN : Number(e.target.value) })} /></label>)}
       <label className="space-y-1 text-sm sm:col-span-2">Change notes<Input maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
     </fieldset>
-    {canWrite && <CommissioningBackdateFields idPrefix="stop-engine" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="record" disabled={command.isPending} />}
+    <CommissioningBackdateFields idPrefix="stop-engine" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="record" disabled={command.isPending} />
     {!valid && <p className="text-sm text-destructive">Enter whole seconds between 0 and 86400.</p>}
-    {canWrite && <Button disabled={!valid || command.isPending} onClick={() => void save()}>{recordLabel(backdate.effectiveFrom !== null)}</Button>}
+    <Button disabled={!valid || command.isPending} onClick={() => void save()}>{recordLabel(backdate.effectiveFrom !== null)}</Button>
   </div>;
 }
-/** The stop-engine settings in force for the scope; a new version ends in the result dialog and the saved values. */
+/** The stop-engine settings in force for the scope; "Record new version" opens the form in a side panel. */
 export function StopEngineSection({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const policy = useStopEnginePolicy(unitId);
-  const saving = usePolicySaveFeedback('Stop-engine settings', unitId, format);
-  return <>
-    <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>{policy.data && <div className="space-y-3">
-      <p className="text-sm text-muted-foreground" data-testid="stop-engine-current">Version {policy.data.version} ({policy.data.unitId ? 'unit override' : 'plant-wide'}) · <EffectiveFrom iso={policy.data.effectiveFrom} tz={format.timezone} prefix="since" />. Existing derived events keep their recorded settings.</p>
-      <SettingsForm key={`${unitId}-${policy.data.id}`} policy={policy.data} unitId={unitId} canWrite={canWrite} saving={saving} />
-    </div>}</DataState>
-    {saving.feedback.dialog}
-  </>;
+  const editor = usePolicyEditor('Stop-engine settings', unitId, format);
+  const form = canWrite && policy.data ? <SettingsForm key={policy.data.id} policy={policy.data} unitId={unitId} saving={editor.saving} /> : null;
+  return (
+    <PolicySection title="Stop-engine settings" description="Existing derived events keep their recorded settings." editor={editor} form={form}>
+      <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>
+        {policy.data && <StopEngineSummary policy={policy.data} format={format} />}
+      </DataState>
+    </PolicySection>
+  );
 }

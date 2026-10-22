@@ -9,6 +9,7 @@ import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ActionIcon } from '@/lib/icons';
+import { AddDialog } from '@/features/ux-kit/add-dialog';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
@@ -71,7 +72,7 @@ export function UnitStreamsTab() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <ReadOnlyHint />
-          {canWriteProfiles && unitId && !adding && (
+          {canWriteProfiles && unitId && (
             <Button size="sm" onClick={() => setAdding(true)} data-testid="unit-stream-new">
               <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
               Add stream
@@ -79,7 +80,11 @@ export function UnitStreamsTab() {
           )}
         </div>
       </div>
-      {adding && unitId && <UnitStreamForm unitId={unitId} timezone={refs.timezone} onDone={() => setAdding(false)} />}
+      {unitId && (
+        <AddDialog open={adding} onOpenChange={setAdding} title="Add stream" description="A draft stream of this unit; another manager approves it." testId="unit-stream-dialog">
+          <UnitStreamForm unitId={unitId} timezone={refs.timezone} onDone={() => setAdding(false)} />
+        </AddDialog>
+      )}
       {unitId ? (
         <>
           <FocusedListNotice anchor={anchor} what="streams" />

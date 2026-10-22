@@ -35,7 +35,7 @@ export function UnitStreamForm({ unitId, timezone, onDone }: UnitStreamFormProps
   };
 
   return (
-    <div className="space-y-2 rounded-md border p-3" data-testid="unit-stream-form">
+    <div className="space-y-2" data-testid="unit-stream-form">
       <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
         <FormField id="streamCode" label="Code" error={fieldError('code')}>

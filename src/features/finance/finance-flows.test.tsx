@@ -15,7 +15,7 @@ const { FxVersionActions } = await import('./fx/fx-version-actions');
 const { FxRateTable } = await import('./fx/fx-rate-table');
 const { PolicyApprove } = await import('./policies/policy-approve');
 const { PolicyTable } = await import('./policies/policy-table');
-const { PoliciesTab } = await import('./policies/policies-tab');
+const { FinanceHeaderActions } = await import('./finance-header-actions');
 
 interface Call {
   method: string;
@@ -189,9 +189,21 @@ describe('finance — exchange rates and valuation policy commands', () => {
       wrap(<PolicyApprove policy={POLICY} status="unapproved" />);
       expect(screen.queryByTestId('policy-approve-start')).toBeNull();
       actAs('viewer');
-      wrap(<PoliciesTab />);
+      wrap(<FinanceHeaderActions tab="policies" />);
       expect(screen.queryByTestId('policy-new')).toBeNull();
       expect(screen.getByTestId('read-only-hint')).toBeTruthy();
+    });
+
+    it('the page header carries the add action of the active tab only (SETUP_UX_FIXES Phase 4)', () => {
+      reply = () => json(200, { items: [], nextCursor: null });
+      actAs('finance_maintainer');
+      const expected = { policies: 'policy-new', fx: 'fx-new', demand: 'demand-new' } as const;
+      for (const [tab, testId] of Object.entries(expected)) {
+        const view = wrap(<FinanceHeaderActions tab={tab as keyof typeof expected} />);
+        expect(Object.values(expected).filter((id) => view.queryByTestId(id))).toEqual([testId]);
+        view.unmount();
+      }
+      expect(screen.queryByTestId('policy-new')).toBeNull();
     });
 
     it('canApproveValuation (FX): a manager or a finance maintainer sees no approve / retire; a finance approver does', () => {

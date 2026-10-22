@@ -25,7 +25,7 @@ export interface TransitionStandardFormProps {
   onDone: () => void;
 }
 
-/** A draft matrix entry: directional product change with optional catalyst family / operating mode (SME E1), reference hours, optional reference off-grade, evidence. Toast and close on success (small inline add); red alert at the top on a refusal. */
+/** A draft matrix entry: directional product change with optional catalyst family / operating mode (SME E1), reference hours, optional reference off-grade, evidence. Shown in the tab's "Add transition standard" dialog: toast and close on success; red alert at the top on a refusal, input kept. */
 export function TransitionStandardForm({ unitId, productOptions, timezone, onDone }: TransitionStandardFormProps) {
   const [values, setValues] = useState<TransitionStandardFormValues>(() => emptyTransitionStandardForm(unitId));
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -43,7 +43,7 @@ export function TransitionStandardForm({ unitId, productOptions, timezone, onDon
   };
 
   return (
-    <div className="space-y-2 rounded-md border p-3" data-testid="transition-standard-form">
+    <div className="space-y-2" data-testid="transition-standard-form">
       <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-2">
         <FormField id="tsFrom" label="From product" error={fieldError('fromProductId')}>

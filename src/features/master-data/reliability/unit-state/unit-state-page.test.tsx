@@ -38,6 +38,13 @@ function reply(call: V2Call) {
   return undefined;
 }
 
+/** "New mapping version" in the versions section header opens the editor in the side panel. */
+const openEditor = async () => {
+  await screen.findByRole('table', { name: 'State mapping versions' });
+  fireEvent.click(screen.getByRole('button', { name: 'New mapping version' }));
+  await waitFor(() => expect((screen.getByLabelText('State signal') as HTMLSelectElement).value).toBe('s1'));
+};
+
 const renderPage = () =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
@@ -80,7 +87,10 @@ describe('Unit state page (SME D1 / D2)', () => {
     const calls = stubV2Fetch(reply);
     actAs('integration_admin');
     renderPage();
-    await waitFor(() => expect((screen.getByLabelText('State signal') as HTMLSelectElement).value).toBe('s1'));
+    // the page reads versions, then coverage; the editor is closed until asked for
+    await screen.findByRole('table', { name: 'State mapping versions' });
+    expect(screen.queryByLabelText('State signal')).toBeNull();
+    await openEditor();
     fireEvent.click(screen.getByRole('button', { name: 'Add a value' }));
     fireEvent.change(screen.getByLabelText('Signal value 2'), { target: { value: 'STOP' } });
     fireEvent.change(screen.getByLabelText('State 2'), { target: { value: 'internal_stop' } });
@@ -89,6 +99,7 @@ describe('Unit state page (SME D1 / D2)', () => {
     expect(await screen.findByText('The server refused the mapping')).toBeInTheDocument();
     expect(screen.getByTestId('save-failure-alert')).toHaveFocus();
     expect(screen.getByLabelText(/Expected interval/)).toHaveValue('5');
+    expect(screen.getByRole('dialog', { name: 'New mapping version' })).toBeInTheDocument();
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
       unitId: 'u1', signalId: 's1', rules: [{ match: 'RUN', state: 'running' }, { match: 'STOP', state: 'internal_stop' }],
       expectedIntervalSeconds: 5, jitterSeconds: 2, staleAfterIntervals: 3, isHeartbeat: true,
@@ -109,7 +120,7 @@ describe('Unit state page (SME D1 / D2)', () => {
     });
     actAs('integration_admin');
     renderPage();
-    await waitFor(() => expect((screen.getByLabelText('State signal') as HTMLSelectElement).value).toBe('s1'));
+    await openEditor();
     fireEvent.change(screen.getByLabelText(/Expected interval/), { target: { value: '5' } });
     fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'faster feed' } });
     fireEvent.click(screen.getByRole('button', { name: 'Record new version' }));
@@ -118,6 +129,11 @@ describe('Unit state page (SME D1 / D2)', () => {
     expect(within(dialog).getByText(/^It takes effect at .*; the version in force stays until then\.$/)).toBeInTheDocument();
     // the list is the page already shown: no redundant "Back to Unit state"
     expect(within(dialog).queryByRole('link', { name: 'Back to Unit state' })).toBeNull();
+    // success closes the panel; the next one starts from the saved version
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New mapping version' })).toBeNull());
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('save-result-dialog')).toBeNull());
+    await openEditor();
     await waitFor(() => expect(screen.getByLabelText('Notes')).toHaveValue(''));
     expect(screen.getByLabelText(/Expected interval/)).toHaveValue('5');
     expect(screen.queryByTestId('save-failure-alert')).toBeNull();
@@ -128,6 +144,7 @@ describe('Unit state page (SME D1 / D2)', () => {
     actAs('master_data_admin');
     renderPage();
     expect(await screen.findByRole('table', { name: 'State mapping versions' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New mapping version' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Record new version' })).toBeNull();
   });
 });

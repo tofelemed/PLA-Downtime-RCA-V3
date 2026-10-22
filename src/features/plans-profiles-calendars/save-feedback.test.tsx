@@ -195,7 +195,7 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
     expect(screen.getByTestId('rate-import-submit').hasAttribute('disabled')).toBe(true);
   });
 
-  it('crews: add crew and add rotation end in a toast; the rotation form is reset', async () => {
+  it('crews: "Add crew" and "Add rotation" in the section header open dialogs; each ends in a toast and closes', async () => {
     reply = (call) => {
       if (call.method === 'POST' && call.path.endsWith('/crews')) return json(201, { id: 'crew-1', siteId: 's1', name: 'Crew A', rowVersion: 1, createdAt: '' });
       if (call.method === 'POST') return json(201, { rotation: { id: 'rot-1' }, materialization: [] });
@@ -203,17 +203,49 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
       return json(200, EMPTY);
     };
     wrap(<CrewRotationEditor siteId="s1" timezone="Asia/Tehran" />);
-    fireEvent.change(screen.getByLabelText('New crew'), { target: { value: 'Crew A' } });
+    expect(screen.queryByLabelText('Crew name')).toBeNull();
     fireEvent.click(screen.getByTestId('crew-add'));
+    const crewDialog = await screen.findByRole('dialog', { name: 'Add crew' });
+    fireEvent.change(within(crewDialog).getByLabelText('Crew name'), { target: { value: 'Crew A' } });
+    fireEvent.click(within(crewDialog).getByRole('button', { name: 'Add crew' }));
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ title: 'Crew added' }));
-    const cycle = (await screen.findByLabelText(/^Cycle \(shift names/)) as HTMLInputElement;
-    fireEvent.change(cycle, { target: { value: 'A,A,B,B' } });
-    fireEvent.change(screen.getByLabelText('Cycle day 1'), { target: { value: '2026-10-01' } });
-    fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-10-01' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add rotation' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add crew' })).toBeNull());
+    // the new crew is chosen and its rotations listed
+    await waitFor(() => expect((screen.getByLabelText('Crew') as HTMLSelectElement).value).toBe('crew-1'));
+    expect(screen.getByTestId('rotation-list')).toBeTruthy();
+    await waitFor(() => expect(screen.getByTestId('rotation-add').hasAttribute('disabled')).toBe(false));
+    fireEvent.click(screen.getByTestId('rotation-add'));
+    const rotationDialog = await screen.findByRole('dialog', { name: 'Add rotation' });
+    expect((within(rotationDialog).getByLabelText('Crew') as HTMLSelectElement).value).toBe('crew-1');
+    const submit = within(rotationDialog).getByRole('button', { name: 'Add rotation' });
+    expect(submit.hasAttribute('disabled')).toBe(true);
+    fireEvent.change(within(rotationDialog).getByLabelText(/^Cycle \(shift names/), { target: { value: 'A,A,B,B' } });
+    fireEvent.change(within(rotationDialog).getByLabelText('Cycle day 1'), { target: { value: '2026-10-01' } });
+    fireEvent.change(within(rotationDialog).getByLabelText('Effective from'), { target: { value: '2026-10-01' } });
+    fireEvent.click(submit);
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ title: 'Rotation added' }));
-    expect(cycle.value).toBe('');
-    expect(screen.getByRole('button', { name: 'Add rotation' }).hasAttribute('disabled')).toBe(true);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add rotation' })).toBeNull());
+  });
+
+  it('crews: a refused rotation is the red alert inside the dialog, the input kept, no toast', async () => {
+    reply = (call) => {
+      if (call.method === 'POST') return json(409, refusal('VERSION_OVERLAP'));
+      if (call.path.endsWith('/crews')) return json(200, { items: [{ id: 'crew-1', siteId: 's1', name: 'Crew A', rowVersion: 1, createdAt: '' }], nextCursor: null });
+      return json(200, EMPTY);
+    };
+    wrap(<CrewRotationEditor siteId="s1" timezone="Asia/Tehran" />);
+    await waitFor(() => expect(screen.getByTestId('rotation-add').hasAttribute('disabled')).toBe(false));
+    fireEvent.click(screen.getByTestId('rotation-add'));
+    const dialog = await screen.findByRole('dialog', { name: 'Add rotation' });
+    fireEvent.change(within(dialog).getByLabelText('Crew'), { target: { value: 'crew-1' } });
+    fireEvent.change(within(dialog).getByLabelText(/^Cycle \(shift names/), { target: { value: 'A,B' } });
+    fireEvent.change(within(dialog).getByLabelText('Cycle day 1'), { target: { value: '2026-10-01' } });
+    fireEvent.change(within(dialog).getByLabelText('Effective from'), { target: { value: '2026-10-01' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add rotation' }));
+    const alert = await within(dialog).findByTestId('save-failure-alert');
+    expect(within(dialog).getByTestId('rotation-form').firstElementChild).toBe(alert);
+    expect((within(dialog).getByLabelText(/^Cycle \(shift names/) as HTMLInputElement).value).toBe('A,B');
+    expect(toast).not.toHaveBeenCalled();
   });
 
   it('ending a stream run is a toast', async () => {

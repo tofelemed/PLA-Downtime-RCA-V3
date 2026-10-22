@@ -1,20 +1,8 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useFxRates } from '@/api/v2/queries/valuation';
 import type { VersionState } from '@/api/v2/types/profiles';
-import type { FxRateView } from '@/api/v2/types/valuation';
-import { useCapabilities } from '@/features/auth/use-capabilities';
-import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { useSaveResult } from '@/features/ux-kit/save-result';
-import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { ActionIcon } from '@/lib/icons';
-import { fxDraftResult } from '../model/finance-save-results';
-import { FxRateForm } from './fx-rate-form';
 import { FxRateTable } from './fx-rate-table';
 
 const PAIRS = ['', 'USD-IRR', 'IRR-USD'] as const;
@@ -29,45 +17,13 @@ const STATE_OPTIONS = [
   { value: 'retired', label: 'Retired' },
 ];
 
-/** "Add exchange rate draft": the form in a dialog; a saved draft closes it and opens the result dialog. */
-function AddFxRate() {
-  const { timezone } = usePlantDates();
-  const { digits } = useNumberFormat();
-  const [open, setOpen] = useState(false);
-  const result = useSaveResult();
-  const saved = (rate: FxRateView) => {
-    setOpen(false);
-    result.open(fxDraftResult(rate, digits));
-  };
-  return (
-    <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <Button onClick={() => setOpen(true)} data-testid="fx-new">
-          <ActionIcon.add aria-hidden="true" />
-          Add exchange rate draft
-        </Button>
-        <DialogContent className="flex max-h-[90vh] flex-col">
-          <DialogHeader>
-            <DialogTitle>New exchange rate draft</DialogTitle>
-            <DialogDescription>A finance approver other than you approves the draft before valuation uses it.</DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {open && <FxRateForm timezone={timezone} onCancel={() => setOpen(false)} onSaved={saved} />}
-          </div>
-        </DialogContent>
-      </Dialog>
-      {result.element}
-    </>
-  );
-}
-
 /**
  * The approved, dated exchange rate table (plan 2.6, D08 Q2): versions per currency pair, `1 from = rate
  * to`, half-open validity; filters in the URL; a row opens the version (approve / retire there). A loss
  * whose date no approved rate covers keeps no amount in the other currency — nothing is estimated.
+ * "Add exchange rate draft" is in the page header (`FinanceHeaderActions`).
  */
 export function FxRatesTab() {
-  const { canMaintainValuation } = useCapabilities();
   const [pair, setPair] = useUrlParam('pair', PAIRS, '');
   const [state, setState] = useUrlParam('state', STATES, '');
   const [fromCurrency, toCurrency] = pair ? pair.split('-') : [undefined, undefined];
@@ -82,10 +38,6 @@ export function FxRatesTab() {
         <div className="w-40 space-y-1">
           <Label htmlFor="fxStateFilter">State</Label>
           <NativeSelect id="fxStateFilter" value={state} options={STATE_OPTIONS} placeholder="All states" onChange={(value) => setState(value as (typeof STATES)[number])} />
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <ReadOnlyHint />
-          {canMaintainValuation && <AddFxRate />}
         </div>
       </div>
       <FxRateTable

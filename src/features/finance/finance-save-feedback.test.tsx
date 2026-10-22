@@ -12,12 +12,11 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const toast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast }) }));
 
-const { FxRatesTab } = await import('./fx/fx-rates-tab');
+const { FinanceHeaderActions } = await import('./finance-header-actions');
 const { FxVersionActions } = await import('./fx/fx-version-actions');
 const { PolicyNewPage } = await import('./policies/policy-new-page');
 const { PolicyApprove } = await import('./policies/policy-approve');
 const { DemandActions } = await import('./demand/demand-actions');
-const { DemandStatusesTab } = await import('./demand/demand-statuses-tab');
 
 interface Call {
   method: string;
@@ -78,7 +77,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
 
   it('an exchange rate draft closes the add dialog and ends in the result dialog: View rate · Back to Exchange rates', async () => {
     reply = (call) => (call.method === 'POST' ? json(201, FX) : json(200, EMPTY));
-    wrap(<FxRatesTab />);
+    wrap(<FinanceHeaderActions tab="fx" />);
     fireEvent.click(screen.getByTestId('fx-new'));
     fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '600000' } });
     setDateTime('Valid from (UTC)', '2026-10-01', '00:00');
@@ -97,7 +96,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
       call.method === 'POST'
         ? json(422, { code: 'VALIDATION_FAILED', message: 'invalid', correlationId: 'corr-1', retryable: false, fieldErrors: [{ field: 'rate', message: 'rate is too large' }] })
         : json(200, EMPTY);
-    wrap(<FxRatesTab />);
+    wrap(<FinanceHeaderActions tab="fx" />);
     fireEvent.click(screen.getByTestId('fx-new'));
     fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '600000' } });
     setDateTime('Valid from (UTC)', '2026-10-01', '00:00');
@@ -187,7 +186,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
       if (call.method === 'POST') return json(201, DEMAND);
       return json(200, call.url.pathname.endsWith('/products') ? PRODUCTS : EMPTY);
     };
-    wrap(<DemandStatusesTab />);
+    wrap(<FinanceHeaderActions tab="demand" />);
     fireEvent.click(screen.getByTestId('demand-new'));
     await screen.findByRole('option', { name: 'HD-1 · HDPE film' });
     fireEvent.change(screen.getByLabelText('Product'), { target: { value: 'prod-1' } });

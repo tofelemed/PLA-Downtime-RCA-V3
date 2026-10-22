@@ -22,11 +22,17 @@ function useTargets(kind: ReasonMappingKind) {
   return SCHEDULE_CLASSES.map((value) => ({ value, label: SCHEDULE_CLASS_LABELS[value] ?? value }));
 }
 
+export interface MappingRuleFormProps {
+  reasonId: string;
+  /** the version was saved (the "+ Add mapping" dialog closes) */
+  onSaved?: () => void;
+}
+
 /**
- * A new version of one default mapping of the reason code (older versions stay unchanged). A small inline
- * edit whose new version appears in the table right below, so it ends in a toast; a refusal is the red alert.
+ * A new version of one default mapping of the reason code (older versions stay unchanged). A small edit
+ * whose new version appears in the table, so it ends in a toast; a refusal is the red alert on top.
  */
-export function MappingRuleForm({ reasonId }: { reasonId: string }) {
+export function MappingRuleForm({ reasonId, onSaved }: MappingRuleFormProps) {
   const create = useCreateCodeMappingRule();
   const feedback = useCodesSaveFeedback();
   const [kind, setKind] = useState<ReasonMappingKind>('reason_to_schedule_class');
@@ -38,7 +44,10 @@ export function MappingRuleForm({ reasonId }: { reasonId: string }) {
         () => create.submit(kind === 'reason_to_impact' ? { ruleKind: kind, sourceCodeId: reasonId, targetCodeId: target } : { ruleKind: kind, sourceCodeId: reasonId, targetValue: target }),
         'Default mapping saved as the next version',
       )
-      .then(() => setTarget((current) => current === target ? '' : current))
+      .then(() => {
+        setTarget((current) => (current === target ? '' : current));
+        onSaved?.();
+      })
       .catch(() => undefined);
   return (
     <div className="space-y-2">

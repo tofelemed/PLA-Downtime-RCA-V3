@@ -13,6 +13,7 @@ import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anc
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
+import { AddDialog } from '@/features/ux-kit/add-dialog';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { RateForm } from './rate-form';
 import { VersionActions } from './version-actions';
@@ -77,7 +78,7 @@ export function RateTable({ profile, timezone }: RateTableProps) {
   const [adding, setAdding] = useState(false);
   const items = byKind(flattenPages(rates.data?.pages));
   useSeekAnchor(anchor, infiniteListState(rates));
-  const add = !adding && canWriteProfiles && (
+  const add = canWriteProfiles && (
     <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="rate-add">
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
       Add rate version
@@ -87,7 +88,9 @@ export function RateTable({ profile, timezone }: RateTableProps) {
     <Section title="Rates" actions={add || undefined}>
       <div className="space-y-3" data-testid="rate-table">
         <FocusedListNotice anchor={anchor} what="rate versions" />
-        {adding && <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
+        <AddDialog open={adding} onOpenChange={setAdding} title="Add rate version" description="A draft rate version of this profile; another manager approves it." testId="rate-dialog">
+          <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />
+        </AddDialog>
         <DataTable
           caption="Rate versions"
           columns={columnsOf(profile, timezone, canApproveProfiles)}

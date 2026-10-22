@@ -32,6 +32,9 @@ function reply(call: V2Call) {
   return undefined;
 }
 
+/** "Record new version" in the section header opens the form in the side panel. */
+const openEditor = (section: string) => fireEvent.click(screen.getByRole('button', { name: `Record new version of ${section}` }));
+
 const renderPage = () =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
@@ -82,7 +85,11 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     renderPage();
     expect(await screen.findByTestId('micro-stop-current')).toHaveTextContent('Version 4 · plant-wide · in force since');
     expect(screen.getByTestId('micro-stop-current')).toHaveTextContent('ELEC-MTR');
-    fireEvent.change(screen.getByLabelText(/Micro-stop threshold/), { target: { value: '90' } });
+    // the form is closed until asked for
+    expect(screen.queryByLabelText(/Micro-stop threshold/)).toBeNull();
+    openEditor('Micro-stops and trips');
+    const panel = await screen.findByRole('dialog', { name: 'Micro-stops and trips: new version' });
+    fireEvent.change(within(panel).getByLabelText(/Micro-stop threshold/), { target: { value: '90' } });
     fireEvent.click(screen.getByRole('button', { name: 'Record new version (effective now)' }));
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
     const post = calls.find((c) => c.method === 'POST');
@@ -91,25 +98,39 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
     const dialog = await screen.findByTestId('save-result-dialog');
     expect(within(dialog).getByText('Micro-stop settings version 5 recorded')).toBeInTheDocument();
+    // success closes the side panel
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Micro-stops and trips: new version' })).toBeNull());
   });
 
   it('explains both grade-change choices and shows what the server refuses', async () => {
     stubV2Fetch(reply);
     actAs('manager_approver');
     renderPage();
-    expect(await screen.findByText('Plans already allow for standard grade changes')).toBeInTheDocument();
-    expect(screen.getByText('Count the allowance against the plan')).toBeInTheDocument();
-    expect(screen.getByText(/Periods already calculated keep the version/)).toBeInTheDocument();
+    const summary = await screen.findByTestId('transition-allowance');
+    expect(summary).toHaveTextContent('Plans already allow for standard grade changes');
+    expect(summary).not.toHaveTextContent('Count the allowance against the plan');
+    openEditor('Grade-change allowance');
+    const form = await screen.findByTestId('transition-allowance-form');
+    expect(within(form).getByText('Plans already allow for standard grade changes')).toBeInTheDocument();
+    expect(within(form).getByText('Count the allowance against the plan')).toBeInTheDocument();
+    expect(within(form).getByText(/Periods already calculated keep the version/)).toBeInTheDocument();
     const record = screen.getByRole('button', { name: 'Record (effective from now)' });
     expect(record).toBeDisabled();
     fireEvent.click(screen.getByLabelText(/Count the allowance against the plan/));
     fireEvent.click(record);
     expect(await screen.findByText('A plant-wide policy needs an approver for the whole plant')).toBeInTheDocument();
-    expect(within(screen.getByTestId('transition-allowance')).getByTestId('save-failure-alert')).toBeInTheDocument();
+    expect(within(screen.getByTestId('transition-allowance-form')).getByTestId('save-failure-alert')).toBeInTheDocument();
     expect(screen.queryByTestId('save-result-dialog')).toBeNull();
     expect(screen.getByLabelText(/Count the allowance against the plan/)).toBeChecked();
     expect(screen.getByText(/Choose one of your units, or ask a plant-level approver/)).toBeInTheDocument();
     expect(screen.queryByText('Choose a plant first')).toBeNull();
+    // closing the panel drops the refusal: it opens again from the version in force
+    fireEvent.keyDown(screen.getByTestId('transition-allowance-form'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('transition-allowance-form')).toBeNull());
+    openEditor('Grade-change allowance');
+    expect(await screen.findByTestId('transition-allowance-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('save-failure-alert')).toBeNull();
+    expect(screen.getByLabelText(/Plans already allow for standard grade changes/)).toBeChecked();
   });
 
   it('validates whole seconds, records only the declared stop-engine fields and ends in the result dialog with the saved values shown', async () => {
@@ -124,6 +145,8 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     });
     actAs('SuperAdmin');
     renderPage();
+    expect(await screen.findByTestId('stop-engine-current')).toHaveTextContent('Version 4');
+    openEditor('Stop-engine settings');
     const debounce = await screen.findByLabelText('Stop debounce (seconds)');
     fireEvent.change(debounce, { target: { value: '-1' } });
     const save = screen.getByRole('button', { name: 'Record stop-engine settings (effective from now)' });
@@ -138,9 +161,14 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(within(dialog).queryByRole('link', { name: 'Back to Stop and plan policy' })).toBeNull();
     expect(within(dialog).getByRole('link', { name: /^Next: / })).toBeInTheDocument();
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ deriveFromState: true, debounceSeconds: 8, restartConfirmSeconds: 10, duplicateToleranceSeconds: 120, autoMergeDuplicates: true, incidentWindowSeconds: 120, notes: 'faster debounce' });
-    // the section shows the version just recorded, its values in the fields, and no leftover status line
+    // the panel closes; the summary shows the version just recorded, and the next panel starts from its values
     await waitFor(() => expect(screen.getByTestId('stop-engine-current')).toHaveTextContent('Version 5'));
-    expect(screen.getByLabelText('Stop debounce (seconds)')).toHaveValue(8);
+    expect(screen.getByTestId('stop-engine-current')).toHaveTextContent('faster debounce');
+    await waitFor(() => expect(screen.queryByLabelText('Stop debounce (seconds)')).toBeNull());
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('save-result-dialog')).toBeNull());
+    openEditor('Stop-engine settings');
+    expect(await screen.findByLabelText('Stop debounce (seconds)')).toHaveValue(8);
     expect(screen.queryByText(/Stop-engine version \d+ recorded/)).toBeNull();
     expect(screen.queryByTestId('save-failure-alert')).toBeNull();
   });
@@ -153,6 +181,8 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     const calls = stubV2Fetch((call) => (call.method === 'POST' && call.url.pathname.endsWith('/stop-event-policies') ? jsonResponse(409, overlap) : reply(call)));
     actAs('SuperAdmin');
     renderPage();
+    await screen.findByTestId('stop-engine-current');
+    openEditor('Stop-engine settings');
     await screen.findByLabelText('Stop debounce (seconds)');
     const commissioning = screen.getByTestId('stop-engine-commissioning');
     expect(commissioning).toHaveTextContent('Only while commissioning');
@@ -167,6 +197,8 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(screen.getByTestId('save-failure-alert')).toHaveFocus();
     expect(screen.queryByTestId('save-result-dialog')).toBeNull();
     expect(screen.getByTestId('backdate-overlap')).toHaveTextContent('Extruder 1 · 2026-10-02 · Day');
+    // a refusal keeps the panel open with the input
+    expect(within(commissioning).getByLabelText(/Reason for backdating/)).toHaveValue(' meter commissioned 1 Oct ');
     const body = calls.find((c) => c.method === 'POST')?.body;
     expect(body).toMatchObject({ backdateReason: 'meter commissioned 1 Oct' });
     expect(typeof body?.effectiveFrom).toBe('string');
@@ -178,6 +210,10 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     renderPage();
     expect(await screen.findByTestId('transition-allowance')).toBeInTheDocument();
     expect(screen.getByText('Only manager approvers record new versions.')).toBeInTheDocument();
+    expect(await screen.findByTestId('stop-engine-current')).toBeInTheDocument();
+    expect(screen.getByTestId('micro-stop-current')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Record/ })).toBeNull();
+    // the preview is a tool for everyone, once a unit is chosen
+    expect(screen.getByRole('button', { name: 'Preview derived stops' })).toBeDisabled();
   });
 });

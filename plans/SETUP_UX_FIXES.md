@@ -46,11 +46,20 @@ creating a plant never switches or refreshes the selection (`hierarchy-form-page
 - [x] "Next: <tab>" from the setup step order, in the result dialog only (no route moved in Phase 3; `next-setup-link` tests pass).
 
 ## Phase 4 — Add / Import placement
-- [ ] Every table page: `[Import CSV] [+ Add]` in the `PageHeader` actions.
-- [ ] + Add: dialog for small records (dictionary entry, standby, buffer level, crew, rotation), sub-page for large ones.
-- [ ] One shared CSV import page (file or paste → check → import) modelled on `rate-import-page.tsx`; replaces the paste
-      panels in `failure-dictionary-page.tsx:98-103` and `standby-page.tsx:34-46`.
-- [ ] Stop policy and unit state: read-only summary per section with Edit.
+- [x] Every table page: `[Import CSV] [+ Add]` in the `PageHeader` actions. (Failure dictionary, Standby, Codes & rules
+      New code / New rule, Valuation per tab, Unit impact rules; Default mappings, Grade transitions, Streams and profile
+      rates keep their top-right Section/toolbar button, now opening a dialog. Work orders still uses `RowsImportPanel`.)
+- [x] + Add: dialog for small records (dictionary entry, standby, buffer level, crew, rotation), sub-page for large ones.
+      `ux-kit/add-dialog`: dictionary entry, standby, default mapping, transition standard, stream, stream run, rate,
+      valuation rate, unit impact rule; buffer level, route, crew and rotation per the note below.
+- [x] One shared CSV import page (file or paste → check → import) modelled on `rate-import-page.tsx`; replaces the paste
+      panels in `failure-dictionary-page.tsx:98-103` and `standby-page.tsx:34-46`. (`ux-kit/csv-import`;
+      `/master-data/failure-dictionary/import`, `/master-data/standby-equipment/import`.)
+- [x] Stop policy and unit state: read-only summary per section with Edit. Stop policy: summary card per section,
+      "Record new version" in the section header opens the form in a side panel (Sheet), closes on success; preview is a
+      header button. Unit state: "New mapping version" on the versions section opens the editor in a Sheet.
+- Done for my part of "+ Add" (dialogs from section-header actions): plant flow "Add route" / "Record buffer level",
+  calendars "Add crew" / "Add rotation".
 
 ## Phase 5 — Consistency
 - [ ] Names: "Production rules" vs "Stop and plan policy"; "Valuation" vs "Finance" crumb; "Master data › Cause library".

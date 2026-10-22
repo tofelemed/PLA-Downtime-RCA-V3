@@ -3,6 +3,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { MasterDataLayout } from '@/features/master-data/components/master-data-layout';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { CodeLibraryBrowser } from './codes/code-library-browser';
+import { CodesHeaderActions } from './codes-header-actions';
 import { usePlantDates } from './hooks/use-plant-dates';
 import { useUrlParam } from './hooks/use-url-param';
 import { RulesPanel } from './rules/rules-panel';
@@ -15,10 +16,12 @@ function CodesAdminScreen() {
   const { timezone, utcFallback } = usePlantDates();
   const [tab] = useUrlParam<AdminTab>('tab', TABS, 'codes');
   return (
-    <MasterDataLayout alsoAllowed={canViewOperations}
-          title="Codes & rules"
-          description={`Code libraries and automatic rules of this plant. Every change is kept as a version. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
-        >
+    <MasterDataLayout
+      alsoAllowed={canViewOperations}
+      title="Codes & rules"
+      description={`Code libraries and automatic rules of this plant. Every change is kept as a version. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
+      actions={<CodesHeaderActions tab={tab} />}
+    >
       {/* the lists are tabs of the area's one tab row (Code libraries · Rules · Failure dictionary), no nested tabs */}
       <div className="space-y-6" data-testid="codes-admin" data-tab={tab}>
         {tab === 'rules' ? <RulesPanel /> : <CodeLibraryBrowser />}

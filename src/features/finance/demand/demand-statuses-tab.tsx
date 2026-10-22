@@ -1,57 +1,14 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useDemandStatuses } from '@/api/v2/queries/demand-statuses';
-import { useProducts } from '@/api/v2/queries/profiles';
 import type { DemandStatusView } from '@/api/v2/types/valuation';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DEMAND_STATUS_LABELS, labelOf } from '@/features/ux-kit/labels';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { useSaveResult } from '@/features/ux-kit/save-result';
-import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
-import { demandDraftResult } from '../model/finance-save-results';
 import { DemandActions } from './demand-actions';
-import { DemandStatusForm } from './demand-status-form';
+import { useProductName } from './use-product-name';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
-
-/**
- * "Add demand status draft": the form in a dialog; a saved draft closes it and opens the result dialog, like
- * an exchange rate draft (a create, and the author learns it still needs another approver).
- */
-function AddDemandStatus({ productName }: { productName: (id: string) => string }) {
-  const { timezone } = usePlantDates();
-  const [open, setOpen] = useState(false);
-  const result = useSaveResult();
-  const saved = (status: DemandStatusView) => {
-    setOpen(false);
-    result.open(demandDraftResult(status, `${productName(status.productId)} — ${labelOf(DEMAND_STATUS_LABELS, status.status)}`));
-  };
-  return (
-    <>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <Button onClick={() => setOpen(true)} data-testid="demand-new">
-          <ActionIcon.add aria-hidden="true" />
-          Add demand status draft
-        </Button>
-        <DialogContent className="flex max-h-[90vh] flex-col">
-          <DialogHeader>
-            <DialogTitle>New demand status draft</DialogTitle>
-            <DialogDescription>A finance approver other than you approves it before the economic view uses it.</DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {open && <DemandStatusForm timezone={timezone} onCancel={() => setOpen(false)} onSaved={saved} />}
-          </div>
-        </DialogContent>
-      </Dialog>
-      {result.element}
-    </>
-  );
-}
 
 /**
  * Demand statuses of the plant's products (SME V3): lost output counts as a lost sale only where an
@@ -59,13 +16,11 @@ function AddDemandStatus({ productName }: { productName: (id: string) => string 
  * lost-sales value, and without any status it stays unvalued. All of it is decided on the server.
  */
 export function DemandStatusesTab() {
-  const { canMaintainValuation } = useCapabilities();
   const dates = usePlantDates();
   const anchor = useAnchorFocus('demand-status-');
   const statuses = useDemandStatuses({ focus: anchor.focus });
   useSeekAnchor(anchor, infiniteListState(statuses.query));
-  const products = useProducts();
-  const productName = (id: string) => products.data?.pages.flatMap((p) => p.items).find((p) => p.id === id)?.name ?? '—';
+  const productName = useProductName();
   const columns: Array<DataTableColumn<DemandStatusView>> = [
     { id: 'product', header: 'Product', cell: (s) => <span data-testid="demand-row">{productName(s.productId)}</span> },
     { id: 'status', header: 'Demand', cell: (s) => labelOf(DEMAND_STATUS_LABELS, s.status) },
@@ -76,10 +31,6 @@ export function DemandStatusesTab() {
   ];
   return (
     <div className="space-y-4" data-testid="demand-statuses-tab">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <ReadOnlyHint />
-        {canMaintainValuation && <AddDemandStatus productName={productName} />}
-      </div>
       <FocusedListNotice anchor={anchor} what="demand statuses" />
       <DataTable
         caption="Demand statuses"

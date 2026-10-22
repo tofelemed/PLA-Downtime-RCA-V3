@@ -177,6 +177,12 @@ describe('nextSetupLink', () => {
     expect(nextSetupLink('/master-data/hierarchy')?.label).toBe('Products');
   });
 
+  it('treats the CSV import sub-pages as part of their list page (SETUP_UX_FIXES Phase 4)', () => {
+    expect(nextSetupLink('/master-data/failure-dictionary/import')).toEqual(nextSetupLink('/master-data/failure-dictionary'));
+    expect(nextSetupLink('/master-data/standby-equipment/import')).toEqual(nextSetupLink('/master-data/standby-equipment'));
+    expect(nextSetupLink('/master-data/standby-equipment/import')).not.toBeNull();
+  });
+
   it('skips steps on the same page and pages the user cannot open', () => {
     expect(nextSetupLink('/connectivity')?.path).toBe('/master-data/unit-state');
     const analyst = { ...capabilitiesOf([]), canViewAnalysis: true };

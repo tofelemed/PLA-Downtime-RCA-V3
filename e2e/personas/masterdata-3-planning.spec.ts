@@ -94,14 +94,21 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
 
     // a crew and a rotation with two days off per cycle (the field documents "-" = off)
     await openTab(page, 'calendars');
-    await page.fill('#crewName', crewName);
-    await page.getByRole('button', { name: 'Add crew' }).click();
+    // "Add crew" / "Add rotation" in the section header open dialogs; a dialog closes only on success
+    await page.getByTestId('crew-add').click();
+    const crewDialog = page.getByRole('dialog', { name: 'Add crew' });
+    await crewDialog.locator('#crewName').fill(crewName);
+    await crewDialog.getByRole('button', { name: 'Add crew' }).click();
+    await expect(crewDialog).toHaveCount(0, { timeout: 20_000 });
     await expect(page.locator('#crewSelect')).toHaveValue(/.+/, { timeout: 20_000 });
-    await page.fill('#rotationCycle', 'A,A,B,B,C,C,-,-');
-    await page.fill('#rotationAnchor', utcDate(0));
-    await page.fill('#rotationFrom', utcDate(0));
-    await page.getByRole('button', { name: 'Add rotation' }).click();
-    await expect(page.getByTestId('crew-rotations').getByTestId('refusal')).toHaveCount(0);
+    await page.getByTestId('rotation-add').click();
+    const rotationDialog = page.getByRole('dialog', { name: 'Add rotation' });
+    await rotationDialog.locator('#rotationCycle').fill('A,A,B,B,C,C,-,-');
+    await rotationDialog.locator('#rotationAnchor').fill(utcDate(0));
+    await rotationDialog.locator('#rotationFrom').fill(utcDate(0));
+    await rotationDialog.getByRole('button', { name: 'Add rotation' }).click();
+    await expect(rotationDialog.getByTestId('refusal')).toHaveCount(0);
+    await expect(rotationDialog).toHaveCount(0, { timeout: 60_000 });
     await expect(page.getByTestId('rotation-row')).toHaveCount(1, { timeout: 60_000 }); // the server re-assigns future shift instances
     await expect(page.getByTestId('rotation-list').locator('tbody tr').first()).toContainText('A,A,B,B,C,C,-,-');
     const crews = await api<{ items: Array<{ id: string; name: string }> }>(felix.token, 'GET', '/v2/crews?limit=200');

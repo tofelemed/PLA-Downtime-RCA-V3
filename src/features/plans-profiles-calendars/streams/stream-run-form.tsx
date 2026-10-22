@@ -37,7 +37,7 @@ export function StreamRunForm({ unitId, streamOptions, productOptions, timezone,
   };
 
   return (
-    <div className="space-y-2 rounded-md border p-3" data-testid="stream-run-form">
+    <div className="space-y-2" data-testid="stream-run-form">
       <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
         <FormField id="runStream" label="Stream" error={fieldError('streamCode')}>

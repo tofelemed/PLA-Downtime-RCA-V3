@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useUnitImpactRules } from '@/api/v2/queries/unit-impact-rules';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
@@ -17,7 +16,7 @@ import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleForm } from './impact-rule-form';
 import { IMPACT_MODE_LABELS } from './impact-rule-form-model';
 import { impactRuleSaveResult } from './impact-rule-save-result';
-import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { AddDialog, useAddDialog } from '@/features/ux-kit/add-dialog';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
@@ -69,29 +68,26 @@ export function UnitImpactRulesPage() {
   useSeekAnchor(anchor, infiniteListState(rules));
   const { labelOf } = useAssetLookup();
   const { percent, number } = useNumberFormat();
-  const [adding, setAdding] = useState(false);
-  const feedback = useSaveFeedback();
-  const open = (next: boolean) => {
-    feedback.clearFailure();
-    setAdding(next);
-  };
+  const add = useAddDialog();
+  // "Add another" reopens the dialog (`useAddDialog().saved`) with an empty form
   const resultOf = (rule: UnitImpactRuleView) =>
-    impactRuleSaveResult({ rule, recordLabel: `${labelOf(rule.assetId)} on ${refs.unitName(rule.unitId)}`, onAddAnother: () => open(true), capabilities });
+    impactRuleSaveResult({ rule, recordLabel: `${labelOf(rule.assetId)} on ${refs.unitName(rule.unitId)}`, onAddAnother: () => undefined, capabilities });
   return (
     <MasterDataLayout
       title="Unit impact rules"
       alsoAllowed={canWriteUnitImpactRules || canApproveProfiles}
       description="How a stop of one piece of equipment affects its unit: without a rule the unit stops; a standby that starts in time holds the output."
-    >
-      <Section title="Rules">
-        {canWriteUnitImpactRules && !adding && (
-          <Button size="sm" onClick={() => open(true)} data-testid="impact-rule-new">
+      actions={
+        canWriteUnitImpactRules && (
+          <Button onClick={add.open} data-testid="impact-rule-new">
             <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
             Add rule
           </Button>
-        )}
+        )
+      }
+    >
+      <Section title="Rules">
         <FocusedListNotice anchor={anchor} what="rules" />
-        {adding && <ImpactRuleForm unitOptions={refs.unitOptions} timezone={refs.timezone} feedback={feedback} resultOf={resultOf} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Unit impact rules"
           columns={columnsOf({ refs, assetLabel: labelOf, percent: (f) => shareText(Number(f) * 100, percent), seconds: (v) => number(v) })}
@@ -108,7 +104,10 @@ export function UnitImpactRulesPage() {
           </Button>
         )}
       </Section>
-      {feedback.dialog}
+      <AddDialog open={add.isOpen} onOpenChange={add.setOpen} title="Add unit impact rule" description="A draft applies after another manager approves it." wide testId="impact-rule-dialog">
+        <ImpactRuleForm unitOptions={refs.unitOptions} timezone={refs.timezone} resultOf={resultOf} onSaved={add.saved} onCancel={add.close} />
+      </AddDialog>
+      {add.resultElement}
     </MasterDataLayout>
   );
 }

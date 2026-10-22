@@ -10,10 +10,10 @@ import { sectionNameOf } from '../../components/master-data-sections';
 import { AssetSelect } from '../shared/asset-select';
 import { SELECT_CLASS, useAssetLookup } from '../shared/use-asset-lookup';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
+import { STANDBY_PATH } from './standby-import-model';
 import { EVALUATION_LABELS } from './standby-metrics-model';
 
 const EVALUATIONS = Object.keys(EVALUATION_LABELS) as StandbyEvaluation[];
-const STANDBY_PATH = '/master-data/standby-equipment';
 
 interface StandbyDraft {
   assetId: string;
@@ -24,8 +24,17 @@ interface StandbyDraft {
 
 const EMPTY: StandbyDraft = { assetId: '', evaluation: 'demand', from: null };
 
-/** Register an asset as standby equipment (SME D9): how maintenance judges it and from when (default now). */
-export function StandbyRegisterForm({ format }: { format: ReliabilityFormat }) {
+export interface StandbyRegisterFormProps {
+  format: ReliabilityFormat;
+  /** in the header's dialog: the registration is saved, the caller shows the result dialog (`useAddDialog().saved`) */
+  onSaved?: (result: SaveResult) => void;
+}
+
+/**
+ * Register an asset as standby equipment (SME D9): how maintenance judges it and from when (default now).
+ * A registration ends in the result dialog (its own, or the caller's through `onSaved`).
+ */
+export function StandbyRegisterForm({ format, onSaved }: StandbyRegisterFormProps) {
   const [draft, setDraft] = useState<StandbyDraft>(EMPTY);
   const register = useRegisterStandby();
   const feedback = useSaveFeedback();
@@ -43,12 +52,14 @@ export function StandbyRegisterForm({ format }: { format: ReliabilityFormat }) {
   });
   const submit = async () => {
     const body = { assetId: draft.assetId, evaluation: draft.evaluation, effectiveFrom: draft.from ?? undefined };
-    const saved = await feedback.run(() => register.submit(body), resultOf).catch(() => null);
-    if (saved) setDraft(EMPTY);
+    const saved = await feedback.run(() => register.submit(body), onSaved ? null : resultOf).catch(() => null);
+    if (!saved) return;
+    setDraft(EMPTY);
+    onSaved?.(resultOf(saved));
   };
   return (
     <>
-      <form className="grid max-w-xl gap-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         {feedback.alert}
         <AssetSelect id="standby-asset" label="Asset" value={draft.assetId} onChange={(assetId) => set({ assetId })} />
         <div className="space-y-1.5">
@@ -58,7 +69,7 @@ export function StandbyRegisterForm({ format }: { format: ReliabilityFormat }) {
           </select>
         </div>
         <DateTimeInput label="Standby from (empty = now)" value={draft.from} timeZone={format.timezone} onChange={(from) => set({ from })} />
-        <div><Button type="submit" disabled={!draft.assetId || register.isPending}>Register</Button></div>
+        <div className="flex justify-end"><Button type="submit" disabled={!draft.assetId || register.isPending}>Register</Button></div>
       </form>
       {feedback.dialog}
     </>

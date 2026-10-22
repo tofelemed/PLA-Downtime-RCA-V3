@@ -1,10 +1,6 @@
-import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { useAnyApprovedPolicy, useValuationPolicies } from '@/api/v2/queries/valuation';
-import { useCapabilities } from '@/features/auth/use-capabilities';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { ActionIcon, StatusIcon } from '@/lib/icons';
+import { StatusIcon } from '@/lib/icons';
 import { PolicyTable } from './policy-table';
 
 /** Whether finance has approved any version: until then every loss is "unvalued (policy pending)". */
@@ -35,23 +31,13 @@ function ApprovalBanner() {
 /**
  * Valuation policy versions of the plant (plan 2.6, VAL01): the finance sign-off is recorded on a
  * version's page. A change is a new version that is not approved yet (older ones are never rewritten).
+ * "New policy version" is in the page header (`FinanceHeaderActions`).
  */
 export function PoliciesTab() {
-  const navigate = useNavigate();
-  const { canMaintainValuation } = useCapabilities();
   const policies = useValuationPolicies();
   return (
     <div className="space-y-4" data-testid="policies-tab">
       <ApprovalBanner />
-      <div className="flex flex-wrap items-center gap-2">
-        <ReadOnlyHint />
-        {canMaintainValuation && (
-          <Button onClick={() => navigate('/finance/policies/new')} data-testid="policy-new">
-            <ActionIcon.add aria-hidden="true" />
-            New policy version
-          </Button>
-        )}
-      </div>
       <PolicyTable policies={policies.rows} pager={policies.pager} status={policies.status} />
     </div>
   );

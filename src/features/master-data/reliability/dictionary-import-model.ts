@@ -5,7 +5,7 @@ import { plural } from '@/features/ux-kit/format/plural';
 import { nextSetupLink, type SaveResult } from '@/features/ux-kit/save-result';
 import { sectionNameOf } from '../components/master-data-sections';
 
-const DICTIONARY_PAGE = '/master-data/failure-dictionary';
+export const DICTIONARY_PAGE = '/master-data/failure-dictionary';
 
 export const CSV_HEADER = 'kind,equipmentClass,code,name,description,category,assetTypes,isPending';
 

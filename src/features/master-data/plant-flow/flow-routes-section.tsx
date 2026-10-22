@@ -4,17 +4,22 @@ import type { useFlowRoutes } from '@/api/v2/queries/plant-model';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { FlowRouteView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
+import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
+import { Section } from '@/features/ux-kit/page-layout';
+import type { AnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import type { PlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { VersionActions } from '@/features/plans-profiles-calendars/profiles/version-actions';
-import { FlowRouteForm } from './flow-route-form';
+import { FlowRouteDialog } from './flow-route-dialog';
 
 export interface FlowRoutesSectionProps {
   refs: PlanningRefs;
   routes: ReturnType<typeof useFlowRoutes>;
+  /** the `#flow-route-…` row a link asked for */
+  anchor: AnchorFocus;
   canWrite: boolean;
 }
 
@@ -49,32 +54,35 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<FlowRouteView>[] {
   ];
 }
 
-/** Routes of the material-flow map with their buffers; drafts are approved by another user. */
-export function FlowRoutesSection({ refs, routes, canWrite }: FlowRoutesSectionProps) {
+/** Routes of the material-flow map with their buffers; drafts are approved by another user. "Add route" opens a dialog. */
+export function FlowRoutesSection({ refs, routes, anchor, canWrite }: FlowRoutesSectionProps) {
   const [adding, setAdding] = useState(false);
+  const action = canWrite ? (
+    <Button type="button" size="sm" onClick={() => setAdding(true)} data-testid="flow-route-new">
+      <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+      Add route
+    </Button>
+  ) : null;
   return (
-    <div className="space-y-2" data-testid="flow-routes-section">
-      {canWrite && !adding && (
-        <Button size="sm" onClick={() => setAdding(true)} data-testid="flow-route-new">
-          <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
-          Add route
-        </Button>
-      )}
-      {adding && <FlowRouteForm unitOptions={refs.unitOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
-      <DataTable
-        caption="Material-flow routes"
-        columns={columnsOf(refs)}
-        rows={flattenPages(routes.data?.pages)}
-        getRowKey={(r) => r.id}
-        getRowAnchor={(r) => `flow-route-${r.id}`}
-        status={{ isLoading: routes.isLoading, isError: routes.isError, error: routes.error, onRetry: () => void routes.refetch() }}
-        empty={{ title: 'No routes', text: 'Without routes no stop propagates between units: each unit counts its own losses only.' }}
-      />
-      {routes.hasNextPage && (
-        <Button size="sm" variant="ghost" onClick={() => void routes.fetchNextPage()} disabled={routes.isFetchingNextPage}>
-          Load more routes
-        </Button>
-      )}
-    </div>
+    <Section title="Routes" actions={action}>
+      <div className="space-y-2" data-testid="flow-routes-section">
+        <FocusedListNotice anchor={anchor} what="routes" />
+        <DataTable
+          caption="Material-flow routes"
+          columns={columnsOf(refs)}
+          rows={flattenPages(routes.data?.pages)}
+          getRowKey={(r) => r.id}
+          getRowAnchor={(r) => `flow-route-${r.id}`}
+          status={{ isLoading: routes.isLoading, isError: routes.isError, error: routes.error, onRetry: () => void routes.refetch() }}
+          empty={{ title: 'No routes', text: 'Without routes no stop propagates between units: each unit counts its own losses only.' }}
+        />
+        {routes.hasNextPage && (
+          <Button size="sm" variant="ghost" onClick={() => void routes.fetchNextPage()} disabled={routes.isFetchingNextPage}>
+            Load more routes
+          </Button>
+        )}
+      </div>
+      {adding && <FlowRouteDialog unitOptions={refs.unitOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
+    </Section>
   );
 }

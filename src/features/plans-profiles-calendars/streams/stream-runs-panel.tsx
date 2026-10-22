@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ActionIcon } from '@/lib/icons';
+import { AddDialog } from '@/features/ux-kit/add-dialog';
 import type { Option } from '../components/native-select';
 import type { PlanningRefs } from '../hooks/use-planning-refs';
 import { EndRunAction } from './end-run-action';
@@ -47,7 +48,7 @@ export function StreamRunsPanel({ unitId, refs, streamOptions, canWrite }: Strea
     <section className="space-y-2" data-testid="stream-runs-panel">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Stream runs</h3>
-        {canWrite && !adding && (
+        {canWrite && (
           <div className="flex flex-col items-end gap-1">
             <Button size="sm" variant="outline" onClick={() => setAdding(true)} disabled={noStream} aria-describedby={noStream ? reasonId : undefined}>
               <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
@@ -57,7 +58,9 @@ export function StreamRunsPanel({ unitId, refs, streamOptions, canWrite }: Strea
           </div>
         )}
       </div>
-      {adding && <StreamRunForm unitId={unitId} streamOptions={streamOptions} productOptions={refs.productOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
+      <AddDialog open={adding} onOpenChange={setAdding} title="Record stream run" description="Which product a stream ran, and the lot it made." testId="stream-run-dialog">
+        <StreamRunForm unitId={unitId} streamOptions={streamOptions} productOptions={refs.productOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />
+      </AddDialog>
       <DataTable
         caption="Stream runs"
         columns={columnsOf(refs, canWrite)}

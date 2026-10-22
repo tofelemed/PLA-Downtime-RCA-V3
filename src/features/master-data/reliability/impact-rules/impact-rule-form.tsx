@@ -8,7 +8,7 @@ import { NativeSelect, type Option } from '@/features/plans-profiles-calendars/c
 import { PlantDateTimeField } from '@/features/plans-profiles-calendars/components/plant-date-time-field';
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
 import { refusalOf } from '@/features/plans-profiles-calendars/model/refusal';
-import type { SaveFeedback, SaveResult } from '@/features/ux-kit/save-result';
+import { useSaveFeedback, type SaveResult } from '@/features/ux-kit/save-result';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleConflicts } from './impact-rule-conflicts';
 import { emptyImpactRuleForm, IMPACT_MODE_LABELS, impactRuleCreateBody, type ImpactRuleFormValues, validateImpactRuleForm } from './impact-rule-form-model';
@@ -18,18 +18,22 @@ const MODE_OPTIONS: Option[] = (Object.keys(IMPACT_MODE_LABELS) as UnitImpactMod
 export interface ImpactRuleFormProps {
   unitOptions: Option[];
   timezone: string;
-  /** the page's save feedback: its result dialog outlives this form, which closes on success */
-  feedback: SaveFeedback;
   /** the result dialog of the added draft */
   resultOf: (rule: UnitImpactRuleView) => SaveResult;
-  onDone: () => void;
+  /** the draft was stored: the page closes the dialog and shows the result (`useAddDialog().saved`) */
+  onSaved: (result: SaveResult) => void;
+  onCancel: () => void;
 }
 
-/** A draft rule: the unit, the asset, how its stop affects the unit, and the standby that may take over. */
-export function ImpactRuleForm({ unitOptions, timezone, feedback, resultOf, onDone }: ImpactRuleFormProps) {
+/**
+ * A draft rule: the unit, the asset, how its stop affects the unit, and the standby that may take over.
+ * Shown in the page's "Add rule" dialog; a refusal is the red alert at its top, the input kept.
+ */
+export function ImpactRuleForm({ unitOptions, timezone, resultOf, onSaved, onCancel }: ImpactRuleFormProps) {
   const [values, setValues] = useState<ImpactRuleFormValues>(emptyImpactRuleForm);
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateUnitImpactRule();
+  const feedback = useSaveFeedback();
   const { assets } = useAssetLookup();
   const set = <K extends keyof ImpactRuleFormValues>(key: K, value: ImpactRuleFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
   const fieldError = (key: string) => errors[key] ?? refusalOf(feedback.failure)?.fieldErrors[key];
@@ -42,12 +46,12 @@ export function ImpactRuleForm({ unitOptions, timezone, feedback, resultOf, onDo
     feedback.clearFailure();
     if (Object.keys(found).length > 0) return;
     // a refusal stays in the red alert at the top, with the input kept
-    const saved = await feedback.run(() => create.submit(impactRuleCreateBody(values, timezone)), resultOf).catch(() => null);
-    if (saved) onDone();
+    const saved = await feedback.run(() => create.submit(impactRuleCreateBody(values, timezone)), null).catch(() => null);
+    if (saved) onSaved(resultOf(saved));
   };
 
   return (
-    <div className="space-y-2 rounded-md border p-3" data-testid="impact-rule-form">
+    <div className="space-y-2" data-testid="impact-rule-form">
       {feedback.alert}
       <ImpactRuleConflicts error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
@@ -83,7 +87,7 @@ export function ImpactRuleForm({ unitOptions, timezone, feedback, resultOf, onDo
         <Button size="sm" onClick={save} disabled={create.isPending}>
           Add draft rule
         </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
+        <Button size="sm" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
       </div>

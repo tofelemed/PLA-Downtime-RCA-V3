@@ -1,24 +1,26 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { useCreateCrew, useCreateCrewRotation, useCrewRotations, useCrews } from '@/api/v2/queries/calendars';
+import { useCrewRotations, useCrews } from '@/api/v2/queries/calendars';
 import type { CrewRotationView } from '@/api/v2/types/calendars';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { DateInput } from '@/features/ux-kit/date-inputs';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { Section } from '@/features/ux-kit/page-layout';
-import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { ActionIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
-import { NativeSelect } from '../components/native-select';
-import { SaveRefusalAlert } from '../components/save-refusal-alert';
-import { cycleOf, cycleText } from '../model/crew-cycle';
+import { NativeSelect, type Option } from '../components/native-select';
+import { cycleText } from '../model/crew-cycle';
+import { CrewDialog } from './crew-dialog';
+import { RotationDialog } from './rotation-dialog';
 
 export interface CrewRotationEditorProps {
   siteId: string | undefined;
   timezone: string;
 }
+
+type Adding = 'crew' | 'rotation';
 
 function RotationTable({ crewId }: { crewId: string }) {
   const pref = useCalendarPreference();
@@ -37,79 +39,53 @@ function RotationTable({ crewId }: { crewId: string }) {
   );
 }
 
-/** A new rotation of the crew: toast and an empty form on success; the red alert above it on a refusal, input kept. */
-function RotationForm({ crewId, timezone }: { crewId: string; timezone: string }) {
-  const [cycle, setCycle] = useState('');
-  const [anchorDate, setAnchorDate] = useState('');
-  const [effectiveFrom, setEffectiveFrom] = useState('');
-  const createRotation = useCreateCrewRotation();
-  const feedback = useSaveFeedback();
-  const addRotation = async () => {
-    const body = { crewId, effectiveFrom, pattern: { anchorDate, cycle: cycleOf(cycle) } };
-    const saved = await feedback.run(() => createRotation.submit(body), 'Rotation added').catch(() => null);
-    if (!saved) return;
-    setCycle('');
-    setAnchorDate('');
-    setEffectiveFrom('');
-  };
+const NO_CREW = 'Add a crew first.';
+
+function AddActions({ hasCrews, onAdd }: { hasCrews: boolean; onAdd: (what: Adding) => void }) {
   return (
-    <div className="space-y-2">
-      <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
-      <div className="grid items-end gap-2 sm:grid-cols-4" data-testid="rotation-form">
-        <FormField id="rotationCycle" label="Cycle (shift names, “-” = off)" hint="e.g. A,A,B,B,C,C,-,-">
-          <Input id="rotationCycle" value={cycle} onChange={(e) => setCycle(e.target.value)} />
-        </FormField>
-        <DateInput id="rotationAnchor" label="Cycle day 1" value={anchorDate} onChange={setAnchorDate} />
-        <DateInput id="rotationFrom" label="Effective from" value={effectiveFrom} onChange={setEffectiveFrom} />
-        <Button size="sm" onClick={() => void addRotation()} disabled={!cycle || !anchorDate || !effectiveFrom || createRotation.isPending}>
-          Add rotation
-        </Button>
-      </div>
-    </div>
+    <>
+      <DisabledReason id="rotation-add-reason" reason={hasCrews ? null : NO_CREW} />
+      <Button type="button" size="sm" variant="outline" onClick={() => onAdd('crew')} data-testid="crew-add">
+        <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+        Add crew
+      </Button>
+      <Button type="button" size="sm" variant="outline" onClick={() => onAdd('rotation')} disabled={!hasCrews} aria-describedby={hasCrews ? undefined : 'rotation-add-reason'} data-testid="rotation-add">
+        <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
+        Add rotation
+      </Button>
+    </>
   );
 }
 
 /**
  * Crews and their rotations: a cycle of shift names from an anchor date. Crews only label shift instances
- * — they never change shift bounds or scheduled time (the server re-assigns future instances). Adding a crew
- * or a rotation ends in a toast and an empty field; a refusal is the red alert above the form, input kept.
+ * — they never change shift bounds or scheduled time (the server re-assigns future instances). "Add crew" and
+ * "Add rotation" in the section header open dialogs (a toast and the dialog closes on success; a refusal is
+ * the red alert in the dialog, input kept); the chosen crew's rotations are listed below.
  */
 export function CrewRotationEditor({ siteId, timezone }: CrewRotationEditorProps) {
   const { canWriteCalendars } = useCapabilities();
   const crews = flattenPages(useCrews(siteId).data?.pages);
+  const crewOptions: Option[] = crews.map((c) => ({ value: c.id, label: c.name }));
   const [crewId, setCrewId] = useState('');
-  const [name, setName] = useState('');
-  const createCrew = useCreateCrew();
-  const feedback = useSaveFeedback();
-  const addCrew = async () => {
-    const crew = await feedback.run(() => createCrew.submit({ name, ...(siteId ? { siteId } : {}) }), 'Crew added').catch(() => null);
-    if (crew) {
-      setName('');
-      setCrewId(crew.id);
-    }
+  const [adding, setAdding] = useState<Adding | null>(null);
+  const closeDialog = (chosen?: string) => {
+    if (chosen) setCrewId(chosen);
+    setAdding(null);
   };
+  const actions = canWriteCalendars ? <AddActions hasCrews={crews.length > 0} onAdd={setAdding} /> : null;
   return (
-    <Section title="Crews and rotations" collapsible>
+    <Section title="Crews and rotations" collapsible actions={actions}>
       <div className="space-y-3" data-testid="crew-rotations">
-        <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="w-72">
           <FormField id="crewSelect" label="Crew">
-            <NativeSelect id="crewSelect" value={crewId} options={crews.map((c) => ({ value: c.id, label: c.name }))} placeholder="Choose a crew" onChange={setCrewId} />
+            <NativeSelect id="crewSelect" value={crewId} options={crewOptions} placeholder="Choose a crew" onChange={setCrewId} />
           </FormField>
-          {canWriteCalendars && (
-            <>
-              <FormField id="crewName" label="New crew">
-                <Input id="crewName" value={name} onChange={(e) => setName(e.target.value)} />
-              </FormField>
-              <Button size="sm" variant="outline" onClick={addCrew} disabled={!name.trim() || createCrew.isPending} data-testid="crew-add">
-                Add crew
-              </Button>
-            </>
-          )}
         </div>
-        {crewId && <RotationTable crewId={crewId} />}
-        {crewId && canWriteCalendars && <RotationForm key={crewId} crewId={crewId} timezone={timezone} />}
+        {crewId ? <RotationTable crewId={crewId} /> : <p className="text-sm text-muted-foreground">Choose a crew to see its rotations.</p>}
       </div>
+      {adding === 'crew' && <CrewDialog siteId={siteId} timezone={timezone} onClose={closeDialog} />}
+      {adding === 'rotation' && <RotationDialog crewOptions={crewOptions} crewId={crewId} timezone={timezone} onClose={closeDialog} />}
     </Section>
   );
 }

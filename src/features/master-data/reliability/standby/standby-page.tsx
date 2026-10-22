@@ -1,28 +1,41 @@
-import { useImportStandbyRecords } from '@/api/v2/queries/reliability-standby';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { AddDialog, useAddDialog } from '@/features/ux-kit/add-dialog';
 import { Section } from '@/features/ux-kit/page-layout';
+import { ActionIcon } from '@/lib/icons';
 import { MasterDataLayout } from '../../components/master-data-layout';
-import { RowsImportPanel } from '../shared/rows-import-panel';
 import { useReliabilityFormat } from '../shared/use-reliability-format';
-import { STANDBY_CSV_EXAMPLE, STANDBY_CSV_COLUMNS, standbyImportResult, standbyImportSummary, standbyRowOf } from './standby-import-model';
 import { StandbyMetricsSection } from './standby-metrics-section';
 import { StandbyRegisterForm } from './standby-register-form';
 import { StandbyRegistrationsTable } from './standby-registrations-table';
+
+/** Header actions (SETUP_UX_FIXES Phase 4): Import log CSV opens the import sub-page, Register standby a dialog. */
+function HeaderActions({ onAdd }: { onAdd: () => void }) {
+  return (
+    <>
+      <Button asChild variant="outline" data-testid="standby-import-open">
+        <Link to="/master-data/standby-equipment/import"><ActionIcon.import aria-hidden="true" />Import log CSV</Link>
+      </Button>
+      <Button onClick={onAdd} data-testid="standby-register-new"><ActionIcon.add aria-hidden="true" />Register standby</Button>
+    </>
+  );
+}
 
 /**
  * `/master-data/standby-equipment` (SME D9): spare pumps and standby compressors — registrations, their
  * demand / test / running log and the measures the server computes from it.
  */
 export function StandbyEquipmentPage() {
-  const capabilities = useCapabilities();
-  const { canWriteStandby } = capabilities;
+  const { canWriteStandby } = useCapabilities();
   const format = useReliabilityFormat();
-  const importer = useImportStandbyRecords();
+  const adding = useAddDialog();
   return (
     <MasterDataLayout
       title="Standby equipment"
       alsoAllowed={canWriteStandby}
       description="Equipment that waits on standby is judged on failed starts per demand, not on calendar time."
+      actions={canWriteStandby ? <HeaderActions onAdd={adding.open} /> : undefined}
     >
       <Section title="Registrations">
         <StandbyRegistrationsTable format={format} canWrite={canWriteStandby} />
@@ -30,23 +43,10 @@ export function StandbyEquipmentPage() {
       <Section title="Measures">
         <StandbyMetricsSection format={format} />
       </Section>
-      {canWriteStandby && (
-        <>
-          <Section title="Register standby equipment"><StandbyRegisterForm format={format} /></Section>
-          <Section title="Import the demand / test log" description="An entry with a log reference already stored is replaced.">
-            <RowsImportPanel
-              id="standby-log"
-              columns={STANDBY_CSV_COLUMNS}
-              example={STANDBY_CSV_EXAMPLE}
-              mapRow={standbyRowOf}
-              submit={importer.submit}
-              summary={standbyImportSummary}
-              saved={(message) => standbyImportResult(message, capabilities)}
-              pending={importer.isPending}
-            />
-          </Section>
-        </>
-      )}
+      <AddDialog open={adding.isOpen} onOpenChange={adding.setOpen} title="Register standby equipment" testId="standby-register-dialog">
+        <StandbyRegisterForm format={format} onSaved={adding.saved} />
+      </AddDialog>
+      {adding.resultElement}
     </MasterDataLayout>
   );
 }

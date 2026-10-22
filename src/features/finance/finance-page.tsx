@@ -5,6 +5,7 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { pageNameOf } from '@/features/auth/navigation-items';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { FinanceAreaTabs } from './components/finance-area-tabs';
+import { FinanceHeaderActions } from './finance-header-actions';
 import { RecalculationNotice } from './components/recalculation-notice';
 import { ValuationRatesLink } from './components/valuation-rates-link';
 import { DemandStatusesTab } from './demand/demand-statuses-tab';
@@ -23,6 +24,7 @@ function FinanceScreen() {
         <PageHeader
           title={pageNameOf('/finance')}
           description={`Valuation policy, exchange rates and product demand of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
+          actions={<FinanceHeaderActions tab={tab} />}
         />
         <FinanceAreaTabs current={tab} />
         <ValuationRatesLink />

@@ -142,13 +142,20 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     expect(itemsOf(versions.body).map((v) => v.state)).toEqual(['published']);
 
     await openPlanningTab(page, 'calendars');
-    await page.fill('#crewName', crewName);
-    await page.getByRole('button', { name: 'Add crew' }).click();
+    // "Add crew" / "Add rotation" in the section header open dialogs that close on success
+    await page.getByTestId('crew-add').click();
+    const crewDialog = page.getByRole('dialog', { name: 'Add crew' });
+    await crewDialog.locator('#crewName').fill(crewName);
+    await crewDialog.getByRole('button', { name: 'Add crew' }).click();
+    await expect(crewDialog).toHaveCount(0, { timeout: 15_000 });
     await expect(page.locator('#crewSelect')).toHaveValue(/.+/, { timeout: 15_000 });
-    await page.fill('#rotationCycle', 'A,A,B,B,C,C');
-    await page.fill('#rotationAnchor', utcDate(0));
-    await page.fill('#rotationFrom', utcDate(0));
-    await page.getByRole('button', { name: 'Add rotation' }).click();
+    await page.getByTestId('rotation-add').click();
+    const rotationDialog = page.getByRole('dialog', { name: 'Add rotation' });
+    await rotationDialog.locator('#rotationCycle').fill('A,A,B,B,C,C');
+    await rotationDialog.locator('#rotationAnchor').fill(utcDate(0));
+    await rotationDialog.locator('#rotationFrom').fill(utcDate(0));
+    await rotationDialog.getByRole('button', { name: 'Add rotation' }).click();
+    await expect(rotationDialog).toHaveCount(0, { timeout: 60_000 });
     await expect(page.getByTestId('rotation-row')).toHaveCount(1, { timeout: 60_000 }); // the server re-assigns future shift instances
     await expect(page.getByTestId('rotation-list').locator('tbody tr').first()).toContainText('A,A,B,B,C,C');
     const crews = await api<{ items: Array<{ name: string }> }>(jonas.token, 'GET', '/v2/crews?limit=200');
@@ -215,10 +222,13 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await page.selectOption('#calendarScope', { label: calUnit.unitName });
     await page.selectOption('#crewSelect', { label: crewName });
     await expect(page.getByTestId('rotation-row')).toHaveCount(1, { timeout: 20_000 });
-    await page.fill('#rotationCycle', 'A,A,B,B,C,C,-,-');
-    await page.fill('#rotationAnchor', utcDate(30));
-    await page.fill('#rotationFrom', utcDate(30));
-    await page.getByRole('button', { name: 'Add rotation' }).click();
+    await page.getByTestId('rotation-add').click();
+    const rotationDialog = page.getByRole('dialog', { name: 'Add rotation' });
+    await rotationDialog.locator('#rotationCycle').fill('A,A,B,B,C,C,-,-');
+    await rotationDialog.locator('#rotationAnchor').fill(utcDate(30));
+    await rotationDialog.locator('#rotationFrom').fill(utcDate(30));
+    await rotationDialog.getByRole('button', { name: 'Add rotation' }).click();
+    await expect(rotationDialog).toHaveCount(0, { timeout: 60_000 });
     // POST /v2/crew-rotations accepts `cycle: Array<string | null>` (null = day off, what the screen sends for "-")
     await expect(page.getByTestId('rotation-row')).toHaveCount(2, { timeout: 60_000 });
   });

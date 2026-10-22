@@ -1,18 +1,12 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { CodeLibraryPath } from '@/api/v2/types/codes-admin';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { ActionIcon } from '@/lib/icons';
 import { useUrlParam } from '../hooks/use-url-param';
 import { useUrlText } from '../hooks/use-url-text';
 import { LIBRARIES, LIBRARY_PATHS } from '../model/code-fields';
-import { CodeCreateDialog } from './code-create-dialog';
 import { CodeFlatTable } from './code-flat-table';
 import { CodeSearchResults } from './code-search-results';
 import { CodeTree } from './code-tree';
@@ -22,12 +16,10 @@ import { sectionNameOf } from '@/features/master-data/components/master-data-sec
 const LIBRARY_OPTIONS = LIBRARY_PATHS.map((path) => ({ value: path, label: LIBRARIES[path].label }));
 const SHOWN = ['active', 'all'] as const;
 
-/** Library picker, search, "Show retired" and "New code" above the chosen library. */
+/** Library picker, search and "Show retired" above the chosen library ("New code" is in the page header). */
 function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary: (next: CodeLibraryPath) => void }) {
-  const { canWriteCodes } = useCapabilities();
   const [shown, setShown] = useUrlParam('show', SHOWN, 'active');
   const [query, setQuery] = useUrlText('q');
-  const [creating, setCreating] = useState(false);
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="w-56 space-y-1">
@@ -39,19 +31,6 @@ function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary
         <Checkbox id="codes-retired" checked={shown === 'all'} onCheckedChange={(value) => setShown(value === true ? 'all' : 'active')} />
         <Label htmlFor="codes-retired">Show retired</Label>
       </div>
-      <div className="ml-auto">
-        {canWriteCodes ? (
-          <Button onClick={() => setCreating(true)} data-testid="code-new">
-            <ActionIcon.add aria-hidden="true" />
-            New code
-          </Button>
-        ) : (
-          <ReadOnlyHint />
-        )}
-      </div>
-      {creating && (
-        <CodeCreateDialog library={library} parentId={null} onClose={() => setCreating(false)} />
-      )}
     </div>
   );
 }

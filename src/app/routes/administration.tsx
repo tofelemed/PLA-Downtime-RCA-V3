@@ -18,10 +18,12 @@ const RcaCauses = lazyNamedWithPreload(() => import('@/features/master-data/rca/
 const Checklists = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklists-page'), 'ChecklistsPage');
 const ChecklistDetail = lazyNamedWithPreload(() => import('@/features/master-data/rca/checklist-detail-page'), 'ChecklistDetailPage');
 const FailureDictionary = lazyNamedWithPreload(() => import('@/features/master-data/reliability/failure-dictionary-page'), 'FailureDictionaryPage');
+const FailureDictionaryImport = lazyNamedWithPreload(() => import('@/features/master-data/reliability/dictionary-import-page'), 'DictionaryImportPage');
 /** Reliability plant data (SME D1 / D2 / D6 / D9 / D10; transition allowance 2.5.6). */
 const PlantFlow = lazyNamedWithPreload(() => import('@/features/master-data/plant-flow/plant-flow-page'), 'PlantFlowPage');
 const StopPolicy = lazyNamedWithPreload(() => import('@/features/master-data/reliability/policy/stop-policy-page'), 'StopPolicyPage');
 const StandbyEquipment = lazyNamedWithPreload(() => import('@/features/master-data/reliability/standby/standby-page'), 'StandbyEquipmentPage');
+const StandbyImport = lazyNamedWithPreload(() => import('@/features/master-data/reliability/standby/standby-import-page'), 'StandbyImportPage');
 const UnitImpactRules = lazyNamedWithPreload(() => import('@/features/master-data/reliability/impact-rules/unit-impact-rules-page'), 'UnitImpactRulesPage');
 const WorkOrders = lazyNamedWithPreload(() => import('@/features/master-data/reliability/work-orders/work-orders-page'), 'WorkOrdersPage');
 const UnitState = lazyNamedWithPreload(() => import('@/features/master-data/reliability/unit-state/unit-state-page'), 'UnitStatePage');
@@ -78,9 +80,11 @@ const ROUTES: readonly AppRoute[] = [
   { path: '/master-data/rca/checklists/new', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/rca/checklists/:checklistId', element: <ChecklistDetail />, preload: ChecklistDetail.preload },
   { path: '/master-data/failure-dictionary', element: <FailureDictionary />, preload: FailureDictionary.preload },
+  { path: '/master-data/failure-dictionary/import', element: <FailureDictionaryImport />, preload: FailureDictionaryImport.preload },
   { path: '/master-data/plant-flow', element: <PlantFlow />, preload: PlantFlow.preload },
   { path: '/master-data/stop-policy', element: <StopPolicy />, preload: StopPolicy.preload },
   { path: '/master-data/standby-equipment', element: <StandbyEquipment />, preload: StandbyEquipment.preload },
+  { path: '/master-data/standby-equipment/import', element: <StandbyImport />, preload: StandbyImport.preload },
   { path: '/master-data/unit-impact-rules', element: <UnitImpactRules />, preload: UnitImpactRules.preload },
   { path: '/master-data/work-orders', element: <WorkOrders />, preload: WorkOrders.preload },
   { path: '/master-data/unit-state', element: <UnitState />, preload: UnitState.preload },

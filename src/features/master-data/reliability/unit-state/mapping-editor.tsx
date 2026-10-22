@@ -53,13 +53,15 @@ export interface MappingEditorProps {
   /** the page's save feedback: its result dialog outlives this editor, which the new version remounts */
   feedback: SaveFeedback;
   resultOf: (saved: UnitStateMappingView) => SaveResult;
+  /** a version was recorded (the page closes the editor's side panel) */
+  onSaved?: () => void;
 }
 
 /**
  * A new version of the unit's mapping, starting from the version in force; the previous one ends at "from".
  * After a save the editor starts again from the saved version (also when it takes effect later).
  */
-export function MappingEditor({ unitId, current, timezone, feedback, resultOf }: MappingEditorProps) {
+export function MappingEditor({ unitId, current, timezone, feedback, resultOf, onSaved }: MappingEditorProps) {
   const [draft, setDraft] = useState<MappingDraft>(() => draftOf(current));
   const [shown, setShown] = useState<MappingErrors>({});
   const record = useRecordUnitStateMapping();
@@ -71,7 +73,9 @@ export function MappingEditor({ unitId, current, timezone, feedback, resultOf }:
     if (Object.keys(errors).length > 0) return;
     // a refusal stays in the red alert at the top, with the input kept
     const saved = await feedback.run(() => record.submit(bodyOf(unitId, draft)), resultOf).catch(() => null);
-    if (saved) setDraft(draftOf(saved));
+    if (!saved) return;
+    setDraft(draftOf(saved));
+    onSaved?.();
   };
   const fields = { draft, errors: shown, set };
   return (

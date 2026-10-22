@@ -45,7 +45,7 @@ export function RateForm({ profileId, timebase, uom, timezone, onDone }: RateFor
   };
 
   return (
-    <div className="space-y-2 rounded-md border p-3" data-testid="rate-form">
+    <div className="space-y-2" data-testid="rate-form">
       <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
         <FormField id="rateKind" label="Kind">

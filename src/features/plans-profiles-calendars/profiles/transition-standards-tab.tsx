@@ -11,6 +11,7 @@ import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ActionIcon } from '@/lib/icons';
+import { AddDialog } from '@/features/ux-kit/add-dialog';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
@@ -86,7 +87,7 @@ export function TransitionStandardsTab() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <ReadOnlyHint />
-          {canWriteProfiles && unitId && !adding && (
+          {canWriteProfiles && unitId && (
             <Button size="sm" onClick={() => setAdding(true)} data-testid="transition-standard-new">
               <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
               Add transition standard
@@ -94,7 +95,11 @@ export function TransitionStandardsTab() {
           )}
         </div>
       </div>
-      {adding && unitId && <TransitionStandardForm unitId={unitId} productOptions={refs.productOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
+      {unitId && (
+        <AddDialog open={adding} onOpenChange={setAdding} title="Add transition standard" description="A draft entry of the grade-transition matrix; another manager approves it." wide testId="transition-standard-dialog">
+          <TransitionStandardForm unitId={unitId} productOptions={refs.productOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />
+        </AddDialog>
+      )}
       <FocusedListNotice anchor={anchor} what="transition standards" />
       {unitId ? (
         <DataTable

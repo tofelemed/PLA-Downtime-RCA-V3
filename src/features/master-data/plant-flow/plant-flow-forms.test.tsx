@@ -11,8 +11,9 @@ vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast }) }));
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
-const { FlowRouteForm } = await import('./flow-route-form');
-const { BufferLevelForm } = await import('./buffer-level-form');
+const { FlowRouteDialog } = await import('./flow-route-dialog');
+const { BufferLevelDialog } = await import('./buffer-level-dialog');
+const { BufferLevelsSection } = await import('./buffer-levels-section');
 
 const TZ = 'Asia/Tehran';
 const UNITS = [{ value: 'u1', label: 'Reactor' }, { value: 'u2', label: 'Extruder' }];
@@ -45,19 +46,19 @@ describe('plant flow save feedback (DECISIONS 2026-10-22)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add draft route' }));
   };
 
-  it('an added route ends in a toast and the form closes', async () => {
+  it('an added route ends in a toast and the dialog closes', async () => {
     reply = (call) => (call.method === 'POST' ? jsonResponse(201, ROUTE) : undefined);
     const onDone = vi.fn();
-    wrap(<FlowRouteForm unitOptions={UNITS} timezone={TZ} onDone={onDone} />);
+    wrap(<FlowRouteDialog unitOptions={UNITS} timezone={TZ} onDone={onDone} />);
     fillRoute();
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ title: 'Draft route added' }));
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('a refused route is the red alert at the top of the form, the input kept, no toast', async () => {
+  it('a refused route is the red alert at the top of the dialog form, the input kept, no toast', async () => {
     reply = (call) => (call.method === 'POST' ? jsonResponse(422, errorBody('FLOW_ROUTE_CYCLE', 'cycle')) : undefined);
     const onDone = vi.fn();
-    wrap(<FlowRouteForm unitOptions={UNITS} timezone={TZ} onDone={onDone} />);
+    wrap(<FlowRouteDialog unitOptions={UNITS} timezone={TZ} onDone={onDone} />);
     fillRoute();
     const alert = await screen.findByTestId('save-failure-alert');
     expect(screen.getByTestId('flow-route-form').firstElementChild).toBe(alert);
@@ -77,22 +78,49 @@ describe('plant flow save feedback (DECISIONS 2026-10-22)', () => {
   };
   const BUFFERS = [{ value: 'u1|u2', label: 'Reactor → Extruder' }];
 
-  it('a recorded level ends in a toast and an empty form', async () => {
+  it('a recorded level ends in a toast and the dialog closes', async () => {
     reply = (call) => (call.method === 'POST' ? jsonResponse(201, LEVEL) : undefined);
-    wrap(<BufferLevelForm bufferOptions={BUFFERS} timezone={TZ} />);
+    const onClose = vi.fn();
+    wrap(<BufferLevelDialog bufferOptions={BUFFERS} timezone={TZ} onClose={onClose} />);
+    expect(screen.getByRole('dialog', { name: 'Record buffer level' })).toBeTruthy();
     fillLevel();
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ title: 'Buffer level recorded' }));
-    expect((screen.getByLabelText('Buffer') as HTMLSelectElement).value).toBe('');
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('save-failure-alert')).toBeNull();
   });
 
   it('a refused level is the red alert at the top, the input kept', async () => {
     reply = (call) => (call.method === 'POST' ? jsonResponse(403, errorBody('FORBIDDEN_ROLE', 'role')) : undefined);
-    wrap(<BufferLevelForm bufferOptions={BUFFERS} timezone={TZ} />);
+    const onClose = vi.fn();
+    wrap(<BufferLevelDialog bufferOptions={BUFFERS} timezone={TZ} onClose={onClose} />);
     fillLevel();
     const alert = await screen.findByTestId('save-failure-alert');
     expect(screen.getByTestId('buffer-level-form').firstElementChild).toBe(alert);
     expect((screen.getByLabelText('Buffer') as HTMLSelectElement).value).toBe('u1|u2');
+    expect(onClose).not.toHaveBeenCalled();
     expect(toast).not.toHaveBeenCalled();
+  });
+
+  it('Buffer levels: the table first, "Record buffer level" in the section header opens the dialog', async () => {
+    reply = (call) => (call.method === 'GET' ? jsonResponse(200, { items: [LEVEL], nextCursor: null }) : undefined);
+    const refs = { timezone: TZ, unitName: (id: string) => (id === 'u1' ? 'Reactor' : 'Extruder') } as unknown as Parameters<typeof BufferLevelsSection>[0]['refs'];
+    wrap(<BufferLevelsSection refs={refs} bufferOptions={BUFFERS} canWrite />);
+    expect(await screen.findByRole('table', { name: 'Buffer levels' })).toBeTruthy();
+    expect(screen.queryByTestId('buffer-level-form')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Record buffer level' }));
+    expect(await screen.findByTestId('buffer-level-form')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByTestId('buffer-level-form')).toBeNull());
+  });
+
+  it('Buffer levels: without an approved buffer route the action says why it is disabled; readers get no action', async () => {
+    reply = () => jsonResponse(200, { items: [], nextCursor: null });
+    const refs = { timezone: TZ, unitName: () => '' } as unknown as Parameters<typeof BufferLevelsSection>[0]['refs'];
+    const { unmount } = wrap(<BufferLevelsSection refs={refs} bufferOptions={[]} canWrite />);
+    expect(screen.getByRole('button', { name: 'Record buffer level' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByTestId('disabled-reason').textContent).toBe('Approve a route with a buffer first.');
+    unmount();
+    wrap(<BufferLevelsSection refs={refs} bufferOptions={BUFFERS} canWrite={false} />);
+    expect(screen.queryByRole('button', { name: 'Record buffer level' })).toBeNull();
   });
 });

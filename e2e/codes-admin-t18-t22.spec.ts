@@ -120,10 +120,13 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     // a new mapping version leaves the historical one unchanged
     await openCode(page, 'reason-codes', CHILD);
     await page.getByTestId('tab-code-mappings').click();
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
     await page.getByTestId('mr-kind').selectOption('reason_to_schedule_class');
     await page.getByTestId('mr-target').selectOption('planned');
     await page.getByTestId('mr-save').click();
     await expect(page.locator('[data-testid="mr-row"][data-version="1"]')).toHaveAttribute('data-target', 'planned');
+    await page.getByTestId('mapping-new').click(); // the form is a dialog opened from "Add mapping"
+    await page.getByTestId('mr-kind').selectOption('reason_to_schedule_class');
     await page.getByTestId('mr-target').selectOption('unplanned');
     await page.getByTestId('mr-save').click();
     await expect(page.locator('[data-testid="mr-row"][data-version="2"]')).toHaveAttribute('data-target', 'unplanned');

@@ -1,19 +1,19 @@
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
-import { StopEngineSection } from './stop-engine-section';
-import { DerivedStopPreview } from './derived-stop-preview';
 import { useSearchParams } from 'react-router-dom';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { Section } from '@/features/ux-kit/page-layout';
 import { MasterDataLayout } from '../../components/master-data-layout';
 import { UnitSelect } from '../../components/unit-select';
 import { useReliabilityFormat } from '../shared/use-reliability-format';
+import { DerivedStopPreviewSection } from './derived-stop-preview-section';
 import { MicroStopSection } from './micro-stop-section';
+import { StopEngineSection } from './stop-engine-section';
 import { TransitionAllowanceControl } from './transition-allowance-control';
 
 /**
  * `/master-data/stop-policy`: the plant's or a unit's loss-accounting policy settings that are written as
- * new approved `oee_policy` versions — micro-stop thresholds and trip reasons (SME D6) and the
- * grade-change allowance (engine 2.5.6). Manager approvers record new versions; others read them.
+ * new approved `oee_policy` versions — stop-engine settings, micro-stop thresholds and trip reasons (SME D6)
+ * and the grade-change allowance (engine 2.5.6). Each section shows the version in force; manager approvers
+ * record a new version from the section's "Record new version" (a side panel), others read them.
  */
 export function StopPolicyPage() {
   const { canWriteOeePolicy } = useCapabilities();
@@ -32,14 +32,10 @@ export function StopPolicyPage() {
         <UnitSelect id="policy-scope" label="Applies to" value={unitId} onChange={choose} allowAll allLabel="The whole plant" />
       </div>
       {!canWriteOeePolicy && <p className="text-sm text-muted-foreground">Only manager approvers record new versions.</p>}
-      <Section title="Stop-engine settings"><StopEngineSection key={unitId} unitId={unitId} canWrite={canWriteOeePolicy} format={format} /></Section>
-      <Section title="State engine preview"><DerivedStopPreview key={unitId} unitId={unitId} timezone={timezone} /></Section>
-      <Section title="Micro-stops and trips">
-        <MicroStopSection unitId={unitId} canWrite={canWriteOeePolicy} format={format} />
-      </Section>
-      <Section title="Grade-change allowance">
-        <TransitionAllowanceControl unitId={unitId} canWrite={canWriteOeePolicy} format={format} />
-      </Section>
+      <StopEngineSection key={unitId} unitId={unitId} canWrite={canWriteOeePolicy} format={format} />
+      <DerivedStopPreviewSection key={`preview-${unitId}`} unitId={unitId} timezone={timezone} />
+      <MicroStopSection key={`micro-${unitId}`} unitId={unitId} canWrite={canWriteOeePolicy} format={format} />
+      <TransitionAllowanceControl key={`allowance-${unitId}`} unitId={unitId} canWrite={canWriteOeePolicy} format={format} />
     </MasterDataLayout>
   );
 }

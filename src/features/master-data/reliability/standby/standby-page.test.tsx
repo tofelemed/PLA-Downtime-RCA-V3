@@ -58,22 +58,6 @@ describe('Standby equipment page (SME D9)', () => {
     expect(within(table).getByText('P-101B — Spare feed pump')).toBeInTheDocument();
   });
 
-  it('checks pasted rows here, then shows the row problems the server refused', async () => {
-    const calls = stubV2Fetch(reply);
-    actAs('operator');
-    renderPage();
-    const panel = await screen.findByTestId('standby-log-import');
-    const box = within(panel).getByRole('textbox');
-    fireEvent.change(box, { target: { value: 'assetCode,kind,startedAt,outcome\nP-9,demand,2026-10-01 08:00,success' } });
-    fireEvent.click(within(panel).getByRole('button', { name: 'Check' }));
-    expect(within(panel).getByText(/startedAt must be an ISO 8601 time/)).toBeInTheDocument();
-    expect(calls.some((c) => c.method === 'POST')).toBe(false);
-    fireEvent.change(box, { target: { value: 'assetCode,kind,startedAt,outcome\nP-9,demand,2026-10-01T08:00:00Z,success' } });
-    fireEvent.click(within(panel).getByRole('button', { name: 'Import' }));
-    expect(await within(panel).findByText(/assetId \/ assetCode must name an asset/)).toBeInTheDocument();
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ records: [{ assetCode: 'P-9', kind: 'demand', startedAt: '2026-10-01T08:00:00Z', endedAt: null, outcome: 'success' }] });
-  });
-
   it('Retire asks for confirmation before ending the duty', async () => {
     const calls = stubV2Fetch(reply);
     actAs('SuperAdmin');
@@ -90,37 +74,26 @@ describe('Standby equipment page (SME D9)', () => {
     await waitFor(() => expect(calls.some((c) => c.method === 'POST' && c.url.pathname.endsWith('/standby-equipment/s1/retire'))).toBe(true));
   });
 
-  it('registering ends in the result dialog and resets the whole form', async () => {
+  it('Register standby opens a dialog; registering ends in the result dialog and Add another opens an empty form', async () => {
     const calls = stubV2Fetch((call) => (call.method === 'POST' && call.url.pathname.endsWith('/standby-equipment') ? jsonResponse(201, { ...REGISTRATION, id: 's2', evaluation: 'running' }) : reply(call)));
     actAs('SuperAdmin');
     renderPage();
-    await waitFor(() => expect(screen.getAllByRole('option', { name: 'P-101B — Spare feed pump' }).length).toBeGreaterThan(0));
-    fireEvent.change(screen.getByLabelText('Asset'), { target: { value: 'a1' } });
-    fireEvent.change(screen.getByLabelText('Evaluated'), { target: { value: 'running' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Register' }));
+    fireEvent.click(await within(screen.getByRole('banner')).findByRole('button', { name: 'Register standby' }));
+    const form = await screen.findByTestId('standby-register-dialog');
+    await waitFor(() => expect(within(form).getAllByRole('option', { name: 'P-101B — Spare feed pump' }).length).toBeGreaterThan(0));
+    fireEvent.change(within(form).getByLabelText('Asset'), { target: { value: 'a1' } });
+    fireEvent.change(within(form).getByLabelText('Evaluated'), { target: { value: 'running' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Register' }));
     const dialog = await screen.findByTestId('save-result-dialog');
     expect(within(dialog).getByText('Standby equipment registered')).toBeInTheDocument();
     expect(within(dialog).getByText('P-101B — Spare feed pump')).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: 'Back to Standby equipment' })).toBeInTheDocument();
     expect(calls.find((c) => c.method === 'POST' && c.url.pathname.endsWith('/standby-equipment'))?.body).toEqual({ assetId: 'a1', evaluation: 'running' });
-    expect((screen.getByLabelText('Asset') as HTMLSelectElement).value).toBe('');
-    expect((screen.getByLabelText('Evaluated') as HTMLSelectElement).value).toBe('demand');
-    expect(screen.getByRole('button', { name: 'Register', hidden: true })).toBeDisabled();
-  });
-
-  it('a stored log import ends in the result dialog with its counts and clears the box', async () => {
-    stubV2Fetch((call) => (call.url.pathname.endsWith('/standby-records/import') ? jsonResponse(201, { total: 3, created: 2, updated: 1 }) : reply(call)));
-    actAs('SuperAdmin');
-    renderPage();
-    const panel = await screen.findByTestId('standby-log-import');
-    const box = within(panel).getByRole('textbox');
-    fireEvent.change(box, { target: { value: 'assetCode,kind,startedAt,outcome\nP-101B,demand,2026-10-01T08:00:00Z,success' } });
-    fireEvent.click(within(panel).getByRole('button', { name: 'Import' }));
-    const dialog = await screen.findByTestId('save-result-dialog');
-    expect(within(dialog).getByText('Standby log imported')).toBeInTheDocument();
-    expect(within(dialog).getByText('Imported 3 entries: 2 new, 1 replaced (same externalRef).')).toBeInTheDocument();
-    expect(box).toHaveValue('');
-    expect(within(panel).queryByRole('status')).toBeNull();
+    expect(screen.queryByTestId('standby-register-dialog')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add another' }));
+    const again = await screen.findByTestId('standby-register-dialog');
+    expect((within(again).getByLabelText('Asset') as HTMLSelectElement).value).toBe('');
+    expect((within(again).getByLabelText('Evaluated') as HTMLSelectElement).value).toBe('demand');
   });
 
   it('a refused retire is a red alert inside the confirmation, which stays open', async () => {
@@ -135,12 +108,26 @@ describe('Standby equipment page (SME D9)', () => {
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
   });
 
+  it('shows the table first and Import log CSV / Register standby in the header, without bottom forms', async () => {
+    stubV2Fetch(reply);
+    actAs('SuperAdmin');
+    renderPage();
+    await screen.findByRole('table', { name: 'Standby registrations' });
+    const header = screen.getByRole('banner');
+    expect(within(header).getByRole('link', { name: 'Import log CSV' }).getAttribute('href')).toBe('/master-data/standby-equipment/import');
+    expect(within(header).getByRole('button', { name: 'Register standby' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Register standby equipment' })).toBeNull();
+    expect(screen.queryByTestId('standby-log-import')).toBeNull();
+    expect(screen.queryByLabelText('Asset')).toBeNull();
+  });
+
   it('a role that may not write sees no register, retire or import', async () => {
     stubV2Fetch(reply);
     actAs('master_data_admin');
     renderPage();
     expect(await screen.findByRole('table', { name: 'Standby registrations' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retire' })).toBeNull();
-    expect(screen.queryByTestId('standby-log-import')).toBeNull();
+    expect(screen.queryByTestId('standby-import-open')).toBeNull();
+    expect(screen.queryByTestId('standby-register-new')).toBeNull();
   });
 });

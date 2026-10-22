@@ -61,7 +61,7 @@ export function ValuationRateForm({ profileId, uom, timezone, onDone }: Valuatio
   };
 
   return (
-    <div className="space-y-2 rounded-md border p-3" data-testid="valuation-form">
+    <div className="space-y-2" data-testid="valuation-form">
       <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
         <FormField id="basis" label="Basis">

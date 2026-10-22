@@ -58,8 +58,11 @@ describe('Unit impact rules page (plan 1.10, SME Q5 + D9)', () => {
     const table = await screen.findByRole('table', { name: 'Unit impact rules' });
     expect(await within(table).findByText('Partial: 50 % of the rate')).toBeInTheDocument();
     expect(within(table).getByText(/P-101B — Spare feed pump \(within 60 s\)/)).toBeInTheDocument();
+    expect(screen.queryByTestId('impact-rule-form')).toBeNull();
     fireEvent.click(screen.getByTestId('impact-rule-new'));
-    expect(screen.getByTestId('impact-rule-form')).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Add unit impact rule')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('impact-rule-form')).toBeInTheDocument();
   });
 
   it('a new draft rule ends in the result dialog and the form closes; Add another opens a fresh one', async () => {
@@ -78,6 +81,7 @@ describe('Unit impact rules page (plan 1.10, SME Q5 + D9)', () => {
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add another' }));
     await waitFor(() => expect(screen.queryByTestId('save-result-dialog')).toBeNull());
+    expect(within(await screen.findByTestId('impact-rule-dialog')).getByTestId('impact-rule-form')).toBeInTheDocument();
     expect((screen.getByLabelText('Why') as HTMLInputElement).value).toBe('');
   });
 

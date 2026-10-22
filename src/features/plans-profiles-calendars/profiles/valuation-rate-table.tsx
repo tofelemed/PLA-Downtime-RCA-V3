@@ -11,6 +11,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
+import { AddDialog } from '@/features/ux-kit/add-dialog';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { ValuationRateForm } from './valuation-rate-form';
 import { VersionActions } from './version-actions';
@@ -69,7 +70,7 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
   const [adding, setAdding] = useState(false);
   const items = flattenPages(rates.data?.pages);
   useSeekAnchor(anchor, infiniteListState(rates));
-  const add = !adding && canMaintainValuation && (
+  const add = canMaintainValuation && (
     <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
       Add valuation rate
@@ -80,7 +81,9 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
       <div className="space-y-3" data-testid="valuation-rate-table">
         <LegacyCost profile={profile} />
         <FocusedListNotice anchor={anchor} what="valuation rates" />
-        {adding && <ValuationRateForm profileId={profile.id} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />}
+        <AddDialog open={adding} onOpenChange={setAdding} title="Add valuation rate" description="A draft margin or standard-cost version of this profile; another person approves it." testId="valuation-rate-dialog">
+          <ValuationRateForm profileId={profile.id} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />
+        </AddDialog>
         <DataTable
           caption="Valuation rate versions"
           columns={columnsOf(timezone, canApproveValuation)}

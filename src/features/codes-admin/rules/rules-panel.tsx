@@ -2,14 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useRules } from '@/api/v2/queries/rules';
 import type { RuleKind, RuleState, RuleView } from '@/api/v2/types/rules';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, RULE_KIND_LABELS, RULE_STATE_LABELS } from '@/features/ux-kit/labels';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { ActionIcon } from '@/lib/icons';
 import { useUrlParam } from '../hooks/use-url-param';
 
 const STATES = ['', 'draft', 'active', 'retired'] as const;
@@ -32,7 +28,6 @@ const COLUMNS: Array<DataTableColumn<RuleView>> = [
  */
 export function RulesPanel() {
   const navigate = useNavigate();
-  const { canAuthorRules } = useCapabilities();
   const [state, setState] = useUrlParam('state', STATES, '');
   const [kind, setKind] = useUrlParam('kind', KINDS, '');
   const rules = useRules({ state: state || undefined, kind: kind || undefined });
@@ -46,16 +41,6 @@ export function RulesPanel() {
         <div className="w-52 space-y-1">
           <Label htmlFor="rule-kind-filter">Kind</Label>
           <NativeSelect id="rule-kind-filter" value={kind} onChange={(value) => setKind(value as RuleKind)} placeholder="All kinds" options={KIND_OPTIONS} />
-        </div>
-        <div className="ml-auto">
-          {canAuthorRules ? (
-            <Button onClick={() => navigate('/master-data/codes-rules/rules/new')} data-testid="rule-new">
-              <ActionIcon.add aria-hidden="true" />
-              New rule
-            </Button>
-          ) : (
-            <ReadOnlyHint />
-          )}
         </div>
       </div>
       <DataTable
