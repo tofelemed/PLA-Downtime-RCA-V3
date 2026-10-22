@@ -136,7 +136,8 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
   it('a new profile ends in the result dialog; the form is clean, so its links leave without asking', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     reply = (call) => (call.method === 'POST' ? json(201, PROFILE) : json(200, EMPTY));
-    wrap(<ProfileEditor profile={null} refs={REFS} cancelTo="/setup/profiles" onSaved={() => undefined} />);
+    // the list address handed over as `?back=` (Phase 5: Back to list keeps its unit filter)
+    wrap(<ProfileEditor profile={null} refs={REFS} cancelTo="/setup/profiles?unitId=u1" onSaved={() => undefined} />);
     fireEvent.change(screen.getByLabelText(/^Unit/), { target: { value: 'u1' } });
     fireEvent.change(screen.getByLabelText(/^Product/), { target: { value: 'p1' } });
     fireEvent.change(screen.getByLabelText(/Quantity unit/), { target: { value: 't' } });
@@ -147,7 +148,7 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
     const dialog = await screen.findByRole('dialog', { name: 'Draft profile version created' });
     expect(within(dialog).getByText('Unit 1 · HDPE — version 1')).toBeTruthy();
     expect(within(dialog).getByRole('link', { name: 'View profile' }).getAttribute('href')).toBe('/planning/profiles/pr9');
-    expect(within(dialog).getByRole('link', { name: 'Back to Profiles & rates' }).getAttribute('href')).toBe('/setup/profiles');
+    expect(within(dialog).getByRole('link', { name: 'Back to Profiles & rates' }).getAttribute('href')).toBe('/setup/profiles?unitId=u1');
     expect(within(dialog).getByRole('link', { name: /^Next: / })).toBeTruthy();
     expect(within(dialog).getByRole('button', { name: 'Add another' })).toBeTruthy();
     fireEvent.click(within(dialog).getByRole('link', { name: 'View profile' }));
@@ -177,7 +178,7 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
       }
       return json(200, EMPTY);
     };
-    wrap(<RateImportPage />);
+    wrap(<RateImportPage />, `/form?back=${encodeURIComponent('/setup/profiles?unitId=u1')}`);
     fireEvent.change(screen.getByLabelText(/^Document reference/), { target: { value: 'FC-1' } });
     fireEvent.change(screen.getByPlaceholderText(/^unitCode/), { target: { value: 'unitCode,productCode\nU1,P1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Import' }));
@@ -190,7 +191,7 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
     const dialog = await screen.findByRole('dialog', { name: '3 rate versions imported' }, { timeout: 5000 });
     expect(within(dialog).getByText('Forecast FC-1, revision 2')).toBeTruthy();
     expect(within(dialog).getByText('3 lines read · 3 imported · 1 earlier version retired.')).toBeTruthy();
-    expect(within(dialog).getByRole('link', { name: 'Back to Profiles & rates' }).getAttribute('href')).toBe('/setup/profiles');
+    expect(within(dialog).getByRole('link', { name: 'Back to Profiles & rates' }).getAttribute('href')).toBe('/setup/profiles?unitId=u1');
     expect((screen.getByLabelText(/^Document reference/) as HTMLInputElement).value).toBe('');
     expect(screen.getByTestId('rate-import-submit').hasAttribute('disabled')).toBe(true);
   });

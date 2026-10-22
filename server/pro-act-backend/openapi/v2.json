@@ -5394,6 +5394,15 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "siteOnly",
+            "required": false,
+            "in": "query",
+            "description": "true = the site calendars only, without unit overrides (default false: both)",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

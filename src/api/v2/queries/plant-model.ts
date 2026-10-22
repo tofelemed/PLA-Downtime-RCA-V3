@@ -3,29 +3,41 @@ import type { BodyOf } from '../schema-types';
 import type { BufferLevelView, FlowRouteView, StreamRunView, UnitStreamView } from '../types/plant-model';
 import { v2 } from '../v2';
 import { useBaselineCommand } from './profile-commands';
-import { useV2InfiniteList } from './use-v2-list';
+import { usePagedQuery } from './use-paged-query';
+import { useV2Lookup } from './use-v2-lookup';
 
 export type UnitStreamCreateBody = BodyOf<'/api/v2/unit-streams', 'post'>;
 export type StreamRunCreateBody = BodyOf<'/api/v2/stream-runs', 'post'>;
 export type StreamRunPatchBody = BodyOf<'/api/v2/stream-runs/{id}', 'patch'>;
 
-/** Stream versions of a unit (SME E6); approve / retire go through `useVersionTransition`. */
+/** Stream versions of a unit (SME E6), 20 per page; approve / retire go through `useVersionTransition`. */
 export function useUnitStreams(unitId: string, focus?: string) {
-  return useV2InfiniteList<UnitStreamView>({
+  return usePagedQuery<UnitStreamView>({
     resource: 'profiles',
     path: '/unit-streams',
-    query: { unitId, limit: 200, focus },
+    query: { unitId, focus },
     key: { scope: { unitIds: [unitId] }, filters: { kind: 'unit-streams', unitId, focus } },
     enabled: unitId !== '',
   });
 }
 
-/** Stream runs of a unit, newest first (SME E6). */
+/** Every approved stream version of a unit: the choices of "Record run" (the table pages on its own). */
+export function useApprovedUnitStreams(unitId: string) {
+  return useV2Lookup<UnitStreamView>({
+    resource: 'profiles',
+    path: '/unit-streams',
+    query: { unitId, state: 'approved', limit: 200 },
+    key: { scope: { unitIds: [unitId] }, filters: { kind: 'unit-streams', unitId, state: 'approved' } },
+    enabled: unitId !== '',
+  });
+}
+
+/** Stream runs of a unit, newest first (SME E6), 20 per page. */
 export function useStreamRuns(unitId: string) {
-  return useV2InfiniteList<StreamRunView>({
+  return usePagedQuery<StreamRunView>({
     resource: 'profiles',
     path: '/stream-runs',
-    query: { unitId, limit: 100 },
+    query: { unitId },
     key: { scope: { unitIds: [unitId] }, filters: { kind: 'stream-runs', unitId } },
     enabled: unitId !== '',
   });
@@ -55,22 +67,32 @@ export function usePatchStreamRun() {
 export type FlowRouteCreateBody = BodyOf<'/api/v2/flow-routes', 'post'>;
 export type BufferLevelCreateBody = BodyOf<'/api/v2/buffer-levels', 'post'>;
 
-/** Every route version of the plant's material-flow map the caller may read (SME E2). */
+/** Route versions of the plant's material-flow map the caller may read (SME E2), 20 per page. */
 export function useFlowRoutes(focus?: string) {
-  return useV2InfiniteList<FlowRouteView>({
+  return usePagedQuery<FlowRouteView>({
     resource: 'profiles',
     path: '/flow-routes',
-    query: { limit: 200, focus },
+    query: { focus },
     key: { filters: { kind: 'flow-routes', focus } },
   });
 }
 
-/** Recorded buffer levels, newest first (SME E2). */
+/** Every approved route version: the buffers a level can be recorded for (the table pages on its own). */
+export function useApprovedFlowRoutes() {
+  return useV2Lookup<FlowRouteView>({
+    resource: 'profiles',
+    path: '/flow-routes',
+    query: { state: 'approved', limit: 200 },
+    key: { filters: { kind: 'flow-routes', state: 'approved' } },
+  });
+}
+
+/** Recorded buffer levels, newest first (SME E2), 20 per page. */
 export function useBufferLevels() {
-  return useV2InfiniteList<BufferLevelView>({
+  return usePagedQuery<BufferLevelView>({
     resource: 'profiles',
     path: '/buffer-levels',
-    query: { limit: 100 },
+    query: {},
     key: { filters: { kind: 'buffer-levels' } },
   });
 }

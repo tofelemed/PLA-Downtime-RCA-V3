@@ -9,6 +9,8 @@ export interface RateImportResultInput {
   count: (value: number) => string;
   next: SaveLink | null;
   onAddAnother: () => void;
+  /** "Back to Profiles & rates": the list as the user left it (`?back=`); default the list itself */
+  listPath?: string;
 }
 
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
@@ -17,7 +19,7 @@ const plural = (count: number, one: string, many: string) => (count === 1 ? one 
  * The result dialog of a finished rate import: "42 rate versions imported", the document and revision, and
  * the counts of the server's job (lines read, imported, earlier versions retired).
  */
-export function rateImportResult({ view, count, next, onAddAnother }: RateImportResultInput): SaveResult {
+export function rateImportResult({ view, count, next, onAddAnother, listPath = '/setup/profiles' }: RateImportResultInput): SaveResult {
   const counts = view.counts;
   const inserted = counts?.inserted ?? 0;
   return {
@@ -26,7 +28,7 @@ export function rateImportResult({ view, count, next, onAddAnother }: RateImport
     message: counts
       ? `${count(counts.rows ?? 0)} lines read · ${count(inserted)} imported · ${count(counts.retired ?? 0)} earlier ${plural(counts.retired ?? 0, 'version', 'versions')} retired.`
       : undefined,
-    listPath: '/setup/profiles',
+    listPath,
     listLabel: 'Profiles & rates',
     onAddAnother,
     next,

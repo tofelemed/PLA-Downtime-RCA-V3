@@ -15,7 +15,9 @@ import { buildActionBody, EMPTY_ACTION_FORM } from '@/features/rca/model/action-
 import { buildCauseBody } from '@/features/rca/model/cause-form';
 import { actionTask } from '@/features/rca/model/task-payload';
 import { EMPTY_TASK_FORM, toCreateTask, toUpdateTask } from '@/features/tasks/model/task-form';
-import { contractProblems } from '@/test/openapi-contract';
+import { contractProblems, queryProblems } from '@/test/openapi-contract';
+import { calendarVersionListQuery } from './queries/calendars';
+import { dictionaryListQuery } from './queries/failure-dictionary';
 
 /**
  * Contract of the main command builders against `server/pro-act-backend/openapi/v2.json`: the global
@@ -158,6 +160,27 @@ describe('command payloads match the OpenAPI v2 request schemas', () => {
       'body.logicTree[0].level is not declared (the server answers "property level should not exist")',
       'body.logicTree[0].children[0].x is not declared (the server answers "property x should not exist")',
       'body.logicTree[0].children[0].y is not declared (the server answers "property y should not exist")',
+    ]);
+  });
+});
+
+// SETUP_UX_FIXES Phase 5: server-paged lists send only the query parameters their GET declares
+describe('list queries match the OpenAPI v2 query parameters', () => {
+  it('failure dictionary table: search, list and equipment class', () => {
+    const query = dictionaryListQuery({ q: 'pump', kind: 'failure_mode', equipmentClass: 'PU' });
+    expect(query).toEqual({ sort: 'code', q: 'pump', kinds: ['failure_mode'], equipmentClass: 'PU' });
+    expect(queryProblems('/api/v2/failure-dictionary', { ...query, limit: 20, cursor: 'c' })).toEqual([]);
+  });
+
+  it('calendar versions: a unit override, or the site calendar without overrides', () => {
+    expect(queryProblems('/api/v2/calendar-versions', calendarVersionListQuery({ unitId: ID(1) }))).toEqual([]);
+    expect(calendarVersionListQuery({ siteId: ID(2) })).toEqual({ siteId: ID(2), siteOnly: true });
+    expect(queryProblems('/api/v2/calendar-versions', calendarVersionListQuery({ siteId: ID(2) }))).toEqual([]);
+  });
+
+  it('the check itself catches an undeclared query parameter', () => {
+    expect(queryProblems('/api/v2/calendar-versions', { siteId: ID(2), sitesOnly: true })).toEqual([
+      'query.sitesOnly is not declared (the server answers "property sitesOnly should not exist")',
     ]);
   });
 });

@@ -10,6 +10,7 @@ import type {
 } from '../types/calendars';
 import { v2 } from '../v2';
 import type { ChangeNotice } from './invalidation';
+import { usePagedQuery } from './use-paged-query';
 import { useV2Command } from './use-v2-command';
 import { useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
@@ -26,6 +27,27 @@ export function useCalendarVersions(filters: CalendarFilters, enabled = true) {
     resource: 'calendars',
     path: '/calendar-versions',
     query: { ...query, limit: 200 },
+    key: { filters: { kind: 'calendar-versions', ...query } },
+    enabled,
+  });
+}
+
+/**
+ * The list query of one calendar's versions: a unit's overrides (`unitId`), or the site calendar without the
+ * unit overrides of that site (`siteId` + `siteOnly`), so every server page holds only rows of that calendar.
+ */
+export function calendarVersionListQuery(filters: CalendarFilters): Record<string, string | boolean> {
+  if (filters.unitId) return { unitId: filters.unitId };
+  return filters.siteId ? { siteId: filters.siteId, siteOnly: true } : { siteOnly: true };
+}
+
+/** Versions of one calendar (Setup › Calendars & crews), 20 per page with the numbered pager. */
+export function useCalendarVersionPage(filters: CalendarFilters, enabled = true) {
+  const query = calendarVersionListQuery(filters);
+  return usePagedQuery<CalendarVersionView>({
+    resource: 'calendars',
+    path: '/calendar-versions',
+    query,
     key: { filters: { kind: 'calendar-versions', ...query } },
     enabled,
   });

@@ -21,6 +21,7 @@ export interface ProfileEditorProps {
   /** absent = create a draft */
   profile: ProfileView | null;
   refs: PlanningRefs;
+  /** Cancel, and for a create the result dialog's "Back to Profiles & rates": the list as the user left it */
   cancelTo: string;
   /** after an edit, and when the result dialog of a create is dismissed: open the saved profile */
   onSaved: (profile: ProfileView) => void;
@@ -59,7 +60,7 @@ export function ProfileEditor({ profile, refs, cancelTo, onSaved }: ProfileEdito
   const submit = () => {
     if (profile) return feedback.run(() => patch.submit({ profile, body: profilePatchBody(values, refs.timezone) }), 'Draft profile version updated');
     return feedback.run(() => create.submit(profileCreateBody(values, refs.timezone)), (saved) =>
-      profileCreatedResult({ saved, refs, capabilities, onAddAnother: addAnother, onDismiss: () => onSaved(saved) }),
+      profileCreatedResult({ saved, refs, capabilities, onAddAnother: addAnother, onDismiss: () => onSaved(saved), listPath: cancelTo }),
     );
   };
 

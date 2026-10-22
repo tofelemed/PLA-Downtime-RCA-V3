@@ -52,6 +52,7 @@ export class CalendarsV2Service {
     if (query.unitId)
       qb.andWhere('v.unitId = :unitId', { unitId: query.unitId });
     if (query.state) qb.andWhere('v.state = :state', { state: query.state });
+    if (query.siteOnly) qb.andWhere('v.unitId IS NULL');
     const page = await keysetPage(qb, {
       alias: 'v',
       property: 'createdAt',

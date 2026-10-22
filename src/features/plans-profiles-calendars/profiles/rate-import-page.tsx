@@ -29,9 +29,10 @@ const HEADER = 'unitCode,productCode,operatingMode,rate,timebase,effectiveFrom,e
  */
 export function RateImportPage() {
   const refs = usePlanningRefs();
-  const form = useRateImportForm();
-  const reasonId = useId();
   const back = useProfilesBack();
+  // the result dialog's "Back to Profiles & rates" returns to the list as the user left it
+  const form = useRateImportForm(back.to);
+  const reasonId = useId();
   const { fields, blocked } = form;
   const fieldError = (key: string) => refusalOf(form.failure)?.fieldErrors[key];
   return (

@@ -310,6 +310,31 @@ describe('calendar versions and shift instances (plan 2.1, v2 API)', () => {
     expect(await names(env.world.unitA1, from)).toEqual(['A', 'B', 'C']);
   });
 
+  it('siteOnly=true lists the site calendar versions without the unit overrides (Setup › Calendars & crews)', async () => {
+    const page = async (query: string) =>
+      (await env.get(`calendar-versions?${query}`).expect(200)).body as {
+        items: VersionBody[];
+        nextCursor: string | null;
+      };
+    const all = (await page('limit=200')).items;
+    const siteId = all.find((v) => v.unitId === null)?.siteId ?? '';
+    expect(all.some((v) => v.unitId === env.world.unitA2)).toBe(true);
+    const both = (await page(`siteId=${siteId}&limit=200`)).items;
+    expect(both.some((v) => v.unitId !== null)).toBe(true);
+    const first = await page(`siteId=${siteId}&siteOnly=true&limit=1`);
+    expect(first.items).toHaveLength(1);
+    expect(first.items[0].unitId).toBeNull();
+    const rest = first.nextCursor
+      ? (
+          await page(
+            `siteId=${siteId}&siteOnly=true&limit=200&cursor=${encodeURIComponent(first.nextCursor)}`,
+          )
+        ).items
+      : [];
+    expect(rest.every((v) => v.unitId === null)).toBe(true);
+    await env.get('calendar-versions?siteOnly=maybe').expect(422);
+  });
+
   it('crews: foreign site 422, duplicate 409; a rotation assigns crews without changing scheduled time', async () => {
     const siteB = await env.app
       .get(SitesService)

@@ -99,7 +99,8 @@ test('unit impact rule is drafted in the UI and approved by a different manager'
   expect(own.body.code).toBe('SEPARATION_OF_DUTIES');
   await signOut(page);
   await signIn(page, FATIMA);
-  await page.goto('/master-data/unit-impact-rules');
+  // the list is paged (20 per page): open it filtered to the unit, at the draft's row (SETUP_UX_FIXES Phase 5)
+  await page.goto(`/master-data/unit-impact-rules?unitId=${unit.id}#unit-impact-rule-${draft.id}`);
   await row.getByTestId('supersede').check();
   await row.getByTestId('approve-version').click();
   await expect(row).toContainText('Approved');

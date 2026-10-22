@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -41,6 +41,7 @@ function useColumns(selectColumn: DataTableColumn<VerificationChecklistView> | n
 
 /** `/master-data/rca/checklists`: verification checklists of the plant, 20 per page. */
 export function ChecklistsPage() {
+  const navigate = useNavigate();
   const { filters, update } = useListFilters();
   const canWrite = useMasterDataWriter();
   const refresh = useRefreshRcaSettings();
@@ -67,6 +68,8 @@ export function ChecklistsPage() {
           columns={columns}
           rows={checklists.rows}
           getRowKey={(checklist) => checklist.id}
+          onRowClick={(checklist) => navigate(`/master-data/rca/checklists/${checklist.id}`)}
+          rowsHaveLink
           pager={checklists.pager}
           status={checklists.status}
           empty={{ title: 'No checklists', text: filters.q ? 'No checklist matches the search.' : 'No verification checklist with this status yet.' }}

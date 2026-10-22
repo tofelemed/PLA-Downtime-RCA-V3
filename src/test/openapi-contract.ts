@@ -14,12 +14,18 @@ interface JsonSchema {
 
 type CommandMethod = 'post' | 'put' | 'patch';
 
+interface Parameter {
+  name: string;
+  in: string;
+}
+
 interface Operation {
   requestBody?: { content?: Record<string, { schema?: JsonSchema }> };
+  parameters?: Parameter[];
 }
 
 interface OpenApiDocument {
-  paths: Record<string, Partial<Record<CommandMethod, Operation>>>;
+  paths: Record<string, Partial<Record<CommandMethod | 'get', Operation>>>;
   components: { schemas: Record<string, JsonSchema> };
 }
 
@@ -83,4 +89,18 @@ export function contractProblems(route: string, method: CommandMethod, body: unk
   const problems: string[] = [];
   walk(requestSchema(route, method), JSON.parse(JSON.stringify(body)) as unknown, 'body', problems);
   return problems;
+}
+
+/**
+ * What the ValidationPipe would refuse in a list query by name: query parameters the GET operation does not
+ * declare (`forbidNonWhitelisted` answers 400/422). Blank values are left out, as `buildUrl` does on the wire.
+ */
+export function queryProblems(route: string, query: Record<string, unknown>): string[] {
+  const operation = openApi().paths[route]?.get;
+  if (!operation) throw new Error(`GET ${route} is not in openapi/v2.json`);
+  const declared = new Set((operation.parameters ?? []).filter((p) => p.in === 'query').map((p) => p.name));
+  return Object.entries(query)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .filter(([name]) => !declared.has(name))
+    .map(([name]) => `query.${name} is not declared (the server answers "property ${name} should not exist")`);
 }

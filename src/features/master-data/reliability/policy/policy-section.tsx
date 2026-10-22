@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
-import { EditorSheet } from './editor-sheet';
+import { EditorSheet } from '@/features/ux-kit/editor-sheet';
 import type { PolicyEditor } from './use-policy-editor';
 
 export interface PolicySectionProps {

@@ -1,7 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { useCalendarVersions } from '@/api/v2/queries/calendars';
+import { useCalendarVersionPage } from '@/api/v2/queries/calendars';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentAddress, withReturnTo } from '@/features/ux-kit/page-layout';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
@@ -27,8 +26,8 @@ export function CalendarsTab() {
   const [unitId, setUnitId] = useUnitParam();
   const here = useCurrentAddress();
   const scope: CalendarScope = unitId ? { unitId } : refs.defaultSiteId ? { siteId: refs.defaultSiteId } : {};
-  const versions = useCalendarVersions(scope, Boolean(unitId || refs.defaultSiteId));
-  const items = flattenPages(versions.data?.pages).filter((v) => (unitId ? v.unitId === unitId : v.unitId === null));
+  // one calendar per list (the server leaves the site's unit overrides out), 20 versions per page
+  const versions = useCalendarVersionPage(scope, Boolean(unitId || refs.defaultSiteId));
   return (
     <div className="space-y-6" data-testid="calendars-tab">
       <div className="space-y-4">
@@ -51,15 +50,11 @@ export function CalendarsTab() {
           </div>
         </div>
         <CalendarVersionList
-          versions={items}
-          status={{ isLoading: versions.isLoading, isError: versions.isError, error: versions.error, onRetry: () => void versions.refetch() }}
+          versions={versions.rows}
+          pager={versions.pager}
+          status={versions.status}
           onOpen={(v) => navigate(withReturnTo(calendarVersionPath(v, canWriteCalendars), here))}
         />
-        {versions.hasNextPage && (
-          <Button size="sm" variant="ghost" onClick={() => void versions.fetchNextPage()} disabled={versions.isFetchingNextPage}>
-            Load older versions
-          </Button>
-        )}
       </div>
       <CrewRotationEditor siteId={refs.defaultSiteId ?? undefined} timezone={refs.timezone} />
     </div>

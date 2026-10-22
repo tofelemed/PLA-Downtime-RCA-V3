@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useBufferLevels } from '@/api/v2/queries/plant-model';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { BufferLevelView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
@@ -49,16 +48,12 @@ export function BufferLevelsSection({ refs, bufferOptions, canWrite }: BufferLev
         <DataTable
           caption="Buffer levels"
           columns={levelColumns(refs)}
-          rows={flattenPages(levels.data?.pages)}
+          rows={levels.rows}
           getRowKey={(l) => l.id}
-          status={{ isLoading: levels.isLoading, isError: levels.isError, error: levels.error, onRetry: () => void levels.refetch() }}
+          pager={levels.pager}
+          status={levels.status}
           empty={{ title: 'No levels recorded', text: 'The configured usable inventory of each buffer applies.' }}
         />
-        {levels.hasNextPage && (
-          <Button size="sm" variant="ghost" onClick={() => void levels.fetchNextPage()} disabled={levels.isFetchingNextPage}>
-            Load more levels
-          </Button>
-        )}
       </div>
       {recording && <BufferLevelDialog bufferOptions={bufferOptions} timezone={refs.timezone} onClose={() => setRecording(false)} />}
     </Section>

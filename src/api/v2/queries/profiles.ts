@@ -4,6 +4,7 @@ import type { ProductView } from '../types/plans';
 import type { ProfileView, RateImportView, RateView, TransitionStandardView, ValuationRateView, VersionState } from '../types/profiles';
 import { v2 } from '../v2';
 import { v2Keys } from './query-keys';
+import { usePagedQuery } from './use-paged-query';
 import { useV2InfiniteList } from './use-v2-list';
 import { useV2TenantId } from './use-v2-tenant';
 
@@ -54,12 +55,12 @@ export function useValuationRates(profileId: string | null, focus?: string) {
   });
 }
 
-/** The grade-transition matrix of one unit (every version; the table shows state and validity). */
+/** The grade-transition matrix of one unit (every version, 20 per page; the table shows state and validity). */
 export function useTransitionStandards(unitId: string, focus?: string) {
-  return useV2InfiniteList<TransitionStandardView>({
+  return usePagedQuery<TransitionStandardView>({
     resource: 'profiles',
     path: '/transition-standards',
-    query: { unitId, limit: 200, focus },
+    query: { unitId, focus },
     key: { scope: { unitIds: [unitId] }, filters: { kind: 'transition-standards', unitId, focus } },
     enabled: unitId !== '',
   });

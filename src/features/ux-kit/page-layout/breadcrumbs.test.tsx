@@ -63,6 +63,15 @@ describe('routeTrail', () => {
     expect(routeTrail('/finance', 'Valuation', undefined)).toBeNull();
   });
 
+  // SETUP_UX_FIXES Phase 5: a sidebar entry whose first page has another name reads Area › page
+  it('every Setup area whose first page is named otherwise shows Area › page', () => {
+    const trail = (path: string, title: string) => routeTrail(path, title, undefined)?.crumbs.map((crumb) => crumb.label).join(' › ');
+    expect(trail('/master-data/stop-policy', 'Stop and plan policy')).toBe('Production rules › Stop and plan policy');
+    expect(trail('/master-data/codes-rules', 'Codes & rules')).toBe('Codes & failures › Codes & rules');
+    expect(trail('/master-data/rca/templates', 'RCA templates')).toBe('RCA library › RCA templates');
+    expect(trail('/master-data/unit-impact-rules', 'Unit impact rules')).toBe('Production rules › Unit impact rules');
+  });
+
   it('a Setup record page keeps the area crumb when its list is the first page of the area', () => {
     expect(routeTrail('/master-data/units/u1', 'Line 1', { to: '/master-data/units', label: 'Production units' })?.crumbs).toEqual([
       { label: 'Plant & equipment' },

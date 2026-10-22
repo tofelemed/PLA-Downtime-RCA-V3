@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTransitionStandards } from '@/api/v2/queries/profiles';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { TransitionStandardView } from '@/api/v2/types/profiles';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
@@ -75,8 +74,7 @@ export function TransitionStandardsTab() {
   const [adding, setAdding] = useState(false);
   const anchor = useAnchorFocus('transition-standard-');
   const standards = useTransitionStandards(unitId, anchor.focus);
-  const rows = flattenPages(standards.data?.pages);
-  useSeekAnchor(anchor, infiniteListState(standards));
+  useSeekAnchor(anchor, infiniteListState(standards.query));
   return (
     <div className="space-y-4" data-testid="transition-standards-tab">
       <div className="flex flex-wrap items-end gap-3">
@@ -105,19 +103,15 @@ export function TransitionStandardsTab() {
         <DataTable
           caption="Grade-transition standards"
           columns={columnsOf(refs)}
-          rows={rows}
+          rows={standards.rows}
           getRowKey={(s) => s.id}
           getRowAnchor={(s) => `transition-standard-${s.id}`}
-          status={{ isLoading: standards.isLoading, isError: standards.isError, error: standards.error, onRetry: () => void standards.refetch() }}
+          pager={standards.pager}
+          status={standards.status}
           empty={{ title: 'No transition standards', text: 'Every grade change of this unit counts as loss, flagged “no transition standard”.' }}
         />
       ) : (
         <p className="text-sm text-muted-foreground">Choose a unit to see its grade-transition matrix.</p>
-      )}
-      {standards.hasNextPage && (
-        <Button size="sm" variant="ghost" onClick={() => void standards.fetchNextPage()} disabled={standards.isFetchingNextPage}>
-          Load more standards
-        </Button>
       )}
     </div>
   );

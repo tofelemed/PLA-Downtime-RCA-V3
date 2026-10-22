@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { DerivedStopPreview } from './derived-stop-preview';
-import { EditorSheet } from './editor-sheet';
+import { EditorSheet } from '@/features/ux-kit/editor-sheet';
 
 /** The state-engine preview as an on-demand tool: "Preview derived stops" opens it in a side panel (it writes nothing). */
 export function DerivedStopPreviewSection({ unitId, timezone }: { unitId: string; timezone: string }) {

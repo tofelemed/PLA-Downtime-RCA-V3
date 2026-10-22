@@ -124,3 +124,45 @@ describe('Failure dictionary header actions (SETUP_UX_FIXES Phase 4)', () => {
     expect(screen.queryByTestId('dictionary-entry-new')).toBeNull();
   });
 });
+
+describe('Failure dictionary is paged and filtered on the server (SETUP_UX_FIXES Phase 5)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
+
+  const tableCalls = (calls: V2Call[]) =>
+    calls.filter((c) => c.url.pathname.endsWith('/failure-dictionary') && c.url.searchParams.get('kinds') !== 'equipment_class');
+
+  it('asks for 20 entries by code with the filters of the address; classes come from their own query', async () => {
+    const calls = stubV2Fetch((call) => (call.url.pathname.endsWith('/failure-dictionary') ? jsonResponse(200, listPage([PUMP], 'next-1')) : undefined));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/master-data/failure-dictionary?q=pump&kind=failure_mode&class=PU']}><FailureDictionaryPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole('table', { name: 'Failure dictionary entries' });
+    const params = tableCalls(calls)[0].url.searchParams;
+    expect(params.get('limit')).toBe('20');
+    expect(params.get('sort')).toBe('code');
+    expect(params.get('q')).toBe('pump');
+    expect(params.getAll('kinds')).toEqual(['failure_mode']);
+    expect(params.get('equipmentClass')).toBe('PU');
+    expect(calls.some((c) => c.url.searchParams.get('kinds') === 'equipment_class')).toBe(true);
+    expect((screen.getByLabelText('List') as HTMLSelectElement).value).toBe('failure_mode');
+    expect(await screen.findByRole('button', { name: /next page/i })).toBeEnabled();
+  });
+
+  it('choosing a list asks the server again; the whole dictionary is never loaded for the table', async () => {
+    const calls = stubV2Fetch((call) => (call.url.pathname.endsWith('/failure-dictionary') ? jsonResponse(200, listPage([PUMP])) : undefined));
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter><FailureDictionaryPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole('table', { name: 'Failure dictionary entries' });
+    fireEvent.change(screen.getByLabelText('List'), { target: { value: 'failure_cause' } });
+    await waitFor(() => expect(tableCalls(calls).some((c) => c.url.searchParams.getAll('kinds').includes('failure_cause'))).toBe(true));
+    expect(tableCalls(calls).every((c) => c.url.searchParams.get('limit') === '20')).toBe(true);
+  });
+});

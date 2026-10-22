@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { useUnitImpactRules } from '@/api/v2/queries/unit-impact-rules';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { UnitImpactRuleView } from '@/api/v2/types/unit-impact';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
@@ -11,7 +10,9 @@ import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePlanningRefs, type PlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { VersionActions } from '@/features/plans-profiles-calendars/profiles/version-actions';
+import { useUnitParam } from '@/features/plans-profiles-calendars/hooks/use-unit-param';
 import { MasterDataLayout } from '../../components/master-data-layout';
+import { UnitSelect } from '../../components/unit-select';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleForm } from './impact-rule-form';
 import { IMPACT_MODE_LABELS } from './impact-rule-form-model';
@@ -63,9 +64,9 @@ export function UnitImpactRulesPage() {
   const { canWriteUnitImpactRules, canApproveProfiles } = capabilities;
   const refs = usePlanningRefs();
   const anchor = useAnchorFocus('unit-impact-rule-');
-  const rules = useUnitImpactRules(anchor.focus);
-  const rows = flattenPages(rules.data?.pages);
-  useSeekAnchor(anchor, infiniteListState(rules));
+  const [unitId, setUnitId] = useUnitParam();
+  const rules = useUnitImpactRules({ unitId, focus: anchor.focus });
+  useSeekAnchor(anchor, infiniteListState(rules.query));
   const { labelOf } = useAssetLookup();
   const { percent, number } = useNumberFormat();
   const add = useAddDialog();
@@ -87,25 +88,29 @@ export function UnitImpactRulesPage() {
       }
     >
       <Section title="Rules">
+        <div className="max-w-sm">
+          <UnitSelect id="impact-rules-unit" label="Unit" value={unitId} onChange={setUnitId} allowAll />
+        </div>
         <FocusedListNotice anchor={anchor} what="rules" />
         <DataTable
           caption="Unit impact rules"
           columns={columnsOf({ refs, assetLabel: labelOf, percent: (f) => shareText(Number(f) * 100, percent), seconds: (v) => number(v) })}
-          rows={rows}
+          rows={rules.rows}
           getRowKey={(r) => r.id}
           getRowAnchor={(r) => `unit-impact-rule-${r.id}`}
           scrollable
-          status={{ isLoading: rules.isLoading, isError: rules.isError, error: rules.error, onRetry: () => void rules.refetch() }}
-          empty={{ title: 'No rules', text: 'Every equipment stop stops its unit unless a person records another impact on the stop.' }}
+          pager={rules.pager}
+          status={rules.status}
+          empty={{
+            title: 'No rules',
+            text: unitId
+              ? 'Every equipment stop of this unit stops it unless a person records another impact on the stop.'
+              : 'Every equipment stop stops its unit unless a person records another impact on the stop.',
+          }}
         />
-        {rules.hasNextPage && (
-          <Button size="sm" variant="ghost" onClick={() => void rules.fetchNextPage()} disabled={rules.isFetchingNextPage}>
-            Load more rules
-          </Button>
-        )}
       </Section>
       <AddDialog open={add.isOpen} onOpenChange={add.setOpen} title="Add unit impact rule" description="A draft applies after another manager approves it." wide testId="impact-rule-dialog">
-        <ImpactRuleForm unitOptions={refs.unitOptions} timezone={refs.timezone} resultOf={resultOf} onSaved={add.saved} onCancel={add.close} />
+        <ImpactRuleForm initialUnitId={unitId} unitOptions={refs.unitOptions} timezone={refs.timezone} resultOf={resultOf} onSaved={add.saved} onCancel={add.close} />
       </AddDialog>
       {add.resultElement}
     </MasterDataLayout>

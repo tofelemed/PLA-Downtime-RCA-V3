@@ -9,7 +9,7 @@ import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { ActionIcon } from '@/lib/icons';
 import { MasterDataLayout } from '../../components/master-data-layout';
 import { UnitSelect } from '../../components/unit-select';
-import { EditorSheet } from '../policy/editor-sheet';
+import { EditorSheet } from '@/features/ux-kit/editor-sheet';
 import { useReliabilityFormat, type ReliabilityFormat } from '../shared/use-reliability-format';
 import { CoveragePanel } from './coverage-panel';
 import { MappingEditor } from './mapping-editor';

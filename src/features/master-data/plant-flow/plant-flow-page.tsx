@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { useFlowRoutes } from '@/api/v2/queries/plant-model';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
+import { useApprovedFlowRoutes, useFlowRoutes } from '@/api/v2/queries/plant-model';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { usePlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
@@ -21,13 +20,15 @@ export function PlantFlowPage() {
   const refs = usePlanningRefs();
   const anchor = useAnchorFocus('flow-route-');
   const routes = useFlowRoutes(anchor.focus);
-  useSeekAnchor(anchor, infiniteListState(routes));
+  useSeekAnchor(anchor, infiniteListState(routes.query));
+  // the buffers a level can be recorded for: every approved route, not only those on the table's current page
+  const approved = useApprovedFlowRoutes();
   const bufferOptions = useMemo(
     () =>
-      flattenPages(routes.data?.pages)
-        .filter((r) => r.state === 'approved' && r.inventoryUom)
+      approved.items
+        .filter((r) => r.inventoryUom)
         .map((r) => ({ value: routeKeyOf(r), label: `${refs.unitName(r.fromUnitId)} → ${refs.unitName(r.toUnitId)}${r.bufferName ? ` (${r.bufferName})` : ''}` })),
-    [routes.data, refs],
+    [approved.items, refs],
   );
   return (
     <MasterDataLayout

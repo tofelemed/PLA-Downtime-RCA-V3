@@ -17,6 +17,8 @@ const MODE_OPTIONS: Option[] = (Object.keys(IMPACT_MODE_LABELS) as UnitImpactMod
 
 export interface ImpactRuleFormProps {
   unitOptions: Option[];
+  /** the unit the list is filtered to (`?unitId=`), preselected; the user may still pick another */
+  initialUnitId?: string;
   timezone: string;
   /** the result dialog of the added draft */
   resultOf: (rule: UnitImpactRuleView) => SaveResult;
@@ -29,8 +31,8 @@ export interface ImpactRuleFormProps {
  * A draft rule: the unit, the asset, how its stop affects the unit, and the standby that may take over.
  * Shown in the page's "Add rule" dialog; a refusal is the red alert at its top, the input kept.
  */
-export function ImpactRuleForm({ unitOptions, timezone, resultOf, onSaved, onCancel }: ImpactRuleFormProps) {
-  const [values, setValues] = useState<ImpactRuleFormValues>(emptyImpactRuleForm);
+export function ImpactRuleForm({ unitOptions, initialUnitId = '', timezone, resultOf, onSaved, onCancel }: ImpactRuleFormProps) {
+  const [values, setValues] = useState<ImpactRuleFormValues>(() => ({ ...emptyImpactRuleForm(), unitId: initialUnitId }));
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateUnitImpactRule();
   const feedback = useSaveFeedback();

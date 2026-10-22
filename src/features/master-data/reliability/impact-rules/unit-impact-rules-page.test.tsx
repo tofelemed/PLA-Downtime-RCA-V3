@@ -30,18 +30,19 @@ function reply(call: V2Call) {
 
 async function fillDraft() {
   fireEvent.click(screen.getByTestId('impact-rule-new'));
-  await screen.findByRole('option', { name: 'Extruder 1' });
-  await waitFor(() => expect(screen.getAllByRole('option', { name: 'P-101 — Feed pump' }).length).toBeGreaterThan(0));
-  fireEvent.change(screen.getByLabelText('Unit'), { target: { value: 'u1' } });
+  const form = await screen.findByTestId('impact-rule-form');
+  await within(form).findByRole('option', { name: 'Extruder 1' });
+  await waitFor(() => expect(within(form).getAllByRole('option', { name: 'P-101 — Feed pump' }).length).toBeGreaterThan(0));
+  fireEvent.change(within(form).getByLabelText('Unit'), { target: { value: 'u1' } });
   fireEvent.change(screen.getByLabelText('Asset'), { target: { value: 'a1' } });
   fireEvent.change(screen.getByLabelText('Why'), { target: { value: 'one of two trains' } });
   fireEvent.change(screen.getByLabelText('Effective from date'), { target: { value: '2027-02-01' } });
 }
 
-const renderPage = () =>
+const renderPage = (entry = '/master-data/unit-impact-rules') =>
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}>
-      <MemoryRouter><UnitImpactRulesPage /></MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}><UnitImpactRulesPage /></MemoryRouter>
     </QueryClientProvider>,
   );
 
@@ -75,14 +76,41 @@ describe('Unit impact rules page (plan 1.10, SME Q5 + D9)', () => {
     const dialog = await screen.findByTestId('save-result-dialog');
     expect(within(dialog).getByText('Draft rule version 2 added')).toBeInTheDocument();
     expect(within(dialog).getByText(/Another manager approves it/)).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: 'View rule' })).toHaveAttribute('href', '/master-data/unit-impact-rules#unit-impact-rule-r2');
-    expect(within(dialog).getByRole('link', { name: 'Back to Unit impact rules' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'View rule' })).toHaveAttribute('href', '/master-data/unit-impact-rules?unitId=u1#unit-impact-rule-r2');
+    // the list is the page already shown: no redundant "Back to Unit impact rules"
+    expect(within(dialog).queryByRole('link', { name: 'Back to Unit impact rules' })).toBeNull();
     expect(screen.queryByTestId('impact-rule-form')).toBeNull();
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add another' }));
     await waitFor(() => expect(screen.queryByTestId('save-result-dialog')).toBeNull());
     expect(within(await screen.findByTestId('impact-rule-dialog')).getByTestId('impact-rule-form')).toBeInTheDocument();
     expect((screen.getByLabelText('Why') as HTMLInputElement).value).toBe('');
+  });
+
+  it('honours ?unitId=: the list is filtered on the server, 20 per page, and Add rule preselects the unit', async () => {
+    const calls = stubV2Fetch(reply);
+    actAs('reliability_engineer');
+    renderPage('/master-data/unit-impact-rules?unitId=u1');
+    await screen.findByRole('table', { name: 'Unit impact rules' });
+    const listCall = calls.find((c) => c.url.pathname.endsWith('/unit-impact-rules'));
+    expect(listCall?.url.searchParams.get('unitId')).toBe('u1');
+    expect(listCall?.url.searchParams.get('limit')).toBe('20');
+    expect(screen.queryByRole('button', { name: /Load more/ })).toBeNull();
+    fireEvent.click(screen.getByTestId('impact-rule-new'));
+    const form = await screen.findByTestId('impact-rule-form');
+    await within(form).findByRole('option', { name: 'Extruder 1' });
+    expect((within(form).getByLabelText('Unit') as HTMLSelectElement).value).toBe('u1');
+  });
+
+  it('without a unit in the address every unit is listed and the form starts empty', async () => {
+    const calls = stubV2Fetch(reply);
+    actAs('reliability_engineer');
+    renderPage();
+    await screen.findByRole('table', { name: 'Unit impact rules' });
+    expect(calls.find((c) => c.url.pathname.endsWith('/unit-impact-rules'))?.url.searchParams.has('unitId')).toBe(false);
+    fireEvent.click(screen.getByTestId('impact-rule-new'));
+    const form = await screen.findByTestId('impact-rule-form');
+    expect((within(form).getByLabelText('Unit') as HTMLSelectElement).value).toBe('');
   });
 
   it('a refused draft is one red alert at the top of the form with the overlapping versions; the input stays', async () => {

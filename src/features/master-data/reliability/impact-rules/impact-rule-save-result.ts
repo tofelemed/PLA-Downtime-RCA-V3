@@ -23,7 +23,8 @@ export function impactRuleSaveResult({ rule, recordLabel, onAddAnother, capabili
     title: `Draft rule version ${rule.version} added`,
     recordLabel,
     message: 'Another manager approves it; until then stops of this asset keep their current impact.',
-    viewPath: `${IMPACT_RULES_PATH}#unit-impact-rule-${rule.id}`,
+    // the rule's unit as the list filter, so its row is among few
+    viewPath: `${IMPACT_RULES_PATH}?unitId=${encodeURIComponent(rule.unitId)}#unit-impact-rule-${rule.id}`,
     viewLabel: 'View rule',
     listPath: IMPACT_RULES_PATH,
     listLabel: sectionNameOf(IMPACT_RULES_PATH),

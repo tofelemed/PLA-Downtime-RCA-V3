@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useStreamRuns } from '@/api/v2/queries/plant-model';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { StreamRunView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
@@ -64,16 +63,12 @@ export function StreamRunsPanel({ unitId, refs, streamOptions, canWrite }: Strea
       <DataTable
         caption="Stream runs"
         columns={columnsOf(refs, canWrite)}
-        rows={flattenPages(runs.data?.pages)}
+        rows={runs.rows}
         getRowKey={(r) => r.id}
-        status={{ isLoading: runs.isLoading, isError: runs.isError, error: runs.error, onRetry: () => void runs.refetch() }}
+        pager={runs.pager}
+        status={runs.status}
         empty={{ title: 'No stream runs', text: 'Without runs the unit is accounted as one stream over each whole period.' }}
       />
-      {runs.hasNextPage && (
-        <Button size="sm" variant="ghost" onClick={() => void runs.fetchNextPage()} disabled={runs.isFetchingNextPage}>
-          Load more runs
-        </Button>
-      )}
     </section>
   );
 }

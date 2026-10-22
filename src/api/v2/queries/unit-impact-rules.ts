@@ -2,17 +2,28 @@ import type { BodyOf } from '../schema-types';
 import type { UnitImpactRuleView } from '../types/unit-impact';
 import { v2 } from '../v2';
 import { useBaselineCommand } from './profile-commands';
-import { useV2InfiniteList } from './use-v2-list';
+import { usePagedQuery } from './use-paged-query';
 
 export type UnitImpactRuleCreateBody = BodyOf<'/api/v2/unit-impact-rules', 'post'>;
 
-/** Every unit impact rule version the caller may read (plan 1.10); approve / retire via `useVersionTransition`. */
-export function useUnitImpactRules(focus?: string) {
-  return useV2InfiniteList<UnitImpactRuleView>({
+export interface UnitImpactRuleFilters {
+  /** one unit's rules (server filter); '' or undefined lists every unit's */
+  unitId?: string;
+  /** deep link to a rule on a later page: the first page starts at it (server keyset seek) */
+  focus?: string;
+}
+
+/**
+ * Unit impact rule versions the caller may read (plan 1.10), 20 per page with the numbered pager, filtered
+ * on the server; approve / retire via `useVersionTransition`.
+ */
+export function useUnitImpactRules(filters: UnitImpactRuleFilters = {}) {
+  const query = { unitId: filters.unitId || undefined, focus: filters.focus };
+  return usePagedQuery<UnitImpactRuleView>({
     resource: 'profiles',
     path: '/unit-impact-rules',
-    query: { limit: 200, focus },
-    key: { filters: { kind: 'unit-impact-rules', focus } },
+    query,
+    key: { filters: { kind: 'unit-impact-rules', ...query } },
   });
 }
 

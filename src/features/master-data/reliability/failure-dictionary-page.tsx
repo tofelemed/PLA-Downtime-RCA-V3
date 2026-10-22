@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useFailureDictionary, useRetireDictionaryEntry } from '@/api/v2/queries/failure-dictionary';
-import { DICTIONARY_KIND_LABELS, type DictionaryKind, type FailureDictionaryEntryView } from '@/api/v2/types/failure-dictionary';
+import { useDictionaryClasses, useFailureDictionaryPage, useRetireDictionaryEntry } from '@/api/v2/queries/failure-dictionary';
+import { DICTIONARY_KIND_LABELS, type FailureDictionaryEntryView } from '@/api/v2/types/failure-dictionary';
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { AddDialog, useAddDialog } from '@/features/ux-kit/add-dialog';
@@ -15,9 +15,8 @@ import { MasterDataLayout } from '../components/master-data-layout';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { DictionaryEntryForm } from './dictionary-entry-form';
 import { dictionaryEntryName } from './dictionary-entry-name';
-
-const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
-const KINDS = Object.keys(DICTIONARY_KIND_LABELS) as DictionaryKind[];
+import { DictionaryFilters } from './dictionary-filters';
+import { useDictionaryFilters } from './use-dictionary-filters';
 
 type DateText = (iso: string | null | undefined) => string;
 
@@ -79,16 +78,17 @@ function HeaderActions({ onAdd }: { onAdd: () => void }) {
  * failure fields pick from it; without entries they stay free text.
  */
 export function FailureDictionaryPage() {
-  const { entries, isLoading, error } = useFailureDictionary();
-  const [kind, setKind] = useState<DictionaryKind | ''>('');
+  const filterState = useDictionaryFilters();
+  const { filters } = filterState;
+  const entries = useFailureDictionaryPage(filters);
+  const classes = useDictionaryClasses();
+  const filtered = Boolean(filters.q || filters.kind || filters.equipmentClass);
   const canWrite = useMasterDataWriter();
   // QA re-test N9: reliability engineers read the dictionary (they validate failure detail); writes stay master data
   const { canValidateFailures } = useCapabilities();
   const dates = usePlantDates();
   const [retiring, setRetiring] = useState<FailureDictionaryEntryView | null>(null);
   const adding = useAddDialog();
-  const rows = useMemo(() => entries.filter((e) => !kind || e.kind === kind), [entries, kind]);
-  const classes = useMemo(() => entries.filter((e) => e.kind === 'equipment_class').map((e) => e.code), [entries]);
   return (
     <MasterDataLayout
       title="Failure dictionary"
@@ -97,20 +97,19 @@ export function FailureDictionaryPage() {
       actions={canWrite ? <HeaderActions onAdd={adding.open} /> : undefined}
     >
       <Section title="Entries in force">
-        <label className="flex items-center gap-2 text-sm">
-          List
-          <select aria-label="List" className={SELECT_CLASS} value={kind} onChange={(e) => setKind(e.target.value as DictionaryKind | '')}>
-            <option value="">All lists</option>
-            {KINDS.map((k) => <option key={k} value={k}>{DICTIONARY_KIND_LABELS[k]}</option>)}
-          </select>
-        </label>
+        <DictionaryFilters state={filterState} classes={classes} />
         <DataTable
           caption="Failure dictionary entries"
           columns={columnsOf(canWrite, setRetiring, dates.date)}
-          rows={rows}
+          rows={entries.rows}
           getRowKey={(e) => e.id}
-          status={{ isLoading, isError: Boolean(error), error }}
-          empty={{ title: 'No dictionary yet', text: 'Failure fields stay free text until the plant imports its codes.' }}
+          pager={entries.pager}
+          status={entries.status}
+          empty={
+            filtered
+              ? { title: 'No matching entries', text: 'No entry in force matches the search and filters.' }
+              : { title: 'No dictionary yet', text: 'Failure fields stay free text until the plant imports its codes.' }
+          }
         />
       </Section>
       <RetireEntryDialog entry={retiring} onClose={() => setRetiring(null)} />

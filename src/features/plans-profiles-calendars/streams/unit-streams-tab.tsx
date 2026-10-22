@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useUnitStreams } from '@/api/v2/queries/plant-model';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
+import { useApprovedUnitStreams, useUnitStreams } from '@/api/v2/queries/plant-model';
 import type { UnitStreamView } from '@/api/v2/types/plant-model';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
@@ -56,11 +55,12 @@ export function UnitStreamsTab() {
   const [adding, setAdding] = useState(false);
   const anchor = useAnchorFocus('unit-stream-');
   const streams = useUnitStreams(unitId, anchor.focus);
-  const rows = flattenPages(streams.data?.pages);
-  useSeekAnchor(anchor, infiniteListState(streams));
+  useSeekAnchor(anchor, infiniteListState(streams.query));
+  // the run form offers every approved stream, not only those on the table's current page
+  const approved = useApprovedUnitStreams(unitId);
   const streamOptions = useMemo(
-    () => [...new Set(rows.filter((s) => s.state === 'approved').map((s) => s.code))].map((code) => ({ value: code, label: code })),
-    [rows],
+    () => [...new Set(approved.items.map((s) => s.code))].map((code) => ({ value: code, label: code })),
+    [approved.items],
   );
   return (
     <div className="space-y-4" data-testid="unit-streams-tab">
@@ -91,10 +91,11 @@ export function UnitStreamsTab() {
           <DataTable
             caption="Unit streams"
             columns={columnsOf(refs)}
-            rows={rows}
+            rows={streams.rows}
             getRowKey={(s) => s.id}
             getRowAnchor={(s) => `unit-stream-${s.id}`}
-            status={{ isLoading: streams.isLoading, isError: streams.isError, error: streams.error, onRetry: () => void streams.refetch() }}
+            pager={streams.pager}
+            status={streams.status}
             empty={{ title: 'No streams', text: 'The unit is one stream: every product slice uses the whole period.' }}
           />
           <StreamRunsPanel unitId={unitId} refs={refs} streamOptions={streamOptions} canWrite={canWritePeriods} />

@@ -1,16 +1,19 @@
 import type { CalendarVersionView } from '@/api/v2/types/calendars';
-import { DataTable, type DataTableColumn, type DataTableStatus } from '@/features/ux-kit/data-table';
+import { DataTable, type DataTableColumn, type DataTableStatus, type PagerModel } from '@/features/ux-kit/data-table';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 
 export interface CalendarVersionListProps {
+  /** the rows of the current page (`pager` given) or every version */
   versions: readonly CalendarVersionView[];
+  /** the server pager of the list (`usePagedQuery`); without it the table pages the rows itself */
+  pager?: PagerModel;
   status: DataTableStatus;
   onOpen: (version: CalendarVersionView) => void;
 }
 
 /** Versions of the chosen calendar scope with state and effective operational dates (20 per page). */
-export function CalendarVersionList({ versions, status, onOpen }: CalendarVersionListProps) {
+export function CalendarVersionList({ versions, pager, status, onOpen }: CalendarVersionListProps) {
   const pref = useCalendarPreference();
   const columns: DataTableColumn<CalendarVersionView>[] = [
     { id: 'version', header: 'Version', nowrap: true, cell: (v) => <span data-testid="calendar-version-row" data-version={v.version}>Version {v.version}</span> },
@@ -28,6 +31,7 @@ export function CalendarVersionList({ versions, status, onOpen }: CalendarVersio
         columns={columns}
         rows={versions}
         getRowKey={(v) => v.id}
+        pager={pager}
         status={status}
         empty={{ text: 'No calendar versions for this scope yet.' }}
         onRowClick={onOpen}

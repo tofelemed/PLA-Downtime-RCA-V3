@@ -1520,10 +1520,17 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List sites of the caller tenant (timezone, operational day start) */
+        /**
+         * List sites of the caller tenant (keyset; sort createdAt or name; timezone, operational day start, unit count)
+         * @description Tenant from the identity; the plant’s default site is created on first use. `q` searches the name. `unitCount` = active units of the site (the default site also owns units without a site). Writes: POST /v2/sites, PATCH /v2/sites/{id}.
+         */
         get: operations["CalendarScheduleV2Controller_listSites_v2"];
         put?: never;
-        post?: never;
+        /**
+         * Create a site in the acting plant
+         * @description Requires `Idempotency-Key`. Super administrators, plant administrators, or the administrator of the plant’s organization (403 ORGANIZATION_NOT_ALLOWED). `timezone` defaults to the plant’s, `operationalDayStart` to the default site’s. 409 SITE_NAME_EXISTS (case-insensitive).
+         */
+        post: operations["SitesV2Controller_create_v2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1544,7 +1551,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Rename a site
+         * @description Same callers as create. 404 for a site outside the acting plant; 409 SITE_NAME_EXISTS.
+         */
+        patch: operations["SitesV2Controller_rename_v2"];
         trace?: never;
     };
     "/api/v2/shift-instances": {
@@ -10637,6 +10648,11 @@ export interface components {
             /** @example EXT-LINE-3 */
             code: string;
             name: string;
+            /**
+             * Format: uuid
+             * @description Site of the plant (GET /v2/sites); null or absent = the plant default site (422 SITE_NOT_IN_PLANT)
+             */
+            siteId?: Record<string, never> | null;
             description?: Record<string, never> | null;
             /** @example t */
             unitOfMeasure?: Record<string, never> | null;
@@ -10648,6 +10664,11 @@ export interface components {
         UnitV2ChangeDto: {
             code?: string;
             name?: string;
+            /**
+             * Format: uuid
+             * @description Site of the plant (GET /v2/sites); null or absent = the plant default site (422 SITE_NOT_IN_PLANT)
+             */
+            siteId?: Record<string, never> | null;
             description?: Record<string, never> | null;
             unitOfMeasure?: Record<string, never> | null;
             capacity?: Record<string, never> | null;
@@ -11128,6 +11149,23 @@ export interface components {
         };
         CertifyDayDto: {
             comment?: string;
+        };
+        SiteV2CreateDto: {
+            /** @example North yard */
+            name: string;
+            /**
+             * @description IANA time zone; default = the plant time zone
+             * @example Asia/Tehran
+             */
+            timezone?: string;
+            /**
+             * @description Start of the operational day, HH:MM; default = the default site’s
+             * @example 06:00
+             */
+            operationalDayStart?: string;
+        };
+        SiteV2ChangeDto: {
+            name: string;
         };
     };
     responses: never;
@@ -13406,6 +13444,8 @@ export interface operations {
                 /** @description Overrides of this unit */
                 unitId?: string;
                 state?: "draft" | "published";
+                /** @description true = the site calendars only, without unit overrides (default false: both) */
+                siteOnly?: boolean;
             };
             header?: never;
             path?: never;
@@ -13520,11 +13560,13 @@ export interface operations {
                 cursor?: string;
                 limit?: number;
                 /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
-                sort?: string;
+                sort?: "name" | "-name" | "createdAt" | "-createdAt";
                 /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
                 from?: string;
                 /** @description Window end, ISO 8601 (exclusive) */
                 to?: string;
+                /** @description Case-insensitive search in the site name */
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -13533,6 +13575,29 @@ export interface operations {
         requestBody?: never;
         responses: {
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SitesV2Controller_create_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteV2CreateDto"];
+            };
+        };
+        responses: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13550,6 +13615,29 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SitesV2Controller_rename_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SiteV2ChangeDto"];
+            };
+        };
         responses: {
             200: {
                 headers: {

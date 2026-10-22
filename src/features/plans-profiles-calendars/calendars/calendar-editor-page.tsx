@@ -66,13 +66,13 @@ const scopeText = (unitId: string | null, refs: PlanningRefs) => (unitId ? `Unit
  * The publish result dialog, held by the page: publishing turns the version read-only, so the page
  * redirects to its view URL and the editor remounts; the dialog stays open across both.
  */
-function usePublishedDialog(refs: PlanningRefs) {
+function usePublishedDialog(refs: PlanningRefs, listPath: string) {
   const saved = useSaveResult();
   const { number } = useNumberFormat();
   const capabilities = useCapabilities();
   const onPublished = (result: CalendarPublishView) => {
     const next = nextSetupLink('/setup/calendars', { unitId: result.version.unitId ?? undefined, capabilities });
-    saved.open(calendarPublishedResult({ result, scopeLabel: scopeText(result.version.unitId, refs), count: (value) => number(value), unitName: refs.unitName, next }));
+    saved.open(calendarPublishedResult({ result, scopeLabel: scopeText(result.version.unitId, refs), count: (value) => number(value), unitName: refs.unitName, next, listPath }));
   };
   return { onPublished, element: saved.element };
 }
@@ -86,8 +86,8 @@ export function CalendarVersionPage() {
   const { pathname, search } = useLocation();
   const { canWriteCalendars } = useCapabilities();
   const refs = usePlanningRefs();
-  const published = usePublishedDialog(refs);
   const back = useCalendarsBack();
+  const published = usePublishedDialog(refs, back.to);
   const version = useCalendarVersion(versionId);
   const state = dataStateOf(version);
   const shown = version.data;

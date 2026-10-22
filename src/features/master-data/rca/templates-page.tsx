@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -42,6 +42,7 @@ function useColumns(selectColumn: DataTableColumn<RcaTemplateView> | null): Data
 
 /** `/master-data/rca/templates`: RCA templates of the plant, 20 per page; export / import JSON; bulk retire. */
 export function RcaTemplatesPage() {
+  const navigate = useNavigate();
   const { filters, update } = useListFilters('name');
   const canWrite = useMasterDataWriter();
   const refresh = useRefreshRcaSettings();
@@ -78,6 +79,8 @@ export function RcaTemplatesPage() {
           columns={columns}
           rows={templates.rows}
           getRowKey={(template) => template.id}
+          onRowClick={(template) => navigate(`/master-data/rca/templates/${template.id}`)}
+          rowsHaveLink
           pager={templates.pager}
           status={templates.status}
           empty={{ title: 'No templates', text: filters.q ? 'No template matches the search.' : 'No RCA template with this status yet.' }}

@@ -62,6 +62,21 @@ creating a plant never switches or refreshes the selection (`hierarchy-form-page
   calendars "Add crew" / "Add rotation".
 
 ## Phase 5 — Consistency
-- [ ] Names: "Production rules" vs "Stop and plan policy"; "Valuation" vs "Finance" crumb; "Master data › Cause library".
-- [ ] Unit choice in the URL everywhere (profiles, calendars); unit impact rules honours `?unitId=`.
-- [ ] Numbered pager instead of "Load more"; failure dictionary server-paged; RCA templates rows clickable.
+- [x] Names: "Production rules" vs "Stop and plan policy"; "Valuation" vs "Finance" crumb; "Master data › Cause library".
+      (Crumb and footer done in Phase 3. A Setup entry whose first page has another name reads Area › page:
+      "Production rules › Stop and plan policy", "Codes & failures › Codes & rules", "RCA library › RCA templates",
+      `breadcrumbs.test.tsx`. Left as is: sidebar "Setup guide" vs h1 "Equipment setup guide" (sidebar label override,
+      like "Downtime overview"); h1 "Codes & rules" over its tabs "Code libraries · Rules".)
+- [x] Unit choice in the URL everywhere (profiles, calendars); unit impact rules honours `?unitId=`.
+      (Profiles / calendars in Phase 3. Unit impact rules: shared `UnitSelect` "Unit" filter in `?unitId=` → server
+      `unitId` filter, Add rule preselects it; View rule opens `?unitId=<rule unit>#unit-impact-rule-<id>`.)
+- [x] Numbered pager instead of "Load more"; failure dictionary server-paged; RCA templates rows clickable.
+      (`usePagedQuery` on plant flow routes + buffer levels, unit impact rules, grade transitions, streams, stream
+      runs, calendar versions; pickers that need every approved row use `useV2Lookup` (approved routes with a buffer,
+      approved streams). Calendar versions: new optional `siteOnly=true` on `GET /v2/calendar-versions` (site
+      calendar without unit overrides) so pages are not thinned by a browser filter; OpenAPI snapshot updated.
+      Failure dictionary: the v2 list was already keyset + `q` / `kinds` / `equipmentClass`; the page now pages on the
+      server with search, list and class in the URL (`?q=&kind=&class=`). RCA templates and verification checklists
+      rows open the record. `EditorSheet` moved to `ux-kit/editor-sheet.tsx`; result dialogs of profiles, calendars
+      and rate import go back to the `?back=` list address.)
+- Follow-up: the failure dictionary list sorts by `code` (pre-existing `sortedKeysetPage`) without an index leading with `code`; add `(tenant_id, code, id)` if dictionaries grow large.

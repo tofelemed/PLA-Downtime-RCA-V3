@@ -43,7 +43,7 @@ function useImportStored(importId: string | null, onStored: (view: RateImportVie
  * the result dialog shows its counts and the form is cleared. A job that refused lines keeps the input
  * (its report lists them); a refused request is the red alert (`failure`), input kept.
  */
-export function useRateImportForm() {
+export function useRateImportForm(listPath: string = LIST) {
   const [fields, setFields] = useState<ImportFields>(START);
   const [sent, setSent] = useState<RateImportInputs | null>(null);
   const [importId, setImportId] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export function useRateImportForm() {
   };
 
   useImportStored(importId, (view) => {
-    feedback.openResult(rateImportResult({ view, count: (value) => number(value), next: nextSetupLink(LIST, { capabilities }), onAddAnother: addAnother }));
+    feedback.openResult(rateImportResult({ view, count: (value) => number(value), next: nextSetupLink(LIST, { capabilities }), onAddAnother: addAnother, listPath }));
     clear();
   });
 

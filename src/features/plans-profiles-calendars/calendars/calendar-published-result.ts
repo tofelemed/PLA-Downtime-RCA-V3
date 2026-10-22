@@ -10,6 +10,8 @@ export interface CalendarPublishedInput {
   /** a unit's name, for a site calendar that generated the shifts of several units */
   unitName: (id: string) => string;
   next: SaveLink | null;
+  /** "Back to calendars": the list as the user left it (`?back=`, e.g. its unit); default the list itself */
+  listPath?: string;
 }
 
 const shiftsText = (shifts: number, count: (value: number) => string) => `${count(shifts)} ${shifts === 1 ? 'shift' : 'shifts'} generated`;
@@ -27,12 +29,12 @@ function publishedShiftsText({ result, count, unitName }: Pick<CalendarPublished
 
 /** The result dialog of a publish: what was generated · Back to calendars · Next: <setup page>. */
 export function calendarPublishedResult(input: CalendarPublishedInput): SaveResult {
-  const { result, scopeLabel, next } = input;
+  const { result, scopeLabel, next, listPath = '/setup/calendars' } = input;
   return {
     title: 'Calendar published',
     recordLabel: `Calendar version ${result.version.version} · ${scopeLabel}`,
     message: publishedShiftsText(input),
-    listPath: '/setup/calendars',
+    listPath,
     listLabel: 'calendars',
     next,
   };

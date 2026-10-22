@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import type { useFlowRoutes } from '@/api/v2/queries/plant-model';
-import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { FlowRouteView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
@@ -70,17 +69,13 @@ export function FlowRoutesSection({ refs, routes, anchor, canWrite }: FlowRoutes
         <DataTable
           caption="Material-flow routes"
           columns={columnsOf(refs)}
-          rows={flattenPages(routes.data?.pages)}
+          rows={routes.rows}
           getRowKey={(r) => r.id}
           getRowAnchor={(r) => `flow-route-${r.id}`}
-          status={{ isLoading: routes.isLoading, isError: routes.isError, error: routes.error, onRetry: () => void routes.refetch() }}
+          pager={routes.pager}
+          status={routes.status}
           empty={{ title: 'No routes', text: 'Without routes no stop propagates between units: each unit counts its own losses only.' }}
         />
-        {routes.hasNextPage && (
-          <Button size="sm" variant="ghost" onClick={() => void routes.fetchNextPage()} disabled={routes.isFetchingNextPage}>
-            Load more routes
-          </Button>
-        )}
       </div>
       {adding && <FlowRouteDialog unitOptions={refs.unitOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
     </Section>

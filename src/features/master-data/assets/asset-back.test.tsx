@@ -11,6 +11,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { AssetDetailPage } = await import('./asset-detail-page');
 const { UnitDetailPage } = await import('../units/unit-detail-page');
 const { UnitAssetsSection } = await import('../units/unit-assets-section');
+const { PlantNode } = await import('../hierarchy/plant-node');
 
 const ASSET = { id: 'a1', code: 'GB-1', name: 'Gearbox', unitId: 'u1', retiredAt: null, rowVersion: 1 };
 
@@ -58,6 +59,17 @@ describe('asset and unit pages return to where they were opened', () => {
     show(<UnitAssetsSection unitId="u1" canAdd />, '/master-data/units/u1', '/master-data/units/:unitId');
     expect(screen.getByRole('link', { name: 'Add asset' })).toHaveAttribute('href', `/master-data/assets/new?unitId=u1&${fromUnit}`);
     expect(await screen.findByRole('link', { name: 'Gearbox' })).toHaveAttribute('href', `/master-data/assets/a1?${fromUnit}`);
+  });
+
+  it('the plant hierarchy hands its address to "Add unit", like its asset adds', () => {
+    const organization = { id: 'o1', code: 'MAR', name: 'Marun' };
+    const plant = { id: 't1', code: 'HDPE', name: 'Marun HDPE', organizationId: 'o1', canEdit: false };
+    show(
+      <ul><PlantNode organization={organization} plant={plant} acting level={0} canWrite onSwitch={() => undefined} /></ul>,
+      '/master-data/hierarchy',
+      '/master-data/hierarchy',
+    );
+    expect(screen.getByRole('link', { name: 'Add unit to Marun HDPE' })).toHaveAttribute('href', `/master-data/units/new?back=${encodeURIComponent('/master-data/hierarchy')}`);
   });
 
   it('"Add unit" in the plant hierarchy returns to the hierarchy', () => {

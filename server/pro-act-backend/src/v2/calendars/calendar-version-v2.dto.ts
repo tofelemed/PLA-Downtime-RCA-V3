@@ -1,9 +1,10 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsISO8601,
@@ -23,6 +24,7 @@ import {
   EXCLUSION_KINDS,
   HOLIDAY_TREATMENTS,
 } from '../../domain/calendar/calendar.types';
+import { toBooleanParam } from '../../common/dto/query-param.transformers';
 import { ListQueryDto } from '../common/list-query.dto';
 
 export const LOCAL_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -275,4 +277,13 @@ export class CalendarVersionListQueryDto extends ListQueryDto {
   @IsOptional()
   @IsIn(CALENDAR_VERSION_STATES)
   state?: (typeof CALENDAR_VERSION_STATES)[number];
+
+  @ApiPropertyOptional({
+    description:
+      'true = the site calendars only, without unit overrides (default false: both)',
+  })
+  @IsOptional()
+  @Transform(toBooleanParam)
+  @IsBoolean()
+  siteOnly?: boolean;
 }
