@@ -3,6 +3,7 @@ import { useFxRate } from '@/api/v2/queries/valuation';
 import type { FxRateView, WithRevaluation } from '@/api/v2/types/valuation';
 import { FX_RATE_TYPE_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { RevaluationQueued } from '../components/revaluation-queued';
+import { FinanceAreaTabs } from '../components/finance-area-tabs';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Fact } from '../components/fact';
@@ -34,6 +35,7 @@ function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
         }
         actions={<FxVersionActions rate={rate} />}
       />
+      <FinanceAreaTabs current="fx" />
       <RevaluationQueued revaluation={rate.revaluation} />
       {rate.provisional && (
         <p className="rounded-md border border-warning/60 p-3 text-sm" data-testid="fx-provisional-note">
@@ -72,6 +74,7 @@ export function FxRateDetailPage() {
       ) : (
         <>
           <PageHeader title="Exchange rate" back={BACK} />
+          <FinanceAreaTabs current="fx" />
           <DataState state={dataStateOf(rate)} error={rate.error} onRetry={() => void rate.refetch()} />
         </>
       )}

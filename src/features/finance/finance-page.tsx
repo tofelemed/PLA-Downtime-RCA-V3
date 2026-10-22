@@ -1,10 +1,10 @@
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { DataState } from '@/features/ux-kit/data-state';
 import { pageNameOf } from '@/features/auth/navigation-items';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { FinanceAreaTabs } from './components/finance-area-tabs';
 import { RecalculationNotice } from './components/recalculation-notice';
 import { ValuationRatesLink } from './components/valuation-rates-link';
 import { DemandStatusesTab } from './demand/demand-statuses-tab';
@@ -16,7 +16,7 @@ type FinanceTab = (typeof TABS)[number];
 
 function FinanceScreen() {
   const { timezone, utcFallback } = usePlantDates();
-  const [tab, setTab] = useUrlParam<FinanceTab>('tab', TABS, 'policies');
+  const [tab] = useUrlParam<FinanceTab>('tab', TABS, 'policies');
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="finance">
@@ -24,30 +24,12 @@ function FinanceScreen() {
           title={pageNameOf('/finance')}
           description={`Valuation policy, exchange rates and product demand of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
         />
+        <FinanceAreaTabs current={tab} />
         <ValuationRatesLink />
         <RecalculationNotice />
-        <Tabs value={tab} onValueChange={(value) => setTab(value as FinanceTab)}>
-          <TabsList className="h-auto flex-wrap">
-            <TabsTrigger value="policies" data-testid="tab-policies">
-              Valuation policy
-            </TabsTrigger>
-            <TabsTrigger value="fx" data-testid="tab-fx-rates">
-              Exchange rates
-            </TabsTrigger>
-            <TabsTrigger value="demand" data-testid="tab-demand">
-              Demand
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="policies" className="pt-4">
-            <PoliciesTab />
-          </TabsContent>
-          <TabsContent value="fx" className="pt-4">
-            <FxRatesTab />
-          </TabsContent>
-          <TabsContent value="demand" className="pt-4">
-            <DemandStatusesTab />
-          </TabsContent>
-        </Tabs>
+        {tab === 'policies' && <PoliciesTab />}
+        {tab === 'fx' && <FxRatesTab />}
+        {tab === 'demand' && <DemandStatusesTab />}
       </div>
     </Page>
   );

@@ -7,8 +7,10 @@ import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
+import { ProfilesAreaTabs } from '../components/profiles-area-tabs';
 import { SaveRefusalAlert } from '../components/save-refusal-alert';
 import { usePlanningRefs } from '../hooks/use-planning-refs';
+import { useProfilesBack } from '../hooks/use-profiles-back';
 import { useRateImportForm, type ImportKind } from '../hooks/use-rate-import-form';
 import { refusalOf } from '../model/refusal';
 import { RateImportStatus } from './rate-import-status';
@@ -18,7 +20,6 @@ const KINDS = [
   { value: 'forecast', label: 'Forecast (daily)' },
   { value: 'mpc', label: 'MPC (becomes sustained)' },
 ];
-const LIST = '/setup/profiles';
 const HEADER = 'unitCode,productCode,operatingMode,rate,timebase,effectiveFrom,effectiveTo';
 
 /**
@@ -30,11 +31,13 @@ export function RateImportPage() {
   const refs = usePlanningRefs();
   const form = useRateImportForm();
   const reasonId = useId();
+  const back = useProfilesBack();
   const { fields, blocked } = form;
   const fieldError = (key: string) => refusalOf(form.failure)?.fieldErrors[key];
   return (
     <Page>
-      <PageHeader title="Import rates" description="Budget, forecast or MPC rates from a CSV file." back={{ to: LIST, label: 'Profiles & rates' }} />
+      <PageHeader title="Import rates" description="Budget, forecast or MPC rates from a CSV file." back={back} />
+      <ProfilesAreaTabs current="profiles" unitId={back.unitId} />
       <Section title="File">
         <div className="space-y-3" data-testid="rate-import-dialog">
           <SaveRefusalAlert error={form.failure} timezone={refs.timezone} />
@@ -55,7 +58,7 @@ export function RateImportPage() {
               Import
             </Button>
             <Button asChild variant="outline">
-              <Link to={LIST}>Cancel</Link>
+              <Link to={back.to}>Cancel</Link>
             </Button>
           </div>
           <DisabledReason id={reasonId} reason={blocked} />

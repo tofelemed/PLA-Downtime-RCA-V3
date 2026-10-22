@@ -1,5 +1,4 @@
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DataState } from '@/features/ux-kit/data-state';
 import { MasterDataLayout } from '@/features/master-data/components/master-data-layout';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -14,29 +13,15 @@ type AdminTab = (typeof TABS)[number];
 function CodesAdminScreen() {
   const { canViewOperations } = useCapabilities();
   const { timezone, utcFallback } = usePlantDates();
-  const [tab, setTab] = useUrlParam<AdminTab>('tab', TABS, 'codes');
+  const [tab] = useUrlParam<AdminTab>('tab', TABS, 'codes');
   return (
     <MasterDataLayout alsoAllowed={canViewOperations}
           title="Codes & rules"
           description={`Code libraries and automatic rules of this plant. Every change is kept as a version. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
         >
-      <div className="space-y-6" data-testid="codes-admin">
-        <Tabs value={tab} onValueChange={(value) => setTab(value as AdminTab)}>
-          <TabsList className="h-auto flex-wrap">
-            <TabsTrigger value="codes" data-testid="tab-codes">
-              Code libraries
-            </TabsTrigger>
-            <TabsTrigger value="rules" data-testid="tab-rules">
-              Rules
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="codes" className="pt-4">
-            <CodeLibraryBrowser />
-          </TabsContent>
-          <TabsContent value="rules" className="pt-4">
-            <RulesPanel />
-          </TabsContent>
-        </Tabs>
+      {/* the lists are tabs of the area's one tab row (Code libraries · Rules · Failure dictionary), no nested tabs */}
+      <div className="space-y-6" data-testid="codes-admin" data-tab={tab}>
+        {tab === 'rules' ? <RulesPanel /> : <CodeLibraryBrowser />}
       </div>
     </MasterDataLayout>
   );

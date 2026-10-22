@@ -43,21 +43,40 @@ export function withReach(crumbs: readonly Crumb[], canReach: (to: string) => bo
 }
 
 function moduleCrumbs(item: NavigationItem, back: BackTarget | undefined): { crumbs: Crumb[]; keepBack: boolean } {
-  if (!back) return { crumbs: [{ label: item.name, to: item.href }], keepBack: false };
-  if (navMatchLength(item, pathOf(back.to)) === 0) return { crumbs: [{ label: item.name, to: item.href }], keepBack: true };
-  // the back target is the module page itself (same name, or exactly its address): one crumb, keeping its filters / words
-  if (sameLabel(back.label, item.name) || back.to === item.href) return { crumbs: [{ label: back.label, to: back.to }], keepBack: false };
-  return { crumbs: [{ label: item.name, to: item.href }, { label: back.label, to: back.to }], keepBack: false };
+  const module = { label: item.name, to: item.href };
+  if (!back) return { crumbs: [module], keepBack: false };
+  if (navMatchLength(item, pathOf(back.to)) === 0) return { crumbs: [module], keepBack: true };
+  // the back target is the module page itself (same name, or exactly its address outside Setup): one crumb, keeping
+  // its filters / words; a Setup area always shows its own name first (its first tab is one of several pages)
+  const collapse = sameLabel(back.label, item.name) || (back.to === item.href && item.section !== 'setup');
+  if (collapse) return { crumbs: [{ label: back.label, to: back.to }], keepBack: false };
+  // a Setup area whose first list is the parent: the area's name as text, so the same address is not linked twice
+  const area = back.to === item.href ? { label: item.name } : module;
+  return { crumbs: [area, { label: back.label, to: back.to }], keepBack: false };
+}
+
+/** The first page of a Setup area (e.g. Production units of "Plant & equipment"): Area › page, like its siblings. */
+function setupHomeTrail(item: NavigationItem, title: string): RouteTrail | null {
+  if (item.section !== 'setup') return null;
+  const crumbs = dedupeCrumbs([{ label: item.name, to: item.href }, { label: title }]);
+  return crumbs.length > 1 ? { crumbs, keepBack: false } : null;
 }
 
 /**
  * UX audit B-3: Module › parent › page, derived from the route instead of typed per page. The module is
  * the menu item the path belongs to (longest match), the parent is the page's own `back` link. Module
- * pages themselves (depth 1) and paths outside the menu get no trail (null).
+ * pages themselves (depth 1) and paths outside the menu get no trail (null), except a Setup area's first
+ * page whose title is not the area's name (SETUP_UX_FIXES Phase 3).
  */
 export function routeTrail(pathname: string, title: string, back: BackTarget | undefined, items: readonly NavigationItem[] = NAVIGATION_ITEMS): RouteTrail | null {
   const item = activeNavItem(items, pathname);
-  if (!item || pathname === item.href) return null;
+  if (!item) return null;
+  if (pathname === item.href) return setupHomeTrail(item, title);
   const { crumbs, keepBack } = moduleCrumbs(item, back);
   return { crumbs: dedupeCrumbs([...crumbs, { label: title }]), keepBack };
+}
+
+/** Whether the path is a page of the sidebar's Setup section (its sub-pages show a visible Back button). */
+export function isSetupPath(pathname: string, items: readonly NavigationItem[] = NAVIGATION_ITEMS): boolean {
+  return activeNavItem(items, pathname)?.section === 'setup';
 }

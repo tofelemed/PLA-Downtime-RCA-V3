@@ -18,10 +18,12 @@ export interface UnitFormProps {
   isNew: boolean;
   /** read-only users and retired units: fields are shown, not editable */
   readOnly: boolean;
+  /** Cancel's target: the page the unit was opened from (default: the unit list) */
+  cancelTo?: string;
 }
 
 /** Plant (the selected one), name, code, site, description, unit of measure and the folded legacy values. */
-export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly }: UnitFormProps) {
+export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly, cancelTo = '/master-data/units' }: UnitFormProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSave();
@@ -67,7 +69,7 @@ export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew
           disabled={readOnly}
         />
       </LegacyValues>
-      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo="/master-data/units" />}
+      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo={cancelTo} />}
     </form>
   );
 }

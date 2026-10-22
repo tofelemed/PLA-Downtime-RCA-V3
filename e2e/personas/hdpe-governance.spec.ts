@@ -105,8 +105,9 @@ test('viewer can inspect budgets but cannot propose, approve or adopt', async ({
 
 test('stream and lot filters follow the selected unit', async ({ page }) => {
   await signIn(page, 'noah.schmidt@demo.acme.com');
-  await page.goto('/planning');
-  await page.getByRole('tab', { name: 'Streams', exact: true }).click();
+  // Streams is a tab of Setup › Profiles & rates: a link of the area's tab row (SETUP_UX_FIXES Phase 3)
+  await page.goto('/setup/profiles');
+  await page.getByRole('navigation', { name: 'Pages of this setup area' }).getByRole('link', { name: 'Streams', exact: true }).click();
   for (const code of ['unit100', 'unit200']) {
     await page.locator('#streamUnit').selectOption(units.find((row) => row.code === code)!.id);
     await expect(page.getByTestId('unit-stream-row')).toContainText(`Demo: ${code} extrusion stream`);

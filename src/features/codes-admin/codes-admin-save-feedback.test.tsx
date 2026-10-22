@@ -72,7 +72,7 @@ describe('codes & rules save feedback (DECISIONS 2026-10-22)', () => {
     expect(within(result).getByRole('link', { name: 'View code' }).getAttribute('href')).toBe('/master-data/codes-rules/reason-codes/r9');
     expect(screen.queryByTestId('code-create-dialog')).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(within(result).getByRole('link', { name: 'Back to Codes & rules' }));
+    fireEvent.click(within(result).getByRole('link', { name: 'Back to Code libraries' }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

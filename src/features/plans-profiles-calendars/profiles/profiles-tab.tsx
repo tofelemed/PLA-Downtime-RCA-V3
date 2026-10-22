@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import type { ProfileView } from '@/api/v2/types/profiles';
@@ -7,12 +6,14 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { CAPACITY_MODEL_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
+import { useCurrentAddress, withReturnTo } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePagedProfiles } from '../hooks/use-profile-reads';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
+import { useSearchParam, useUnitParam } from '../hooks/use-unit-param';
 import { operatingModeLabel } from '../model/plan-labels';
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
@@ -45,14 +46,16 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
 
 /**
  * Production profiles: what a unit can make of a product, with effective-dated rates and valuation rates.
- * 20 per page; a row opens the profile at `/planning/profiles/:profileId`.
+ * 20 per page; a row opens the profile at `/planning/profiles/:profileId`. The unit and product filters are in
+ * the URL and every sub-page link carries this address (`?back=`), so Back returns to the list as it was.
  */
 export function ProfilesTab() {
   const { canWriteProfiles, canApproveProfiles } = useCapabilities();
   const refs = usePlanningRefs();
   const navigate = useNavigate();
-  const [unitId, setUnitId] = useState('');
-  const [productId, setProductId] = useState('');
+  const [unitId, setUnitId] = useUnitParam();
+  const [productId, setProductId] = useSearchParam('productId');
+  const here = useCurrentAddress();
   const profiles = usePagedProfiles({ unitId, productId });
   return (
     <div className="space-y-4" data-testid="profiles-tab">
@@ -71,7 +74,7 @@ export function ProfilesTab() {
           <ReadOnlyHint />
           {canApproveProfiles && (
             <Button asChild size="sm" variant="outline" data-testid="rate-import">
-              <Link to="/planning/profiles/import">
+              <Link to={withReturnTo('/planning/profiles/import', here)}>
                 <ActionIcon.import className="h-4 w-4" aria-hidden="true" />
                 Import rates
               </Link>
@@ -79,7 +82,7 @@ export function ProfilesTab() {
           )}
           {canWriteProfiles && (
             <Button asChild size="sm" data-testid="profile-new">
-              <Link to="/planning/profiles/new">
+              <Link to={withReturnTo('/planning/profiles/new', here)}>
                 <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
                 New profile
               </Link>
@@ -95,7 +98,7 @@ export function ProfilesTab() {
         pager={profiles.pager}
         status={profiles.status}
         empty={{ title: 'No profiles', text: 'No profiles match these filters.' }}
-        onRowClick={(p) => navigate(`/planning/profiles/${p.id}`)}
+        onRowClick={(p) => navigate(withReturnTo(`/planning/profiles/${p.id}`, here))}
         rowLabel={(p) => `Open profile ${refs.unitName(p.unitId)} × ${refs.productName(p.productId)}`}
       />
     </div>

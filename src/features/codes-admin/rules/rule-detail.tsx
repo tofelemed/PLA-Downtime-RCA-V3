@@ -3,7 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { labelOf, RULE_KIND_LABELS, RULE_STATE_LABELS } from '@/features/ux-kit/labels';
 import { PageHeader } from '@/features/ux-kit/page-layout';
+import { MasterDataNav } from '@/features/master-data/components/master-data-nav';
 import { useUrlParam } from '../hooks/use-url-param';
+import { RULES_LIST_PATH } from '../model/codes-save-result';
 import { RuleActions } from './rule-actions';
 import { RuleEditor } from './rule-editor';
 import { RuleVersions } from './rule-versions';
@@ -40,10 +42,11 @@ export function RuleDetail({ rule, schema, currentUserId }: RuleDetailProps) {
     <div className="space-y-6" data-testid="rule-detail" data-state={rule.state} data-active-version={rule.activeVersion ?? ''} data-has-draft={Boolean(rule.draft)}>
       <PageHeader
         title={rule.name}
-        back={{ to: '/master-data/codes-rules?tab=rules', label: 'Rules' }}
+        back={{ to: RULES_LIST_PATH, label: 'Rules' }}
         description={<RuleSummary rule={rule} ownDraft={ownDraft} />}
         actions={<RuleActions rule={rule} currentUserId={currentUserId} />}
       />
+      <MasterDataNav />
       <Tabs value={tab} onValueChange={(value) => setTab(value as RuleTab)}>
         <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="builder" data-testid="tab-builder">Builder</TabsTrigger>

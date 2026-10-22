@@ -150,7 +150,7 @@ describe('QA planning: forms, reasons and URL state', () => {
 
   it('the calendar editor has a Cancel, required markers and a guard; a non-writer gets a view-only notice', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    const props = { version: null, seed: newCalendarDraft('Asia/Tehran'), scope: { siteId: 's1' }, displayTimezone: 'Asia/Tehran', onSaved: vi.fn(), onNewFrom: vi.fn(), onPreview: vi.fn() };
+    const props = { version: null, seed: newCalendarDraft('Asia/Tehran'), scope: { siteId: 's1' }, displayTimezone: 'Asia/Tehran', onSaved: vi.fn(), onNewFrom: vi.fn(), onPreview: vi.fn(), cancelTo: '/setup/calendars' };
     const first = wrap(<CalendarEditor {...props} />);
     expect(screen.getByLabelText(/^Operational day starts at/).getAttribute('aria-required')).toBe('true');
     fireEvent.click(screen.getByTestId('calendar-cancel'));

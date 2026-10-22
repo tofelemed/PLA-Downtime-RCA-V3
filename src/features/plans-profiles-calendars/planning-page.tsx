@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -9,6 +8,9 @@ import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { DecisionBanners } from './components/decision-banners';
+import { ProfilesAreaTabs } from './components/profiles-area-tabs';
+import { useUnitParam } from './hooks/use-unit-param';
+import type { ProfilesAreaTab } from './model/profiles-area';
 import { pageNameOf } from '@/features/auth/navigation-items';
 
 const PlansTab = lazy(() => import('./plans/plans-tab').then((m) => ({ default: m.PlansTab })));
@@ -47,14 +49,16 @@ function viewOfTab(tab: string | null): PlanningView | null {
 
 /**
  * Production plans, or the profiles / calendars set up for them: capability and schedule as versioned master
- * data, previews from the server before every approval. The tab is in the URL (`?tab=`); records, forms and
- * editors are sub-pages (`/planning/plans/…`, `/planning/profiles/…`, `/planning/calendars/…`).
+ * data, previews from the server before every approval. The tab is in the URL (`?tab=`) and chosen in the area's
+ * link row (no nested shadcn tabs, SETUP_UX_FIXES Phase 3); records, forms and editors are sub-pages
+ * (`/planning/plans/…`, `/planning/profiles/…`, `/planning/calendars/…`).
  */
 export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
   const tenantId = useV2TenantId();
   const { selection } = usePlantSelection();
   const zone = usePlantTimezone();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
+  const [unitId] = useUnitParam();
   const page = VIEWS[view];
   const tabs = TABS.filter((t) => (page.tabs as readonly string[]).includes(t.value));
   const wanted = params.get('tab');
@@ -65,7 +69,8 @@ export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
     const query = rest.toString();
     return <Navigate to={`${VIEWS[home].path}${query ? `?${query}` : ''}`} replace />;
   }
-  const tab = tabs.some((t) => t.value === wanted) ? (wanted as string) : tabs[0].value;
+  const active = tabs.find((t) => t.value === wanted) ?? tabs[0];
+  const tab = active.value;
   if (!tenantId) return <DataState state="no-permission" detail={`Choose a plant to manage its ${page.title.toLowerCase()}.`} />;
   return (
     <Page width="wide">
@@ -75,21 +80,13 @@ export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
           description={page.description}
           meta={<ScopeHeader scopeLabel={selection?.tenant?.name ?? 'Plant'} timezone={zone.timezone} timezoneIsFallback={zone.source === 'utc-fallback'} />}
         />
+        {view === 'profiles' && <ProfilesAreaTabs current={tab as ProfilesAreaTab} unitId={unitId} />}
         <DecisionBanners tab={tab} />
-        <Tabs value={tab} onValueChange={(next) => setParams({ tab: next }, { replace: true })}>
-          <TabsList className={tabs.length > 1 ? 'h-auto flex-wrap' : 'sr-only'}>
-            {tabs.map((t) => (
-              <TabsTrigger key={t.value} value={t.value} data-testid={`tab-${t.value}`}>
-                {t.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {tabs.map(({ value, Component }) => (
-            <TabsContent key={value} value={value} className="pt-3">
-              <Suspense fallback={<Skeleton className="h-64 w-full" />}>{tab === value && <Component />}</Suspense>
-            </TabsContent>
-          ))}
-        </Tabs>
+        <div data-testid={`panel-${active.value}`}>
+          <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+            <active.Component />
+          </Suspense>
+        </div>
       </div>
     </Page>
   );

@@ -3,7 +3,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { CrumbReachProvider } from './crumb-reach';
 import { PageHeader } from './page-header';
-import { dedupeCrumbs, routeTrail } from './route-trail';
+import { dedupeCrumbs, isSetupPath, routeTrail } from './route-trail';
+import { returnTargetOf, withReturnTo } from './return-to';
 
 describe('routeTrail', () => {
   it('module pages (depth 1) and paths outside the menu get no trail', () => {
@@ -51,6 +52,25 @@ describe('routeTrail', () => {
       { label: 'T1', to: '/tasks?x=1' },
       { label: 'Page' },
     ]);
+  });
+
+  // SETUP_UX_FIXES Phase 3: a Setup area's first page has its area crumb like its sibling tabs
+  it('the first page of a Setup area gets Area › page; a page named like its area gets none', () => {
+    expect(routeTrail('/master-data/units', 'Production units', undefined)?.crumbs).toEqual([{ label: 'Plant & equipment', to: '/master-data/units' }, { label: 'Production units' }]);
+    expect(routeTrail('/master-data/assets', 'Assets', undefined)?.crumbs).toEqual([{ label: 'Plant & equipment', to: '/master-data/units' }, { label: 'Assets' }]);
+    expect(routeTrail('/master-data/stop-policy', 'Stop and plan policy', undefined)?.crumbs[0]).toEqual({ label: 'Production rules', to: '/master-data/stop-policy' });
+    expect(routeTrail('/setup/profiles', 'Profiles & rates', undefined)).toBeNull();
+    expect(routeTrail('/finance', 'Valuation', undefined)).toBeNull();
+  });
+
+  it('a Setup record page keeps the area crumb when its list is the first page of the area', () => {
+    expect(routeTrail('/master-data/units/u1', 'Line 1', { to: '/master-data/units', label: 'Production units' })?.crumbs).toEqual([
+      { label: 'Plant & equipment' },
+      { label: 'Production units', to: '/master-data/units' },
+      { label: 'Line 1' },
+    ]);
+    expect(isSetupPath('/planning/profiles/p1')).toBe(true);
+    expect(isSetupPath('/events/e1')).toBe(false);
   });
 
   it('without a back link: Module › page', () => {
@@ -106,8 +126,35 @@ describe('PageHeader breadcrumbs', () => {
     expect(screen.queryByRole('link', { name: 'Connectivity' })).toBeNull();
   });
 
+  it('a Setup sub-page shows a visible "Back to <list>" button next to its trail; other pages do not', () => {
+    const { unmount } = at('/finance/fx/f1', <PageHeader title="USD → IRR" back={{ to: '/finance?tab=fx', label: 'Exchange rates' }} />);
+    expect(screen.getByRole('link', { name: 'Back to Exchange rates' })).toHaveAttribute('href', '/finance?tab=fx');
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Valuation' })).toHaveAttribute('href', '/finance');
+    unmount();
+    at('/tasks/t1', <PageHeader title="Task" back={{ to: '/tasks', label: 'Tasks' }} />);
+    expect(screen.queryByTestId('page-back')).toBeNull();
+  });
+
+  it('the Back button also stands beside an explicit trail', () => {
+    at('/finance/policies/p1', <PageHeader title="Version 2" back={{ to: '/finance?tab=policies', label: 'Valuation policy' }} breadcrumbs={[{ label: 'Valuation', to: '/finance' }, { label: 'Version 2' }]} />);
+    expect(screen.getByTestId('page-back')).toHaveTextContent('Back to Valuation policy');
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+  });
+
   it('outside a router (isolated component tests) the header still renders', () => {
     render(<PageHeader title="Isolated" back={{ to: '/x', label: 'X' }} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Isolated' })).toBeInTheDocument();
+  });
+});
+
+describe('return-to addresses', () => {
+  it('a sub-page link carries the list address; only in-app addresses under the allowed lists are used', () => {
+    const link = withReturnTo('/planning/profiles/p1', '/setup/profiles?unitId=u1&productId=x');
+    expect(returnTargetOf(link.split('?')[1], ['/setup/profiles'])).toBe('/setup/profiles?unitId=u1&productId=x');
+    expect(withReturnTo('/master-data/assets/new?unitId=u1', '/master-data/units/u1')).toBe('/master-data/assets/new?unitId=u1&back=%2Fmaster-data%2Funits%2Fu1');
+    expect(returnTargetOf('?back=%2F%2Fevil.example', ['/setup/profiles'])).toBeNull();
+    expect(returnTargetOf('?back=https%3A%2F%2Fevil.example', ['/setup/profiles'])).toBeNull();
+    expect(returnTargetOf('?back=%2Fadmin', ['/setup/profiles'])).toBeNull();
+    expect(returnTargetOf('', ['/setup/profiles'])).toBeNull();
   });
 });

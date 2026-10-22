@@ -46,7 +46,7 @@ function useCreatedResult(onClose: () => void, resetForm: () => void) {
 /**
  * New code (version 1) under an optional parent; duplicates (409) and bad parents (422) come from the
  * server and show as the red alert at the top of the dialog, the input kept. A create ends in the result
- * dialog (View code · Add another · Back to Codes & rules · Next). Mounted while open, so every opening
+ * dialog (View code · Add another · Back to Code libraries · Next). Mounted while open, so every opening
  * starts from an empty form.
  */
 export function CodeCreateDialog({ library, parentId, onClose }: CodeCreateDialogProps) {

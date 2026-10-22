@@ -31,13 +31,40 @@ describe('master-data links by capability', () => {
   // owner 21 Oct 2026: the link row shows the pages of the current Setup entry only
   it.each([
     ['/master-data/assets', ['Production units', 'Assets', 'Products', 'Plant hierarchy', 'Plant flow']],
-    ['/master-data/failure-dictionary', ['Codes & rules', 'Failure dictionary']],
+    ['/master-data/failure-dictionary', ['Code libraries', 'Rules', 'Failure dictionary']],
     ['/master-data/unit-state', ['Stop and plan policy', 'Standby equipment', 'Unit impact rules', 'Unit state']],
     ['/master-data/rca/causes', ['RCA templates', 'Cause library', 'Verification checklists']],
   ])('a master-data admin on %s sees the pages of that setup entry', (path, names) => {
     actAs('master_data_admin');
     wrap(<MasterDataNav />, path);
     expect(linkNames()).toEqual(names);
+  });
+
+  const current = () => within(screen.getByRole('navigation', LINKS)).getByRole('link', { current: 'page' }).textContent;
+
+  // SETUP_UX_FIXES Phase 3: the row stays on record / form pages, the record's list highlighted
+  it.each([
+    ['/master-data/assets/a1', 'Assets'],
+    ['/master-data/assets/new?unitId=u1&back=%2Fmaster-data%2Funits%2Fu1', 'Assets'],
+    ['/master-data/units/new', 'Production units'],
+    ['/master-data/rca/templates/t1', 'RCA templates'],
+    ['/master-data/codes-rules', 'Code libraries'],
+    ['/master-data/codes-rules?tab=rules', 'Rules'],
+    ['/master-data/codes-rules/rules/r1?tab=versions', 'Rules'],
+    ['/master-data/codes-rules/rules/new', 'Rules'],
+    ['/master-data/codes-rules/reason-codes/c1', 'Code libraries'],
+  ])('on %s the row highlights %s', (path, name) => {
+    actAs('master_data_admin');
+    wrap(<MasterDataNav />, path);
+    expect(current()).toBe(name);
+  });
+
+  it('Codes & failures is one row: Code libraries · Rules · Failure dictionary, by address (no nested tabs)', () => {
+    actAs('master_data_admin');
+    wrap(<MasterDataNav />, '/master-data/codes-rules');
+    expect(screen.getByTestId('tab-codes')).toHaveAttribute('href', '/master-data/codes-rules');
+    expect(screen.getByTestId('tab-rules')).toHaveAttribute('href', '/master-data/codes-rules?tab=rules');
+    expect(screen.queryByRole('tablist')).toBeNull();
   });
 
   it('a single-page entry (Work-order operations) has no link row', () => {

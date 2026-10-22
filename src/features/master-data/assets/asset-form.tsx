@@ -18,6 +18,8 @@ export interface AssetFormProps {
   dirty?: boolean;
   isNew: boolean;
   readOnly: boolean;
+  /** Cancel's target: the page the asset was opened from (default: the asset list) */
+  cancelTo?: string;
 }
 
 const TYPE_OPTIONS = ASSET_TYPE_OPTIONS.map((value) => ({ value, label: value }));
@@ -25,7 +27,7 @@ const STATUS_OPTIONS = ASSET_STATUS_OPTIONS.map((value) => ({ value, label: valu
 const CRITICALITY_OPTIONS = Object.entries(ASSET_CRITICALITY_LABELS).map(([value, label]) => ({ value, label }));
 
 /** Identity (name, code, unit), classification (type, criticality, status) and the descriptive fields. */
-export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly }: AssetFormProps) {
+export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly, cancelTo = '/master-data/assets' }: AssetFormProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSave();
@@ -54,7 +56,7 @@ export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNe
         {text('serialNumber', 'Serial number')}
         {text('location', 'Location')}
       </div>
-      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo="/master-data/assets" />}
+      {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo={cancelTo} />}
     </form>
   );
 }

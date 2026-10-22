@@ -8,6 +8,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useSaveResult } from '@/features/ux-kit/save-result';
 import { POLICIES_PATH, policyVersionResult } from '../model/finance-save-results';
 import { inForceBasis } from '../model/policy-form';
+import { FinanceAreaTabs } from '../components/finance-area-tabs';
 import { PolicyForm } from './policy-form';
 
 const BACK = { to: POLICIES_PATH, label: 'Valuation policy' };
@@ -32,6 +33,7 @@ export function PolicyNewPage() {
   return (
     <Page>
       <PageHeader title={title} back={BACK} description={`Approve the new version before it values losses.${selfApprovalNote(isSuperAdmin, 'version')}`} />
+      <FinanceAreaTabs current="policies" />
       {waiting ? (
         <DataState state={fromId !== null ? dataStateOf(source) : 'loading'} error={source.error} onRetry={() => void source.refetch()} />
       ) : (

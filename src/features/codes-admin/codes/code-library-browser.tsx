@@ -16,6 +16,7 @@ import { CodeCreateDialog } from './code-create-dialog';
 import { CodeFlatTable } from './code-flat-table';
 import { CodeSearchResults } from './code-search-results';
 import { CodeTree } from './code-tree';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { sectionNameOf } from '@/features/master-data/components/master-data-sections';
 
 const LIBRARY_OPTIONS = LIBRARY_PATHS.map((path) => ({ value: path, label: LIBRARIES[path].label }));
@@ -57,7 +58,7 @@ function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary
 
 /**
  * The "Code libraries" tab: one library at a time (chosen in the URL), its tree or table, a search that
- * finds codes at any depth. The RCA cause library is master data (Master data › Cause library).
+ * finds codes at any depth. The RCA cause library is master data (RCA library › Cause library).
  */
 export function CodeLibraryBrowser() {
   const [library, setLibrary] = useUrlParam<CodeLibraryPath>('library', LIBRARY_PATHS, 'reason-codes');
@@ -74,7 +75,7 @@ export function CodeLibraryBrowser() {
       <Toolbar library={library} setLibrary={setLibrary} />
       {body}
       <p className="text-sm text-muted-foreground">
-        Root causes for investigations are kept in Master data ›{' '}
+        Root causes for investigations are kept in {pageNameOf('/master-data/rca/templates')} ›{' '}
         <Link className="underline" to="/master-data/rca/causes">
           {sectionNameOf('/master-data/rca/causes')}
         </Link>

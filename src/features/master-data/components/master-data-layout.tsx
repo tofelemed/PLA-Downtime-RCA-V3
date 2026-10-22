@@ -8,14 +8,14 @@ export interface MasterDataLayoutProps {
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
-  /** detail pages: link back to their list (and no section links) */
+  /** detail pages: link back to their list (the section links stay, the list highlighted) */
   back?: { to: string; label: string };
   /** admit the roles that write this page's records besides the master-data administrators */
   alsoAllowed?: boolean;
   children: ReactNode;
 }
 
-/** Frame of every master-data page: access gate, one page header, the section links on list pages. */
+/** Frame of every master-data page: access gate, one page header, the section links (list and sub-pages alike). */
 export function MasterDataLayout({ title, description, actions, back, alsoAllowed, children }: MasterDataLayoutProps) {
   return (
     <MasterDataGate title={title} alsoAllowed={alsoAllowed}>
@@ -31,7 +31,7 @@ export function MasterDataLayout({ title, description, actions, back, alsoAllowe
             </>
           }
         />
-        {!back && <MasterDataNav />}
+        <MasterDataNav />
         {children}
       </Page>
     </MasterDataGate>

@@ -36,11 +36,14 @@ creating a plant never switches or refreshes the selection (`hierarchy-form-page
       the import job finishes); rotation form never resets. Plan screens (Production) still use plain `RefusalNotice`.
 
 ## Phase 3 — Navigation
-- [ ] Area tab bar visible on sub-pages (`master-data-layout.tsx:34`); one link-row tab pattern for codes, profiles,
-      calendars, finance (no nested shadcn Tabs).
-- [ ] Visible "← Back to <list>" on every sub-page, keeping tab, unit and filters in the query; module crumb on first tabs.
-- [ ] Cancel on code and rule editors; asset Back returns to the originating unit.
-- [ ] "Next: <tab>" from the setup step order, in the result dialog only.
+- [x] Area tab bar visible on sub-pages (`master-data-layout.tsx:34`); one link-row tab pattern for codes, profiles,
+      calendars, finance (no nested shadcn Tabs). (`ux-kit/page-layout/area-tabs.tsx`; `?tab=` URLs kept; Calendars & crews
+      and Organizations & plants are single pages, no row.)
+- [x] Visible "← Back to <list>" on every sub-page, keeping tab, unit and filters in the query; module crumb on first tabs.
+      (Setup sub-pages; list address handed over as `?back=`, `ux-kit/page-layout/return-to.ts`.)
+- [x] Cancel on code and rule editors; asset Back returns to the originating unit (and units / assets opened from the
+      plant hierarchy return to it).
+- [x] "Next: <tab>" from the setup step order, in the result dialog only (no route moved in Phase 3; `next-setup-link` tests pass).
 
 ## Phase 4 — Add / Import placement
 - [ ] Every table page: `[Import CSV] [+ Add]` in the `PageHeader` actions.

@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { withReturnTo } from '@/features/ux-kit/page-layout';
 import { Button } from '@/components/ui/button';
 import { useV2InfiniteList, flattenPages } from '@/api/v2/queries/use-v2-list';
 import { EntityIcon } from '@/lib/icons';
 import type { MasterAssetView, MasterUnitView } from '../api/master-data-types';
 import { HierarchyNode } from './hierarchy-node';
+
+/** records opened from the hierarchy return to it (Back, Cancel) */
+const HIERARCHY_PATH = '/master-data/hierarchy';
 
 const PAGE = 50;
 
@@ -40,7 +44,7 @@ function UnitAssets({ unitId, level }: { unitId: string; level: number }) {
           onToggle={() => undefined}
           actions={
             <Button size="sm" variant="ghost" asChild>
-              <Link to={`/master-data/assets/${asset.id}`} aria-label={`Open asset ${asset.name}`}>Open</Link>
+              <Link to={withReturnTo(`/master-data/assets/${asset.id}`, HIERARCHY_PATH)} aria-label={`Open asset ${asset.name}`}>Open</Link>
             </Button>
           }
         />
@@ -63,11 +67,11 @@ export function UnitNode({ unit, level, canWrite }: { unit: MasterUnitView; leve
     <>
       {canWrite && (
         <Button size="sm" variant="ghost" asChild>
-          <Link to={`/master-data/assets/new?unitId=${unit.id}`} aria-label={`Add asset to ${unit.name}`}>Add asset</Link>
+          <Link to={withReturnTo(`/master-data/assets/new?unitId=${unit.id}`, HIERARCHY_PATH)} aria-label={`Add asset to ${unit.name}`}>Add asset</Link>
         </Button>
       )}
       <Button size="sm" variant="ghost" asChild>
-        <Link to={`/master-data/units/${unit.id}`} aria-label={`Open unit ${unit.name}`}>Open</Link>
+        <Link to={withReturnTo(`/master-data/units/${unit.id}`, HIERARCHY_PATH)} aria-label={`Open unit ${unit.name}`}>Open</Link>
       </Button>
     </>
   );

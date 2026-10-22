@@ -14,7 +14,8 @@ import { CodeMappingsTab } from './code-mappings-tab';
 import { CodeMoveForm } from './code-move-form';
 import { CodeStatusBadge } from './code-status-badge';
 import { CodeVersions } from './code-versions';
-import { sectionNameOf } from '@/features/master-data/components/master-data-sections';
+import { MasterDataNav } from '@/features/master-data/components/master-data-nav';
+import { CODES_PAGE, CODES_LIST_LABEL, libraryListPath } from '../model/codes-save-result';
 
 const TABS = ['details', 'mappings', 'versions'] as const;
 type CodeTab = (typeof TABS)[number];
@@ -65,11 +66,12 @@ function CodeTabs({ library, code }: { library: CodeLibraryPath; code: CodeDetai
 function CodePage({ library, codeId }: { library: CodeLibraryPath; codeId: string }) {
   const query = useCode(library, codeId);
   const code = query.data;
-  const back = { to: `/master-data/codes-rules?library=${library}`, label: sectionNameOf('/master-data/codes-rules') };
+  const back = { to: libraryListPath(library), label: CODES_LIST_LABEL };
   if (!code) {
     return (
       <Page>
         <PageHeader title={singularLabel(library)} back={back} />
+        <MasterDataNav />
         <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()} />
       </Page>
     );
@@ -78,6 +80,7 @@ function CodePage({ library, codeId }: { library: CodeLibraryPath; codeId: strin
     <Page>
       <div className="space-y-6" data-testid="code-detail" data-code={code.code} data-version={code.version} data-active={code.active}>
         <PageHeader title={`${code.code} — ${code.name}`} back={back} description={<Summary library={library} code={code} />} actions={<CodeHeaderActions library={library} code={code} />} />
+        <MasterDataNav />
         <CodeTabs library={library} code={code} />
       </div>
     </Page>
@@ -90,7 +93,8 @@ export function CodeDetailPage() {
   if (!isCodeLibrary(library) || !codeId) {
     return (
       <Page>
-        <PageHeader title="Code not found" back={{ to: '/master-data/codes-rules', label: sectionNameOf('/master-data/codes-rules') }} />
+        <PageHeader title="Code not found" back={{ to: CODES_PAGE, label: CODES_LIST_LABEL }} />
+        <MasterDataNav />
         <DataState state="empty" detail="This address does not name a code library." />
       </Page>
     );

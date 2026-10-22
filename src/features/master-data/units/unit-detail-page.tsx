@@ -11,15 +11,19 @@ import { MasterDataLayout } from '../components/master-data-layout';
 import { RecordStatusBadge } from '../components/record-status-badge';
 import { SourceMappingsSection } from '../components/source-mappings-section';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
+import { useRecordBack } from '../hooks/use-record-back';
 import { useRecordEditor } from '../hooks/use-record-editor';
+import type { RecordListLink } from '../hooks/record-save-result';
 import { changedFields } from '../model/changed-fields';
 import { UnitAssetsSection } from './unit-assets-section';
 import { UnitForm } from './unit-form';
 import { unitBodyOf, unitDraftOf, validateUnit, type UnitBody, type UnitDraft } from './unit-form-model';
 
-const BACK = { to: '/master-data/units', label: 'Production units' };
+const LIST = { to: '/master-data/units', label: 'Production units' };
+/** "Add unit" / "Open" in the plant hierarchy: Back and Cancel return there */
+const ORIGINS = [{ prefix: '/master-data/hierarchy', label: 'Plant hierarchy' }];
 
-function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
+function UnitEditor({ unit, back }: { unit: MasterUnitView | null; back: RecordListLink }) {
   const canWrite = useMasterDataWriter();
   const editor = useRecordEditor<UnitDraft, MasterUnitView, UnitBody, Partial<UnitBody>>({
     source: UNITS,
@@ -30,7 +34,7 @@ function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
     toChange: (draft, stored) => changedFields(unitBodyOf(draft), stored),
     kind: 'Unit',
     detailPath: (id) => `/master-data/units/${id}`,
-    list: BACK,
+    list: back,
   });
   const retired = unit?.retiredAt != null;
   return (
@@ -45,6 +49,7 @@ function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
         dirty={editor.dirty}
         isNew={unit === null}
         readOnly={!canWrite || retired}
+        cancelTo={back.to}
       />
       {editor.dialog}
     </div>
@@ -58,16 +63,17 @@ export function UnitDetailPage() {
   const canWrite = useMasterDataWriter();
   const query = useRecordDetail<MasterUnitView>(UNITS, unitId ?? null);
   const unit = query.data ?? null;
+  const back = useRecordBack(LIST, ORIGINS);
   if (isNew) {
     return (
-      <MasterDataLayout title="Create production unit" back={BACK}>
-        <UnitEditor unit={null} />
+      <MasterDataLayout title="Create production unit" back={back}>
+        <UnitEditor unit={null} back={back} />
       </MasterDataLayout>
     );
   }
   if (!unit) {
     return (
-      <MasterDataLayout title="Production unit" back={BACK}>
+      <MasterDataLayout title="Production unit" back={back}>
         {query.isError ? <FriendlyErrorAlert error={query.error} onRetry={() => void query.refetch()} /> : <DataState state="loading" />}
       </MasterDataLayout>
     );
@@ -83,9 +89,9 @@ export function UnitDetailPage() {
     />
   ) : undefined;
   return (
-    <MasterDataLayout title={unit.name} description={<RecordStatusBadge retired={unit.retiredAt !== null} />} back={BACK} actions={actions}>
+    <MasterDataLayout title={unit.name} description={<RecordStatusBadge retired={unit.retiredAt !== null} />} back={back} actions={actions}>
       <Section title="Details">
-        <UnitEditor unit={unit} />
+        <UnitEditor unit={unit} back={back} />
       </Section>
       <UnitAssetsSection unitId={unit.id} canAdd={canWrite && unit.retiredAt === null} />
       <CustomAttributesSection entityType="Unit" entityId={unit.id} canWrite={canWrite} />

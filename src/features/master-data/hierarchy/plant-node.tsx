@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { withReturnTo } from '@/features/ux-kit/page-layout';
 import { Button } from '@/components/ui/button';
 import { useV2InfiniteList, flattenPages } from '@/api/v2/queries/use-v2-list';
 import { EntityIcon } from '@/lib/icons';
@@ -8,6 +9,9 @@ import type { MasterUnitView } from '../api/master-data-types';
 import { HierarchyEditLink } from './hierarchy-edit-link';
 import { HierarchyNode } from './hierarchy-node';
 import { UnitNode } from './unit-node';
+
+/** records opened from the hierarchy return to it (Back, Cancel) */
+const HIERARCHY_PATH = '/master-data/hierarchy';
 
 const PAGE = 50;
 
@@ -64,7 +68,7 @@ export function PlantNode({ organization, plant, acting, level, canWrite, onSwit
   const primary = acting ? (
     canWrite ? (
       <Button size="sm" variant="ghost" asChild>
-        <Link to="/master-data/units/new" aria-label={`Add unit to ${plant.name}`}>Add unit</Link>
+        <Link to={withReturnTo('/master-data/units/new', HIERARCHY_PATH)} aria-label={`Add unit to ${plant.name}`}>Add unit</Link>
       </Button>
     ) : null
   ) : (

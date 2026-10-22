@@ -4,6 +4,7 @@ import { useValuationPolicy } from '@/api/v2/queries/valuation';
 import type { ValuationPolicyView, WithRevaluation } from '@/api/v2/types/valuation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -19,10 +20,11 @@ import { ActionIcon } from '@/lib/icons';
 import { currenciesLabel, policyStatus } from '../model/policy-status';
 import { PolicyPerson } from '../components/policy-person';
 import { RevaluationQueued } from '../components/revaluation-queued';
+import { FinanceAreaTabs } from '../components/finance-area-tabs';
 import { PolicyApprove } from './policy-approve';
 
 const BACK = { to: '/finance?tab=policies', label: 'Valuation policy' };
-const trailOf = (version: number) => [{ label: 'Finance', to: '/finance' }, { label: 'Valuation policy', to: BACK.to }, { label: `Version ${version}` }];
+const trailOf = (version: number) => [{ label: pageNameOf('/finance'), to: '/finance' }, { label: 'Valuation policy', to: BACK.to }, { label: `Version ${version}` }];
 const bodyText = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 /** Names of the impact codes counted as independent cost components (never their ids). */
@@ -95,6 +97,7 @@ function PolicyView({ policy }: { policy: ValuationPolicyView & WithRevaluation 
   return (
     <div className="space-y-6" data-testid="policy-detail" data-version={policy.version} data-status={status}>
       <PageHeader title={`Valuation policy version ${policy.version}`} back={BACK} breadcrumbs={trailOf(policy.version)} description={description} actions={actions} />
+      <FinanceAreaTabs current="policies" />
       <RevaluationQueued revaluation={policy.revaluation} />
       <Section title="Settings">
         <PolicyFacts policy={policy} />
@@ -114,6 +117,7 @@ export function PolicyDetailPage() {
       ) : (
         <>
           <PageHeader title="Valuation policy" back={BACK} />
+          <FinanceAreaTabs current="policies" />
           <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()} />
         </>
       )}

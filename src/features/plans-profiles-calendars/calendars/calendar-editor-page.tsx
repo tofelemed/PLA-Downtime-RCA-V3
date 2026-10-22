@@ -4,7 +4,7 @@ import type { CalendarPublishView, CalendarVersionView } from '@/api/v2/types/ca
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { Page, PageHeader, useReturnTo, withReturnTo } from '@/features/ux-kit/page-layout';
 import { nextSetupLink, useSaveResult } from '@/features/ux-kit/save-result';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useCalendarVersion } from '../hooks/use-calendar-reads';
@@ -17,18 +17,27 @@ import { calendarPublishedResult } from './calendar-published-result';
 import { CalendarPreviewPanel } from './calendar-preview-panel';
 
 const LIST = '/setup/calendars';
-const BACK = { to: LIST, label: 'Calendars & crews' };
+
+/** Back / Cancel target: the calendars list as the user left it (`?back=`, e.g. its unit), else the list. */
+function useCalendarsBack() {
+  return { to: useReturnTo(LIST, [LIST]), label: 'Calendars & crews' };
+}
+
+/** A sub-page address that keeps the list address along. */
+const keepingBack = (path: string, back: string) => (back === LIST ? path : withReturnTo(path, back));
 
 interface WorkspaceProps {
   version: CalendarVersionView | null;
   seed: CalendarDraft;
   scope: CalendarScope;
   refs: PlanningRefs;
+  /** the list address Back and Cancel return to */
+  back: string;
   onPublished?: (result: CalendarPublishView) => void;
 }
 
 /** Editor plus the server preview of the stored version or of the unsaved edits (a click, never on render). */
-function Workspace({ version, seed, scope, refs, onPublished }: WorkspaceProps) {
+function Workspace({ version, seed, scope, refs, back, onPublished }: WorkspaceProps) {
   const navigate = useNavigate();
   const { canWriteCalendars } = useCapabilities();
   const [preview, setPreview] = useState<{ candidate: PreviewCandidate | null; request: number }>({ candidate: null, request: 0 });
@@ -40,9 +49,10 @@ function Workspace({ version, seed, scope, refs, onPublished }: WorkspaceProps) 
         seed={seed}
         scope={scope}
         displayTimezone={refs.timezone}
-        onSaved={(saved) => navigate(calendarVersionPath(saved, canWriteCalendars), { replace: !version })}
+        onSaved={(saved) => navigate(keepingBack(calendarVersionPath(saved, canWriteCalendars), back), { replace: !version })}
         onPublished={onPublished}
-        onNewFrom={(from) => navigate(`/planning/calendars/new?from=${from.id}`)}
+        onNewFrom={(from) => navigate(keepingBack(`/planning/calendars/new?from=${from.id}`, back))}
+        cancelTo={back}
         onPreview={(candidate) => setPreview((prev) => ({ candidate, request: prev.request + 1 }))}
       />
       <CalendarPreviewPanel candidate={preview.candidate} request={preview.request} unitOptions={refs.unitOptions} defaultUnitId={scope.unitId ?? ''} timezone={refs.timezone} />
@@ -77,6 +87,7 @@ export function CalendarVersionPage() {
   const { canWriteCalendars } = useCapabilities();
   const refs = usePlanningRefs();
   const published = usePublishedDialog(refs);
+  const back = useCalendarsBack();
   const version = useCalendarVersion(versionId);
   const state = dataStateOf(version);
   const shown = version.data;
@@ -91,9 +102,9 @@ export function CalendarVersionPage() {
   }
   return (
     <Page>
-      <PageHeader title={shown ? `Calendar version ${shown.version}` : 'Calendar version'} description={shown ? scopeText(shown.unitId, refs) : undefined} back={BACK} />
+      <PageHeader title={shown ? `Calendar version ${shown.version}` : 'Calendar version'} description={shown ? scopeText(shown.unitId, refs) : undefined} back={back} />
       {state === 'ready' && shown ? (
-        <Workspace version={shown} seed={draftOf(shown)} scope={shown.unitId ? { unitId: shown.unitId } : { siteId: shown.siteId }} refs={refs} onPublished={published.onPublished} />
+        <Workspace version={shown} seed={draftOf(shown)} scope={shown.unitId ? { unitId: shown.unitId } : { siteId: shown.siteId }} refs={refs} back={back.to} onPublished={published.onPublished} />
       ) : (
         <DataState state={state} error={version.error} />
       )}
@@ -106,6 +117,7 @@ export function CalendarVersionPage() {
 export function NewCalendarVersionPage() {
   const [params] = useSearchParams();
   const refs = usePlanningRefs();
+  const back = useCalendarsBack();
   const fromId = params.get('from');
   const from = useCalendarVersion(fromId);
   const unitId = from.data?.unitId ?? params.get('unitId') ?? '';
@@ -114,8 +126,8 @@ export function NewCalendarVersionPage() {
   const seed = from.data ? { ...draftOf(from.data), effectiveFrom: '' } : newCalendarDraft(refs.timezone);
   return (
     <Page>
-      <PageHeader title="New calendar version" description={unitId ? `Unit override · ${refs.unitName(unitId)}` : 'Site calendar'} back={BACK} />
-      {waiting ? <DataState state={from.isError ? 'error' : 'loading'} error={from.error} /> : <Workspace version={null} seed={seed} scope={scope} refs={refs} />}
+      <PageHeader title="New calendar version" description={unitId ? `Unit override · ${refs.unitName(unitId)}` : 'Site calendar'} back={back} />
+      {waiting ? <DataState state={from.isError ? 'error' : 'loading'} error={from.error} /> : <Workspace version={null} seed={seed} scope={scope} refs={refs} back={back.to} />}
     </Page>
   );
 }

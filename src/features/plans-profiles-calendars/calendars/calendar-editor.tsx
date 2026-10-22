@@ -27,11 +27,11 @@ export interface CalendarEditorProps {
   /** "New version from this" on a published version */
   onNewFrom: (version: CalendarVersionView) => void;
   onPreview: (candidate: PreviewCandidate) => void;
+  /** Cancel's target: the calendars list as the user left it */
+  cancelTo: string;
 }
 
 type Editor = ReturnType<typeof useCalendarEditor>;
-
-const CALENDAR_LIST = '/setup/calendars';
 
 function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
   const { draft, errors } = editor;
@@ -85,7 +85,7 @@ function EditorButtons({ editor, version, readOnly, props }: { editor: Editor; v
         </Button>
       )}
       <Button asChild variant="outline">
-        <Link to={CALENDAR_LIST} data-testid="calendar-cancel">
+        <Link to={props.cancelTo} data-testid="calendar-cancel">
           {readOnly ? 'Back to calendars' : 'Cancel'}
         </Link>
       </Button>
