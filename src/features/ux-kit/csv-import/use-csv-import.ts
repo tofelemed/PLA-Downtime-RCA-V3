@@ -14,7 +14,7 @@ export function useCsvImport(importer: CsvImporter) {
   const [checked, setChecked] = useState<CsvCheck | null>(null);
   const [accepted, setAccepted] = useState<string | null>(null);
   const feedback = useSaveFeedback();
-  const blocked = importBlockedReason(text, accepted, importer.pending);
+  const blocked = importBlockedReason(text, accepted, importer.pending, feedback.failure !== null || Boolean(checked?.problems.length));
   useUnsavedChangesGuard(text.trim() !== '' && accepted !== text && !importer.pending);
 
   const setText = (next: string) => {

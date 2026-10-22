@@ -81,6 +81,20 @@ describe('shared CSV import (SETUP_UX_FIXES Phase 4)', () => {
     expect(screen.queryByTestId('save-result-dialog')).toBeNull();
   });
 
+  it('lists the row problems under the alert and blocks Import until the rows change', async () => {
+    const value = importer({ check: vi.fn(async () => { throw new V2ApiError(422, { code: 'IMPORT_INVALID', message: 'invalid', correlationId: 'c', retryable: false }); }) });
+    show(value);
+    fireEvent.change(box(), { target: { value: ROWS } });
+    fireEvent.click(screen.getByRole('button', { name: 'Check' }));
+    const alert = await screen.findByTestId('save-failure-alert');
+    const problems = screen.getByRole('list', { name: 'Row problems' });
+    expect(alert.compareDocumentPosition(problems) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(problems.compareDocumentPosition(importButton()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(importButton()).toBeDisabled();
+    fireEvent.change(box(), { target: { value: `${ROWS}\nVA,Valves` } });
+    expect(importButton()).not.toBeDisabled();
+  });
+
   it('a local precheck that is not ready stops Import before anything is sent', async () => {
     const value = importer({ precheck: () => ({ status: 'Fix the rows below first.', problems: [{ line: 1, message: 'code is required' }], ready: false }) });
     show(value);

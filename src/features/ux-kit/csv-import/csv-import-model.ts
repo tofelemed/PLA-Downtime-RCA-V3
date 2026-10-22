@@ -46,9 +46,9 @@ export function downloadCsvTemplate(fileName: string, columns: readonly string[]
 }
 
 /** Why Import is disabled, or null when it may run. */
-export function importBlockedReason(text: string, accepted: string | null, pending: boolean): string | null {
+export function importBlockedReason(text: string, accepted: string | null, pending: boolean, problemsListed = false): string | null {
   if (pending) return null;
   if (!text.trim()) return 'Choose a CSV file or paste the rows first.';
   if (accepted !== null && accepted === text) return 'These rows were imported. Change the file or the rows to import again.';
-  return null;
+  return problemsListed ? 'Fix the rows listed above, then check again.' : null;
 }

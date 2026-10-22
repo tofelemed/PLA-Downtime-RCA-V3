@@ -70,6 +70,8 @@ export function CsvImportForm({ id, columns, columnHelp, templateName, example, 
       <Section title="Rows to import">
         <div className="space-y-3" data-testid={`${id}-import`}>
           <SaveFailureAlert error={form.feedback.failure} title="The rows were refused; nothing was stored" />
+          {form.checked && <p className="text-sm" role="status">{form.checked.status}</p>}
+          <ProblemList problems={form.problems} label={label} />
           <FormField id={`${id}-file`} label="CSV file" hint={form.fileName ? `Read from ${form.fileName}; the rows are shown below.` : undefined}>
             <Input id={`${id}-file`} type="file" accept=".csv,text/csv" onChange={(e) => void form.readFile(e.target.files?.[0])} />
           </FormField>
@@ -82,8 +84,6 @@ export function CsvImportForm({ id, columns, columnHelp, templateName, example, 
             <Button asChild variant="ghost"><Link to={listPath}>Cancel</Link></Button>
           </div>
           <DisabledReason id={reasonId} reason={form.blocked} />
-          {form.checked && <p className="text-sm" role="status">{form.checked.status}</p>}
-          <ProblemList problems={form.problems} label={label} />
         </div>
       </Section>
       {form.feedback.dialog}
