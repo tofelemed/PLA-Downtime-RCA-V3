@@ -1,17 +1,23 @@
 import { useSearchParams } from 'react-router-dom';
 import { useUnitStateMappingsPage } from '@/api/v2/queries/reliability-unit-state';
+import type { UnitStateMappingView } from '@/api/v2/types/reliability';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Section } from '@/features/ux-kit/page-layout';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { MasterDataLayout } from '../../components/master-data-layout';
 import { UnitSelect } from '../../components/unit-select';
 import { useReliabilityFormat, type ReliabilityFormat } from '../shared/use-reliability-format';
 import { CoveragePanel } from './coverage-panel';
 import { MappingEditor } from './mapping-editor';
+import { mappingSaveResult } from './mapping-save-result';
 import { MappingVersionsTable } from './mapping-versions-table';
 
 function UnitStateSections({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const versions = useUnitStateMappingsPage(unitId);
   const current = versions.rows.find((m) => m.effectiveTo === null);
+  const feedback = useSaveFeedback();
+  const capabilities = useCapabilities();
+  const resultOf = (saved: UnitStateMappingView) => mappingSaveResult({ saved, dateTime: format.dateTime, now: Date.now(), capabilities });
   return (
     <>
       <Section title="Mapping versions">
@@ -19,12 +25,13 @@ function UnitStateSections({ unitId, canWrite, format }: { unitId: string; canWr
       </Section>
       {canWrite && (
         <Section title="New version" description="Physical state only: schedule status comes from the calendar, causes from events.">
-          <MappingEditor key={current?.id ?? 'first'} unitId={unitId} current={current} timezone={format.timezone} />
+          <MappingEditor key={current?.id ?? 'first'} unitId={unitId} current={current} timezone={format.timezone} feedback={feedback} resultOf={resultOf} />
         </Section>
       )}
       <Section title="Coverage">
         <CoveragePanel unitId={unitId} format={format} />
       </Section>
+      {feedback.dialog}
     </>
   );
 }

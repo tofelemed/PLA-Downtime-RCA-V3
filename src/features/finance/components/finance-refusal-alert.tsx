@@ -9,6 +9,8 @@ import { financeRefusalKind, overlapConflicts } from '../model/finance-refusal';
  * approval overlaps, the refused fields by name (also shown on their inputs by the forms; a field the form
  * does not render, such as an unexpected property, is only here) and "Copy support reference". `fields` is
  * the form's vocabulary, so a refused field reads with the form's own label and choice names.
+ * For approve / retire commands, where the overlap list matters; a refused save of a form uses the
+ * ux-kit `SaveFailureAlert` (`useSaveFeedback().alert`) at the top of the form instead.
  */
 export function FinanceRefusalAlert({ error, fields }: { error: unknown; fields?: FieldVocabulary }) {
   const dates = usePlantDates();

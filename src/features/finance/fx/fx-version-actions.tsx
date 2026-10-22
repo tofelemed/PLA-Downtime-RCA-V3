@@ -9,6 +9,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 
 type Pending = 'approve' | 'retire' | null;
@@ -27,12 +28,14 @@ function SupersedeChoice({ checked, onChange }: { checked: boolean; onChange: (o
 /**
  * Approve / retire one exchange rate version, each after a confirmation. The server decides who may
  * (403) and whether it overlaps an approved version of the pair (409, the conflicting versions are
- * listed in the dialog). Only finance approvers see these actions (SME V1); the author sees approve disabled.
+ * listed in the dialog, the input kept). Success is a toast. Only finance approvers see these actions
+ * (SME V1); the author sees approve disabled.
  */
 export function FxVersionActions({ rate }: { rate: FxRateView }) {
   const { canApproveValuation, isSuperAdmin } = useCapabilities();
   const access = approvalAccess(canApproveValuation, rate.createdBy, useCurrentUserId(), isSuperAdmin);
   const transition = useFxTransition();
+  const { toast } = useToast();
   const [pending, setPending] = useState<Pending>(null);
   const [supersede, setSupersede] = useState(false);
   if (rate.state === 'retired' || !canApproveValuation) return null;
@@ -40,6 +43,10 @@ export function FxVersionActions({ rate }: { rate: FxRateView }) {
     if (next) return;
     setPending(null);
     transition.reset();
+  };
+  const run = async (action: 'approve' | 'retire', done: string) => {
+    await transition.submit({ id: rate.id, action, supersede: action === 'approve' ? supersede : undefined });
+    toast({ title: `${rate.fromCurrency} → ${rate.toCurrency} version ${rate.version} ${done}` });
   };
   const refusal = transition.error ? <FinanceRefusalAlert error={transition.error} /> : null;
   return (
@@ -58,7 +65,7 @@ export function FxVersionActions({ rate }: { rate: FxRateView }) {
         title={`Approve 1 ${rate.fromCurrency} = ${rate.rate} ${rate.toCurrency}?`}
         description="Valuation uses the approved rate for losses inside its validity. Approving queues a recalculation of the periods of its months; approved periods get a change proposal."
         confirmLabel="Approve rate"
-        onConfirm={() => transition.submit({ id: rate.id, action: 'approve', supersede })}
+        onConfirm={() => run('approve', 'approved')}
       >
         <SupersedeChoice checked={supersede} onChange={setSupersede} />
         {refusal}
@@ -70,7 +77,7 @@ export function FxVersionActions({ rate }: { rate: FxRateView }) {
         description="A retired rate is no longer used for valuation. It stays in the history and cannot be approved again."
         confirmLabel="Retire rate"
         destructive
-        onConfirm={() => transition.submit({ id: rate.id, action: 'retire' })}
+        onConfirm={() => run('retire', 'retired')}
       >
         {refusal}
       </ConfirmDialog>

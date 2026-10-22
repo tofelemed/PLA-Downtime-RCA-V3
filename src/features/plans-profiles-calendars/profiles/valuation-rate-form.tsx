@@ -4,10 +4,11 @@ import { useCreateValuationRate } from '@/api/v2/queries/profile-commands';
 import type { ValuationBasis } from '@/api/v2/types/profiles';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { VALUATION_BASIS_LABELS } from '@/features/ux-kit/labels';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
-import { RefusalNotice } from '../components/refusal-notice';
+import { SaveRefusalAlert } from '../components/save-refusal-alert';
 import { isRatioBasis, validateValuationForm, valuationCreateBody, type FieldErrors, type ValuationFormValues } from '../model/profile-form';
 import { refusalOf } from '../model/refusal';
 
@@ -41,24 +42,27 @@ export interface ValuationRateFormProps {
   onDone: () => void;
 }
 
+/** A new draft valuation rate: toast and close on success (small inline add), red alert at the top on a refusal. */
 export function ValuationRateForm({ profileId, uom, timezone, onDone }: ValuationRateFormProps) {
   const [values, setValues] = useState<ValuationFormValues>({ basis: 'contribution_margin', value: null, currency: 'IRR', effectiveFrom: '', effectiveTo: '' });
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateValuationRate();
+  const feedback = useSaveFeedback();
   const set = <K extends keyof ValuationFormValues>(key: K, value: ValuationFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
-  const fieldError = (key: string) => errors[key] ?? refusalOf(create.error)?.fieldErrors[key];
+  const fieldError = (key: string) => errors[key] ?? refusalOf(feedback.failure)?.fieldErrors[key];
   const ratio = isRatioBasis(values.basis);
 
   const save = async () => {
     const found = validateValuationForm(values, timezone);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    const saved = await create.submit(valuationCreateBody(profileId, values, timezone)).catch(() => null);
+    const saved = await feedback.run(() => create.submit(valuationCreateBody(profileId, values, timezone)), 'Draft valuation rate added').catch(() => null);
     if (saved) onDone();
   };
 
   return (
     <div className="space-y-2 rounded-md border p-3" data-testid="valuation-form">
+      <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
         <FormField id="basis" label="Basis">
           <NativeSelect id="basis" value={values.basis} options={BASES} onChange={(v) => set('basis', v as ValuationBasis)} />
@@ -80,7 +84,6 @@ export function ValuationRateForm({ profileId, uom, timezone, onDone }: Valuatio
         <PlantDateTimeField id="valEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
         <PlantDateTimeField id="valEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <RefusalNotice error={create.error} timezone={timezone} />
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={create.isPending}>
           Add draft valuation rate

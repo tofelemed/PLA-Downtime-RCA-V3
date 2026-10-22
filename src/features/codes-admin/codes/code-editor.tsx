@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useChangeCode, useCodeList } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
@@ -9,8 +10,9 @@ import { NativeSelect } from '@/features/integration-console/components/native-s
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
-import { AdminRefusalAlert } from '../components/admin-refusal-alert';
+import { useCodesSaveFeedback } from '../hooks/use-codes-save-feedback';
 import { changeBodyOf, type CodeForm, formOf, LIBRARIES, OEE_COMPONENTS, SCHEDULE_CLASSES } from '../model/code-fields';
+import { libraryListPath } from '../model/codes-save-result';
 
 export interface CodeEditorProps {
   library: CodeLibraryPath;
@@ -45,18 +47,24 @@ function DefaultsFields({ form, readOnly, set }: DefaultsProps) {
   );
 }
 
-/** Edits a code: every save is its next version (If-Match; 412 when someone else saved first). */
+/**
+ * Edits a code: every save is its next version (If-Match; 412 when someone else saved first). A save ends
+ * in a toast; the page then shows the new version and the editor starts clean from it (keyed by revision).
+ * A refusal is the red alert at the top, the input kept. Cancel goes back to the library list.
+ */
 export function CodeEditor({ library, code }: CodeEditorProps) {
   const { canWriteCodes, canViewMoney } = useCapabilities();
   const spec = LIBRARIES[library];
   const [form, setForm] = useState<CodeForm>(() => formOf(code));
   const change = useChangeCode(library);
+  const feedback = useCodesSaveFeedback();
   const set = (key: keyof CodeForm) => (value: string | null) => setForm((current) => ({ ...current, [key]: value ?? '' }));
   const readOnly = !code.active || !canWriteCodes;
-  const save = () => change.submit({ code, body: changeBodyOf(spec, form) }).catch(() => undefined);
+  const save = () => feedback.run(() => change.submit({ code, body: changeBodyOf(spec, form) }), `${code.code} saved as version ${code.version + 1}`).catch(() => undefined);
   useUnsavedChangesGuard(hasUnsavedChanges(form, formOf(code), [readOnly, change.isPending]));
   return (
     <div className="space-y-4" data-testid="code-editor">
+      {feedback.alert}
       {!code.active && <p className="text-sm text-muted-foreground">This code is retired and can no longer be changed.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         <Field id="code-name" label="Name">
@@ -82,11 +90,15 @@ export function CodeEditor({ library, code }: CodeEditorProps) {
           </Field>
         )}
       </div>
-      {change.error ? <AdminRefusalAlert error={change.error} /> : null}
       {canWriteCodes && code.active && (
-        <Button onClick={save} disabled={change.isPending || form.name.trim() === ''} data-testid="code-save">
-          <span>Save as version {code.version + 1}</span>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={save} disabled={change.isPending || form.name.trim() === ''} data-testid="code-save">
+            <span>Save as version {code.version + 1}</span>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to={libraryListPath(library)} data-testid="code-cancel">Cancel</Link>
+          </Button>
+        </div>
       )}
     </div>
   );

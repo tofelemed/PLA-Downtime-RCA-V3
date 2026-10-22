@@ -112,6 +112,7 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     expect((await fxVersions(finance.maintainer)).find((v) => v.source === fxSource)).toBeUndefined();
     await page.fill('#rate', '2750000');
     await page.getByTestId('fx-save').click();
+    await page.getByRole('dialog', { name: 'Exchange rate draft saved' }).getByRole('link', { name: 'View rate' }).click({ timeout: 20_000 });
     await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
     await expect(fxDetail(page).getByTestId('fx-rate')).toHaveText('1 USD = 2,750,000 IRR');
     await page.context().close();
@@ -156,6 +157,7 @@ test.describe('Manager persona — finance approvals and feature flags', () => {
     await fillDateTime(author, 'Starts', '2099-01-01T00:00');
     await author.fill('#policyNotes', policyNotes);
     await author.getByTestId('policy-save').click();
+    await author.getByRole('dialog', { name: /^Version \d+ saved \(not approved\)$/ }).getByRole('link', { name: 'View policy version' }).click({ timeout: 20_000 });
     await expect(author.getByTestId('policy-detail')).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
     // a maintainer never signs off (SME V1): no approve control
     await expect(author.getByTestId('policy-approve-start')).toHaveCount(0);

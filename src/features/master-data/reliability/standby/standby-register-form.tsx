@@ -1,47 +1,66 @@
 import { useState } from 'react';
 import { useRegisterStandby } from '@/api/v2/queries/reliability-standby';
-import type { StandbyEvaluation } from '@/api/v2/types/reliability';
+import type { StandbyEquipmentView, StandbyEvaluation } from '@/api/v2/types/reliability';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
-import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { useToast } from '@/hooks/use-toast';
+import { nextSetupLink, useSaveFeedback, type SaveResult } from '@/features/ux-kit/save-result';
+import { sectionNameOf } from '../../components/master-data-sections';
 import { AssetSelect } from '../shared/asset-select';
-import { SELECT_CLASS } from '../shared/use-asset-lookup';
+import { SELECT_CLASS, useAssetLookup } from '../shared/use-asset-lookup';
+import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { EVALUATION_LABELS } from './standby-metrics-model';
 
 const EVALUATIONS = Object.keys(EVALUATION_LABELS) as StandbyEvaluation[];
+const STANDBY_PATH = '/master-data/standby-equipment';
+
+interface StandbyDraft {
+  assetId: string;
+  evaluation: StandbyEvaluation;
+  /** null = now */
+  from: string | null;
+}
+
+const EMPTY: StandbyDraft = { assetId: '', evaluation: 'demand', from: null };
 
 /** Register an asset as standby equipment (SME D9): how maintenance judges it and from when (default now). */
-export function StandbyRegisterForm({ timezone }: { timezone: string }) {
-  const [assetId, setAssetId] = useState('');
-  const [evaluation, setEvaluation] = useState<StandbyEvaluation>('demand');
-  const [from, setFrom] = useState<string | null>(null);
-  const [error, setError] = useState<unknown>(null);
+export function StandbyRegisterForm({ format }: { format: ReliabilityFormat }) {
+  const [draft, setDraft] = useState<StandbyDraft>(EMPTY);
   const register = useRegisterStandby();
-  const { toast } = useToast();
+  const feedback = useSaveFeedback();
+  const capabilities = useCapabilities();
+  const { labelOf } = useAssetLookup();
+  const set = (change: Partial<StandbyDraft>) => setDraft((d) => ({ ...d, ...change }));
+  const resultOf = (saved: StandbyEquipmentView): SaveResult => ({
+    title: 'Standby equipment registered',
+    recordLabel: labelOf(saved.assetId),
+    message: `${EVALUATION_LABELS[saved.evaluation]}, on standby from ${format.dateTime(saved.effectiveFrom)}.`,
+    listPath: STANDBY_PATH,
+    listLabel: sectionNameOf(STANDBY_PATH),
+    onAddAnother: () => setDraft(EMPTY),
+    next: nextSetupLink(STANDBY_PATH, { capabilities }),
+  });
   const submit = async () => {
-    setError(null);
-    try {
-      await register.submit({ assetId, evaluation, effectiveFrom: from ?? undefined });
-      toast({ title: 'Standby duty registered' });
-      setAssetId('');
-    } catch (failure: unknown) {
-      setError(failure);
-    }
+    const body = { assetId: draft.assetId, evaluation: draft.evaluation, effectiveFrom: draft.from ?? undefined };
+    const saved = await feedback.run(() => register.submit(body), resultOf).catch(() => null);
+    if (saved) setDraft(EMPTY);
   };
   return (
-    <form className="grid max-w-xl gap-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-      <AssetSelect id="standby-asset" label="Asset" value={assetId} onChange={setAssetId} />
-      <div className="space-y-1.5">
-        <Label htmlFor="standby-evaluation">Evaluated</Label>
-        <select id="standby-evaluation" className={SELECT_CLASS} value={evaluation} onChange={(e) => setEvaluation(e.target.value as StandbyEvaluation)}>
-          {EVALUATIONS.map((e) => <option key={e} value={e}>{EVALUATION_LABELS[e]}</option>)}
-        </select>
-      </div>
-      <DateTimeInput label="Standby from (empty = now)" value={from} timeZone={timezone} onChange={setFrom} />
-      {error !== null && <FriendlyErrorAlert error={error} title="The server refused the registration" />}
-      <div><Button type="submit" disabled={!assetId || register.isPending}>Register</Button></div>
-    </form>
+    <>
+      <form className="grid max-w-xl gap-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+        {feedback.alert}
+        <AssetSelect id="standby-asset" label="Asset" value={draft.assetId} onChange={(assetId) => set({ assetId })} />
+        <div className="space-y-1.5">
+          <Label htmlFor="standby-evaluation">Evaluated</Label>
+          <select id="standby-evaluation" className={SELECT_CLASS} value={draft.evaluation} onChange={(e) => set({ evaluation: e.target.value as StandbyEvaluation })}>
+            {EVALUATIONS.map((e) => <option key={e} value={e}>{EVALUATION_LABELS[e]}</option>)}
+          </select>
+        </div>
+        <DateTimeInput label="Standby from (empty = now)" value={draft.from} timeZone={format.timezone} onChange={(from) => set({ from })} />
+        <div><Button type="submit" disabled={!draft.assetId || register.isPending}>Register</Button></div>
+      </form>
+      {feedback.dialog}
+    </>
   );
 }

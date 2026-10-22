@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import type { CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,7 +24,6 @@ const SHOWN = ['active', 'all'] as const;
 /** Library picker, search, "Show retired" and "New code" above the chosen library. */
 function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary: (next: CodeLibraryPath) => void }) {
   const { canWriteCodes } = useCapabilities();
-  const navigate = useNavigate();
   const [shown, setShown] = useUrlParam('show', SHOWN, 'active');
   const [query, setQuery] = useUrlText('q');
   const [creating, setCreating] = useState(false);
@@ -50,7 +49,7 @@ function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary
         )}
       </div>
       {creating && (
-        <CodeCreateDialog library={library} parentId={null} onClose={() => setCreating(false)} onCreated={(id) => navigate(`/master-data/codes-rules/${library}/${id}`)} />
+        <CodeCreateDialog library={library} parentId={null} onClose={() => setCreating(false)} />
       )}
     </div>
   );

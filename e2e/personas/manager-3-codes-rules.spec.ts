@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { downtime, findCode, findRule, type CodesWorld } from '../test-utils/codes-world';
-import { adminRefusal, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openLibrary, openRule } from './support/codes-finance-ui';
+import { adminRefusal, viewSaved, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openLibrary, openRule } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
 import { asUser, MANAGERS, PREFIX, sessionOf, type Session } from './support/manager-users';
 import { unitOf } from './support/manager-world';
@@ -140,6 +140,7 @@ test.describe('Manager persona — codes and declarative rules (/codes-admin)', 
     await condition(2).getByTestId('rule-value').selectOption({ label: world.unitName });
     await expect(page.getByTestId('rule-validation')).toHaveAttribute('data-state', 'valid', { timeout: 20_000 });
     await page.getByTestId('rule-save').click();
+    await viewSaved(page);
     await expect(page.getByTestId('rule-detail')).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
 
     const stored = await findRule(erik.token, name);

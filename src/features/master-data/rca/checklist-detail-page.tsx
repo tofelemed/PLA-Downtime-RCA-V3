@@ -65,6 +65,7 @@ function ChecklistEditor({ checklist }: { checklist: VerificationChecklistView |
     toChange: bodyOf,
     kind: 'Checklist',
     detailPath: (id) => `/master-data/rca/checklists/${id}`,
+    list: BACK,
   });
   const { draft, errors, patch } = editor;
   const submit = (event: FormEvent) => {
@@ -73,6 +74,7 @@ function ChecklistEditor({ checklist }: { checklist: VerificationChecklistView |
   };
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={checklist ? 'Edit checklist' : 'Create checklist'}>
+      {editor.alert}
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField id="name" label="Name" value={draft.name} onChange={(name) => patch({ name })} error={errors.name} required disabled={readOnly} />
         <TextField id="code" label="Code" value={draft.code} onChange={(code) => patch({ code })} error={errors.code} hint="Unique, e.g. VC-BEARING." required disabled={readOnly} />
@@ -83,7 +85,8 @@ function ChecklistEditor({ checklist }: { checklist: VerificationChecklistView |
         <Input id="color" type="color" className="h-9 w-20 p-1" value={draft.color} onChange={(event) => patch({ color: event.target.value })} disabled={readOnly} />
       </div>
       <ChecklistItemsEditor items={draft.items} onChange={(items) => patch({ items })} disabled={readOnly} />
-      {!readOnly && <FormActions isNew={checklist === null} saving={editor.saving} cancelTo={BACK.to} />}
+      {!readOnly && <FormActions isNew={checklist === null} saving={editor.saving} dirty={editor.dirty} cancelTo={BACK.to} />}
+      {editor.dialog}
     </form>
   );
 }

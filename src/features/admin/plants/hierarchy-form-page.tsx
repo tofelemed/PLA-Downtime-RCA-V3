@@ -15,7 +15,7 @@ import { HierarchyEditForm } from './hierarchy-edit-form';
 import { HierarchyFields, type HierarchyFieldErrors, type HierarchyFieldValues } from './hierarchy-fields';
 import { PLANTS_PAGE } from './plants-page-path';
 import { SwitchPlantDialog } from './switch-plant-dialog';
-import { useHierarchyCreate } from './use-hierarchy-create';
+import { hierarchyFieldErrorsOf, useHierarchyCreate } from './use-hierarchy-create';
 
 const BACK = { to: PLANTS_PAGE, label: pageNameOf(PLANTS_PAGE) };
 const CODE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
@@ -75,7 +75,11 @@ function HierarchyForm({ kind }: { kind: Kind }) {
   const [errors, setErrors] = useState<HierarchyFieldErrors>({});
   const organizations = useOrganizations();
   const writable = useMemo(() => (organizations.data?.items ?? []).filter((org) => org.canAddPlants), [organizations.data]);
-  const create = useHierarchyCreate(organizations.data?.items ?? []);
+  const addAnother = () => {
+    setValues((current) => ({ ...initialValues(current.organizationId || null), weekStart: current.weekStart }));
+    setErrors({});
+  };
+  const create = useHierarchyCreate(organizations.data?.items ?? [], addAnother);
   const busy = create.busy;
   const set = (patch: Partial<Values>) => setValues((current) => ({ ...current, ...patch }));
   const submit = async (event: FormEvent) => {
@@ -86,45 +90,50 @@ function HierarchyForm({ kind }: { kind: Kind }) {
     try {
       if (plant) await create.plant(plantBodyOf(values));
       else await create.organization(organizationBodyOf(values));
-    } catch {
-      // the toast explains the refusal
+    } catch (error) {
+      // the alert above the form explains the refusal; the refused fields are marked here
+      setErrors(hierarchyFieldErrorsOf(error));
     }
   };
   return (
     <Page>
       <PageHeader title={plant ? 'Add plant' : 'Add organization'} back={BACK} description={plant ? 'A plant is a site with its own users, units and data.' : undefined} />
       <Section title="Details">
-        <form onSubmit={submit} className="grid max-w-2xl gap-4 sm:grid-cols-2" noValidate>
-          {plant && (
-            <FormField htmlFor={orgId} label="Organization" error={errors.organizationId} required>
-              <Select value={values.organizationId} onValueChange={(organizationId) => set({ organizationId })}>
-                <SelectTrigger id={orgId}><SelectValue placeholder="Choose the organization" /></SelectTrigger>
-                <SelectContent>{writable.map((org) => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}</SelectContent>
-              </Select>
-            </FormField>
-          )}
-          <HierarchyFields values={values} errors={errors} set={set} plant={plant} />
-          {plant && (
-            <FormField htmlFor={weekId} label="First day of the week" hint="Weekly trends and reports group the days from it; it can be changed later in Plant settings.">
-              <Select value={values.weekStart} onValueChange={(weekStart) => set({ weekStart })}>
-                <SelectTrigger id={weekId}><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={AUTO_WEEK}>Automatic (Saturday for Asia/Tehran, otherwise Monday)</SelectItem>
-                  {WEEK_START_CHOICES.map((choice) => <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
-          <div className="flex gap-2 sm:col-span-2">
-            <Button type="submit" disabled={busy} aria-busy={busy || undefined}>
-              {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
-              {plant ? 'Create plant' : 'Create organization'}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => navigate(BACK.to)} disabled={busy}>Cancel</Button>
-          </div>
-        </form>
+        <div className="max-w-2xl space-y-4">
+          {create.alert}
+          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2" noValidate>
+            {plant && (
+              <FormField htmlFor={orgId} label="Organization" error={errors.organizationId} required>
+                <Select value={values.organizationId} onValueChange={(organizationId) => set({ organizationId })}>
+                  <SelectTrigger id={orgId}><SelectValue placeholder="Choose the organization" /></SelectTrigger>
+                  <SelectContent>{writable.map((org) => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </FormField>
+            )}
+            <HierarchyFields values={values} errors={errors} set={set} plant={plant} />
+            {plant && (
+              <FormField htmlFor={weekId} label="First day of the week" hint="Weekly trends and reports group the days from it; it can be changed later in Plant settings.">
+                <Select value={values.weekStart} onValueChange={(weekStart) => set({ weekStart })}>
+                  <SelectTrigger id={weekId}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={AUTO_WEEK}>Automatic (Saturday for Asia/Tehran, otherwise Monday)</SelectItem>
+                    {WEEK_START_CHOICES.map((choice) => <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+            <div className="flex gap-2 sm:col-span-2">
+              <Button type="submit" disabled={busy} aria-busy={busy || undefined}>
+                {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
+                {plant ? 'Create plant' : 'Create organization'}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate(BACK.to)} disabled={busy}>Cancel</Button>
+            </div>
+          </form>
+        </div>
       </Section>
-      <SwitchPlantDialog created={create.created} onDone={create.finish} />
+      <SwitchPlantDialog created={create.created} onClose={create.finish} onAddAnother={addAnother} />
+      {create.dialog}
     </Page>
   );
 }

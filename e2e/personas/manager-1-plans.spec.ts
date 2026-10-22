@@ -131,6 +131,8 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await page.getByTestId('calendar-save').click();
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'draft');
     await page.getByTestId('calendar-publish').click();
+    await expect(page.getByTestId('save-result-dialog')).toContainText('Published:', { timeout: 15_000 }); // result dialog (DECISIONS 2026-10-22)
+    await page.keyboard.press('Escape');
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'published', { timeout: 15_000 });
     await expect(page.getByTestId('calendar-immutable')).toBeVisible();
     await expect(page.locator('#calTimezone')).toBeDisabled();
@@ -168,6 +170,7 @@ test.describe('Manager persona — plans, calendars and rates (/planning)', () =
     await expect(erik.getByTestId('field-error-productId')).toBeVisible();
     await erik.selectOption('#productId', calUnit.productId);
     await erik.getByTestId('profile-save').click();
+    await erik.getByTestId('save-result-dialog').getByRole('link', { name: 'View profile' }).click({ timeout: 20_000 }); // result dialog of a create
     await expect(erik.getByTestId('profile-editor')).toBeHidden({ timeout: 20_000 });
     const profiles = await api<{ items: Array<{ id: string; state: string }> }>(jonas.token, 'GET', `/v2/profiles?unitId=${calUnit.unitId}&limit=20`);
     expect(itemsOf(profiles.body)).toHaveLength(1);

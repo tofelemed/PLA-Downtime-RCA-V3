@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { hasUnsavedChanges, useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,9 +11,9 @@ import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { DEFAULT_BASIS_LABELS, FX_POLICY_LABELS, TIME_BASIS_RULE_LABELS } from '@/features/ux-kit/labels';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { useCalendarPreference } from '@/lib/dates';
 import { FinanceField } from '../components/finance-field';
-import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 import { serverFieldErrors, type FieldErrors } from '../model/field-errors';
 import { POLICY_FIELD_VOCABULARY } from '../model/policy-field-vocabulary';
 import { policyCreateBody, policyFormOf, REPORTING_CURRENCIES, validatePolicyForm, type PolicyFormValues } from '../model/policy-form';
@@ -26,8 +27,10 @@ export interface PolicyFormProps {
   source: ValuationPolicyView | null;
   /** default basis of a fresh version (the version in force) */
   freshBasis?: DefaultBasis | null;
+  /** the saved version: the page shows the result dialog */
   onSaved: (policy: ValuationPolicyView) => void;
-  onCancel: () => void;
+  /** where Cancel goes (a fixed link, never browser history) */
+  cancelTo: string;
 }
 
 function CurrencyChoice({ values, toggle }: { values: PolicyFormValues; toggle: (code: string, on: boolean) => void }) {
@@ -43,15 +46,21 @@ function CurrencyChoice({ values, toggle }: { values: PolicyFormValues; toggle: 
   );
 }
 
-/** A new valuation policy version, not approved yet; a finance approver (not the author) records the sign-off afterwards (SME V1). */
-export function PolicyForm({ source, freshBasis = null, onSaved, onCancel }: PolicyFormProps) {
+/**
+ * A new valuation policy version, not approved yet; a finance approver (not the author) records the sign-off
+ * afterwards (SME V1). A refused save is the red alert at the top (the input stays); a saved one is reported
+ * by the page (`onSaved`).
+ */
+export function PolicyForm({ source, freshBasis = null, onSaved, cancelTo }: PolicyFormProps) {
   const { timezone } = usePlantDates();
   const calendar = useCalendarPreference().calendar;
   const initial = useMemo(() => policyFormOf(source, freshBasis), [source, freshBasis]);
   const [values, setValues] = useState<PolicyFormValues>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [saved, setSaved] = useState(false);
   const create = useCreateValuationPolicy();
-  useUnsavedChangesGuard(hasUnsavedChanges(values, initial, [create.isPending]));
+  const feedback = useSaveFeedback(POLICY_FIELD_VOCABULARY);
+  useUnsavedChangesGuard(hasUnsavedChanges(values, initial, [create.isPending, saved]));
   const set = <K extends keyof PolicyFormValues>(key: K, value: PolicyFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
   const serverErrors = serverFieldErrors(create.error, POLICY_FIELD_VOCABULARY);
   const fieldError = (key: string) => errors[key] ?? serverErrors[key];
@@ -61,11 +70,14 @@ export function PolicyForm({ source, freshBasis = null, onSaved, onCancel }: Pol
     const found = validatePolicyForm(values);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    const saved = await create.submit(policyCreateBody(values)).catch(() => null);
-    if (saved) onSaved(saved);
+    const policy = await feedback.run(() => create.submit(policyCreateBody(values)), null).catch(() => null);
+    if (!policy) return;
+    setSaved(true);
+    onSaved(policy);
   };
   return (
     <div className="space-y-4" data-testid="policy-form">
+      {feedback.alert}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <FinanceField id="defaultBasis" label="Default management view" error={fieldError('defaultBasis')}>
           <NativeSelect id="defaultBasis" value={values.defaultBasis} options={options(DEFAULT_BASIS_LABELS)} onChange={(v) => set('defaultBasis', v as DefaultBasis)} />
@@ -106,13 +118,12 @@ export function PolicyForm({ source, freshBasis = null, onSaved, onCancel }: Pol
       <FinanceField id="policyNotes" label="Notes (optional)" error={fieldError('notes')}>
         <Textarea id="policyNotes" value={values.notes} onChange={(e) => set('notes', e.target.value)} />
       </FinanceField>
-      <FinanceRefusalAlert error={create.error} fields={POLICY_FIELD_VOCABULARY} />
       <div className="flex gap-2">
-        <Button onClick={save} disabled={create.isPending} data-testid="policy-save">
+        <Button onClick={save} disabled={create.isPending || saved} data-testid="policy-save">
           Save version (not approved)
         </Button>
-        <Button variant="outline" onClick={onCancel}>
-          Cancel
+        <Button variant="outline" asChild>
+          <Link to={cancelTo}>Cancel</Link>
         </Button>
       </div>
     </div>

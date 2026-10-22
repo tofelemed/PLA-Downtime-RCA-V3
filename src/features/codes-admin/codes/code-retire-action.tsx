@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { AdminRefusalAlert } from '../components/admin-refusal-alert';
+import { useCodesSaveFeedback } from '../hooks/use-codes-save-feedback';
 
 export interface CodeRetireActionProps {
   library: CodeLibraryPath;
@@ -38,15 +38,16 @@ function RetireImpact({ library, code }: CodeRetireActionProps) {
 
 /**
  * Retire with impact (plan 3.8, T18): a confirmation that lists what still points at the code; a code
- * with active sub-codes is refused (409 CODE_HAS_CHILDREN) and the dialog stays open with the reason.
- * History and past codings stay.
+ * with active sub-codes is refused (409 CODE_HAS_CHILDREN) and the dialog stays open with the reason (red
+ * alert with the reference counts). Success is a toast. History and past codings stay.
  */
 export function CodeRetireAction({ library, code }: CodeRetireActionProps) {
   const [open, setOpen] = useState(false);
   const retire = useRetireCode(library);
+  const feedback = useCodesSaveFeedback();
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) retire.reset();
+    if (!next) feedback.clearFailure();
   };
   return (
     <>
@@ -60,10 +61,10 @@ export function CodeRetireAction({ library, code }: CodeRetireActionProps) {
         description="Retiring ends the code's validity now. Its versions, past events and mapping history are kept."
         confirmLabel="Retire code"
         destructive
-        onConfirm={() => retire.submit({ id: code.id })}
+        onConfirm={() => feedback.run(() => retire.submit({ id: code.id }), `${code.code} retired`)}
       >
+        {feedback.alert}
         {open && <RetireImpact library={library} code={code} />}
-        {retire.error ? <AdminRefusalAlert error={retire.error} /> : null}
       </ConfirmDialog>
     </>
   );

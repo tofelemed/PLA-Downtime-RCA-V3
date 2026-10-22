@@ -29,18 +29,23 @@ function AssetEditor({ asset, unitId }: { asset: MasterAssetView | null; unitId?
     toChange: (draft, stored) => changedFields(assetBodyOf(draft), stored),
     kind: 'Asset',
     detailPath: (id) => `/master-data/assets/${id}`,
+    list: BACK,
   });
   return (
-    <AssetForm
-      draft={editor.draft}
-      errors={editor.errors}
-      onChange={editor.patch}
-      onSave={() => void editor.save()}
-      saving={editor.saving}
-      dirty={editor.dirty}
-      isNew={asset === null}
-      readOnly={!canWrite || asset?.retiredAt != null}
-    />
+    <div className="space-y-4">
+      {editor.alert}
+      <AssetForm
+        draft={editor.draft}
+        errors={editor.errors}
+        onChange={editor.patch}
+        onSave={() => void editor.save()}
+        saving={editor.saving}
+        dirty={editor.dirty}
+        isNew={asset === null}
+        readOnly={!canWrite || asset?.retiredAt != null}
+      />
+      {editor.dialog}
+    </div>
   );
 }
 

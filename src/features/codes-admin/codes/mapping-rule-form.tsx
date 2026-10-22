@@ -6,7 +6,7 @@ import { Field } from '@/features/integration-console/components/field';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
 import { CODE_MAPPING_RULE_KIND_LABELS } from '@/features/ux-kit/labels';
 import { OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
-import { AdminRefusalAlert } from '../components/admin-refusal-alert';
+import { useCodesSaveFeedback } from '../hooks/use-codes-save-feedback';
 import { OEE_COMPONENTS, SCHEDULE_CLASSES } from '../model/code-fields';
 
 type ReasonMappingKind = Exclude<CodeMappingRuleKind, 'impact_to_valuation'>;
@@ -22,19 +22,27 @@ function useTargets(kind: ReasonMappingKind) {
   return SCHEDULE_CLASSES.map((value) => ({ value, label: SCHEDULE_CLASS_LABELS[value] ?? value }));
 }
 
-/** A new version of one default mapping of the reason code (older versions stay unchanged). */
+/**
+ * A new version of one default mapping of the reason code (older versions stay unchanged). A small inline
+ * edit whose new version appears in the table right below, so it ends in a toast; a refusal is the red alert.
+ */
 export function MappingRuleForm({ reasonId }: { reasonId: string }) {
   const create = useCreateCodeMappingRule();
+  const feedback = useCodesSaveFeedback();
   const [kind, setKind] = useState<ReasonMappingKind>('reason_to_schedule_class');
   const [target, setTarget] = useState('');
   const targets = useTargets(kind);
   const save = () =>
-    create
-      .submit(kind === 'reason_to_impact' ? { ruleKind: kind, sourceCodeId: reasonId, targetCodeId: target } : { ruleKind: kind, sourceCodeId: reasonId, targetValue: target })
+    feedback
+      .run(
+        () => create.submit(kind === 'reason_to_impact' ? { ruleKind: kind, sourceCodeId: reasonId, targetCodeId: target } : { ruleKind: kind, sourceCodeId: reasonId, targetValue: target }),
+        'Default mapping saved as the next version',
+      )
       .then(() => setTarget((current) => current === target ? '' : current))
       .catch(() => undefined);
   return (
     <div className="space-y-2">
+      {feedback.alert}
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-64">
           <Field id="mr-kind" label="Mapping">
@@ -50,7 +58,6 @@ export function MappingRuleForm({ reasonId }: { reasonId: string }) {
           Save as next version
         </Button>
       </div>
-      {create.error ? <AdminRefusalAlert error={create.error} /> : null}
     </div>
   );
 }

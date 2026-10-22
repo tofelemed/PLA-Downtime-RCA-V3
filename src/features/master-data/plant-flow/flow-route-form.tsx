@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCreateFlowRoute } from '@/api/v2/queries/plant-model';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { FormField } from '@/features/plans-profiles-calendars/components/form-field';
 import { NativeSelect, type Option } from '@/features/plans-profiles-calendars/components/native-select';
 import { PlantDateTimeField } from '@/features/plans-profiles-calendars/components/plant-date-time-field';
-import { RefusalNotice } from '@/features/plans-profiles-calendars/components/refusal-notice';
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
 import { refusalOf } from '@/features/plans-profiles-calendars/model/refusal';
+import { PlantFlowSaveAlert } from './plant-flow-save-alert';
 import { emptyFlowRouteForm, flowRouteCreateBody, type FlowRouteFormValues, validateFlowRouteForm } from './plant-flow-form-model';
 
 export interface FlowRouteFormProps {
@@ -22,24 +23,30 @@ const ROLE_OPTIONS: Option[] = [
   { value: 'alternate', label: 'Alternate (can supply on its own)' },
 ];
 
-/** A draft route: supplying and supplied unit, role, the buffer between them and its downstream draw. */
+/**
+ * A draft route: supplying and supplied unit, role, the buffer between them and its downstream draw. A small
+ * inline add: success is a toast and the form closes (the draft appears in the table); a refusal is the red
+ * alert at the top, the input kept.
+ */
 export function FlowRouteForm({ unitOptions, timezone, onDone }: FlowRouteFormProps) {
   const [values, setValues] = useState<FlowRouteFormValues>(emptyFlowRouteForm);
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateFlowRoute();
+  const feedback = useSaveFeedback();
   const set = <K extends keyof FlowRouteFormValues>(key: K, value: FlowRouteFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
-  const fieldError = (key: string) => errors[key] ?? refusalOf(create.error)?.fieldErrors[key];
+  const fieldError = (key: string) => errors[key] ?? refusalOf(feedback.failure)?.fieldErrors[key];
 
   const save = async () => {
     const found = validateFlowRouteForm(values, timezone);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    const saved = await create.submit(flowRouteCreateBody(values, timezone)).catch(() => null);
+    const saved = await feedback.run(() => create.submit(flowRouteCreateBody(values, timezone)), 'Draft route added').catch(() => null);
     if (saved) onDone();
   };
 
   return (
     <div className="space-y-2 rounded-md border p-3" data-testid="flow-route-form">
+      <PlantFlowSaveAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
         <FormField id="routeFrom" label="From unit (supplies)" error={fieldError('fromUnitId')}>
           <NativeSelect id="routeFrom" value={values.fromUnitId} options={unitOptions} placeholder="Choose…" onChange={(v) => set('fromUnitId', v)} />
@@ -75,7 +82,6 @@ export function FlowRouteForm({ unitOptions, timezone, onDone }: FlowRouteFormPr
         <PlantDateTimeField id="routeEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
         <PlantDateTimeField id="routeEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <RefusalNotice error={create.error} timezone={timezone} />
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={create.isPending}>
           Add draft route

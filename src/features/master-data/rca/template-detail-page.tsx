@@ -31,6 +31,7 @@ function TemplateEditor({ template }: { template: RcaTemplateView | null }) {
     toChange: templateChangeOf,
     kind: 'RCA template',
     detailPath: (id) => `/master-data/rca/templates/${id}`,
+    list: BACK,
   });
   const { draft, errors, patch } = editor;
   const submit = (event: FormEvent) => {
@@ -39,6 +40,7 @@ function TemplateEditor({ template }: { template: RcaTemplateView | null }) {
   };
   return (
     <form onSubmit={submit} className="space-y-6" noValidate aria-label={template ? 'Edit RCA template' : 'Create RCA template'}>
+      {editor.alert}
       <Section title="Details">
         <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
           <TextField id="name" label="Name" value={draft.name} onChange={(name) => patch({ name })} error={errors.name} required disabled={readOnly} />
@@ -53,7 +55,8 @@ function TemplateEditor({ template }: { template: RcaTemplateView | null }) {
         <LogicTreeEditor tree={draft.logicTree} onChange={(logicTree) => patch({ logicTree })} editable={!readOnly} />
         {errors.logicTree && <p className="text-sm text-destructive">{errors.logicTree}</p>}
       </Section>
-      {!readOnly && <FormActions isNew={template === null} saving={editor.saving} cancelTo={BACK.to} />}
+      {!readOnly && <FormActions isNew={template === null} saving={editor.saving} dirty={editor.dirty} cancelTo={BACK.to} />}
+      {editor.dialog}
     </form>
   );
 }

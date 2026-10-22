@@ -4,8 +4,7 @@ import type { UnitStateMappingView } from '@/api/v2/types/reliability';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
-import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { useToast } from '@/hooks/use-toast';
+import { SaveFailureAlert, type SaveFeedback, type SaveResult } from '@/features/ux-kit/save-result';
 import { TextField } from '../../components/text-field';
 import { SELECT_CLASS } from '../shared/use-asset-lookup';
 import { bodyOf, draftErrors, draftOf, withoutRule, withRule, withRuleChange, type MappingDraft, type MappingErrors } from './mapping-editor-model';
@@ -47,36 +46,43 @@ function SignalField({ unitId, draft, errors, set }: FieldsProps & { unitId: str
   );
 }
 
-/** A new version of the unit's mapping, starting from the version in force; the previous one ends at "from". */
-export function MappingEditor({ unitId, current, timezone }: { unitId: string; current: UnitStateMappingView | undefined; timezone: string }) {
+export interface MappingEditorProps {
+  unitId: string;
+  current: UnitStateMappingView | undefined;
+  timezone: string;
+  /** the page's save feedback: its result dialog outlives this editor, which the new version remounts */
+  feedback: SaveFeedback;
+  resultOf: (saved: UnitStateMappingView) => SaveResult;
+}
+
+/**
+ * A new version of the unit's mapping, starting from the version in force; the previous one ends at "from".
+ * After a save the editor starts again from the saved version (also when it takes effect later).
+ */
+export function MappingEditor({ unitId, current, timezone, feedback, resultOf }: MappingEditorProps) {
   const [draft, setDraft] = useState<MappingDraft>(() => draftOf(current));
   const [shown, setShown] = useState<MappingErrors>({});
-  const [failure, setFailure] = useState<unknown>(null);
   const record = useRecordUnitStateMapping();
-  const { toast } = useToast();
   const set = (change: Partial<MappingDraft>) => setDraft((d) => ({ ...d, ...change }));
   const save = async () => {
     const errors = draftErrors(draft);
     setShown(errors);
-    setFailure(null);
+    feedback.clearFailure();
     if (Object.keys(errors).length > 0) return;
-    try {
-      const saved = await record.submit(bodyOf(unitId, draft));
-      toast({ title: `Mapping version ${saved.version} recorded` });
-    } catch (error: unknown) {
-      setFailure(error);
-    }
+    // a refusal stays in the red alert at the top, with the input kept
+    const saved = await feedback.run(() => record.submit(bodyOf(unitId, draft)), resultOf).catch(() => null);
+    if (saved) setDraft(draftOf(saved));
   };
   const fields = { draft, errors: shown, set };
   return (
     <form noValidate className="max-w-3xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+      <SaveFailureAlert error={feedback.failure} title="The server refused the mapping" />
       <SignalField unitId={unitId} {...fields} />
       <StateRulesEditor rules={draft.rules} error={shown.rules} onAdd={() => setDraft(withRule)} onRemove={(i) => setDraft((d) => withoutRule(d, i))} onChange={(i, c) => setDraft((d) => withRuleChange(d, i, c))} />
       <AnalogFields analog={draft.analog} errors={shown.analog} onChange={(analog) => set({ analog })} />
       <StalenessFields {...fields} />
       <DateTimeInput label="Effective from (empty = now)" value={draft.effectiveFrom} timeZone={timezone} onChange={(v) => set({ effectiveFrom: v })} />
       <TextField id="map-notes" label="Notes" value={draft.notes} onChange={(v) => set({ notes: v })} multiline maxLength={1000} />
-      {failure !== null && <FriendlyErrorAlert error={failure} title="The server refused the mapping" />}
       <Button type="submit" disabled={record.isPending}>Record new version</Button>
     </form>
   );

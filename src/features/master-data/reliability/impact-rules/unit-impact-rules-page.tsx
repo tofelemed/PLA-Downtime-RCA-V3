@@ -16,6 +16,8 @@ import { MasterDataLayout } from '../../components/master-data-layout';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleForm } from './impact-rule-form';
 import { IMPACT_MODE_LABELS } from './impact-rule-form-model';
+import { impactRuleSaveResult } from './impact-rule-save-result';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
@@ -58,7 +60,8 @@ function columnsOf({ refs, assetLabel, percent, seconds }: ColumnInput): DataTab
  * person stated keeps it.
  */
 export function UnitImpactRulesPage() {
-  const { canWriteUnitImpactRules, canApproveProfiles } = useCapabilities();
+  const capabilities = useCapabilities();
+  const { canWriteUnitImpactRules, canApproveProfiles } = capabilities;
   const refs = usePlanningRefs();
   const anchor = useAnchorFocus('unit-impact-rule-');
   const rules = useUnitImpactRules(anchor.focus);
@@ -67,6 +70,13 @@ export function UnitImpactRulesPage() {
   const { labelOf } = useAssetLookup();
   const { percent, number } = useNumberFormat();
   const [adding, setAdding] = useState(false);
+  const feedback = useSaveFeedback();
+  const open = (next: boolean) => {
+    feedback.clearFailure();
+    setAdding(next);
+  };
+  const resultOf = (rule: UnitImpactRuleView) =>
+    impactRuleSaveResult({ rule, recordLabel: `${labelOf(rule.assetId)} on ${refs.unitName(rule.unitId)}`, onAddAnother: () => open(true), capabilities });
   return (
     <MasterDataLayout
       title="Unit impact rules"
@@ -75,13 +85,13 @@ export function UnitImpactRulesPage() {
     >
       <Section title="Rules">
         {canWriteUnitImpactRules && !adding && (
-          <Button size="sm" onClick={() => setAdding(true)} data-testid="impact-rule-new">
+          <Button size="sm" onClick={() => open(true)} data-testid="impact-rule-new">
             <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
             Add rule
           </Button>
         )}
         <FocusedListNotice anchor={anchor} what="rules" />
-        {adding && <ImpactRuleForm unitOptions={refs.unitOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
+        {adding && <ImpactRuleForm unitOptions={refs.unitOptions} timezone={refs.timezone} feedback={feedback} resultOf={resultOf} onDone={() => setAdding(false)} />}
         <DataTable
           caption="Unit impact rules"
           columns={columnsOf({ refs, assetLabel: labelOf, percent: (f) => shareText(Number(f) * 100, percent), seconds: (v) => number(v) })}
@@ -98,6 +108,7 @@ export function UnitImpactRulesPage() {
           </Button>
         )}
       </Section>
+      {feedback.dialog}
     </MasterDataLayout>
   );
 }

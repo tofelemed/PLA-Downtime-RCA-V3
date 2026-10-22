@@ -108,6 +108,8 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await page.getByTestId('calendar-save').click();
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'draft');
     await page.getByTestId('calendar-publish').click();
+    await expect(page.getByTestId('save-result-dialog')).toContainText('Published:', { timeout: 15_000 }); // result dialog (DECISIONS 2026-10-22)
+    await page.keyboard.press('Escape');
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'published', { timeout: 15_000 });
     await expect(page.getByTestId('calendar-immutable')).toBeVisible();
     await expect(page.locator('#calTimezone')).toBeDisabled();
@@ -196,6 +198,8 @@ test.describe('Plans, profiles & calendars — PLAN03 / CAL preview (plan 3.4)',
     await page.getByTestId('calendar-save').click();
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'draft');
     await page.getByTestId('calendar-publish').click();
+    await expect(page.getByTestId('save-result-dialog')).toContainText('Published:', { timeout: 15_000 }); // result dialog (DECISIONS 2026-10-22)
+    await page.keyboard.press('Escape');
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'published', { timeout: 15_000 });
 
     await openPlan(page);

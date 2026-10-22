@@ -76,7 +76,7 @@ test.describe('Master data admin — Master Data screen and user lists', () => {
     await page.locator('#code').fill(unit.code);
     await page.locator('#description').fill('created by the master data admin persona');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expectToast(page, 'Unit created successfully');
+    await page.getByRole('dialog', { name: 'Unit created' }).getByRole('link', { name: 'View unit' }).click();
     await expect(page.getByRole('heading', { level: 1, name: unit.name })).toBeVisible();
 
     const charlotte = await sessionOf(MDA.charlotte);
@@ -111,7 +111,7 @@ test.describe('Master data admin — Master Data screen and user lists', () => {
     await chooseOption(page, page.getByRole('combobox', { name: /Production unit/ }), `${unit.code} — ${unit.name}`);
     await page.locator('#description').fill('created by the master data admin persona');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expectToast(page, 'Asset created successfully');
+    await page.getByRole('dialog', { name: 'Asset created' }).getByRole('link', { name: 'View asset' }).click();
     await expect(page.getByRole('heading', { level: 1, name: asset.name })).toBeVisible();
 
     const charlotte = await sessionOf(MDA.charlotte);
@@ -149,7 +149,7 @@ test.describe('Master data admin — Master Data screen and user lists', () => {
     await page.locator('#code').fill(product.code);
     await page.locator('#description').fill('created by the master data admin persona');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expectToast(page, 'Product created successfully');
+    await page.getByRole('dialog', { name: 'Product created' }).getByRole('link', { name: 'View product' }).click();
     await expect(page.getByRole('heading', { level: 1, name: product.name })).toBeVisible();
     await expect(page.getByText('Available to:')).toBeVisible();
 

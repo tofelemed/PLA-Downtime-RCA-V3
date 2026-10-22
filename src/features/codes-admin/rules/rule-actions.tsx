@@ -6,18 +6,20 @@ import { approvalAccess } from '@/features/auth/approval-gate';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
-import { AdminRefusalAlert } from '../components/admin-refusal-alert';
+import { useCodesSaveFeedback } from '../hooks/use-codes-save-feedback';
 
-type Command = ReturnType<typeof useActivateRule>;
-
-/** Open state of one confirmation; closing it clears the command's last refusal. */
-function useConfirm(command: Command) {
+/**
+ * One confirmation and its feedback: success is a toast, a refusal the red alert inside the dialog (which
+ * stays open); closing it clears the last refusal.
+ */
+function useConfirm() {
   const [open, setOpen] = useState(false);
+  const feedback = useCodesSaveFeedback();
   const onOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) command.reset();
+    if (!next) feedback.clearFailure();
   };
-  return { open, setOpen, onOpenChange };
+  return { open, setOpen, onOpenChange, run: feedback.run, alert: feedback.alert };
 }
 
 /**
@@ -29,8 +31,8 @@ export function RuleActions({ rule, currentUserId }: { rule: RuleView; currentUs
   const { canApproveRules, isSuperAdmin } = useCapabilities();
   const activate = useActivateRule();
   const retire = useRetireRule();
-  const activation = useConfirm(activate);
-  const retirement = useConfirm(retire);
+  const activation = useConfirm();
+  const retirement = useConfirm();
   if (rule.state === 'retired') return null;
   const access = approvalAccess(canApproveRules, rule.draft?.authorId, currentUserId, isSuperAdmin);
   return (
@@ -51,9 +53,9 @@ export function RuleActions({ rule, currentUserId }: { rule: RuleView; currentUs
         title={`Activate the draft of “${rule.name}”?`}
         description="The draft becomes the version in force for new events from now on. Earlier versions stay and can be restored."
         confirmLabel="Activate rule"
-        onConfirm={() => activate.submit({ rule })}
+        onConfirm={() => activation.run(() => activate.submit({ rule }), `“${rule.name}” activated`)}
       >
-        {activate.error ? <AdminRefusalAlert error={activate.error} /> : null}
+        {activation.alert}
       </ConfirmDialog>
       <ConfirmDialog
         open={retirement.open}
@@ -62,9 +64,9 @@ export function RuleActions({ rule, currentUserId }: { rule: RuleView; currentUs
         description="The rule stops applying to new events. Its versions are kept; a retired rule cannot be activated again."
         confirmLabel="Retire rule"
         destructive
-        onConfirm={() => retire.submit({ rule })}
+        onConfirm={() => retirement.run(() => retire.submit({ rule }), `“${rule.name}” retired`)}
       >
-        {retire.error ? <AdminRefusalAlert error={retire.error} /> : null}
+        {retirement.alert}
       </ConfirmDialog>
     </>
   );

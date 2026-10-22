@@ -30,19 +30,24 @@ function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
     toChange: (draft, stored) => changedFields(unitBodyOf(draft), stored),
     kind: 'Unit',
     detailPath: (id) => `/master-data/units/${id}`,
+    list: BACK,
   });
   const retired = unit?.retiredAt != null;
   return (
-    <UnitForm
-      draft={editor.draft}
-      errors={editor.errors}
-      onChange={editor.patch}
-      onSave={() => void editor.save()}
-      saving={editor.saving}
-      dirty={editor.dirty}
-      isNew={unit === null}
-      readOnly={!canWrite || retired}
-    />
+    <div className="space-y-4">
+      {editor.alert}
+      <UnitForm
+        draft={editor.draft}
+        errors={editor.errors}
+        onChange={editor.patch}
+        onSave={() => void editor.save()}
+        saving={editor.saving}
+        dirty={editor.dirty}
+        isNew={unit === null}
+        readOnly={!canWrite || retired}
+      />
+      {editor.dialog}
+    </div>
   );
 }
 

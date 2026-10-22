@@ -6,6 +6,7 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { MicroStopForm } from './micro-stop-form';
 import { policyVersionLine } from './policy-version-line';
+import { usePolicySaveFeedback } from './use-policy-save-feedback';
 
 function CurrentSettings({ view, unitId, format }: { view: MicroStopPolicyView; unitId: string; format: ReliabilityFormat }) {
   const classes = Object.entries(view.microStopSecondsByAssetClass);
@@ -27,14 +28,18 @@ function CurrentSettings({ view, unitId, format }: { view: MicroStopPolicyView; 
 /** SME D6: the micro-stop settings in force for the scope, and (manager approvers) a new version. */
 export function MicroStopSection({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const policy = useMicroStopPolicy(unitId);
+  const saving = usePolicySaveFeedback('Micro-stop settings', unitId, format);
   return (
-    <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>
-      {policy.data && (
-        <div className="space-y-4">
-          <CurrentSettings view={policy.data} unitId={unitId} format={format} />
-          {canWrite && <MicroStopForm key={`${unitId}-${policy.data.id}`} unitId={unitId} current={policy.data} />}
-        </div>
-      )}
-    </DataState>
+    <>
+      <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>
+        {policy.data && (
+          <div className="space-y-4">
+            <CurrentSettings view={policy.data} unitId={unitId} format={format} />
+            {canWrite && <MicroStopForm key={`${unitId}-${policy.data.id}`} unitId={unitId} current={policy.data} saving={saving} />}
+          </div>
+        )}
+      </DataState>
+      {saving.feedback.dialog}
+    </>
   );
 }

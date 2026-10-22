@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { friendlyToastContent } from '@/features/ux-kit/errors';
-import { useToast } from '@/hooks/use-toast';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { EVALUATION_LABELS } from './standby-metrics-model';
@@ -39,26 +38,25 @@ interface RetireDialogProps {
 /** "End standby duty?": the registration ends now; its demand and failure log is kept. */
 function RetireStandbyDialog({ row, assetLabel, onClose }: RetireDialogProps) {
   const retire = useRetireStandby();
-  const { toast } = useToast();
-  const run = async (target: StandbyEquipmentView) => {
-    try {
-      await retire.submit(target.id);
-      toast({ title: `${assetLabel(target.assetId)}: standby duty ended` });
-    } catch (failure) {
-      toast({ ...friendlyToastContent(failure), variant: 'destructive' });
-      throw failure;
-    }
+  const feedback = useSaveFeedback();
+  // success → toast; a refusal → red alert inside the dialog, which stays open for a retry
+  const run = (target: StandbyEquipmentView) => feedback.run(() => retire.submit(target.id), `${assetLabel(target.assetId)}: standby duty ended`);
+  const close = () => {
+    feedback.clearFailure();
+    onClose();
   };
   return (
     <ConfirmDialog
       open={row !== null}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && close()}
       title={row ? `Retire standby duty of ${assetLabel(row.assetId)}?` : 'Retire standby duty?'}
       description="The duty ends now. Its demands and failures stay in the log and in the standby metrics."
       confirmLabel="Retire standby"
       destructive
       onConfirm={() => (row ? run(row) : undefined)}
-    />
+    >
+      {feedback.alert}
+    </ConfirmDialog>
   );
 }
 

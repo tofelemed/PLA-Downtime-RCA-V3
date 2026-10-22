@@ -21,14 +21,19 @@ creating a plant never switches or refreshes the selection (`hierarchy-form-page
       `siteId`/`siteName`, 422 `SITE_NOT_IN_PLANT`; no migration needed; snapshot updated.)*
 
 ## Phase 2 — Save feedback standard
-- [ ] `ux-kit` `SaveResultDialog` (title, record name, actions View · Add another · Back to list · Next: <tab>) and a
+- [x] `ux-kit` `SaveResultDialog` (title, record name, actions View · Add another · Back to list · Next: <tab>) and a
       `useSaveFeedback` built on `useCommandFeedback`; failures → `FriendlyErrorAlert` + field errors, input kept.
-- [ ] Apply to `useRecordEditor` creates (units, assets, products, RCA templates/checklists), codes/rules create,
+      (`src/features/ux-kit/save-result/`: `useSaveFeedback`, `useSaveResult`, `SaveFailureAlert`, `nextSetupLink`;
+      applied so far to `useRecordEditor` and Setup › organizations & plants creates.)
+- [x] Apply to `useRecordEditor` creates (units, assets, products, RCA templates/checklists), codes/rules create,
       profiles, rates, calendars, streams, transitions, plant flow, impact rules, finance creates, all imports,
       stop-engine / micro-stop / grade-change / unit-state versions.
-- [ ] Small edits/approvals: toast. Settings forms return to read view after save.
-- [ ] Defects: dictionary error shown as neutral status; duplicate `RefusalNotice` (`version-actions.tsx:96,103`);
-      demand retire without confirmation; rate import stays enabled after accept; rotation form never resets.
+- [x] Small edits/approvals: toast; inline adds above their own table (rates, transitions, streams, crews, flow
+      routes) toast + close. Settings forms remount clean with the saved version. Dismissing a create's result dialog
+      opens the new record (no duplicate create). Richer area alerts (codes, RefusalNotice) sit in `SaveFailureFrame`.
+- [x] Defects: dictionary error shown as neutral status; duplicate `RefusalNotice` (`version-actions.tsx`);
+      demand retire without confirmation; rate import stays enabled after accept (now disabled; result dialog when
+      the import job finishes); rotation form never resets. Plan screens (Production) still use plain `RefusalNotice`.
 
 ## Phase 3 — Navigation
 - [ ] Area tab bar visible on sub-pages (`master-data-layout.tsx:34`); one link-row tab pattern for codes, profiles,

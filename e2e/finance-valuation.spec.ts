@@ -54,6 +54,8 @@ async function addFxDraft(page: Page, source: string, rate: string): Promise<voi
   await fillDateTime(page, 'Valid until', WINDOW.to);
   await page.fill('#fxSource', source);
   await page.getByTestId('fx-save').click();
+  // the add dialog closes into the result dialog
+  await page.getByRole('dialog', { name: 'Exchange rate draft saved' }).getByRole('link', { name: 'View rate' }).click({ timeout: 20_000 });
   await expect(fxDetail(page)).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
 }
 
@@ -134,7 +136,8 @@ test.describe('Finance — FX rates and valuation policy approval (plan 3.10 pre
     await fillDateTime(page, 'Starts', '2099-01-01T00:00');
     await page.fill('#policyNotes', notes);
     await page.getByTestId('policy-save').click();
-    // saving opens the version's page
+    // saving ends in the result dialog; View opens the version's page
+    await page.getByRole('dialog', { name: /^Version \d+ saved \(not approved\)$/ }).getByRole('link', { name: 'View policy version' }).click({ timeout: 20_000 });
     const row = page.getByTestId('policy-detail');
     await expect(row).toHaveAttribute('data-status', 'unapproved', { timeout: 20_000 });
     await expect(row).toContainText('You');

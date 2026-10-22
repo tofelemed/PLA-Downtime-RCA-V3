@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { UnitImpactRuleView } from '@/api/v2/types/unit-impact';
 import { actAs } from '@/test/acting-user';
-import { jsonResponse, listPage, stubV2Fetch, type V2Call } from '@/test/v2-fetch';
+import { errorBody, jsonResponse, listPage, stubV2Fetch, type V2Call } from '@/test/v2-fetch';
 import { impactRuleCreateBody, validateImpactRuleForm, emptyImpactRuleForm } from './impact-rule-form-model';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
@@ -23,8 +23,19 @@ const RULE: UnitImpactRuleView = {
 function reply(call: V2Call) {
   const path = call.url.pathname;
   if (path.endsWith('/assets')) return jsonResponse(200, listPage([PUMP, SPARE]));
+  if (path.endsWith('/units')) return jsonResponse(200, listPage([{ id: 'u1', code: 'EXT-1', name: 'Extruder 1', rowVersion: 1 }]));
   if (path.endsWith('/unit-impact-rules')) return jsonResponse(200, listPage([RULE]));
   return undefined;
+}
+
+async function fillDraft() {
+  fireEvent.click(screen.getByTestId('impact-rule-new'));
+  await screen.findByRole('option', { name: 'Extruder 1' });
+  await waitFor(() => expect(screen.getAllByRole('option', { name: 'P-101 — Feed pump' }).length).toBeGreaterThan(0));
+  fireEvent.change(screen.getByLabelText('Unit'), { target: { value: 'u1' } });
+  fireEvent.change(screen.getByLabelText('Asset'), { target: { value: 'a1' } });
+  fireEvent.change(screen.getByLabelText('Why'), { target: { value: 'one of two trains' } });
+  fireEvent.change(screen.getByLabelText('Effective from date'), { target: { value: '2027-02-01' } });
 }
 
 const renderPage = () =>
@@ -49,6 +60,42 @@ describe('Unit impact rules page (plan 1.10, SME Q5 + D9)', () => {
     expect(within(table).getByText(/P-101B — Spare feed pump \(within 60 s\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('impact-rule-new'));
     expect(screen.getByTestId('impact-rule-form')).toBeInTheDocument();
+  });
+
+  it('a new draft rule ends in the result dialog and the form closes; Add another opens a fresh one', async () => {
+    const calls = stubV2Fetch((call) => (call.method === 'POST' && call.url.pathname.endsWith('/unit-impact-rules') ? jsonResponse(201, { ...RULE, id: 'r2', state: 'draft', version: 2 }) : reply(call)));
+    actAs('reliability_engineer');
+    renderPage();
+    await screen.findByRole('table', { name: 'Unit impact rules' });
+    await fillDraft();
+    fireEvent.click(screen.getByRole('button', { name: 'Add draft rule' }));
+    const dialog = await screen.findByTestId('save-result-dialog');
+    expect(within(dialog).getByText('Draft rule version 2 added')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Another manager approves it/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: 'View rule' })).toHaveAttribute('href', '/master-data/unit-impact-rules#unit-impact-rule-r2');
+    expect(within(dialog).getByRole('link', { name: 'Back to Unit impact rules' })).toBeInTheDocument();
+    expect(screen.queryByTestId('impact-rule-form')).toBeNull();
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add another' }));
+    await waitFor(() => expect(screen.queryByTestId('save-result-dialog')).toBeNull());
+    expect((screen.getByLabelText('Why') as HTMLInputElement).value).toBe('');
+  });
+
+  it('a refused draft is one red alert at the top of the form with the overlapping versions; the input stays', async () => {
+    const overlap = errorBody('VERSION_OVERLAP', 'The rule overlaps an approved version', {
+      conflicts: [{ id: 'r1', version: 1, effectiveFrom: '2027-01-01T00:00:00.000Z', effectiveTo: null }],
+    });
+    stubV2Fetch((call) => (call.method === 'POST' && call.url.pathname.endsWith('/unit-impact-rules') ? jsonResponse(409, overlap) : reply(call)));
+    actAs('reliability_engineer');
+    renderPage();
+    await screen.findByRole('table', { name: 'Unit impact rules' });
+    await fillDraft();
+    fireEvent.click(screen.getByRole('button', { name: 'Add draft rule' }));
+    const form = screen.getByTestId('impact-rule-form');
+    expect(await within(form).findByTestId('save-failure-alert')).toBeInTheDocument();
+    expect(within(form).getByTestId('impact-rule-conflicts')).toHaveTextContent('Version 1');
+    expect((within(form).getByLabelText('Why') as HTMLInputElement).value).toBe('one of two trains');
+    expect(screen.queryByTestId('save-result-dialog')).toBeNull();
   });
 
   it('the form checks the shape the server validates and sends the share as a 0..1 decimal', () => {

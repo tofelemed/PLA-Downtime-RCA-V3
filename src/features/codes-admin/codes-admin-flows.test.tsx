@@ -82,7 +82,7 @@ describe('codes & rules flows (plan 3.8)', () => {
       }
       return json(200, list([]));
     };
-    wrap(<RuleEditor schema={SCHEMA} rule={null} onSaved={() => undefined} />);
+    wrap(<RuleEditor schema={SCHEMA} rule={null} />);
     const row = screen.getAllByTestId('rule-condition')[0];
     fireEvent.change(within(row).getByLabelText('Field'), { target: { value: 'durationSeconds' } });
     fireEvent.change(within(row).getByLabelText('Operator'), { target: { value: 'gte' } });
@@ -222,7 +222,7 @@ describe('codes & rules flows (plan 3.8)', () => {
     it('canAuthorRules: an operator sees no save button on the builder', () => {
       reply = () => json(200, list([]));
       actAs('Operator');
-      wrap(<RuleEditor schema={SCHEMA} rule={RULE} onSaved={() => undefined} />);
+      wrap(<RuleEditor schema={SCHEMA} rule={RULE} />);
       expect(screen.queryByTestId('rule-save')).toBeNull();
     });
   });

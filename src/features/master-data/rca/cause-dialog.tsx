@@ -72,6 +72,7 @@ export function CauseDialog({ cause, parent, onClose }: CauseDialogProps) {
           <DialogDescription>Causes are grouped by category; codes are unique.</DialogDescription>
         </DialogHeader>
         <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
+          {editor.alert}
           <TextField id="cause-code" label="Code" value={draft.code} onChange={(code) => patch({ code })} error={errors.code} required />
           <TextField id="cause-name" label="Name" value={draft.name} onChange={(name) => patch({ name })} error={errors.name} required />
           <ChoiceField id="cause-category" label="Category" value={draft.category} onChange={(category) => patch({ category: category as CauseCategory })} options={CATEGORY_OPTIONS} />

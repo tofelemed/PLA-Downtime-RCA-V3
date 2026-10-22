@@ -58,7 +58,7 @@ test.describe('ADM-03 Master data for Demo Plant 2', () => {
     await page.locator('#code').fill(code);
     await page.locator('#description').fill('created by the admin persona journey');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expectToast(page, 'Unit created successfully');
+    await page.getByRole('dialog', { name: 'Unit created' }).getByRole('link', { name: 'View unit' }).click();
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 
     const helena = await apiLogin(USERS.helena);
@@ -106,7 +106,7 @@ test.describe('ADM-03 Master data for Demo Plant 2', () => {
     await page.locator('#code').fill(code);
     await page.locator('#description').fill('created by the admin persona journey');
     await page.getByRole('button', { name: 'Create', exact: true }).click();
-    await expectToast(page, 'Product created successfully');
+    await page.getByRole('dialog', { name: 'Product created' }).getByRole('link', { name: 'View product' }).click();
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 
     const helena = await apiLogin(USERS.helena);

@@ -5,18 +5,23 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { selfApprovalNote } from '@/features/ux-kit/format/self-approval-note';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { useSaveResult } from '@/features/ux-kit/save-result';
+import { POLICIES_PATH, policyVersionResult } from '../model/finance-save-results';
 import { inForceBasis } from '../model/policy-form';
 import { PolicyForm } from './policy-form';
 
-const BACK = { to: '/finance?tab=policies', label: 'Valuation policy' };
+const BACK = { to: POLICIES_PATH, label: 'Valuation policy' };
 
 /**
  * `/finance/policies/new` (`?from=<version>` copies a stored version): a new valuation policy version,
- * saved as not approved; saving opens the new version's page.
+ * saved as not approved. Saving ends in the result dialog (View policy version · Back to Valuation · Next);
+ * dismissing it opens the new version's page, so a second save cannot duplicate it.
  */
 export function PolicyNewPage() {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useCapabilities();
+  const capabilities = useCapabilities();
+  const { isSuperAdmin } = capabilities;
+  const result = useSaveResult();
   const [params] = useSearchParams();
   const fromId = params.get('from');
   const source = useValuationPolicy(fromId);
@@ -34,10 +39,11 @@ export function PolicyNewPage() {
           key={source.data?.id ?? 'fresh'}
           source={source.data ?? null}
           freshBasis={fromId === null ? inForceBasis(policies.rows) : null}
-          onSaved={(policy) => navigate(`/finance/policies/${policy.id}`, { replace: true })}
-          onCancel={() => navigate(-1)}
+          onSaved={(policy) => result.open(policyVersionResult(policy, capabilities, () => navigate(`/finance/policies/${policy.id}`, { replace: true })))}
+          cancelTo={POLICIES_PATH}
         />
       )}
+      {result.element}
     </Page>
   );
 }

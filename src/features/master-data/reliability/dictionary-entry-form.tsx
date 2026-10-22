@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCreateDictionaryEntry } from '@/api/v2/queries/failure-dictionary';
 import { DICTIONARY_KIND_LABELS, type DictionaryKind } from '@/api/v2/types/failure-dictionary';
-import { friendlyToastContent } from '@/features/ux-kit/errors';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 
 const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 const KINDS = Object.keys(DICTIONARY_KIND_LABELS) as DictionaryKind[];
@@ -21,31 +21,33 @@ interface Draft {
 
 const EMPTY: Draft = { kind: 'equipment_class', equipmentClass: '', code: '', name: '', assetTypes: '', isPending: false };
 
-/** Adds one entry; the server checks the class and refuses a code already in force (409). */
+/**
+ * Adds one entry; the server checks the class and refuses a code already in force (409). Success: a toast
+ * and empty code / name fields (list and class stay for the next entry); a refusal: the red alert on top.
+ */
 export function DictionaryEntryForm({ classes }: { classes: readonly string[] }) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
-  const [message, setMessage] = useState<string | null>(null);
   const command = useCreateDictionaryEntry();
+  const feedback = useSaveFeedback();
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }));
   const submit = async () => {
-    setMessage(null);
     try {
-      await command.submit({
+      await feedback.run(() => command.submit({
         kind: draft.kind,
         code: draft.code.trim(),
         name: draft.name.trim(),
         ...(CLASS_BOUND.has(draft.kind) && draft.equipmentClass ? { equipmentClass: draft.equipmentClass } : {}),
         ...(draft.kind === 'equipment_class' ? { assetTypes: draft.assetTypes.split(';').map((t) => t.trim()).filter(Boolean) } : {}),
         isPending: draft.isPending,
-      });
+      }), 'Entry added');
       setDraft({ ...EMPTY, kind: draft.kind, equipmentClass: draft.equipmentClass });
-      setMessage('Entry added.');
-    } catch (error: unknown) {
-      setMessage(friendlyToastContent(error).description);
+    } catch {
+      // the alert above the fields explains the refusal; the input stays for a correction
     }
   };
   return (
     <form className="grid gap-3 sm:grid-cols-3" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="dictionary-entry-form">
+      <div className="sm:col-span-3 empty:hidden">{feedback.alert}</div>
       <div className="space-y-1">
         <Label htmlFor="entry-kind">List</Label>
         <select id="entry-kind" className={SELECT_CLASS} value={draft.kind} onChange={(e) => set('kind', e.target.value as DictionaryKind)}>
@@ -81,7 +83,6 @@ export function DictionaryEntryForm({ classes }: { classes: readonly string[] })
       </label>
       <div className="flex items-end gap-2 sm:col-span-3">
         <Button type="submit" disabled={!draft.code.trim() || !draft.name.trim() || command.isPending}>Add entry</Button>
-        {message && <p className="text-sm" role="status">{message}</p>}
       </div>
     </form>
   );

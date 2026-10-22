@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateTransitionStandard } from '@/api/v2/queries/profile-commands';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { FormField } from '../components/form-field';
 import { NativeSelect, type Option } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
-import { RefusalNotice } from '../components/refusal-notice';
+import { SaveRefusalAlert } from '../components/save-refusal-alert';
 import type { FieldErrors } from '../model/profile-form';
 import { refusalOf } from '../model/refusal';
 import {
@@ -24,24 +25,26 @@ export interface TransitionStandardFormProps {
   onDone: () => void;
 }
 
-/** A draft matrix entry: directional product change with optional catalyst family / operating mode (SME E1), reference hours, optional reference off-grade, evidence. */
+/** A draft matrix entry: directional product change with optional catalyst family / operating mode (SME E1), reference hours, optional reference off-grade, evidence. Toast and close on success (small inline add); red alert at the top on a refusal. */
 export function TransitionStandardForm({ unitId, productOptions, timezone, onDone }: TransitionStandardFormProps) {
   const [values, setValues] = useState<TransitionStandardFormValues>(() => emptyTransitionStandardForm(unitId));
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateTransitionStandard();
+  const feedback = useSaveFeedback();
   const set = <K extends keyof TransitionStandardFormValues>(key: K, value: TransitionStandardFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
-  const fieldError = (key: string) => errors[key] ?? refusalOf(create.error)?.fieldErrors[key];
+  const fieldError = (key: string) => errors[key] ?? refusalOf(feedback.failure)?.fieldErrors[key];
 
   const save = async () => {
     const found = validateTransitionStandardForm(values, timezone);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    const saved = await create.submit(transitionStandardCreateBody(values, timezone)).catch(() => null);
+    const saved = await feedback.run(() => create.submit(transitionStandardCreateBody(values, timezone)), 'Draft transition standard added').catch(() => null);
     if (saved) onDone();
   };
 
   return (
     <div className="space-y-2 rounded-md border p-3" data-testid="transition-standard-form">
+      <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-2">
         <FormField id="tsFrom" label="From product" error={fieldError('fromProductId')}>
           <NativeSelect id="tsFrom" value={values.fromProductId} options={productOptions} placeholder="Choose…" onChange={(v) => set('fromProductId', v)} />
@@ -79,7 +82,6 @@ export function TransitionStandardForm({ unitId, productOptions, timezone, onDon
         <PlantDateTimeField id="tsEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
         <PlantDateTimeField id="tsEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <RefusalNotice error={create.error} timezone={timezone} />
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={create.isPending}>
           Add draft standard

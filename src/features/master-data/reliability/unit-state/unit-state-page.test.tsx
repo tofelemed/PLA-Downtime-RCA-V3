@@ -87,10 +87,40 @@ describe('Unit state page (SME D1 / D2)', () => {
     fireEvent.change(screen.getByLabelText(/Expected interval/), { target: { value: '5' } });
     fireEvent.click(screen.getByRole('button', { name: 'Record new version' }));
     expect(await screen.findByText('The server refused the mapping')).toBeInTheDocument();
+    expect(screen.getByTestId('save-failure-alert')).toHaveFocus();
+    expect(screen.getByLabelText(/Expected interval/)).toHaveValue('5');
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
       unitId: 'u1', signalId: 's1', rules: [{ match: 'RUN', state: 'running' }, { match: 'STOP', state: 'internal_stop' }],
       expectedIntervalSeconds: 5, jitterSeconds: 2, staleAfterIntervals: 3, isHeartbeat: true,
     });
+  });
+
+  it('a new version that takes effect later ends in the result dialog and the editor starts again from it', async () => {
+    const LATER: UnitStateMappingView = { ...MAPPING, id: 'm2', version: 2, expectedIntervalSeconds: 5, notes: 'faster feed', effectiveFrom: '2099-01-01T00:00:00.000Z' };
+    let rows = [MAPPING];
+    stubV2Fetch((call) => {
+      const path = call.url.pathname;
+      if (path.endsWith('/unit-state-mappings') && call.method === 'POST') {
+        rows = [LATER, { ...MAPPING, effectiveTo: LATER.effectiveFrom }];
+        return jsonResponse(201, LATER);
+      }
+      if (path.endsWith('/unit-state-mappings') && call.method === 'GET') return jsonResponse(200, listPage(rows));
+      return reply(call);
+    });
+    actAs('integration_admin');
+    renderPage();
+    await waitFor(() => expect((screen.getByLabelText('State signal') as HTMLSelectElement).value).toBe('s1'));
+    fireEvent.change(screen.getByLabelText(/Expected interval/), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'faster feed' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Record new version' }));
+    const dialog = await screen.findByTestId('save-result-dialog');
+    expect(within(dialog).getByText('Mapping version 2 recorded')).toBeInTheDocument();
+    expect(within(dialog).getByText(/^It takes effect at .*; the version in force stays until then\.$/)).toBeInTheDocument();
+    // the list is the page already shown: no redundant "Back to Unit state"
+    expect(within(dialog).queryByRole('link', { name: 'Back to Unit state' })).toBeNull();
+    await waitFor(() => expect(screen.getByLabelText('Notes')).toHaveValue(''));
+    expect(screen.getByLabelText(/Expected interval/)).toHaveValue('5');
+    expect(screen.queryByTestId('save-failure-alert')).toBeNull();
   });
 
   it('a role that may not write mappings only reads them', async () => {

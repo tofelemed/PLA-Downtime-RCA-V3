@@ -6,9 +6,8 @@ import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
-import { useToast } from '@/hooks/use-toast';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { DictionaryEntryForm } from './dictionary-entry-form';
@@ -34,29 +33,29 @@ function columnsOf(canWrite: boolean, onRetire: (entry: FailureDictionaryEntryVi
   ];
 }
 
-/** "Retire <code>?": a retired entry is no longer offered on new stops; recorded stops keep it. */
+/**
+ * "Retire <code>?": a retired entry is no longer offered on new stops; recorded stops keep it. Success → toast;
+ * a refusal → the red alert inside the still-open dialog (DECISIONS 2026-10-22 "Save feedback").
+ */
 function RetireEntryDialog({ entry, onClose }: { entry: FailureDictionaryEntryView | null; onClose: () => void }) {
   const retire = useRetireDictionaryEntry();
-  const { toast } = useToast();
-  const run = async (target: FailureDictionaryEntryView) => {
-    try {
-      await retire.submit(target.id);
-      toast({ title: `${target.code} retired` });
-    } catch (failure) {
-      toast({ ...friendlyToastContent(failure), variant: 'destructive' });
-      throw failure;
-    }
+  const feedback = useSaveFeedback();
+  const close = () => {
+    feedback.clearFailure();
+    onClose();
   };
   return (
     <ConfirmDialog
       open={entry !== null}
-      onOpenChange={(open) => !open && onClose()}
+      onOpenChange={(open) => !open && close()}
       title={entry ? `Retire ${entry.code} — ${entry.name}?` : 'Retire entry?'}
       description="It is no longer offered when describing a stop's failure. Stops that already use it keep it."
       confirmLabel="Retire entry"
       destructive
-      onConfirm={() => (entry ? run(entry) : undefined)}
-    />
+      onConfirm={() => (entry ? feedback.run(() => retire.submit(entry.id), `${entry.code} retired`) : undefined)}
+    >
+      {feedback.alert}
+    </ConfirmDialog>
   );
 }
 

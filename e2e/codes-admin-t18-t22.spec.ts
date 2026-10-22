@@ -5,7 +5,7 @@ import { loginViaUI } from './test-utils/auth-helpers';
 import { call, command } from './test-utils/downtime-world';
 import { ensureApprover } from './test-utils/dashboard-world';
 import { downtime, findCode, findRule, retireRule, seedCodesWorld, type CodesWorld } from './test-utils/codes-world';
-import { adminRefusal, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openLibrary, openRule } from './personas/support/codes-finance-ui';
+import { adminRefusal, viewSaved, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openLibrary, openRule } from './personas/support/codes-finance-ui';
 
 /**
  * Plan 3.8 exit tests on `/master-data/codes-rules` (flag `v2.codesAdmin`, switched on for the demo tenant by the
@@ -195,6 +195,7 @@ test.describe('Codes & rules — T18 UI and T22 (plan 3.8)', () => {
     await condition(2).getByTestId('rule-value').selectOption({ label: world.unitName });
     await expect(page.getByTestId('rule-validation')).toHaveAttribute('data-state', 'valid', { timeout: 20_000 });
     await page.getByTestId('rule-save').click();
+    await viewSaved(page);
     await expect(page.getByTestId('rule-detail')).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
 
     // stored as JSON, never as a function; non-allowlisted field / operator → 422

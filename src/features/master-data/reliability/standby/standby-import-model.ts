@@ -1,4 +1,7 @@
 import type { StandbyImportResult, StandbyRecordRow } from '@/api/v2/types/reliability';
+import type { Capabilities } from '@/features/auth/capabilities';
+import { nextSetupLink, type SaveResult } from '@/features/ux-kit/save-result';
+import { sectionNameOf } from '../../components/master-data-sections';
 import { optional, type TextRow } from '../shared/delimited-rows';
 import { choiceProblem, instantProblem, type MappedRow } from '../shared/row-mapping';
 
@@ -36,3 +39,19 @@ export function standbyRowOf(row: TextRow): MappedRow<StandbyRecordRow> {
 
 export const standbyImportSummary = (r: StandbyImportResult) =>
   `Imported ${r.total} entr${r.total === 1 ? 'y' : 'ies'}: ${r.created} new, ${r.updated} replaced (same externalRef).`;
+
+const STANDBY_PATH = '/master-data/standby-equipment';
+
+/**
+ * The result dialog of a stored log import: the counts are in `message` (`standbyImportSummary` in the
+ * plant's digits); Back to Standby equipment · Next.
+ */
+export function standbyImportResult(message: string, capabilities?: Capabilities): SaveResult {
+  return {
+    title: 'Standby log imported',
+    message,
+    listPath: STANDBY_PATH,
+    listLabel: sectionNameOf(STANDBY_PATH),
+    next: nextSetupLink(STANDBY_PATH, { capabilities }),
+  };
+}

@@ -23,7 +23,9 @@ export function useRuleDraft(initial: () => RuleDraft) {
   const addAction = (type: ActionRow['type']) => setDraft((current) => ({ ...current, actions: [...current.actions, emptyAction(type)] }));
   const removeAction = (key: string) => setDraft((current) => ({ ...current, actions: current.actions.filter((row) => row.key !== key) }));
   const setKind = (kind: RuleKind) => patch({ kind, actions: [emptyAction(kind === 'coding_default' || kind === 'status_derivation' ? 'set' : 'flag')] });
-  return { draft, patch, setKind, updateCondition, addCondition, removeCondition, updateAction, addAction, removeAction };
+  /** a whole new draft, e.g. an empty one for "Add another" */
+  const replace = (next: RuleDraft) => setDraft(next);
+  return { draft, patch, replace, setKind, updateCondition, addCondition, removeCondition, updateAction, addAction, removeAction };
 }
 
 export type RuleDraftState = ReturnType<typeof useRuleDraft>;

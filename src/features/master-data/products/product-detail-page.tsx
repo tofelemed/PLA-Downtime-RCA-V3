@@ -35,18 +35,23 @@ function ProductEditor({ product }: { product: MasterProductView | null }) {
     toChange: (draft, stored) => changedFields(productChangeOf(draft), stored),
     kind: 'Product',
     detailPath: (id) => `/master-data/products/${id}`,
+    list: BACK,
   });
   return (
-    <ProductForm
-      draft={editor.draft}
-      errors={editor.errors}
-      onChange={editor.patch}
-      onSave={() => void editor.save()}
-      saving={editor.saving}
-      dirty={editor.dirty}
-      isNew={product === null}
-      readOnly={!canWrite || product?.isActive === false}
-    />
+    <div className="space-y-4">
+      {editor.alert}
+      <ProductForm
+        draft={editor.draft}
+        errors={editor.errors}
+        onChange={editor.patch}
+        onSave={() => void editor.save()}
+        saving={editor.saving}
+        dirty={editor.dirty}
+        isNew={product === null}
+        readOnly={!canWrite || product?.isActive === false}
+      />
+      {editor.dialog}
+    </div>
   );
 }
 

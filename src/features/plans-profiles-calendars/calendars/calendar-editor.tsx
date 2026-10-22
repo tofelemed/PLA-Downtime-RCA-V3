@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { CalendarVersionView } from '@/api/v2/types/calendars';
+import type { CalendarPublishView, CalendarVersionView } from '@/api/v2/types/calendars';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { Section } from '@/features/ux-kit/page-layout';
 import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { FormField } from '../components/form-field';
-import { RefusalNotice } from '../components/refusal-notice';
+import { SaveRefusalAlert } from '../components/save-refusal-alert';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { useCalendarEditor, type CalendarScope, type PreviewCandidate } from '../hooks/use-calendar-editor';
 import type { CalendarDraft } from '../model/calendar-draft';
@@ -22,6 +22,8 @@ export interface CalendarEditorProps {
   scope: CalendarScope;
   displayTimezone: string;
   onSaved: (version: CalendarVersionView) => void;
+  /** a stored draft was published (the page shows the result dialog) */
+  onPublished?: (result: CalendarPublishView) => void;
   /** "New version from this" on a published version */
   onNewFrom: (version: CalendarVersionView) => void;
   onPreview: (candidate: PreviewCandidate) => void;
@@ -54,6 +56,10 @@ function EditorButtons({ editor, version, readOnly, props }: { editor: Editor; v
     const saved = await editor.save();
     if (saved) props.onSaved(saved);
   };
+  const publish = async () => {
+    const result = await editor.publishStored();
+    if (result) props.onPublished?.(result);
+  };
   const preview = () => {
     const candidate = editor.candidate();
     if (candidate) props.onPreview(candidate);
@@ -69,7 +75,7 @@ function EditorButtons({ editor, version, readOnly, props }: { editor: Editor; v
         </Button>
       )}
       {version?.state === 'draft' && canWriteCalendars && (
-        <Button onClick={editor.publishStored} disabled={editor.publishing || editor.dirty} data-testid="calendar-publish" title={editor.dirty ? 'Save the draft first' : undefined}>
+        <Button onClick={() => void publish()} disabled={editor.publishing || editor.dirty} data-testid="calendar-publish" title={editor.dirty ? 'Save the draft first' : undefined}>
           Publish
         </Button>
       )}
@@ -87,7 +93,10 @@ function EditorButtons({ editor, version, readOnly, props }: { editor: Editor; v
   );
 }
 
-/** Calendar editor: time zone, operational day start, effective dates, shift templates, holidays, exclusions. */
+/**
+ * Calendar editor: time zone, operational day start, effective dates, shift templates, holidays, exclusions.
+ * Save ends in a toast and a clean editor; a refused save or publish is the red alert at the top.
+ */
 export function CalendarEditor(props: CalendarEditorProps) {
   const { version, displayTimezone } = props;
   const editor = useCalendarEditor(version, props.seed, props.scope);
@@ -99,6 +108,7 @@ export function CalendarEditor(props: CalendarEditorProps) {
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
   return (
     <div className="space-y-6" data-testid="calendar-editor" data-state={version?.state ?? 'new'}>
+      <SaveRefusalAlert error={editor.failure} timezone={displayTimezone} />
       <Section title="Calendar" actions={version ? <VersionStateBadge state={version.state} /> : undefined}>
         <div className="space-y-3">
           {editor.readOnly && (
@@ -123,12 +133,6 @@ export function CalendarEditor(props: CalendarEditorProps) {
           <ExclusionsEditor rows={draft.exclusions} timezone={draft.timezone} errors={errors} readOnly={readOnly} onChange={(rows) => set('exclusions', rows)} />
         </div>
       </Section>
-      <RefusalNotice error={editor.saveError ?? editor.publishError} timezone={displayTimezone} />
-      {editor.published && (
-        <p className="text-sm" role="status" data-testid="calendar-published">
-          Published: {editor.published.materialization.map((m) => `${m.insertedInstances} shifts generated`).join(' · ') || 'no unit shifts generated'}.
-        </p>
-      )}
       <EditorButtons editor={editor} version={version} readOnly={readOnly} props={props} />
     </div>
   );

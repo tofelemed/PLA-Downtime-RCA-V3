@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import type { CalendarVersionView } from '@/api/v2/types/calendars';
+import type { CalendarPublishView, CalendarVersionView } from '@/api/v2/types/calendars';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { nextSetupLink, useSaveResult } from '@/features/ux-kit/save-result';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useCalendarVersion } from '../hooks/use-calendar-reads';
 import type { CalendarScope, PreviewCandidate } from '../hooks/use-calendar-editor';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
 import { calendarVersionPath } from '../model/calendar-paths';
 import { draftOf, newCalendarDraft, type CalendarDraft } from '../model/calendar-draft';
 import { CalendarEditor } from './calendar-editor';
+import { calendarPublishedResult } from './calendar-published-result';
 import { CalendarPreviewPanel } from './calendar-preview-panel';
 
 const LIST = '/setup/calendars';
@@ -21,10 +24,11 @@ interface WorkspaceProps {
   seed: CalendarDraft;
   scope: CalendarScope;
   refs: PlanningRefs;
+  onPublished?: (result: CalendarPublishView) => void;
 }
 
 /** Editor plus the server preview of the stored version or of the unsaved edits (a click, never on render). */
-function Workspace({ version, seed, scope, refs }: WorkspaceProps) {
+function Workspace({ version, seed, scope, refs, onPublished }: WorkspaceProps) {
   const navigate = useNavigate();
   const { canWriteCalendars } = useCapabilities();
   const [preview, setPreview] = useState<{ candidate: PreviewCandidate | null; request: number }>({ candidate: null, request: 0 });
@@ -37,6 +41,7 @@ function Workspace({ version, seed, scope, refs }: WorkspaceProps) {
         scope={scope}
         displayTimezone={refs.timezone}
         onSaved={(saved) => navigate(calendarVersionPath(saved, canWriteCalendars), { replace: !version })}
+        onPublished={onPublished}
         onNewFrom={(from) => navigate(`/planning/calendars/new?from=${from.id}`)}
         onPreview={(candidate) => setPreview((prev) => ({ candidate, request: prev.request + 1 }))}
       />
@@ -48,6 +53,21 @@ function Workspace({ version, seed, scope, refs }: WorkspaceProps) {
 const scopeText = (unitId: string | null, refs: PlanningRefs) => (unitId ? `Unit override · ${refs.unitName(unitId)}` : 'Site calendar');
 
 /**
+ * The publish result dialog, held by the page: publishing turns the version read-only, so the page
+ * redirects to its view URL and the editor remounts; the dialog stays open across both.
+ */
+function usePublishedDialog(refs: PlanningRefs) {
+  const saved = useSaveResult();
+  const { number } = useNumberFormat();
+  const capabilities = useCapabilities();
+  const onPublished = (result: CalendarPublishView) => {
+    const next = nextSetupLink('/setup/calendars', { unitId: result.version.unitId ?? undefined, capabilities });
+    saved.open(calendarPublishedResult({ result, scopeLabel: scopeText(result.version.unitId, refs), count: (value) => number(value), unitName: refs.unitName, next }));
+  };
+  return { onPublished, element: saved.element };
+}
+
+/**
  * A stored version: `/planning/calendars/:versionId/edit` for a draft the user may edit, the read-only
  * `/planning/calendars/:versionId` otherwise (a published version); the wrong one of the two redirects.
  */
@@ -56,19 +76,28 @@ export function CalendarVersionPage() {
   const { pathname, search } = useLocation();
   const { canWriteCalendars } = useCapabilities();
   const refs = usePlanningRefs();
+  const published = usePublishedDialog(refs);
   const version = useCalendarVersion(versionId);
   const state = dataStateOf(version);
   const shown = version.data;
   const canonical = shown ? calendarVersionPath(shown, canWriteCalendars) : null;
-  if (canonical && canonical !== pathname) return <Navigate to={`${canonical}${search}`} replace />;
+  if (canonical && canonical !== pathname) {
+    return (
+      <>
+        <Navigate to={`${canonical}${search}`} replace />
+        {published.element}
+      </>
+    );
+  }
   return (
     <Page>
       <PageHeader title={shown ? `Calendar version ${shown.version}` : 'Calendar version'} description={shown ? scopeText(shown.unitId, refs) : undefined} back={BACK} />
       {state === 'ready' && shown ? (
-        <Workspace version={shown} seed={draftOf(shown)} scope={shown.unitId ? { unitId: shown.unitId } : { siteId: shown.siteId }} refs={refs} />
+        <Workspace version={shown} seed={draftOf(shown)} scope={shown.unitId ? { unitId: shown.unitId } : { siteId: shown.siteId }} refs={refs} onPublished={published.onPublished} />
       ) : (
         <DataState state={state} error={version.error} />
       )}
+      {published.element}
     </Page>
   );
 }

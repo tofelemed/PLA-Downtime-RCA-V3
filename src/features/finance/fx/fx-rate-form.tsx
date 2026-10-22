@@ -9,9 +9,9 @@ import { NativeSelect } from '@/features/integration-console/components/native-s
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { FX_RATE_TYPE_LABELS } from '@/features/ux-kit/labels';
+import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { useCalendarPreference } from '@/lib/dates';
 import { FinanceField } from '../components/finance-field';
-import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 import { serverFieldErrors, type FieldErrors } from '../model/field-errors';
 import { emptyFxForm, fxCreateBody, FX_SCALE, validateFxForm, type FxFormValues } from '../model/fx-form';
 import { REPORTING_CURRENCIES } from '../model/policy-form';
@@ -21,27 +21,33 @@ const RATE_TYPES = Object.entries(FX_RATE_TYPE_LABELS).map(([value, label]) => (
 
 export interface FxRateFormProps {
   timezone: string;
+  /** the saved draft: the caller closes the dialog and shows the result dialog */
   onSaved: (rate: FxRateView) => void;
   onCancel: () => void;
 }
 
-/** A draft exchange rate version; the server validates the shape again and decides overlaps at approval. */
+/**
+ * A draft exchange rate version; the server validates the shape again and decides overlaps at approval.
+ * A refused save is the red alert at the top of the dialog, the refused fields marked and the input kept.
+ */
 export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
   const calendar = useCalendarPreference().calendar;
   const [values, setValues] = useState<FxFormValues>(emptyFxForm);
   const [errors, setErrors] = useState<FieldErrors>({});
   const create = useCreateFxRate();
+  const feedback = useSaveFeedback();
   const set = <K extends keyof FxFormValues>(key: K, value: FxFormValues[K]) => setValues((prev) => ({ ...prev, [key]: value }));
   const fieldError = (key: string) => errors[key] ?? serverFieldErrors(create.error)[key];
   const save = async () => {
     const found = validateFxForm(values);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    const saved = await create.submit(fxCreateBody(values)).catch(() => null);
+    const saved = await feedback.run(() => create.submit(fxCreateBody(values)), null).catch(() => null);
     if (saved) onSaved(saved);
   };
   return (
     <div className="space-y-3" data-testid="fx-form">
+      {feedback.alert}
       <FinanceField id="rateType" label="Rate table" hint="Which conversion basis this rate belongs to; name the market or fixing under Source." error={fieldError('rateType')}>
         <NativeSelect id="rateType" value={values.rateType} options={RATE_TYPES} onChange={(v) => set('rateType', v as FxRateType)} />
       </FinanceField>
@@ -74,7 +80,6 @@ export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
       <FinanceField id="fxSource" label="Source (optional)" error={fieldError('source')}>
         <Input id="fxSource" value={values.source} placeholder="e.g. CBI official fixing, treasury, exchange market" onChange={(e) => set('source', e.target.value)} />
       </FinanceField>
-      <FinanceRefusalAlert error={create.error} />
       <div className="flex justify-end gap-2">
         <Button variant="outline" onClick={onCancel}>
           Cancel

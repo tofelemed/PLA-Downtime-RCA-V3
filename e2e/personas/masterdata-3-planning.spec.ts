@@ -82,6 +82,8 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
 
     // CALENDAR_WRITERS (master_data_admin, manager_approver) may publish: the server accepts it
     await page.getByTestId('calendar-publish').click();
+    await expect(page.getByTestId('save-result-dialog')).toContainText('Published:', { timeout: 15_000 }); // result dialog (DECISIONS 2026-10-22)
+    await page.keyboard.press('Escape');
     await expect(page.getByTestId('calendar-editor')).toHaveAttribute('data-state', 'published', { timeout: 20_000 });
     await expect(page.getByTestId('calendar-immutable')).toBeVisible();
     await expect(page.locator('#calTimezone')).toBeDisabled();
@@ -125,6 +127,7 @@ test.describe('Master data admin — calendars, crews, profiles and rates (/plan
     expect(itemsOf((await api<{ items: unknown[] }>(felix.token, 'GET', `/v2/profiles?unitId=${unit.unitId}&limit=20`)).body)).toHaveLength(0);
     await page.selectOption('#productId', product.productId);
     await page.getByTestId('profile-save').click();
+    await page.getByTestId('save-result-dialog').getByRole('link', { name: 'View profile' }).click({ timeout: 20_000 }); // result dialog of a create
     await expect(page.getByTestId('profile-editor')).toBeHidden({ timeout: 20_000 });
     const profiles = await api<{ items: Array<{ id: string; state: string }> }>(felix.token, 'GET', `/v2/profiles?unitId=${unit.unitId}&limit=20`);
     expect(itemsOf(profiles.body)).toHaveLength(1);

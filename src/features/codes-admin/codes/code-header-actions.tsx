@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -18,7 +17,6 @@ export interface CodeHeaderActionsProps {
 /** Header actions of a code page: valuation link (impact codes), new sub-code, retire. */
 export function CodeHeaderActions({ library, code }: CodeHeaderActionsProps) {
   const { canWriteCodes, canViewMoney } = useCapabilities();
-  const navigate = useNavigate();
   const [creating, setCreating] = useState(false);
   const canAddChild = canWriteCodes && code.active && LIBRARIES[library].hierarchical && canHaveChildren(code);
   return (
@@ -33,7 +31,7 @@ export function CodeHeaderActions({ library, code }: CodeHeaderActionsProps) {
       )}
       {canWriteCodes && code.active && <CodeRetireAction library={library} code={code} />}
       {creating && (
-        <CodeCreateDialog library={library} parentId={code.id} onClose={() => setCreating(false)} onCreated={(id) => { setCreating(false); navigate(`/master-data/codes-rules/${library}/${id}`); }} />
+        <CodeCreateDialog library={library} parentId={code.id} onClose={() => setCreating(false)} />
       )}
     </>
   );

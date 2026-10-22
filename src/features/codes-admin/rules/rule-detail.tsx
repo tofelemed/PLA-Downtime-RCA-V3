@@ -51,7 +51,7 @@ export function RuleDetail({ rule, schema, currentUserId }: RuleDetailProps) {
           <TabsTrigger value="versions" data-testid="tab-rule-versions">Versions</TabsTrigger>
         </TabsList>
         <TabsContent value="builder" className="pt-4">
-          <RuleEditor key={`${rule.id}:${rule.rowVersion}`} schema={schema} rule={rule} onSaved={() => undefined} />
+          <RuleEditor key={`${rule.id}:${rule.rowVersion}`} schema={schema} rule={rule} />
         </TabsContent>
         <TabsContent value="simulation" className="pt-4">
           <SimulationPanel key={`${rule.id}:${rule.rowVersion}`} rule={rule} schema={schema} />

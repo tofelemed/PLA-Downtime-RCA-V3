@@ -89,6 +89,8 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(post?.url.pathname).toBe('/api/v2/micro-stop-policies');
     expect(post?.body).toEqual({ microStopSeconds: 90, microStopSecondsByAssetClass: { Bagger: 120 }, tripReasonCodes: ['ELEC-MTR'] });
     expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
+    const dialog = await screen.findByTestId('save-result-dialog');
+    expect(within(dialog).getByText('Micro-stop settings version 5 recorded')).toBeInTheDocument();
   });
 
   it('explains both grade-change choices and shows what the server refuses', async () => {
@@ -103,12 +105,23 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     fireEvent.click(screen.getByLabelText(/Count the allowance against the plan/));
     fireEvent.click(record);
     expect(await screen.findByText('A plant-wide policy needs an approver for the whole plant')).toBeInTheDocument();
+    expect(within(screen.getByTestId('transition-allowance')).getByTestId('save-failure-alert')).toBeInTheDocument();
+    expect(screen.queryByTestId('save-result-dialog')).toBeNull();
+    expect(screen.getByLabelText(/Count the allowance against the plan/)).toBeChecked();
     expect(screen.getByText(/Choose one of your units, or ask a plant-level approver/)).toBeInTheDocument();
     expect(screen.queryByText('Choose a plant first')).toBeNull();
   });
 
-  it('validates whole seconds and records only the declared stop-engine fields', async () => {
-    const calls = stubV2Fetch(reply);
+  it('validates whole seconds, records only the declared stop-engine fields and ends in the result dialog with the saved values shown', async () => {
+    let stored = STOP;
+    const calls = stubV2Fetch((call) => {
+      if (call.url.pathname.endsWith('/stop-event-policies/current')) return jsonResponse(200, stored);
+      if (call.method === 'POST' && call.url.pathname.endsWith('/stop-event-policies')) {
+        stored = { ...STOP, ...(call.body ?? {}), id: 'p5', version: 5, notes: 'faster debounce' };
+        return jsonResponse(201, stored);
+      }
+      return reply(call);
+    });
     actAs('SuperAdmin');
     renderPage();
     const debounce = await screen.findByLabelText('Stop debounce (seconds)');
@@ -116,9 +129,20 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     const save = screen.getByRole('button', { name: 'Record stop-engine settings (effective from now)' });
     expect(save).toBeDisabled();
     fireEvent.change(debounce, { target: { value: '8' } });
+    fireEvent.change(screen.getByLabelText('Change notes'), { target: { value: 'faster debounce' } });
     fireEvent.click(save);
-    await screen.findByRole('status');
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ deriveFromState: true, debounceSeconds: 8, restartConfirmSeconds: 10, duplicateToleranceSeconds: 120, autoMergeDuplicates: true, incidentWindowSeconds: 120, notes: '' });
+    const dialog = await screen.findByTestId('save-result-dialog');
+    expect(within(dialog).getByText('Stop-engine settings version 5 recorded')).toBeInTheDocument();
+    expect(within(dialog).getByText(/^Applies plant-wide from .*Periods already calculated keep the version they used\.$/)).toBeInTheDocument();
+    // the list is the page already shown: no redundant "Back to Stop and plan policy"
+    expect(within(dialog).queryByRole('link', { name: 'Back to Stop and plan policy' })).toBeNull();
+    expect(within(dialog).getByRole('link', { name: /^Next: / })).toBeInTheDocument();
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ deriveFromState: true, debounceSeconds: 8, restartConfirmSeconds: 10, duplicateToleranceSeconds: 120, autoMergeDuplicates: true, incidentWindowSeconds: 120, notes: 'faster debounce' });
+    // the section shows the version just recorded, its values in the fields, and no leftover status line
+    await waitFor(() => expect(screen.getByTestId('stop-engine-current')).toHaveTextContent('Version 5'));
+    expect(screen.getByLabelText('Stop debounce (seconds)')).toHaveValue(8);
+    expect(screen.queryByText(/Stop-engine version \d+ recorded/)).toBeNull();
+    expect(screen.queryByTestId('save-failure-alert')).toBeNull();
   });
 
   it('sends a commissioning backdate with its reason and lists the calculated periods the server refuses it over', async () => {
@@ -140,6 +164,8 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     fireEvent.change(within(commissioning).getByLabelText(/Reason for backdating/), { target: { value: ' meter commissioned 1 Oct ' } });
     fireEvent.click(save);
     expect(await screen.findByText('Figures were already calculated in this range')).toBeInTheDocument();
+    expect(screen.getByTestId('save-failure-alert')).toHaveFocus();
+    expect(screen.queryByTestId('save-result-dialog')).toBeNull();
     expect(screen.getByTestId('backdate-overlap')).toHaveTextContent('Extruder 1 · 2026-10-02 · Day');
     const body = calls.find((c) => c.method === 'POST')?.body;
     expect(body).toMatchObject({ backdateReason: 'meter commissioned 1 Oct' });

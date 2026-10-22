@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { loginViaUI } from '../test-utils/auth-helpers';
 import { findCode, findRule } from '../test-utils/codes-world';
-import { adminRefusal, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openRule } from './support/codes-finance-ui';
+import { adminRefusal, viewSaved, confirmDialog, ruleVersionRow, createCode, expectUnder, moveCode, openCode, openRule } from './support/codes-finance-ui';
 import { api, itemsOf, post } from './support/manager-api';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import { JONAS, MDA, PREFIX, asUser, mdaUnit, sessionOf, shortId, type Session } from './support/masterdata-world';
@@ -164,6 +164,7 @@ test.describe('Master data admin — codes, default mappings and declarative rul
     await condition(2).getByTestId('rule-value').selectOption({ label: unit.unitName });
     await expect(page.getByTestId('rule-validation')).toHaveAttribute('data-state', 'valid', { timeout: 20_000 });
     await page.getByTestId('rule-save').click();
+    await viewSaved(page);
     await expect(page.getByTestId('rule-detail')).toHaveAttribute('data-state', 'draft', { timeout: 20_000 });
     const stored = await findRule(zara.token, ruleName);
     expect(stored?.state).toBe('draft');

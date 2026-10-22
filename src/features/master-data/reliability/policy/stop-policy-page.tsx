@@ -32,7 +32,7 @@ export function StopPolicyPage() {
         <UnitSelect id="policy-scope" label="Applies to" value={unitId} onChange={choose} allowAll allLabel="The whole plant" />
       </div>
       {!canWriteOeePolicy && <p className="text-sm text-muted-foreground">Only manager approvers record new versions.</p>}
-      <Section title="Stop-engine settings"><StopEngineSection key={unitId} unitId={unitId} canWrite={canWriteOeePolicy} timezone={timezone} /></Section>
+      <Section title="Stop-engine settings"><StopEngineSection key={unitId} unitId={unitId} canWrite={canWriteOeePolicy} format={format} /></Section>
       <Section title="State engine preview"><DerivedStopPreview key={unitId} unitId={unitId} timezone={timezone} /></Section>
       <Section title="Micro-stops and trips">
         <MicroStopSection unitId={unitId} canWrite={canWriteOeePolicy} format={format} />

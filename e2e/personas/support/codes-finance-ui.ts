@@ -11,6 +11,11 @@ export type Library = 'reason-codes' | 'impact-codes' | 'oee-codes' | 'failure-c
 
 export const adminRefusal = (page: Page) => page.getByTestId('admin-refusal');
 
+/** "View …" in the result dialog of a create (DECISIONS 2026-10-22 "Save feedback"). */
+export async function viewSaved(page: Page): Promise<void> {
+  await page.getByTestId('save-result-dialog').locator('[data-action="view"]').click({ timeout: 20_000 });
+}
+
 /** The library tab of `/master-data/codes-rules`, optionally with a search. */
 export async function openLibrary(page: Page, library: Library = 'reason-codes', search = ''): Promise<void> {
   const query = new URLSearchParams({ library, ...(search ? { q: search } : {}) });
@@ -19,7 +24,7 @@ export async function openLibrary(page: Page, library: Library = 'reason-codes',
   await expect(page.getByTestId('codes-admin')).toBeVisible({ timeout: 60_000 });
 }
 
-/** "New code" from the library page; the new code's page opens. `parentLabel` null = top level, undefined = no parent field. */
+/** "New code" from the library page, then "View code" in the result dialog: the new code's page opens. `parentLabel` null = top level, undefined = no parent field. */
 export async function createCode(page: Page, library: Library, code: string, name: string, parentLabel?: string | null): Promise<void> {
   await openLibrary(page, library);
   await page.getByTestId('code-new').click();
@@ -28,6 +33,7 @@ export async function createCode(page: Page, library: Library, code: string, nam
   if (parentLabel === null) await page.getByTestId('new-parent').selectOption('');
   else if (parentLabel !== undefined) await page.getByTestId('new-parent').selectOption({ label: parentLabel });
   await page.getByTestId('code-create-submit').click();
+  await viewSaved(page);
   await expect(page.getByTestId('code-detail')).toHaveAttribute('data-code', code, { timeout: 20_000 });
 }
 
@@ -73,7 +79,7 @@ export async function fillDateTime(page: Page, legend: string, isoLocal: string)
   await group.locator('input[type="time"]').fill(time.slice(0, 5));
 }
 
-/** Adds an exchange rate draft through the dialog; the new rate's page opens. */
+/** Adds an exchange rate draft through the dialog; "View rate" in the result dialog opens the new rate's page. */
 export async function addFxDraft(page: Page, input: { rate: string; from: string; source: string }): Promise<void> {
   await page.goto('/finance?tab=fx');
   await page.getByTestId('fx-new').click({ timeout: 60_000 });
@@ -81,6 +87,7 @@ export async function addFxDraft(page: Page, input: { rate: string; from: string
   await fillDateTime(page, 'Valid from', input.from);
   await page.fill('#fxSource', input.source);
   await page.getByTestId('fx-save').click();
+  await page.getByRole('dialog', { name: 'Exchange rate draft saved' }).getByRole('link', { name: 'View rate' }).click({ timeout: 20_000 });
   await expect(page.getByTestId('fx-detail')).toBeVisible({ timeout: 20_000 });
 }
 

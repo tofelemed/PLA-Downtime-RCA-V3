@@ -7,6 +7,7 @@ import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { ApproveButton } from '@/features/ux-kit/approve-button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { BackdateOverlapList } from '@/features/policy-backdate/backdate-overlap-list';
+import { useToast } from '@/hooks/use-toast';
 import { FinanceRefusalAlert } from '../components/finance-refusal-alert';
 import { currenciesLabel, type PolicyStatus } from '../model/policy-status';
 
@@ -18,10 +19,12 @@ export interface PolicyApproveProps {
 /**
  * The finance sign-off of one version (VAL01) after a confirmation. The server checks role, access to
  * the whole plant and separation of duties (403 for the author); a refusal keeps the dialog open with
- * the reason. Only finance approvers see it (SME V1); the author sees it disabled with the reason.
+ * the reason (with the versions it overlaps). Success is a toast; the revaluation it queued stays on the
+ * version's page. Only finance approvers see it (SME V1); the author sees it disabled with the reason.
  */
 export function PolicyApprove({ policy, status }: PolicyApproveProps) {
   const approve = useApproveValuationPolicy();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const { canApproveValuation, isSuperAdmin } = useCapabilities();
   const access = approvalAccess(canApproveValuation, policy.createdBy, useCurrentUserId(), isSuperAdmin);
@@ -41,7 +44,10 @@ export function PolicyApprove({ policy, status }: PolicyApproveProps) {
         title={`Approve version ${policy.version}?`}
         description={`Version ${policy.version} (${currenciesLabel(policy)}) becomes the valuation basis from its start. This is the finance sign-off and cannot be undone here. Approving queues a recalculation of the periods from its start; approved periods get a change proposal.`}
         confirmLabel={`Approve version ${policy.version}`}
-        onConfirm={() => approve.submit({ id: policy.id })}
+        onConfirm={async () => {
+          await approve.submit({ id: policy.id });
+          toast({ title: `Version ${policy.version} approved` });
+        }}
       >
         {approve.error ? (
           <>

@@ -8,9 +8,11 @@ import { backdateBodyOf, backdateErrors, EMPTY_BACKDATE } from '@/features/polic
 import { CommissioningBackdateFields } from '@/features/policy-backdate/commissioning-backdate-fields';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { isSeedNote } from '@/features/ux-kit/format/built-in-default';
+import { SaveFailureAlert } from '@/features/ux-kit/save-result';
+import type { ReliabilityFormat } from '../shared/use-reliability-format';
+import { usePolicySaveFeedback, type PolicySaveFeedback } from './use-policy-save-feedback';
 
 const SECONDS = [
   ['debounceSeconds', 'Stop debounce (seconds)'],
@@ -19,25 +21,35 @@ const SECONDS = [
   ['incidentWindowSeconds', 'Incident grouping window (seconds)'],
 ] as const;
 const recordLabel = (backdated: boolean) => (backdated ? 'Record stop-engine settings (backdated)' : 'Record stop-engine settings (effective from now)');
-function SettingsForm({ policy, unitId, canWrite }: { policy: StopEnginePolicy; unitId: string; canWrite: boolean }) {
+interface SettingsFormProps {
+  policy: StopEnginePolicy;
+  unitId: string;
+  canWrite: boolean;
+  saving: PolicySaveFeedback;
+}
+/** The settings in force as an editable draft; a recorded version remounts it (keyed by the version) with the saved values. */
+function SettingsForm({ policy, unitId, canWrite, saving }: SettingsFormProps) {
   const [values, setValues] = useState<StopEngineSettings>(policy);
   const [notes, setNotes] = useState(isSeedNote(policy.notes) ? '' : policy.notes ?? '');
-  const [failure, setFailure] = useState<unknown>(null);
+  const failure = saving.feedback.failure;
   const [backdate, setBackdate] = useState(EMPTY_BACKDATE);
   const [checkBackdate, setCheckBackdate] = useState(false);
   const command = useRecordStopEnginePolicy();
   const valid = SECONDS.every(([key]) => Number.isInteger(values[key]) && values[key] >= 0 && values[key] <= 86400);
   const backdateProblems = checkBackdate ? backdateErrors(backdate) : {};
   const save = async () => {
-    setFailure(null);
+    saving.feedback.clearFailure();
     setCheckBackdate(true);
     if (Object.keys(backdateErrors(backdate)).length > 0) return;
     // Send only the DTO fields, never the version metadata returned by GET.
     const { deriveFromState, debounceSeconds, restartConfirmSeconds, duplicateToleranceSeconds, autoMergeDuplicates, incidentWindowSeconds } = values;
-    try { await command.submit({ ...(unitId ? { unitId } : {}), deriveFromState, debounceSeconds, restartConfirmSeconds, duplicateToleranceSeconds, autoMergeDuplicates, incidentWindowSeconds, notes, ...backdateBodyOf(backdate) }); }
-    catch (error: unknown) { setFailure(error); }
+    const body = { ...(unitId ? { unitId } : {}), deriveFromState, debounceSeconds, restartConfirmSeconds, duplicateToleranceSeconds, autoMergeDuplicates, incidentWindowSeconds, notes, ...backdateBodyOf(backdate) };
+    // a refusal stays in the red alert above the fields, with the input kept
+    await saving.record(() => command.submit(body)).catch(() => null);
   };
   return <div className="space-y-3">
+    <SaveFailureAlert error={failure} />
+    <BackdateOverlapList error={failure} />
     <fieldset disabled={!canWrite || command.isPending} className="grid gap-3 sm:grid-cols-2">
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={values.deriveFromState} onChange={(e) => setValues({ ...values, deriveFromState: e.target.checked })} />Derive stops from unit state</label>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={values.autoMergeDuplicates} onChange={(e) => setValues({ ...values, autoMergeDuplicates: e.target.checked })} />Automatically merge unique cross-source duplicates</label>
@@ -46,16 +58,18 @@ function SettingsForm({ policy, unitId, canWrite }: { policy: StopEnginePolicy; 
     </fieldset>
     {canWrite && <CommissioningBackdateFields idPrefix="stop-engine" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="record" disabled={command.isPending} />}
     {!valid && <p className="text-sm text-destructive">Enter whole seconds between 0 and 86400.</p>}
-    {failure !== null && <FriendlyErrorAlert error={failure} />}
-    <BackdateOverlapList error={failure} />
-    {command.data && <p role="status" className="text-sm">Stop-engine version {command.data.version} recorded.</p>}
     {canWrite && <Button disabled={!valid || command.isPending} onClick={() => void save()}>{recordLabel(backdate.effectiveFrom !== null)}</Button>}
   </div>;
 }
-export function StopEngineSection({ unitId, canWrite, timezone }: { unitId: string; canWrite: boolean; timezone: string }) {
+/** The stop-engine settings in force for the scope; a new version ends in the result dialog and the saved values. */
+export function StopEngineSection({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const policy = useStopEnginePolicy(unitId);
-  return <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>{policy.data && <div className="space-y-3">
-    <p className="text-sm text-muted-foreground">Version {policy.data.version} ({policy.data.unitId ? 'unit override' : 'plant-wide'}) · <EffectiveFrom iso={policy.data.effectiveFrom} tz={timezone} prefix="since" />. Existing derived events keep their recorded settings.</p>
-    <SettingsForm key={`${unitId}-${policy.data.id}`} policy={policy.data} unitId={unitId} canWrite={canWrite} />
-  </div>}</DataState>;
+  const saving = usePolicySaveFeedback('Stop-engine settings', unitId, format);
+  return <>
+    <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>{policy.data && <div className="space-y-3">
+      <p className="text-sm text-muted-foreground" data-testid="stop-engine-current">Version {policy.data.version} ({policy.data.unitId ? 'unit override' : 'plant-wide'}) · <EffectiveFrom iso={policy.data.effectiveFrom} tz={format.timezone} prefix="since" />. Existing derived events keep their recorded settings.</p>
+      <SettingsForm key={`${unitId}-${policy.data.id}`} policy={policy.data} unitId={unitId} canWrite={canWrite} saving={saving} />
+    </div>}</DataState>
+    {saving.feedback.dialog}
+  </>;
 }

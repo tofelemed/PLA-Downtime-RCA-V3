@@ -87,6 +87,10 @@ test('unit impact rule is drafted in the UI and approved by a different manager'
   expect(created.status()).toBe(201);
   const draft = await created.json() as UnitImpactRuleView;
   expect(Number(draft.fraction)).toBe(0.25);
+  const savedDialog = page.getByTestId('save-result-dialog'); // result dialog of a new rule version (DECISIONS 2026-10-22)
+  await expect(savedDialog).toContainText(`Draft rule version ${draft.version} added`);
+  await savedDialog.getByRole('link', { name: 'View rule' }).click();
+  await expect(savedDialog).toBeHidden();
   const row = page.getByRole('row').filter({ hasText: reason });
   await expect(row).toContainText('Partial: 25 % of the rate');
   await expect(row.getByTestId('approve-version')).toBeDisabled();
