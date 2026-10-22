@@ -1,5 +1,3 @@
-import { EquipmentSetupProvider } from '@/features/equipment-setup/equipment-setup-provider';
-import { SetupJourneyBar } from '@/features/equipment-setup/setup-journey-bar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,7 +84,7 @@ export const Layout = ({ children }: LayoutProps) => {
         )}
         <main ref={mainRef} id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 outline-none md:p-6">
           <RouteErrorBoundary resetKey={pathname} onAuthFailure={expireSession}>
-            <PlantAccessGuard><EquipmentSetupProvider><SetupJourneyBar />{children}</EquipmentSetupProvider></PlantAccessGuard>
+            <PlantAccessGuard>{children}</PlantAccessGuard>
           </RouteErrorBoundary>
           <HighlightTarget />
         </main>

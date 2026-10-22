@@ -1,41 +1,36 @@
-import { StepReadinessBadge } from './readiness-status';
-import { Button } from '@/components/ui/button';
-import { useCapabilities } from '@/features/auth/use-capabilities';
+import { UiIcon } from '@/lib/icons';
 import { NumberText } from '@/features/ux-kit/number-text';
-import { useEquipmentJourney } from './journey-context';
-import { emptySelection } from './journey-storage';
-import { canOpenStep, SETUP_STEPS, stepPrerequisite, type SetupPhase, type SetupStep } from './setup-steps';
+import { SetupStepCard } from './setup-step-card';
+import { stepsOfPhase, type SetupPhase } from './setup-steps';
 
-function SetupStepCard({ step, number }: { step: SetupStep; number: number }) {
-  const context = useEquipmentJourney();
-  const capabilities = useCapabilities();
-  const restriction = stepPrerequisite(step, context?.journey ?? emptySelection);
-  const allowed = canOpenStep(step, capabilities);
-  const current = context?.journey?.stepId === step.id;
-  return <li className="rounded-lg border bg-background p-4" aria-current={current ? 'step' : undefined}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <h3 className="font-medium"><NumberText value={number} />. {step.title}{step.optional ? ' (optional)' : ''}</h3>
-      <StepReadinessBadge stepId={step.id} />
-      <Button size="sm" variant="outline" disabled={!context || !allowed || !!restriction} onClick={() => context?.openStep(step.id)}>{current ? 'Resume step' : 'Open step'}</Button>
-    </div>
-    <p className="mt-2 text-sm">{step.action}</p>
-    <p className="mt-1 text-sm text-muted-foreground">Check: {step.verify}</p>
-    {restriction && <p className="mt-1 text-xs text-muted-foreground">{restriction}</p>}
-    {!allowed && <p className="mt-1 text-xs text-muted-foreground">Your current role cannot open this step; a permitted user must handle it.</p>}
-  </li>;
+export interface SetupPhaseSectionProps {
+  phase: SetupPhase;
+  number: number;
+  unitId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function SetupPhaseSection({ phase, number, expanded }: { phase: SetupPhase; number: number; expanded: boolean }) {
-  const steps = SETUP_STEPS.filter((step) => step.phase === phase.id);
-  return <details open={expanded} className="rounded-lg border bg-background p-4">
-    <summary aria-label={`Phase ${number}: ${phase.title}`} className="cursor-pointer rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <h2 className="inline font-medium">Phase <NumberText value={number} />: {phase.title}
-        <span className="ml-2 text-sm font-normal text-muted-foreground"><NumberText value={steps.length} /> {steps.length === 1 ? 'step' : 'steps'}</span>
-      </h2>
-    </summary>
-    <p className="my-3 text-sm text-muted-foreground">{phase.description}</p>
-    <ol aria-label={`${phase.title} steps`} className="space-y-3" start={SETUP_STEPS.indexOf(steps[0]) + 1}>
-      {steps.map((step) => <SetupStepCard key={step.id} step={step} number={SETUP_STEPS.indexOf(step) + 1} />)}
-    </ol>
-  </details>;
+/** One phase on the guide's vertical timeline: number badge, collapsible list of its steps. */
+export function SetupPhaseSection({ phase, number, unitId, open, onOpenChange }: SetupPhaseSectionProps) {
+  const steps = stepsOfPhase(phase.id);
+  const headingId = `setup-phase-${phase.id}`;
+  return <li aria-labelledby={headingId} className="relative pl-11 sm:pl-14">
+    <span aria-hidden className="absolute left-0 top-3.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground sm:left-1"><NumberText value={number} /></span>
+    <details open={open} onToggle={(event) => onOpenChange(event.currentTarget.open)} className="group rounded-lg border bg-background">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-lg p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0 space-y-1">
+          <h2 id={headingId} className="font-semibold">Phase <NumberText value={number} />: {phase.title}</h2>
+          <p className="text-sm text-muted-foreground">{phase.description}</p>
+        </div>
+        <span className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
+          <NumberText value={steps.length} /> {steps.length === 1 ? 'step' : 'steps'}
+          <UiIcon.expand aria-hidden className="h-4 w-4 transition-transform group-open:rotate-180" />
+        </span>
+      </summary>
+      <ol aria-label={`${phase.title} steps`} className="divide-y border-t">
+        {steps.map((step) => <SetupStepCard key={step.id} step={step} unitId={unitId} />)}
+      </ol>
+    </details>
+  </li>;
 }

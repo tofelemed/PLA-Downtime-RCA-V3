@@ -16,13 +16,13 @@ export interface SidebarGroupProps {
 
 /**
  * One section of the sidebar. Expanded: a disclosure button (`aria-expanded`, `aria-controls`) over its
- * links; a closed section keeps its links in the DOM (`hidden`) and the section holding the current
- * page is always open. Collapsed rail: the links only, separated from the next section by a divider.
+ * links; a closed section keeps its links in the DOM (`hidden`). Any section can be closed, the one
+ * holding the current page too (the sidebar opens it again when the user moves to another section).
+ * Collapsed rail: the links only, separated from the next section by a divider.
  */
 export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onNavigate }: SidebarGroupProps) {
-  const { section, items } = group;
-  const holdsActive = items.some((item) => item.href === activeHref);
-  const shown = collapsed || open || holdsActive;
+  const { section } = group;
+  const shown = collapsed || open;
   const visible = railItems(group, activeHref, collapsed);
   const listId = `nav-section-${section.key}`;
   const Chevron = shown ? UiIcon.chevronDown : UiIcon.chevronRight;
@@ -33,9 +33,8 @@ export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onN
           type="button"
           aria-expanded={shown}
           aria-controls={listId}
-          disabled={holdsActive}
           onClick={onToggle}
-          className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:hover:text-muted-foreground"
+          className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex-1 text-left">{section.label}</span>
           <Chevron className="h-3.5 w-3.5" aria-hidden />

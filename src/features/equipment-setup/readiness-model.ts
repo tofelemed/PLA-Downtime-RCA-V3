@@ -4,7 +4,6 @@ import type { ReadinessCheckView, ReadinessStatus } from '@/api/v2/types/equipme
 import { rangeFromDates, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { productionDayWindow } from '@/features/ux-kit/production-day-window';
 import { addCalendarDays, utcToPlantLocal } from '@/lib/dates';
-import type { SetupJourney } from './journey-storage';
 
 export interface ReadinessFilters { productId: string; operatingMode: string; range: InstantRange }
 export const STATUS_LABELS: Record<ReadinessStatus, string> = { ready: 'Passed', missing: 'Missing', needs_attention: 'Needs attention', not_checked: 'Not checked', optional: 'Optional' };
@@ -29,9 +28,9 @@ export function lastPlantDay(timezone: string, now: number = Date.now(), dayStar
   const day = addCalendarDays(today, -1);
   return rangeFromDates({ start: day, end: day }, timezone);
 }
-export function readinessQuery(journey: SetupJourney, filters: ReadinessFilters, day: { start: string; timezone: string }): EquipmentReadinessQuery | null {
+export function readinessQuery(unitId: string, filters: ReadinessFilters, day: { start: string; timezone: string }): EquipmentReadinessQuery | null {
   if (!validReadinessRange(filters.range)) return null;
   const { from, to } = productionDayWindow(filters.range, day.start, day.timezone);
   if (!from || !to) return null;
-  return { unitId: journey.unitId, productId: filters.productId || undefined, operatingMode: filters.operatingMode, from, to, connectionId: journey.connectionId || undefined, planId: journey.planId || undefined, periodId: journey.periodId || undefined };
+  return { unitId, productId: filters.productId || undefined, operatingMode: filters.operatingMode, from, to };
 }

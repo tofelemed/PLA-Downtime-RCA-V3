@@ -38,7 +38,8 @@ describe('AppSidebar', () => {
     expect(within(nav).getByRole('button', { name: 'Downtime analysis' })).toHaveAttribute('aria-expanded', 'true');
     expect(within(nav).getByRole('link', { name: 'Stops & timeline' })).toHaveAttribute('href', '/downtime/stops?units=u1&products=p1');
     expect(within(nav).getByRole('link', { name: 'Downtime overview' })).not.toHaveAttribute('aria-current');
-    expect(within(nav).getByRole('link', { name: 'Loss valuation' })).toHaveAttribute('href', '/pla-analytics/valuation?units=u1');
+    // other sections start closed (accordion); their links keep the scope
+    expect(within(nav).getByRole('link', { name: 'Loss valuation', hidden: true })).toHaveAttribute('href', '/pla-analytics/valuation?units=u1');
   });
 
   it('carries the shared analysis context (B-8) from the Event Hub to Downtime, PLA and Reports, not to other modules', async () => {
@@ -47,11 +48,11 @@ describe('AppSidebar', () => {
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
     expect(within(nav).getByRole('link', { name: 'Event Hub' })).toHaveAttribute('href', '/events?window=24h&units=u1&kinds=downtime');
-    expect(within(nav).getByRole('link', { name: 'Downtime overview' })).toHaveAttribute('href', '/downtime?window=24h&units=u1');
-    expect(within(nav).getByRole('link', { name: 'PLA overview' })).toHaveAttribute('href', '/pla-analytics?window=24h&units=u1');
-    expect(within(nav).getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/reports?window=24h&units=u1');
+    expect(within(nav).getByRole('link', { name: 'Downtime overview', hidden: true })).toHaveAttribute('href', '/downtime?window=24h&units=u1');
+    expect(within(nav).getByRole('link', { name: 'PLA overview', hidden: true })).toHaveAttribute('href', '/pla-analytics?window=24h&units=u1');
+    expect(within(nav).getByRole('link', { name: 'Reports', hidden: true })).toHaveAttribute('href', '/reports?window=24h&units=u1');
     expect(within(nav).getByRole('link', { name: 'My work' })).toHaveAttribute('href', '/my-queue');
-    expect(within(nav).getByRole('link', { name: 'RCA Analysis' })).toHaveAttribute('href', '/rca');
+    expect(within(nav).getByRole('link', { name: 'RCA Analysis', hidden: true })).toHaveAttribute('href', '/rca');
   });
 
   it('expanded (UX audit B-1): the two overviews are named apart, long labels wrap with the full name as title', async () => {
@@ -59,11 +60,11 @@ describe('AppSidebar', () => {
     renderAt('/planning/plans/p1');
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
-    expect(within(nav).getByRole('link', { name: 'Downtime overview' })).toHaveAttribute('href', '/downtime');
-    expect(within(nav).getByRole('link', { name: 'PLA overview' })).toHaveAttribute('href', '/pla-analytics');
-    expect(within(nav).queryByRole('link', { name: 'Overview' })).toBeNull();
+    expect(within(nav).getByRole('link', { name: 'Downtime overview', hidden: true })).toHaveAttribute('href', '/downtime');
+    expect(within(nav).getByRole('link', { name: 'PLA overview', hidden: true })).toHaveAttribute('href', '/pla-analytics');
+    expect(within(nav).queryByRole('link', { name: 'Overview', hidden: true })).toBeNull();
     // label in name (WCAG 2.5.3): a short label keeps the fuller name
-    expect(within(nav).getByRole('link', { name: 'PLA trends' })).toHaveTextContent('Trends');
+    expect(within(nav).getByRole('link', { name: 'PLA trends', hidden: true })).toHaveTextContent('Trends');
     const plans = within(nav).getByRole('link', { name: 'Plans' });
     expect(plans).toHaveAttribute('aria-current', 'page');
     expect(plans).toHaveAttribute('title', 'Plans');
@@ -98,12 +99,57 @@ describe('AppSidebar', () => {
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
     expect(within(nav).getByRole('button', { name: 'Collapse sidebar' })).toBeInTheDocument();
     const reliability = within(nav).getByRole('button', { name: 'Reliability' });
+    expect(reliability).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(reliability);
     expect(reliability).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav).getByRole('link', { name: 'Tasks' })).toBeInTheDocument();
     await userEvent.click(reliability);
     expect(reliability).toHaveAttribute('aria-expanded', 'false');
     expect(nav.querySelector('a[href="/tasks"]')).not.toBeNull();
     expect(within(nav).queryByRole('link', { name: 'Tasks' })).toBeNull();
-    // the section holding the current page cannot be closed
-    expect(within(nav).getByRole('button', { name: 'Overview' })).toBeDisabled();
+  });
+
+  it('the section holding the current page can be closed and opened again by hand', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const overview = within(nav).getByRole('button', { name: 'Overview' });
+    expect(overview).toBeEnabled();
+    expect(overview).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(overview);
+    expect(overview).toHaveAttribute('aria-expanded', 'false');
+    expect(document.getElementById(overview.getAttribute('aria-controls') ?? '')).not.toBeVisible();
+    await userEvent.click(overview);
+    expect(overview).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('accordion: on first load only the current section is open; moving to another section opens it and closes the previous', async () => {
+    window.localStorage.clear();
+    renderAt('/pla-analytics/oee');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const section = (name: string) => within(nav).getByRole('button', { name });
+    expect(section('Production loss analysis (PLA)')).toHaveAttribute('aria-expanded', 'true');
+    expect(section('Downtime analysis')).toHaveAttribute('aria-expanded', 'false');
+    // a section opened by hand stays open until the current section changes
+    await userEvent.click(section('Downtime analysis'));
+    expect(section('Downtime analysis')).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(within(nav).getByRole('link', { name: 'Stops & timeline' }));
+    expect(section('Downtime analysis')).toHaveAttribute('aria-expanded', 'true');
+    expect(section('Production loss analysis (PLA)')).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(section('Overview'));
+    await userEvent.click(within(nav).getByRole('link', { name: 'Dashboard' }));
+    expect(section('Overview')).toHaveAttribute('aria-expanded', 'true');
+    expect(section('Downtime analysis')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('sections are listed Overview, Production, PLA, Downtime, Reliability, ...', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const sections = within(nav).getAllByRole('button').filter((button) => button.hasAttribute('aria-controls')).map((button) => button.textContent);
+    expect(sections.slice(0, 5)).toEqual(['Overview', 'Production', 'Production loss analysis (PLA)', 'Downtime analysis', 'Reliability']);
   });
 });

@@ -32,6 +32,21 @@ describe('sidebar state per user', () => {
     expect(renderHook(() => useNavState('u2')).result.current.collapsed).toBe(true);
   });
 
+  it('focusSection opens the section and closes every other one, once per change of section', () => {
+    const { result } = renderHook(() => useNavState('u1'));
+    act(() => result.current.focusSection('pla'));
+    expect(result.current.isSectionOpen('pla')).toBe(true);
+    expect(result.current.isSectionOpen('downtime')).toBe(false);
+    expect(result.current.isSectionOpen('overview')).toBe(false);
+    // a manual close of the focused section sticks while the section stays the same
+    act(() => result.current.toggleSection('pla'));
+    act(() => result.current.focusSection('pla'));
+    expect(result.current.isSectionOpen('pla')).toBe(false);
+    act(() => result.current.focusSection('downtime'));
+    expect(result.current.isSectionOpen('downtime')).toBe(true);
+    expect(result.current.isSectionOpen('pla')).toBe(false);
+  });
+
   it('storage failures never break the menu', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota');

@@ -25,8 +25,7 @@ describe('equipment setup QA fixes (2026-10-19)', () => {
   it('re-test N2: a date-only readiness window is production days from the operational day start', () => {
     const picked = rangeFromDates({ start: '2026-10-17', end: '2026-10-17' }, 'Asia/Tehran');
     expect(productionDayWindow(picked, '06:00', 'Asia/Tehran')).toEqual({ from: '2026-10-17T02:30:00.000Z', to: '2026-10-18T02:30:00.000Z' });
-    const journey = { unitId: 'u1', connectionId: '', planId: '', periodId: '' } as Parameters<typeof readinessQuery>[0];
-    const query = readinessQuery(journey, { productId: '', operatingMode: 'normal', range: picked }, { start: '06:00', timezone: 'Asia/Tehran' });
+    const query = readinessQuery('u1', { productId: '', operatingMode: 'normal', range: picked }, { start: '06:00', timezone: 'Asia/Tehran' });
     expect(query).toMatchObject({ from: '2026-10-17T02:30:00.000Z', to: '2026-10-18T02:30:00.000Z' });
     expect(dayStartText('06:00:00')).toBe('06:00');
   });

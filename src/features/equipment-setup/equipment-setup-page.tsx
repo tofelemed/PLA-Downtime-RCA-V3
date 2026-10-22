@@ -1,36 +1,60 @@
-import { EquipmentReadiness } from './equipment-readiness';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PageGate } from '@/features/admin/shared/page-gate';
 import { UnitSelect } from '@/features/master-data/components/unit-select';
+import { NumberText } from '@/features/ux-kit/number-text';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { useEquipmentJourney } from './journey-context';
-import { emptySelection } from './journey-storage';
-import { canOpenStep, SETUP_PHASES, setupStep, stepPrerequisite } from './setup-steps';
+import { EquipmentReadiness } from './equipment-readiness';
 import { SetupPhaseSection } from './setup-phase-section';
+import { SETUP_PHASES, SETUP_STEPS, type SetupPhaseId } from './setup-steps';
+import { useGuideUnit } from './use-guide-unit';
 
-/** Start or resume the real configuration pages; readiness comes from the backend previews/periods. */
+const ALL_PHASES: ReadonlySet<SetupPhaseId> = new Set(SETUP_PHASES.map((phase) => phase.id));
+
+/** Which phases are expanded; all of them at first so the whole guide can be scanned. */
+function useOpenPhases() {
+  const [open, setOpen] = useState<ReadonlySet<SetupPhaseId>>(ALL_PHASES);
+  const toggle = (id: SetupPhaseId, isOpen: boolean) => setOpen((current) => {
+    if (current.has(id) === isOpen) return current;
+    const next = new Set(current);
+    if (isOpen) next.add(id);
+    else next.delete(id);
+    return next;
+  });
+  return { open, toggle, expandAll: () => setOpen(ALL_PHASES), collapseAll: () => setOpen(new Set()) };
+}
+
+function GuideToolbar({ unitId, onUnitChange, phases }: { unitId: string; onUnitChange: (id: string) => void; phases: ReturnType<typeof useOpenPhases> }) {
+  return <section aria-label="Guide options" className="flex flex-wrap items-end justify-between gap-4 rounded-lg border bg-background p-4">
+    <div className="w-full max-w-sm space-y-1">
+      <UnitSelect id="setup-guide-unit" label="Production unit (optional)" value={unitId} onChange={onUnitChange} allowAll allLabel="No unit selected" />
+      <p className="text-xs text-muted-foreground">Choose a unit to open it directly from the links below and to run its readiness checks.</p>
+    </div>
+    <div className="flex gap-2">
+      <Button size="sm" variant="outline" disabled={phases.open.size === ALL_PHASES.size} onClick={phases.expandAll}>Expand all</Button>
+      <Button size="sm" variant="outline" disabled={phases.open.size === 0} onClick={phases.collapseAll}>Collapse all</Button>
+    </div>
+  </section>;
+}
+
+/** Reference guide: every phase and step of setting up a production unit, each linking to the page where it is done. */
 export function EquipmentSetupPage() {
-  const context = useEquipmentJourney();
   const capabilities = useCapabilities();
-  const selection = context?.journey ?? emptySelection;
-  const current = setupStep(context?.journey?.stepId ?? 'plant');
-  return <PageGate title="Equipment setup guide" allowed={capabilities.canReachMasterData} deniedText="Your current role cannot access the equipment setup guide.">
+  const [unitId, setUnitId] = useGuideUnit();
+  const phases = useOpenPhases();
+  const description = <>Set up a production unit, such as an HDPE extruder, in <NumberText value={SETUP_PHASES.length} /> phases and <NumberText value={SETUP_STEPS.length} /> steps. Each step links to the page where you do it.</>;
+  return <PageGate title={pageNameOf('/equipment-setup')} allowed={capabilities.canReachMasterData} deniedText="Your current role cannot access the equipment setup guide.">
     <Page>
-      <PageHeader title="Equipment setup guide" description="Set up one production unit, such as an HDPE extruder, in six phases. Expand a phase for the exact actions and checks." />
-      <section aria-label="Start or resume equipment setup" className="space-y-3 rounded-lg border bg-background p-4">
-        <p className="text-sm">Start with the plant selected in the header. Reuse existing plant settings, products, code libraries and published calendars when they apply; create only the records missing for this equipment.</p>
-        <p className="text-sm text-muted-foreground">Phases 1–4 configure the equipment. Phases 5–6 prove its first production period and show the results. Your place is remembered in this browser session for this user and plant.</p>
-        {!context?.journey && <div className="max-w-sm"><UnitSelect id="setup-existing-unit" label="Existing production unit (optional)" value="" disabled={!context} onChange={(id) => context?.chooseUnit(id)} /></div>}
-        <Button disabled={!context || !canOpenStep(current, capabilities) || !!stepPrerequisite(current, selection)} onClick={() => context?.openStep(current.id)}>{context?.journey ? `Continue: ${current.title}` : 'Start equipment setup'}</Button>
-        <p className="text-xs text-muted-foreground">Automatic checks show saved evidence for their named requirements. A visited step is not proof of completion: save, publish or approve on its actual page, then review its checks.{capabilities.isSuperAdmin ? ' SuperAdmin can perform every role personally.' : ''}</p>
-      </section>
-      <EquipmentReadiness>
-      <div className="space-y-3" aria-label="Equipment setup phases">
-        {SETUP_PHASES.map((phase, index) => <SetupPhaseSection key={`${phase.id}:${current.phase}`} phase={phase} number={index + 1} expanded={phase.id === current.phase} />)}
-      </div>
+      <PageHeader title={pageNameOf('/equipment-setup')} description={description} />
+      <GuideToolbar unitId={unitId} onUnitChange={setUnitId} phases={phases} />
+      <EquipmentReadiness unitId={unitId}>
+        <ol aria-label="Setup phases" className="relative space-y-4 before:absolute before:bottom-6 before:left-4 before:top-6 before:w-px before:bg-border sm:before:left-5">
+          {SETUP_PHASES.map((phase, index) => <SetupPhaseSection key={phase.id} phase={phase} number={index + 1} unitId={unitId} open={phases.open.has(phase.id)} onOpenChange={(isOpen) => phases.toggle(phase.id, isOpen)} />)}
+        </ol>
       </EquipmentReadiness>
-      <p className="text-sm text-muted-foreground">Exit guide closes navigation only. Saved records remain available on their normal pages.</p>
+      <p className="text-sm text-muted-foreground">Opening a page from this guide does not save, approve or certify anything. Finish each step on its own page, then review its check.</p>
     </Page>
   </PageGate>;
 }

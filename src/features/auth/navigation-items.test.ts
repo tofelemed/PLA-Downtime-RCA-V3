@@ -15,9 +15,9 @@ const ADMINS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin'];
 const PREVIOUS_MENU: Record<string, string[]> = {
   // Overview
   Dashboard: ALL,
+  Reports: NOT_OPERATOR,
   // QA re-test 19 Oct (W-OP): roles that decide an inbox kind (operators decide duplicate-stop merges)
   'Pending approvals': ALL,
-  Reports: NOT_OPERATOR,
   // Production
   'Event Hub': ALL,
   // owner 21 Oct 2026: plans stay here; profiles and calendars moved to Setup
@@ -28,12 +28,7 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Month close': NOT_OPERATOR,
   // SME E4 uncertainty budgets: read by every analysis role
   'Measurement uncertainty': NOT_OPERATOR,
-  // Focused analysis pages use the same read capability as the original two pages.
-  'Downtime analysis': ALL,
-  'Stops & timeline': ALL,
-  'Causes & Pareto': ALL,
-  'Trends & comparisons': ALL,
-  'Reliability (MTBF/MTTR)': ALL,
+  // PLA, then Downtime (owner 22 Oct 2026). Focused analysis pages use the same read capability as the original two pages.
   'Production loss analysis': ALL,
   'Loss breakdown': ALL,
   'PLA trends': ALL,
@@ -45,6 +40,12 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   'Capacity gap': ALL,
   // UX audit B-5: the period grid, gated like Plans, Profiles & Calendars
   'Period accounting': NOT_OPERATOR,
+  // Downtime analysis
+  'Downtime analysis': ALL,
+  'Stops & timeline': ALL,
+  'Causes & Pareto': ALL,
+  'Trends & comparisons': ALL,
+  'Reliability (MTBF/MTTR)': ALL,
   // Reliability
   'RCA Analysis': ALL,
   'Bad actors': NOT_OPERATOR,
@@ -234,19 +235,24 @@ describe('navigation sections', () => {
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
+  it('sections in display order (owner 22 Oct 2026): Overview, Production, PLA, Downtime, Reliability, then setup and admin', () => {
+    expect(NAV_SECTIONS.map((section) => section.key)).toEqual(['overview', 'production', 'pla', 'downtime', 'reliability', 'setup', 'integration', 'administration']);
+    expect(NAVIGATION_ITEMS.filter((item) => item.section === 'overview').map((item) => item.name)).toEqual(['Dashboard', 'Reports', 'Pending approvals']);
+  });
+
   it('every item has its own icon', () => {
     expect(new Set(NAVIGATION_ITEMS.map((item) => item.icon)).size).toBe(NAVIGATION_ITEMS.length);
   });
 
   it.each([
-    ['SuperAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup', 'integration', 'administration']],
+    ['SuperAdmin', ['overview', 'production', 'pla', 'downtime', 'reliability', 'setup', 'integration', 'administration']],
     // owner 18 Oct 2026: the Integration section is SuperAdmin-only
-    ['TenantAdmin', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup', 'administration']],
-    ['Manager', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup', 'administration']],
+    ['TenantAdmin', ['overview', 'production', 'pla', 'downtime', 'reliability', 'setup', 'administration']],
+    ['Manager', ['overview', 'production', 'pla', 'downtime', 'reliability', 'setup', 'administration']],
     // engineers and operators have no administration page any more (master data and finance moved to Setup)
-    ['Engineer', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup']],
+    ['Engineer', ['overview', 'production', 'pla', 'downtime', 'reliability', 'setup']],
     // operators keep the standby log (Production rules) and read the code libraries (Codes & failures)
-    ['Operator', ['overview', 'production', 'downtime', 'pla', 'reliability', 'setup']],
+    ['Operator', ['overview', 'production', 'pla', 'downtime', 'reliability', 'setup']],
   ])('a %s sees only the sections that hold one of its items', (role, sections) => {
     expect(sectionsOf(role)).toEqual(sections);
   });

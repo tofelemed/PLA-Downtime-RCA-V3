@@ -3,8 +3,8 @@ import { EntityIcon, type AppIcon } from '@/lib/icons';
 import type { FeatureFlagKey } from '@/api/v2/types/flags';
 import type { Capabilities, CapabilityKey } from './capabilities';
 
-/** Sidebar sections, in display order (docs/UI_UX_AUDIT.md §1). */
-export type NavSectionKey = 'overview' | 'production' | 'downtime' | 'pla' | 'reliability' | 'setup' | 'integration' | 'administration';
+/** Sidebar sections; `NAV_SECTIONS` gives the display order (owner 22 Oct 2026: PLA before Downtime). */
+export type NavSectionKey = 'overview' | 'production' | 'pla' | 'downtime' | 'reliability' | 'setup' | 'integration' | 'administration';
 
 export interface NavSection {
   key: NavSectionKey;
@@ -15,8 +15,8 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   { key: 'overview', label: 'Overview', icon: EntityIcon.dashboard },
   { key: 'production', label: 'Production', icon: EntityIcon.plant },
-  { key: 'downtime', label: 'Downtime analysis', icon: EntityIcon.downtime },
   { key: 'pla', label: 'Production loss analysis (PLA)', icon: EntityIcon.lossAnalysis },
+  { key: 'downtime', label: 'Downtime analysis', icon: EntityIcon.downtime },
   { key: 'reliability', label: 'Reliability', icon: EntityIcon.rcaCase },
   { key: 'setup', label: 'Setup', icon: EntityIcon.equipmentSetup },
   { key: 'integration', label: 'Integration', icon: EntityIcon.integration },
@@ -51,8 +51,8 @@ function sidebarLabel(page: { key: string; label: string }, overviewLabel: strin
  */
 export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: EntityIcon.dashboard, section: 'overview', capability: 'canViewOperations', description: 'Key figures of the selected plant' },
-  { name: 'Pending approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canReachApprovals', description: 'Pending records for your approval roles in the selected plant' },
   { name: 'Reports', href: '/reports', icon: EntityIcon.report, section: 'overview', capability: 'canViewAnalysis', description: 'OEE, loss, downtime and reconciliation reports' },
+  { name: 'Pending approvals', href: '/approvals', icon: EntityIcon.approvals, section: 'overview', capability: 'canReachApprovals', description: 'Pending records for your approval roles in the selected plant' },
   { name: 'Event Hub', href: '/events', icon: EntityIcon.event, section: 'production', capability: 'canViewOperations', description: 'Stops and production events' },
   {
     // owner 21 Oct 2026: plans are made every period, so they stay here; profiles and calendars moved to Setup
@@ -92,7 +92,6 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: 'Uncertainty budgets per measurement boundary that justify the reconciliation tolerance',
   },
-  ...DOWNTIME_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'Downtime overview'), href: page.path, icon: page.icon, section: 'downtime', capability: 'canViewOperations', description: page.description, exact: true })),
   // owner 19 Oct 2026 (QA audit): no money for operators, so Loss valuation needs canViewMoney (menu and route gate)
   ...PLA_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'PLA overview'), href: page.path, icon: page.icon, section: 'pla', capability: page.key === 'valuation' ? 'canViewMoney' : 'canViewOperations', description: page.description, exact: true })),
   {
@@ -104,6 +103,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
     capability: 'canViewAnalysis',
     description: "Period grid of the unit's active approved plan; the plan list when several plans are active",
   },
+  ...DOWNTIME_PAGES.map((page): NavigationItem => ({ name: page.name, label: sidebarLabel(page, 'Downtime overview'), href: page.path, icon: page.icon, section: 'downtime', capability: 'canViewOperations', description: page.description, exact: true })),
   // operators see their RCA actions and the investigations they belong to, read-only (Marun E2E owner rule)
   { name: 'RCA Analysis', href: '/rca', icon: EntityIcon.rcaCase, section: 'reliability', capability: 'canViewOperations', description: 'Root cause investigations' },
   { name: 'Bad actors', href: '/reliability/bad-actors', icon: EntityIcon.badActor, section: 'reliability', capability: 'canViewAnalysis', description: 'Monthly top assets and failure modes by approved loss' },

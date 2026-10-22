@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createLogger } from '@/lib/logger';
-import type { NavSectionKey } from './navigation-items';
+import { NAV_SECTIONS, type NavSectionKey } from './navigation-items';
 
 const log = createLogger('nav-state');
 const KEY_PREFIX = 'proact.nav.';
@@ -54,12 +54,22 @@ export interface NavStateApi extends NavState {
   toggleCollapsed: () => void;
   isSectionOpen: (section: NavSectionKey) => boolean;
   toggleSection: (section: NavSectionKey) => void;
+  /**
+   * Accordion on navigation: opens `section` and closes every other one, once per change of the focused
+   * section (calling it again for the same section is a no-op, so a manual close of it sticks).
+   */
+  focusSection: (section: NavSectionKey) => void;
 }
 
 /** `{collapsed, closedSections}` of the signed-in user, persisted per user in localStorage (guarded). */
 export function useNavState(userId: string | null): NavStateApi {
   const [state, setState] = useState<NavState>(() => loadNavState(userId));
-  useEffect(() => setState(loadNavState(userId)), [userId]);
+  // the section last focused in this page load (not persisted: a reload opens the current page's section)
+  const focused = useRef<NavSectionKey | null>(null);
+  useEffect(() => {
+    focused.current = null;
+    setState(loadNavState(userId));
+  }, [userId]);
 
   const update = useCallback(
     (next: (previous: NavState) => NavState) =>
@@ -82,6 +92,14 @@ export function useNavState(userId: string | null): NavStateApi {
       })),
     [update],
   );
+  const focusSection = useCallback(
+    (section: NavSectionKey) => {
+      if (focused.current === section) return;
+      focused.current = section;
+      update((s) => ({ ...s, closedSections: NAV_SECTIONS.map((entry) => entry.key).filter((key) => key !== section) }));
+    },
+    [update],
+  );
   const isSectionOpen = useCallback((section: NavSectionKey) => !state.closedSections.includes(section), [state.closedSections]);
-  return { ...state, setCollapsed, toggleCollapsed, isSectionOpen, toggleSection };
+  return { ...state, setCollapsed, toggleCollapsed, isSectionOpen, toggleSection, focusSection };
 }

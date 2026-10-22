@@ -10,17 +10,15 @@ import { pageNameOf } from '@/features/auth/navigation-items';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { useOperationalDayStart } from '@/features/ux-kit/use-operational-day-start';
-import { useEquipmentJourney } from './journey-context';
 import { ReadinessContext } from './readiness-context';
 import { ReadinessResults } from './readiness-results';
 import { useReadinessFilters } from './use-readiness-filters';
-import type { SetupJourney } from './journey-storage';
 
-function UnitReadiness({ journey, storageKey, children }: { journey: SetupJourney; storageKey: string; children: ReactNode }) {
+function UnitReadiness({ unitId, storageKey, children }: { unitId: string; storageKey: string; children: ReactNode }) {
   const { timezone } = usePlantTimezone();
   const dayStart = useOperationalDayStart();
   const [filters, setFilters] = useReadinessFilters(storageKey, timezone, dayStart ?? '00:00');
-  const query = dayStart === null ? null : readinessQuery(journey, filters, { start: dayStart, timezone });
+  const query = dayStart === null ? null : readinessQuery(unitId, filters, { start: dayStart, timezone });
   const validWindow = query !== null;
   const readiness = useEquipmentReadiness(query);
   const snapshot = readiness.isError || !validWindow ? null : readiness.data ?? null;
@@ -38,11 +36,11 @@ function UnitReadiness({ journey, storageKey, children }: { journey: SetupJourne
     {children}
   </ReadinessContext.Provider>;
 }
-export function EquipmentReadiness({ children }: { children: ReactNode }) {
-  const journey = useEquipmentJourney()?.journey;
+/** Readiness checks for the unit chosen at the top of the guide; the step badges below read them from context. */
+export function EquipmentReadiness({ unitId, children }: { unitId: string; children: ReactNode }) {
   const tenantId = useV2TenantId();
   const userId = useCurrentUserId();
-  if (!journey?.unitId || !tenantId || !userId) return <><p className="text-sm text-muted-foreground">Choose the setup production unit to see automatic readiness checks.</p>{children}</>;
-  const storageKey = `proact:equipment-readiness:v2:${tenantId}:${userId}:${journey.unitId}`;
-  return <UnitReadiness key={storageKey} journey={journey} storageKey={storageKey}>{children}</UnitReadiness>;
+  if (!unitId || !tenantId || !userId) return <>{children}</>;
+  const storageKey = `proact:equipment-readiness:v2:${tenantId}:${userId}:${unitId}`;
+  return <UnitReadiness key={storageKey} unitId={unitId} storageKey={storageKey}>{children}</UnitReadiness>;
 }

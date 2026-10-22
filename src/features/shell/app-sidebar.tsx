@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { activeNavItem, groupNavigationItems, visibleNavigationItems } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -9,7 +10,8 @@ import { useMenuFlags } from './use-menu-flags';
 
 /**
  * The sidebar: capability-gated items (features/auth) grouped in collapsible sections; an icon rail
- * when collapsed. The toggle's accessible name is exactly "Expand sidebar" / "Collapse sidebar". Below
+ * when collapsed. Moving to a page of another section opens that section and closes the others
+ * (`focusSection`); any section can still be opened or closed by hand. The toggle's accessible name is exactly "Expand sidebar" / "Collapse sidebar". Below
  * 1024 px it is rendered inside the navigation drawer (`variant="drawer"`).
  */
 export interface AppSidebarProps {
@@ -25,7 +27,14 @@ export function AppSidebar({ nav, variant = 'sidebar', onNavigate }: AppSidebarP
   const { pathname } = useLocation();
   const visible = visibleNavigationItems(capabilities, useMenuFlags());
   const groups = groupNavigationItems(visible);
-  const activeHref = activeNavItem(visible, pathname)?.href;
+  const active = activeNavItem(visible, pathname);
+  const activeHref = active?.href;
+  const activeSection = active?.section;
+  const { focusSection } = nav;
+  // accordion on navigation: moving to a page of another section opens it and closes the others
+  useEffect(() => {
+    if (activeSection) focusSection(activeSection);
+  }, [activeSection, focusSection]);
   const ToggleIcon = nav.collapsed ? UiIcon.expandSidebar : UiIcon.collapseSidebar;
   return (
     <nav aria-label="Main menu" className="flex h-full min-h-0 flex-col">

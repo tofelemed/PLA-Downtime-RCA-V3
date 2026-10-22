@@ -18,8 +18,6 @@ vi.mock('@/features/notifications/notification-bell', () => ({ NotificationBell:
 vi.mock('@/features/shell/user-badge', () => ({ UserBadge: () => null }));
 vi.mock('@/features/shell/live-indicator', () => ({ LiveIndicator: () => null }));
 vi.mock('@/features/v2-foundation/plant-access-guard', () => ({ PlantAccessGuard: passThrough }));
-vi.mock('@/features/equipment-setup/equipment-setup-provider', () => ({ EquipmentSetupProvider: passThrough }));
-vi.mock('@/features/equipment-setup/setup-journey-bar', () => ({ SetupJourneyBar: () => null }));
 
 const { Layout } = await import('@/components/Layout');
 
@@ -71,7 +69,10 @@ describe('responsive shell (UX audit H-1)', () => {
     const nav = within(drawer).getByRole('navigation', { name: 'Main menu' });
     // always expanded in the drawer, without the rail toggle
     expect(within(nav).queryByRole('button', { name: /sidebar/ })).toBeNull();
-    await userEvent.click(within(nav).getByRole('link', { name: 'Month close' }));
+    // the drawer opens the current page's section (Overview) and closes the others, like the sidebar
+    expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(nav).getByRole('button', { name: 'Production' })).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(within(nav).getByRole('link', { name: 'Reports' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull());
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false');
   });
