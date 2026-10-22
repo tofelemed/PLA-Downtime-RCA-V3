@@ -5575,6 +5575,7 @@
     },
     "/api/v2/sites": {
       "get": {
+        "description": "Tenant from the identity; the plant’s default site is created on first use. `q` searches the name. `unitCount` = active units of the site (the default site also owns units without a site). Writes: POST /v2/sites, PATCH /v2/sites/{id}.",
         "operationId": "CalendarScheduleV2Controller_listSites_v2",
         "parameters": [
           {
@@ -5603,6 +5604,13 @@
             "in": "query",
             "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
             "schema": {
+              "default": "createdAt",
+              "enum": [
+                "name",
+                "-name",
+                "createdAt",
+                "-createdAt"
+              ],
               "type": "string"
             }
           },
@@ -5623,6 +5631,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search in the site name",
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5635,9 +5653,47 @@
             "bearer": []
           }
         ],
-        "summary": "List sites of the caller tenant (timezone, operational day start)",
+        "summary": "List sites of the caller tenant (keyset; sort createdAt or name; timezone, operational day start, unit count)",
         "tags": [
           "v2 · Calendars"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. Super administrators, plant administrators, or the administrator of the plant’s organization (403 ORGANIZATION_NOT_ALLOWED). `timezone` defaults to the plant’s, `operationalDayStart` to the default site’s. 409 SITE_NAME_EXISTS (case-insensitive).",
+        "operationId": "SitesV2Controller_create_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteV2CreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a site in the acting plant",
+        "tags": [
+          "v2 · Sites"
         ]
       }
     },
@@ -5667,6 +5723,44 @@
         "summary": "Get one site; foreign ids are 404",
         "tags": [
           "v2 · Calendars"
+        ]
+      },
+      "patch": {
+        "description": "Same callers as create. 404 for a site outside the acting plant; 409 SITE_NAME_EXISTS.",
+        "operationId": "SitesV2Controller_rename_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteV2ChangeDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Rename a site",
+        "tags": [
+          "v2 · Sites"
         ]
       }
     },
@@ -33341,6 +33435,12 @@
             "type": "string",
             "maxLength": 255
           },
+          "siteId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Site of the plant (GET /v2/sites); null or absent = the plant default site (422 SITE_NOT_IN_PLANT)"
+          },
           "description": {
             "type": "object",
             "maxLength": 2000,
@@ -33378,6 +33478,12 @@
           "name": {
             "type": "string",
             "maxLength": 255
+          },
+          "siteId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Site of the plant (GET /v2/sites); null or absent = the plant default site (422 SITE_NOT_IN_PLANT)"
           },
           "description": {
             "type": "object",
@@ -34673,6 +34779,44 @@
             "type": "string"
           }
         }
+      },
+      "SiteV2CreateDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "example": "North yard"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "example": "Asia/Tehran",
+            "description": "IANA time zone; default = the plant time zone"
+          },
+          "operationalDayStart": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Start of the operational day, HH:MM; default = the default site’s"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "SiteV2ChangeDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "name"
+        ]
       }
     }
   }

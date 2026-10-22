@@ -71,16 +71,16 @@ function Tree() {
 export function HierarchyPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
-  const { canUseAdminPanel } = useCapabilities();
+  const { canAdministerTenant } = useCapabilities();
   const setQ = (next: string) => setParams(next ? { q: next } : {}, { replace: true });
   return (
     <MasterDataLayout title="Plant hierarchy" description="Organization, plants, units and assets of the plants you can work in.">
       <Section
         title="Hierarchy"
         description={
-          canUseAdminPanel ? (
+          canAdministerTenant ? (
             <>
-              Organizations and plants are managed in the <Link className="underline" to="/admin">Admin panel</Link>.
+              Organizations and plants are managed in <Link className="underline" to="/setup/plants">Setup › Organizations &amp; plants</Link>.
             </>
           ) : undefined
         }

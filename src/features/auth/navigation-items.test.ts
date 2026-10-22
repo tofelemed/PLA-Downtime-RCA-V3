@@ -61,6 +61,8 @@ const PREVIOUS_MENU: Record<string, string[]> = {
   // open one of its pages (Manager = profile and stop-policy writer; Operator = standby log writer)
   // QA re-test 19 Oct (L16): the guide is a configuration journey, not for operations-only roles
   'Equipment setup guide': NOT_OPERATOR,
+  // owner 22 Oct 2026: moved from the Admin panel (its tab was shown to the plant's administrators)
+  'Organizations & plants': ADMINS,
   'Plant & equipment': [...ADMINS, 'Manager'],
   'Codes & failures': ALL,
   'Production rules': [...ADMINS, 'Manager', 'Operator'],
@@ -164,6 +166,7 @@ describe('navigation items by capability', () => {
     ['Approval delegations', 'canReachDelegationsOnly'],
     ['Enhanced historian', 'canReachIntegration'],
     ['Admin panel', 'canUseAdminPanel'],
+    ['Organizations & plants', 'canAdministerTenant'],
     ['Audit log', 'canViewAuditLogs'],
   ] as const)('%s is listed exactly when its page gate (%s) admits the user', (name, gate) => {
     const roleSets = [

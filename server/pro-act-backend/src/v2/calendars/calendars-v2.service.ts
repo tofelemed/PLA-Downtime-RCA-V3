@@ -5,7 +5,6 @@ import { CalendarVersion } from '../../calendar/entities/calendar-version.entity
 import { CrewRotation } from '../../calendar/entities/crew-rotation.entity';
 import { Crew } from '../../calendar/entities/crew.entity';
 import { ShiftInstance } from '../../calendar/entities/shift-instance.entity';
-import { Site } from '../../calendar/entities/site.entity';
 import {
   RequestContext,
   requireTenantId,
@@ -14,17 +13,12 @@ import { scopedQuery } from '../../common/query/scoped-query';
 import { keysetPage } from '../common/keyset-page';
 import { listResponse, ListResponse } from '../common/response';
 import { parseSort } from '../common/sort-spec';
-import {
-  ShiftInstanceListQueryDto,
-  SiteListQueryDto,
-} from './calendar-query-v2.dto';
+import { ShiftInstanceListQueryDto } from './calendar-query-v2.dto';
 import { CalendarVersionListQueryDto } from './calendar-version-v2.dto';
 import {
   CalendarVersionV2View,
   ShiftInstanceV2View,
-  SiteV2View,
   toCalendarVersionView,
-  toSiteView,
   toStoredInstanceView,
 } from './calendar-v2.view';
 import { CrewListQueryDto, CrewRotationListQueryDto } from './crew-v2.dto';
@@ -39,7 +33,6 @@ import {
 @Injectable()
 export class CalendarsV2Service {
   constructor(
-    @InjectRepository(Site) private readonly sites: Repository<Site>,
     @InjectRepository(CalendarVersion)
     private readonly versions: Repository<CalendarVersion>,
     @InjectRepository(ShiftInstance)
@@ -48,24 +41,6 @@ export class CalendarsV2Service {
     @InjectRepository(CrewRotation)
     private readonly rotations: Repository<CrewRotation>,
   ) {}
-
-  async listSites(
-    context: RequestContext,
-    query: SiteListQueryDto,
-  ): Promise<ListResponse<SiteV2View>> {
-    const qb = scopedQuery(this.sites, 's', { context });
-    const page = await keysetPage(qb, {
-      alias: 's',
-      property: 'createdAt',
-      direction: 'ASC',
-      ...paging(query),
-    });
-    return listResponse(
-      page.items.map(toSiteView),
-      page.nextCursor,
-      scope(context),
-    );
-  }
 
   async listVersions(
     context: RequestContext,

@@ -45,7 +45,10 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   // item 5: a task carrying out an RCA action shows on the action (linked task, task completed)
   task: ['tasks', 'rca-cases'],
   admin_config: ['admin-config'],
-  unit: ['units', 'assets', 'master-data'],
+  // a unit's site sets the unit counts of the site list (Setup UX Phase 1)
+  unit: ['units', 'assets', 'master-data', 'sites'],
+  // Setup UX Phase 1: a site created or renamed shows in site lists and in the units' site names
+  site: ['sites', 'units', 'master-data'],
   asset: ['assets', 'master-data'],
   product: ['products', 'master-data'],
   rca_settings: ['rca-settings', 'master-data'],

@@ -18,6 +18,9 @@ function show(path: string) {
     <Route path="/codes-admin/*" element={<AdministrationRedirect kind="codes" />} />
     <Route path="/master-data/codes-rules/*" element={<p>Canonical code page</p>} />
     <Route path="/admin" element={<AdminPage />} />
+    <Route path="/admin/organizations/*" element={<AdministrationRedirect kind="plants" />} />
+    <Route path="/admin/plants/*" element={<AdministrationRedirect kind="plants" />} />
+    <Route path="/setup/plants/*" element={<p>Organizations and plants page</p>} />
   </Routes></MemoryRouter></QueryClientProvider>);
 }
 afterEach(() => { vi.unstubAllGlobals(); actAs('SuperAdmin'); });
@@ -30,6 +33,17 @@ describe('moved administration pages', () => {
   it.each(['/codes-admin/reason-codes/r1?library=reason-codes#history', '/codes-admin/rules/rule-1?tab=rules#versions'])('redirects the full old record path %s', async (path) => {
     show(path); await screen.findByText('Canonical code page');
     expect(screen.getByTestId('location')).toHaveTextContent(path.replace('/codes-admin', '/master-data/codes-rules'));
+  });
+  it.each([
+    ['/admin?tab=plants', '/setup/plants'],
+    ['/admin/plants/new?organizationId=o1', '/setup/plants/new?organizationId=o1'],
+    ['/admin/organizations/new', '/setup/plants/organizations/new'],
+    ['/admin/plants/tenant-a/edit?from=hierarchy#details', '/setup/plants/tenant-a/edit?from=hierarchy#details'],
+    ['/admin/organizations/o1/edit', '/setup/plants/organizations/o1/edit'],
+  ])('sends the old plant administration link %s to Setup › Organizations & plants', async (from, to) => {
+    show(from);
+    await screen.findByText('Organizations and plants page');
+    expect(screen.getByTestId('location')).toHaveTextContent(to);
   });
   it('a manager retains Settings access without getting plant administration or branding', async () => {
     actAs('manager_approver'); show('/settings?unitId=u1#display');

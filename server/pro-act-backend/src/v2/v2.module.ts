@@ -179,6 +179,7 @@ import { ReliabilityV2Module } from './reliability/reliability-v2.module';
 import { StopEventsV2Module } from './stop-events/stop-events-v2.module';
 import { CloseV2Module } from './close/close-v2.module';
 import { NotificationsV2Module } from './notifications/notifications-v2.module';
+import { SitesV2Module } from './sites/sites-v2.module';
 import {
   PeriodSummariesV2Controller,
   WaterfallReportV2Controller,
@@ -264,6 +265,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     StopEventsV2Module,
     CloseV2Module,
     NotificationsV2Module,
+    SitesV2Module,
     NotificationsModule,
   ],
   controllers: [

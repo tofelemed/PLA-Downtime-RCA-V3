@@ -114,6 +114,9 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   { name: 'Tasks', href: '/tasks', icon: EntityIcon.task, section: 'reliability', capability: 'canViewOperations', description: 'Assign and track tasks' },
   // owner 21 Oct 2026: everything that sets a plant up, in the order of the setup guide's phases
   { name: 'Equipment setup guide', label: 'Setup guide', href: '/equipment-setup', icon: EntityIcon.equipmentSetup, section: 'setup', capability: 'canReachSetupGuide', description: 'Six phases from equipment records to the first approved period and analysis' },
+  // owner 22 Oct 2026: organizations and plants moved here from the Admin panel; administrators of the plant read
+  // it and manage its sites, creating plants stays with SuperAdmin / OrgAdmin (`canManagePlants`)
+  { name: 'Organizations & plants', href: '/setup/plants', icon: EntityIcon.organization, section: 'setup', capability: 'canAdministerTenant', description: 'Organizations, their plants and the sites of the selected plant' },
   { name: 'Plant & equipment', href: '/master-data/units', icon: EntityIcon.asset, section: 'setup', capability: 'canReachPlantEquipment', activeAlso: ['/master-data/assets', '/master-data/products', '/master-data/hierarchy', '/master-data/plant-flow'], description: 'Production units, assets, products, the plant hierarchy and plant flow' },
   { name: 'Codes & failures', href: '/master-data/codes-rules', icon: EntityIcon.codeLibrary, section: 'setup', capability: 'canReachCodesSetup', activeAlso: ['/master-data/failure-dictionary', '/codes-admin'], description: 'Code libraries, reason codes, automatic rules and the failure dictionary' },
   { name: 'Production rules', href: '/master-data/stop-policy', icon: EntityIcon.productionRules, section: 'setup', capability: 'canReachProductionRules', activeAlso: ['/master-data/unit-impact-rules', '/master-data/standby-equipment', '/master-data/unit-state'], description: 'Stop and plan policy, unit impact rules, standby equipment and unit state' },
@@ -132,7 +135,7 @@ export const NAVIGATION_ITEMS: readonly NavigationItem[] = [
   // holders for themselves: QA re-test 2026-10-19, their own entry instead of "User management"
   { name: 'Approval delegations', href: '/delegations', icon: EntityIcon.delegation, section: 'administration', capability: 'canReachDelegationsOnly', description: 'Hand your approval role to a colleague for an absence' },
   // the page's gate: TenantAdmin gets the plant-level tabs, the application-wide ones stay SuperAdmin-only
-  { name: 'Admin panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Plants, branding, custom attributes and plant settings' },
+  { name: 'Admin panel', href: '/admin', activeAlso: ['/settings'], icon: EntityIcon.admin, section: 'administration', capability: 'canUseAdminPanel', description: 'Branding, custom attributes and plant settings' },
   { name: 'Audit log', href: '/audit', icon: EntityIcon.audit, section: 'administration', capability: 'canViewAuditLogs', description: 'Who changed what, and when' },
 ];
 

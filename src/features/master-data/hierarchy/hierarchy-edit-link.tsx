@@ -10,11 +10,11 @@ export interface HierarchyEditLinkProps {
   canEdit?: boolean;
 }
 
-/** "Edit" on an organization / plant node: opens its Admin panel edit page, back to this tree after saving. */
+/** "Edit" on an organization / plant node: opens its Setup › Organizations & plants edit page, back to this tree after saving. */
 export function HierarchyEditLink({ kind, id, name, canEdit }: HierarchyEditLinkProps) {
-  const { canUseAdminPanel } = useCapabilities();
-  if (!canEdit || !canUseAdminPanel) return null;
-  const base = kind === 'plant' ? '/admin/plants' : '/admin/organizations';
+  const { canManagePlants } = useCapabilities();
+  if (!canEdit || !canManagePlants) return null;
+  const base = kind === 'plant' ? '/setup/plants' : '/setup/plants/organizations';
   return (
     <Button size="sm" variant="ghost" asChild>
       <Link to={`${base}/${encodeURIComponent(id)}/edit?from=hierarchy`} aria-label={`Edit ${kind} ${name}`}>

@@ -52,8 +52,10 @@ export interface Capabilities {
    */
   canReviewSourcePriority: boolean;
   canReviewSourceStatusRules: boolean;
-  /** user management, permissions, settings of the plant */
+  /** user management, permissions, settings of the plant; Setup › Organizations & plants (read, and the plant's sites) */
   canAdministerTenant: boolean;
+  /** 22 Oct 2026: create plants and edit organizations / plants (SuperAdmin, OrgAdmin); the server keeps its row flags */
+  canManagePlants: boolean;
   /** QA re-test 2026-10-19: the User management workspace (users, permissions, delegations): administrators */
   canUseUserManagement: boolean;
   /**
@@ -172,7 +174,7 @@ const READ_ONLY_ROLES: ReadonlySet<string> = new Set(ServerRoles.READ_ONLY_ROLES
 const holdsAny = (roles: readonly string[], wanted: readonly string[]): boolean =>
   roles.some((role) => wanted.includes(role));
 
-type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canReachPlantEquipment' | 'canReachCodesSetup' | 'canReachProductionRules' | 'canReachWorkOrders' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canUseUserManagement' | 'canReachDelegationsOnly' | 'canReachApprovals' | 'canReachSetupGuide' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
+type WriteCapabilities = Omit<Capabilities, 'roles' | 'isSuperAdmin' | 'isReadOnly' | 'canViewOperations' | 'canViewAnalysis' | 'canReachPeriodQuality' | 'canViewMoney' | 'canManageMasterData' | 'canReachMasterData' | 'canReachPlantEquipment' | 'canReachCodesSetup' | 'canReachProductionRules' | 'canReachWorkOrders' | 'canUseIntegrationConsole' | 'canReachIntegration' | 'canReviewSourcePriority' | 'canReviewSourceStatusRules' | 'canAdministerTenant' | 'canManagePlants' | 'canUseUserManagement' | 'canReachDelegationsOnly' | 'canReachApprovals' | 'canReachSetupGuide' | 'canUseAdminPanel' | 'canViewAuditLogs' | 'canApprove'>;
 
 /** The v2 write capabilities; a read-only plant gets none (the server's WriteAccessGuard runs first). */
 function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteCapabilities {
@@ -256,6 +258,7 @@ export function capabilitiesOf(roles: readonly string[]): Capabilities {
     canReviewSourcePriority: isSuperAdmin || writes.canApproveSourceAuthority,
     canReviewSourceStatusRules: isSuperAdmin || writes.canApproveStatusMappings,
     canAdministerTenant: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
+    canManagePlants: holdsAny(held, GLOBAL_ROLES),
     canUseUserManagement: holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canReachDelegationsOnly: writes.canDelegateApprovals && !holdsAny(held, [...GLOBAL_ROLES, 'TenantAdmin']),
     canReachApprovals: !readOnly && ServerRoles.satisfiesAnyRole(held, ServerRoles.APPROVAL_DECIDERS),

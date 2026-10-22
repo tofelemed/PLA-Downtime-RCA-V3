@@ -8,7 +8,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { BrandingV2Service } from '../administration/branding/branding-v2.service';
 import { HierarchyEditV2Service } from '../administration/hierarchy/hierarchy-edit-v2.service';
 import { HierarchyV2Service } from '../administration/hierarchy/hierarchy-v2.service';
-import { CalendarsV2Service } from '../calendars/calendars-v2.service';
+import { SitesV2Service } from '../sites/sites-v2.service';
 import { ListResponse } from '../common/response';
 import { SessionBootstrapV2View } from './session-bootstrap-v2.view';
 
@@ -42,7 +42,7 @@ export class SessionBootstrapV2Service {
     private readonly branding: BrandingV2Service,
     private readonly flags: FeatureFlagsService,
     private readonly notifications: NotificationsService,
-    private readonly calendars: CalendarsV2Service,
+    private readonly sites: SitesV2Service,
     private readonly hierarchy: HierarchyV2Service,
     private readonly plants: HierarchyEditV2Service,
   ) {}
@@ -61,7 +61,7 @@ export class SessionBootstrapV2Service {
       this.branding.get(context),
       this.flags.list(context),
       this.notifications.unreadCount(context),
-      this.calendars.listSites(context, { limit: SITES_LIMIT }),
+      this.sites.list(context, { limit: SITES_LIMIT }),
       this.plants.getPlant(context, tenantId),
       allPages((cursor) =>
         this.hierarchy.listOrganizations(context, {

@@ -1,6 +1,5 @@
 /** What each Admin panel tab holds, in the words of the page description. */
 const TAB_TOPICS: Readonly<Record<string, string>> = {
-  plants: 'plants and organizations',
   attributes: 'custom attributes',
   branding: 'branding',
   automation: 'status automation',

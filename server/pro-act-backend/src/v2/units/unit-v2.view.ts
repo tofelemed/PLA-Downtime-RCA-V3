@@ -1,5 +1,6 @@
 import { Unit } from '../../unit/unit.entity';
 import { toDecimalString } from '../common/decimal-string.transformer';
+import { SiteNameOf } from '../sites/site-references';
 
 /**
  * `GET /api/v2/units` item and `GET /api/v2/units/{id}`: what a unit picker needs (plan 3.2) plus the master
@@ -12,6 +13,8 @@ export interface UnitV2View {
   name: string;
   /** null = the tenant's default site (plan 2.1) */
   siteId: string | null;
+  /** name of the unit's site (the default site's for `siteId` null); null when the plant has no site yet */
+  siteName: string | null;
   description: string | null;
   unitOfMeasure: string | null;
   /** legacy v1 capacity (decimal string), not used by v2 calculations */
@@ -25,12 +28,13 @@ export interface UnitV2View {
   updatedAt: string;
 }
 
-export function toUnitView(unit: Unit): UnitV2View {
+export function toUnitView(unit: Unit, siteName: SiteNameOf): UnitV2View {
   return {
     id: unit.id,
     code: unit.code,
     name: unit.name,
     siteId: unit.siteId ?? null,
+    siteName: siteName(unit.siteId),
     description: unit.description ?? null,
     unitOfMeasure: unit.unitOfMeasure ?? null,
     capacity: toDecimalString(unit.capacity),

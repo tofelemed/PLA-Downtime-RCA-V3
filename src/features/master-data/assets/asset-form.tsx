@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import { ASSET_CRITICALITY_LABELS, ASSET_STATUS_OPTIONS, ASSET_TYPE_OPTIONS } from '@/features/ux-kit/labels';
+import { ActingPlantField } from '../components/acting-plant-field';
 import { ChoiceField } from '../components/choice-field';
 import { FormActions } from '../components/form-actions';
 import { TextField } from '../components/text-field';
@@ -34,6 +35,8 @@ export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNe
   );
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={isNew ? 'Create asset' : 'Edit asset'}>
+      {/* units belong to the plant: a switch clears the chosen one */}
+      <ActingPlantField editable={isNew && !readOnly} onSwitched={() => onChange({ unitId: '' })} />
       <div className="grid gap-4 sm:grid-cols-2">
         {text('name', 'Name', { required: true })}
         {text('code', 'Code', { required: true, hint: 'Unique in this plant.' })}

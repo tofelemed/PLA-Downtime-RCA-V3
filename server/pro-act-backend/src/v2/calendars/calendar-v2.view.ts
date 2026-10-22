@@ -3,7 +3,6 @@ import { PublishResult } from '../../calendar/calendar-publish.service';
 import { UnitMaterialization } from '../../calendar/calendar-materializer.service';
 import { CalendarVersion } from '../../calendar/entities/calendar-version.entity';
 import { ShiftInstance } from '../../calendar/entities/shift-instance.entity';
-import { Site } from '../../calendar/entities/site.entity';
 import { InstanceDiff } from '../../calendar/instance-diff';
 import {
   CalendarWarning,
@@ -15,18 +14,6 @@ import {
 } from '../../domain/calendar/calendar.types';
 import { scheduledSeconds } from '../../domain/calendar/schedule-metrics';
 import { normalizeTime } from '../../domain/calendar/wall-clock';
-
-export interface SiteV2View {
-  id: string;
-  name: string;
-  timezone: string;
-  /** the tenant had no valid IANA timezone; `UTC` was used */
-  timezoneFallback: boolean;
-  operationalDayStart: string;
-  isDefault: boolean;
-  rowVersion: number;
-  createdAt: string;
-}
 
 export interface CalendarVersionV2View {
   id: string;
@@ -93,19 +80,6 @@ export interface CalendarPreviewV2View {
       candidate: ShiftInstanceV2View;
     }>;
     unchangedCount: number;
-  };
-}
-
-export function toSiteView(site: Site): SiteV2View {
-  return {
-    id: site.id,
-    name: site.name,
-    timezone: site.timezone,
-    timezoneFallback: site.timezoneFallback,
-    operationalDayStart: normalizeTime(site.operationalDayStart),
-    isDefault: site.isDefault,
-    rowVersion: site.rowVersion,
-    createdAt: site.createdAt.toISOString(),
   };
 }
 

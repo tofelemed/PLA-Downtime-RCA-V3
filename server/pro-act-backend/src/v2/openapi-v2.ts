@@ -5,6 +5,7 @@ import { ReliabilityV2Module } from './reliability/reliability-v2.module';
 import { StopEventsV2Module } from './stop-events/stop-events-v2.module';
 import { CloseV2Module } from './close/close-v2.module';
 import { NotificationsV2Module } from './notifications/notifications-v2.module';
+import { SitesV2Module } from './sites/sites-v2.module';
 import { V2Module } from './v2.module';
 
 /** OpenAPI document of `/api/v2` (V2Module only); served at /api/docs/v2 and snapshotted in `openapi/v2.json`. */
@@ -25,6 +26,7 @@ export function buildV2Document(app: INestApplication): OpenAPIObject {
       StopEventsV2Module,
       CloseV2Module,
       NotificationsV2Module,
+      SitesV2Module,
     ],
   });
 }

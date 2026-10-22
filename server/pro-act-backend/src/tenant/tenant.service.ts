@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, In, Repository } from 'typeorm';
+import { EntityManager, FindOptionsWhere, In, Repository } from 'typeorm';
 import { canWriteSetting } from '../app-settings/app-settings-access.policy';
 import { UpdateTenantDisplaySettingsDto } from './dto/update-tenant-display-settings.dto';
 import { randomUUID } from 'crypto';
@@ -73,14 +73,27 @@ export class TenantService {
     return this.tenantRepository.findOneBy({ code, organizationId });
   }
 
-  async create(data: Partial<Tenant>): Promise<Tenant> {
+  /**
+   * Creates a tenant. `provision` runs in the same transaction as the insert (default site, the creator's
+   * grant); the realtime notice goes out only after the commit.
+   */
+  async create(
+    data: Partial<Tenant>,
+    provision?: (manager: EntityManager, tenant: Tenant) => Promise<void>,
+  ): Promise<Tenant> {
     // Generate UUID manually for SQL Server compatibility
     const id = randomUUID();
     const tenant = this.tenantRepository.create({
       id,
       ...data,
     });
-    const saved = await this.tenantRepository.save(tenant);
+    const saved = provision
+      ? await this.tenantRepository.manager.transaction(async (manager) => {
+          const inserted = await manager.getRepository(Tenant).save(tenant);
+          await provision(manager, inserted);
+          return inserted;
+        })
+      : await this.tenantRepository.save(tenant);
     this.realtimeGateway.broadcastEntityEvent('Created', 'tenant', saved);
     return saved;
   }

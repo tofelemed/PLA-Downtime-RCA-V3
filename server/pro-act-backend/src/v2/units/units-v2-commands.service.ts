@@ -21,7 +21,8 @@ import {
   updateWithRevision,
 } from '../master-data/common/revisioned-update';
 import { UnitV2ChangeDto, UnitV2CreateDto } from './unit-v2.dto';
-import { toUnitView, UnitV2View } from './unit-v2.view';
+import { UnitV2View } from './unit-v2.view';
+import { assertSiteOfPlant } from '../sites/site-references';
 import { UnitsV2Service } from './units-v2.service';
 
 /**
@@ -44,6 +45,7 @@ export class UnitsV2CommandsService {
     try {
       return await this.manager.transaction(async (manager) => {
         await assertCodeFree(manager, stamp.tenantId, input.code);
+        await assertSiteOfPlant(manager, stamp.tenantId, input.siteId);
         const id = randomUUID();
         await manager.getRepository(Unit).insert({
           id,
@@ -51,13 +53,14 @@ export class UnitsV2CommandsService {
           organizationId: await organizationOfTenant(manager, stamp.tenantId),
           code: input.code,
           name: input.name,
+          siteId: input.siteId ?? null,
           description: input.description ?? undefined,
           unitOfMeasure: input.unitOfMeasure ?? undefined,
           capacity: decimalOrNull(input.capacity) ?? undefined,
           idealCycleTime:
             decimalOrNull(input.idealCycleTimeSeconds) ?? undefined,
         });
-        return toUnitView(await this.reads.find(context, id, manager));
+        return this.reads.view(context, id, manager);
       });
     } catch (error) {
       throw isUniqueViolation(error) ? codeTaken('unit', input.code) : error;
@@ -78,17 +81,19 @@ export class UnitsV2CommandsService {
         if (code !== undefined && code !== unit.code) {
           await assertCodeFree(manager, stamp.tenantId, code, unit.id);
         }
+        await assertSiteOfPlant(manager, stamp.tenantId, input.siteId);
         await updateWithRevision(manager, Unit, target, {
           ...definedOnly({
             code,
             name: keepUnlessGiven(input.name),
+            siteId: input.siteId,
             description: input.description,
             unitOfMeasure: input.unitOfMeasure,
             capacity: decimalOrNull(input.capacity),
             idealCycleTime: decimalOrNull(input.idealCycleTimeSeconds),
           }),
         });
-        return toUnitView(await this.reads.find(context, unit.id, manager));
+        return this.reads.view(context, unit.id, manager);
       });
     } catch (error) {
       throw isUniqueViolation(error) ? codeTaken('unit', code ?? '') : error;
@@ -105,7 +110,7 @@ export class UnitsV2CommandsService {
       await manager
         .getRepository(Unit)
         .update(unit.id, { retiredAt: new Date() });
-      return toUnitView(await this.reads.find(context, unit.id, manager));
+      return this.reads.view(context, unit.id, manager);
     });
   }
 
@@ -115,7 +120,7 @@ export class UnitsV2CommandsService {
       const unit = await this.reads.find(context, id, manager);
       if (!unit.retiredAt) throw recordNotRetired('unit');
       await manager.getRepository(Unit).update(unit.id, { retiredAt: null });
-      return toUnitView(await this.reads.find(context, unit.id, manager));
+      return this.reads.view(context, unit.id, manager);
     });
   }
 }

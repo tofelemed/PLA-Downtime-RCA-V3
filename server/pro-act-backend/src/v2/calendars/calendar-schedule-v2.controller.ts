@@ -13,7 +13,6 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CalendarPreviewService } from '../../calendar/calendar-preview.service';
-import { SitesService } from '../../calendar/sites.service';
 import { Ctx } from '../../common/context/ctx.decorator';
 import { RequestContext } from '../../common/context/request-context';
 import { ListResponse } from '../common/response';
@@ -21,15 +20,15 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import {
   CalendarPreviewDto,
   ShiftInstanceListQueryDto,
-  SiteListQueryDto,
 } from './calendar-query-v2.dto';
 import {
   CalendarPreviewV2View,
   ShiftInstanceV2View,
-  SiteV2View,
   toPreviewView,
-  toSiteView,
 } from './calendar-v2.view';
+import { SitesListQueryDto } from '../sites/site-v2.dto';
+import { SiteV2View } from '../sites/site-v2.view';
+import { SitesV2Service } from '../sites/sites-v2.service';
 import { CalendarsV2Service } from './calendars-v2.service';
 
 /** Reads of plan 2.1: sites, generated shift instances, and the calendar preview (§15.2). */
@@ -40,29 +39,33 @@ import { CalendarsV2Service } from './calendars-v2.service';
 export class CalendarScheduleV2Controller {
   constructor(
     private readonly lists: CalendarsV2Service,
-    private readonly sites: SitesService,
+    private readonly siteReads: SitesV2Service,
     private readonly previews: CalendarPreviewService,
   ) {}
 
   @Get('sites')
   @ApiOperation({
     summary:
-      'List sites of the caller tenant (timezone, operational day start)',
+      'List sites of the caller tenant (keyset; sort createdAt or name; timezone, operational day start, unit count)',
+    description:
+      'Tenant from the identity; the plant’s default site is created on first use. `q` searches the name. ' +
+      '`unitCount` = active units of the site (the default site also owns units without a site). ' +
+      'Writes: POST /v2/sites, PATCH /v2/sites/{id}.',
   })
   listSites(
     @Ctx() ctx: RequestContext,
-    @Query() query: SiteListQueryDto,
+    @Query() query: SitesListQueryDto,
   ): Promise<ListResponse<SiteV2View>> {
-    return this.lists.listSites(ctx, query);
+    return this.siteReads.list(ctx, query);
   }
 
   @Get('sites/:id')
   @ApiOperation({ summary: 'Get one site; foreign ids are 404' })
-  async getSite(
+  getSite(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<SiteV2View> {
-    return toSiteView(await this.sites.get(ctx, id));
+    return this.siteReads.get(ctx, id);
   }
 
   @Get('shift-instances')

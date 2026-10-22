@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { lazy, Suspense } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { pageNameOf } from '@/features/auth/navigation-items';
@@ -11,12 +11,11 @@ import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { adminPanelDescription } from './admin-panel-description';
 import { PageGate } from './shared/page-gate';
 
-const PlantsSection = lazy(() => import('./plants/plants-section').then((m) => ({ default: m.PlantsSection })));
 const AttributeDefinitionsPanel = lazy(() => import('./attributes/attribute-definitions-panel').then((m) => ({ default: m.AttributeDefinitionsPanel })));
 const PlantSettings = lazy(() => import('@/features/settings/settings-page').then((m) => ({ default: m.SettingsPage })));
 const BrandingSection = lazy(() => import('./branding/branding-section').then((m) => ({ default: m.BrandingSection })));
 
-type AdminTab = 'plants' | 'attributes' | 'branding' | 'automation' | 'settings';
+type AdminTab = 'attributes' | 'branding' | 'automation' | 'settings';
 
 interface TabSpec {
   value: AdminTab;
@@ -27,7 +26,6 @@ interface TabSpec {
 }
 
 const TABS: readonly TabSpec[] = [
-  { value: 'plants', label: 'Plants & organizations' },
   { value: 'attributes', label: 'Custom attributes' },
   { value: 'branding', label: 'Branding', superAdminOnly: true },
   { value: 'automation', label: 'Status automation' },
@@ -36,7 +34,6 @@ const TABS: readonly TabSpec[] = [
 
 function TabBody({ tab }: { tab: AdminTab }) {
   if (tab === 'settings') return <PlantSettings embedded />;
-  if (tab === 'plants') return <PlantsSection />;
   if (tab === 'attributes') return <AttributeDefinitionsPanel />;
   if (tab === 'branding') return <BrandingSection />;
   return <StatusRulesMoved />;
@@ -44,12 +41,14 @@ function TabBody({ tab }: { tab: AdminTab }) {
 
 /**
  * Admin panel (owner requirement "v2 only"): related sections, the active one in the URL (`?tab=`). Users moved
- * to Users (`/users`), units and assets to Master data; branding is application-wide (super administrators).
+ * to Users (`/users`), units and assets to Master data, organizations and plants to Setup (`/setup/plants`, 22 Oct
+ * 2026: old `?tab=plants` links redirect there); branding is application-wide (super administrators).
  */
 export function AdminPage() {
   const { canUseAdminPanel, canViewOperations } = useCapabilities();
   const [params] = useSearchParams();
   const mayReadSettings = params.get('tab') === 'settings' && canViewOperations;
+  if (params.get('tab') === 'plants') return <Navigate replace to="/setup/plants" />;
   return (
     <PageGate title={pageNameOf('/admin')} allowed={canUseAdminPanel || mayReadSettings} deniedText="You don't have permission to access the admin panel.">
       <AdminScreen />

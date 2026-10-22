@@ -3,6 +3,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PRODUCT_AVAILABILITY_LABELS } from '@/features/ux-kit/labels';
 import type { ProductAvailability } from '../api/master-data-types';
+import { ActingPlantField } from '../components/acting-plant-field';
 import { FormActions } from '../components/form-actions';
 import { LegacyValues } from '../components/legacy-values';
 import { TextField } from '../components/text-field';
@@ -62,6 +63,7 @@ export function ProductForm({ draft, errors, onChange, onSave, saving, dirty, is
   };
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={isNew ? 'Create product' : 'Edit product'}>
+      <ActingPlantField editable={isNew && !readOnly} />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required disabled={readOnly} />
         <TextField id="code" label="Code" value={draft.code} onChange={(code) => onChange({ code })} error={errors.code} hint="Unique across the organization's products." required disabled={readOnly} />

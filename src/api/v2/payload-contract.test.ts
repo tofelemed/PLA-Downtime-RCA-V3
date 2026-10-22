@@ -77,7 +77,7 @@ const CASES: ReadonlyArray<{ name: string; route: string; method: 'post' | 'put'
   },
   { name: 'asset create', route: '/api/v2/assets', method: 'post', body: () => assetBodyOf({ ...assetDraftOf(null, ID(1)), code: 'P-101', name: 'Pump', description: 'd', manufacturer: 'm', model: 'x', serialNumber: 's', location: 'l' }) },
   { name: 'asset change', route: '/api/v2/assets/{id}', method: 'patch', body: () => assetBodyOf({ ...assetDraftOf(null, ID(1)), code: 'P-101', name: 'Pump' }) },
-  { name: 'unit create', route: '/api/v2/units', method: 'post', body: () => unitBodyOf({ code: 'EXT1', name: 'Extruder 1', description: 'd', unitOfMeasure: 't', capacity: '12.5', idealCycleTimeSeconds: '3' }) },
+  { name: 'unit create', route: '/api/v2/units', method: 'post', body: () => unitBodyOf({ code: 'EXT1', name: 'Extruder 1', siteId: ID(6), description: 'd', unitOfMeasure: 't', capacity: '12.5', idealCycleTimeSeconds: '3' }) },
   { name: 'product create', route: '/api/v2/products', method: 'post', body: () => productCreateOf({ ...productDraftOf(null), code: 'HD1', name: 'HDPE', uom: 't', description: 'd', legacyStandardCost: '1.5' }) },
   { name: 'product change', route: '/api/v2/products/{id}', method: 'patch', body: () => productChangeOf({ ...productDraftOf(null), code: 'HD1', name: 'HDPE' }) },
   {

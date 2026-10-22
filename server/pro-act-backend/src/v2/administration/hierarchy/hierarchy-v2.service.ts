@@ -37,6 +37,8 @@ import {
   toPlantView,
 } from './hierarchy-v2.view';
 import { defaultWeekStart } from '../../../domain/calendar/week-start';
+import { outsideTenantBinding } from '../common/outside-tenant-binding';
+import { provisionPlant } from './plant-provisioning';
 
 const notFound = () =>
   new NotFoundException({ code: 'NOT_FOUND', message: 'Not found' });
@@ -141,37 +143,28 @@ export class HierarchyV2Service {
     await this.organizationService.remove(id);
   }
 
+  /**
+   * Creates a plant with its default site and, for an organization administrator, a plant-wide grant so the
+   * creator can switch to it at once (Setup UX audit: otherwise 403 TENANT_NOT_ALLOWED).
+   */
   async createPlant(
     context: RequestContext,
     body: CreatePlantV2Dto,
   ): Promise<PlantV2View> {
-    if (!context.isSuperAdmin && !isOrgAdminOf(context, body.organizationId)) {
-      throw new ForbiddenException({
-        code: 'ORGANIZATION_NOT_ALLOWED',
-        message:
-          'Only an administrator of this organization can add plants to it',
-      });
-    }
-    if (!isValidTimeZone(body.timezone)) {
-      throw new UnprocessableEntityException({
-        code: 'INVALID_TIMEZONE',
-        message: 'Unknown time zone',
-      });
-    }
-    if (
-      !(await this.organizations.count({ where: { id: body.organizationId } }))
-    )
-      throw notFound();
-    if (await this.plants.count({ where: { code: body.code } })) {
-      throw inUse('CODE_EXISTS', 'A plant with this code already exists');
-    }
-    const saved = await this.tenantService.create({
+    await this.assertPlantCreatable(context, body);
+    const data = {
       ...body,
       name: body.name.trim(),
       weekStart:
         body.weekStart ?? defaultWeekStart(body.timezone, body.calendarSystem),
       isActive: true,
-    });
+    };
+    // the new plant is outside the caller's tenant binding until its scope exists
+    const saved = await outsideTenantBinding(context, () =>
+      this.tenantService.create(data, (manager, plant) =>
+        provisionPlant(manager, plant, context),
+      ),
+    );
     return this.getPlant(context, saved.id);
   }
 
@@ -200,6 +193,32 @@ export class HierarchyV2Service {
   ): Promise<PlantV2View> {
     await this.tenantService.updateDisplaySettings(context, id, body);
     return this.getPlant(context, id);
+  }
+
+  private async assertPlantCreatable(
+    context: RequestContext,
+    body: CreatePlantV2Dto,
+  ): Promise<void> {
+    if (!context.isSuperAdmin && !isOrgAdminOf(context, body.organizationId)) {
+      throw new ForbiddenException({
+        code: 'ORGANIZATION_NOT_ALLOWED',
+        message:
+          'Only an administrator of this organization can add plants to it',
+      });
+    }
+    if (!isValidTimeZone(body.timezone)) {
+      throw new UnprocessableEntityException({
+        code: 'INVALID_TIMEZONE',
+        message: 'Unknown time zone',
+      });
+    }
+    if (
+      !(await this.organizations.count({ where: { id: body.organizationId } }))
+    )
+      throw notFound();
+    if (await this.plants.count({ where: { code: body.code } })) {
+      throw inUse('CODE_EXISTS', 'A plant with this code already exists');
+    }
   }
 
   private visiblePlants(context: RequestContext): SelectQueryBuilder<Tenant> {

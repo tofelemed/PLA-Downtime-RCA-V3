@@ -14,6 +14,7 @@ const { UsersPage } = await import('@/features/users/users-page');
 const { TasksPage } = await import('@/features/tasks/tasks-page');
 const { AdminPage } = await import('./admin-page');
 const { HierarchyFormPage } = await import('./plants/hierarchy-form-page');
+const { PlantsPage } = await import('./plants/plants-page');
 
 interface Call {
   method: string;
@@ -119,27 +120,31 @@ describe('administration screens on v2', () => {
 
   it('groups plant settings with the related administration sections (no dashboard settings, FE-02) and hides branding from plant administrators', async () => {
     wrap(<AdminPage />, '/admin');
-    expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual(['Plants & organizations', 'Custom attributes', 'Branding', 'Status automation', 'Plant settings']);
+    expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual(['Custom attributes', 'Branding', 'Status automation', 'Plant settings']);
+    // organizations and plants moved to Setup › Organizations & plants (22 Oct 2026)
     actAs('TenantAdmin');
     wrap(<AdminPage />, '/admin?tab=branding');
-    await waitFor(() => expect(screen.getAllByRole('tablist').at(-1)?.querySelectorAll('[role="tab"]').length).toBe(4));
+    await waitFor(() => expect(screen.getAllByRole('tablist').at(-1)?.querySelectorAll('[role="tab"]').length).toBe(3));
   });
 
   it('lets OrgAdmin reach plant administration while retaining global and server row guards', async () => {
     actAs('OrgAdmin');
-    wrap(<AdminPage />, '/admin?tab=branding');
+    wrap(<PlantsPage />, '/setup/plants');
     expect(await screen.findByText('Own plant')).toBeTruthy();
-    expect(screen.queryByRole('tab', { name: 'Branding' })).toBeNull();
     expect(calls.some((call) => call.url.pathname === '/api/v2/branding')).toBe(false);
     expect(screen.queryByRole('link', { name: 'Add organization' })).toBeNull();
     expect(screen.queryByRole('button', { name: /^Delete (organization|plant)/ })).toBeNull();
-    expect(within(screen.getByRole('row', { name: /Own organization OWN/ })).getByRole('link', { name: 'Add plant' })).toHaveAttribute('href', '/admin/plants/new?organizationId=o1');
+    expect(within(screen.getByRole('row', { name: /Own organization OWN/ })).getByRole('link', { name: 'Add plant' })).toHaveAttribute('href', '/setup/plants/new?organizationId=o1');
     expect(within(screen.getByRole('row', { name: /Read-only organization OTHER/ })).queryByRole('link', { name: 'Add plant' })).toBeNull();
+    wrap(<AdminPage />, '/admin?tab=branding');
+    expect(await screen.findByRole('tab', { name: 'Custom attributes' })).toBeTruthy();
+    expect(screen.queryByRole('tab', { name: 'Branding' })).toBeNull();
+    expect(calls.some((call) => call.url.pathname === '/api/v2/branding')).toBe(false);
   });
 
   it('lets OrgAdmin open the plant form with only writable organizations available', async () => {
     actAs('OrgAdmin');
-    wrap(<HierarchyFormPage kind="plant" />, '/admin/plants/new');
+    wrap(<HierarchyFormPage kind="plant" />, '/setup/plants/new');
     expect(screen.getByRole('button', { name: 'Create plant' })).toBeTruthy();
     await waitFor(() => expect(calls.some((call) => call.url.pathname === '/api/v2/organizations')).toBe(true));
     fireEvent.keyDown(screen.getByRole('combobox', { name: /Organization/ }), { key: 'ArrowDown' });
@@ -151,7 +156,7 @@ describe('administration screens on v2', () => {
 
   it.each(['OrgAdmin', 'TenantAdmin', 'viewer'])('does not allow %s to open organization creation', (role) => {
     actAs(role);
-    wrap(<HierarchyFormPage kind="organization" />, '/admin/organizations/new');
+    wrap(<HierarchyFormPage kind="organization" />, '/setup/plants/organizations/new');
     expect(screen.getByText(/Only a super administrator/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Create organization' })).toBeNull();
     expect(calls).toHaveLength(0);
@@ -159,7 +164,7 @@ describe('administration screens on v2', () => {
 
   it.each(['TenantAdmin', 'viewer'])('does not allow %s to open plant creation', (role) => {
     actAs(role);
-    wrap(<HierarchyFormPage kind="plant" />, '/admin/plants/new');
+    wrap(<HierarchyFormPage kind="plant" />, '/setup/plants/new');
     expect(screen.getByText(/Only a super administrator/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Create plant' })).toBeNull();
     expect(calls).toHaveLength(0);

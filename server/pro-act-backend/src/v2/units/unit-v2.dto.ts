@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   ValidateIf,
@@ -30,6 +31,16 @@ export class UnitV2CreateDto {
   @IsNotEmpty()
   @MaxLength(255)
   name: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Site of the plant (GET /v2/sites); null or absent = the plant default site (422 SITE_NOT_IN_PLANT)',
+  })
+  @ValidateIf((_dto, value) => value !== null && value !== undefined)
+  @IsUUID()
+  siteId?: string | null;
 
   @ApiPropertyOptional({ maxLength: 2000, nullable: true })
   @IsOptional()
@@ -86,6 +97,16 @@ export class UnitV2ChangeDto {
   @IsNotEmpty()
   @MaxLength(255)
   name?: string;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Site of the plant (GET /v2/sites); null or absent = the plant default site (422 SITE_NOT_IN_PLANT)',
+  })
+  @ValidateIf((_dto, value) => value !== null && value !== undefined)
+  @IsUUID()
+  siteId?: string | null;
 
   @ApiPropertyOptional({ maxLength: 2000, nullable: true })
   @IsOptional()

@@ -11,6 +11,7 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { weekStartLabel } from '@/features/settings/week-start-choices';
 import { useCommandFeedback } from '../shared/use-command-feedback';
+import { PLANTS_PAGE } from './plants-page-path';
 
 function DeleteButton({ name, kind, onConfirm }: { name: string; kind: 'organization' | 'plant'; onConfirm: () => Promise<unknown> }) {
   return (
@@ -26,7 +27,7 @@ function DeleteButton({ name, kind, onConfirm }: { name: string; kind: 'organiza
 }
 
 function EditLink({ kind, id, name }: { kind: 'organization' | 'plant'; id: string; name: string }) {
-  const path = kind === 'plant' ? `/admin/plants/${encodeURIComponent(id)}/edit` : `/admin/organizations/${encodeURIComponent(id)}/edit`;
+  const path = kind === 'plant' ? `${PLANTS_PAGE}/${encodeURIComponent(id)}/edit` : `${PLANTS_PAGE}/organizations/${encodeURIComponent(id)}/edit`;
   return (
     <Button asChild variant="ghost" size="sm">
       <Link to={path} aria-label={`Edit ${kind} ${name}`}>
@@ -52,7 +53,7 @@ function useOrganizationColumns(): ReadonlyArray<DataTableColumn<OrganizationVie
           {org.canEdit && <EditLink kind="organization" id={org.id} name={org.name} />}
           {org.canAddPlants && (
             <Button asChild variant="ghost" size="sm">
-              <Link to={`/admin/plants/new?organizationId=${encodeURIComponent(org.id)}`}>Add plant</Link>
+              <Link to={`${PLANTS_PAGE}/new?organizationId=${encodeURIComponent(org.id)}`}>Add plant</Link>
             </Button>
           )}
           {org.canDelete && <DeleteButton name={org.name} kind="organization" onConfirm={() => feedback(() => remove.submit(org.id), 'Organization deleted')} />}
@@ -88,18 +89,17 @@ function usePlantColumns(): ReadonlyArray<DataTableColumn<PlantView>> {
 
 /** Organizations and plants (was "Hierarchy management"); units and assets live in Master data. */
 export function PlantsSection() {
-  const { isSuperAdmin, roles } = useCapabilities();
+  const { isSuperAdmin, canManagePlants } = useCapabilities();
   const organizations = useOrganizations();
   const plants = usePlantsPage();
   const orgColumns = useOrganizationColumns();
   const plantColumns = usePlantColumns();
-  const mayAddPlant = isSuperAdmin || roles.includes('OrgAdmin');
   return (
     <>
       <Section
         title="Organizations"
         description="Companies that own plants."
-        actions={isSuperAdmin && <Button asChild variant="outline"><Link to="/admin/organizations/new"><ActionIcon.add aria-hidden="true" />Add organization</Link></Button>}
+        actions={isSuperAdmin && <Button asChild variant="outline"><Link to={`${PLANTS_PAGE}/organizations/new`}><ActionIcon.add aria-hidden="true" />Add organization</Link></Button>}
       >
         <DataTable
           caption="Organizations"
@@ -112,7 +112,7 @@ export function PlantsSection() {
       <Section
         title="Plants"
         description={<>Plants you administer. Units, assets and products are managed in <Link className="underline" to="/master-data/units">Setup › Plant &amp; equipment</Link>; people in <Link className="underline" to="/users">Users</Link>.</>}
-        actions={mayAddPlant && <Button asChild variant="outline"><Link to="/admin/plants/new"><ActionIcon.add aria-hidden="true" />Add plant</Link></Button>}
+        actions={canManagePlants && <Button asChild variant="outline"><Link to={`${PLANTS_PAGE}/new`}><ActionIcon.add aria-hidden="true" />Add plant</Link></Button>}
       >
         <DataTable caption="Plants" columns={plantColumns} rows={plants.rows} getRowKey={(plant) => plant.id} pager={plants.pager} status={plants.status} />
       </Section>

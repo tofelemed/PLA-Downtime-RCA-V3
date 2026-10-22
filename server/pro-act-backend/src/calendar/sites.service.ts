@@ -3,14 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RequestContext } from '../common/context/request-context';
 import { scopedQuery } from '../common/query/scoped-query';
-import { isValidTimeZone } from '../domain/calendar/zone-timeline';
 import { Tenant } from '../tenant/tenant.entity';
 import { Unit } from '../unit/unit.entity';
 import { invalidReference, notFound } from './calendar-errors';
+import { ensureDefaultSite } from './default-site';
 import { Site } from './entities/site.entity';
-
-/** D03: the operational day starts at 06:00 unless a site says otherwise. */
-const DEFAULT_OPERATIONAL_DAY_START = '06:00';
 
 /**
  * Sites (spec §3.1, plan 2.1 step 1). Every tenant has one default site; tenants created after the
@@ -49,23 +46,12 @@ export class SitesService {
     });
     if (existing) return existing;
     const tenant = await this.tenants.findOne({ where: { id: tenantId } });
-    const zone = tenant?.timezone?.trim() ?? '';
-    const valid = zone !== '' && isValidTimeZone(zone);
-    await this.sites
-      .createQueryBuilder()
-      .insert()
-      .values({
-        tenantId,
-        organizationId: tenant?.organizationId ?? null,
-        name: tenant?.name ?? 'Default site',
-        timezone: valid ? zone : 'UTC',
-        timezoneFallback: !valid,
-        operationalDayStart: DEFAULT_OPERATIONAL_DAY_START,
-        isDefault: true,
-      })
-      .orIgnore()
-      .execute();
-    return this.sites.findOneOrFail({ where: { tenantId, isDefault: true } });
+    return ensureDefaultSite(this.sites.manager, {
+      id: tenantId,
+      name: tenant?.name,
+      organizationId: tenant?.organizationId,
+      timezone: tenant?.timezone,
+    });
   }
 
   /** Unit of the tenant (422 `INVALID_REFERENCE` otherwise) and its site. */

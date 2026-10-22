@@ -70,5 +70,3 @@ export class ShiftInstanceListQueryDto extends ListQueryDto {
   @IsBoolean()
   isExcluded?: boolean;
 }
-
-export class SiteListQueryDto extends ListQueryDto {}

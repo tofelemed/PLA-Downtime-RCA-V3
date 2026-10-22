@@ -21,7 +21,10 @@ interface Revisioned {
 export interface MasterUnitView extends Revisioned {
   code: string;
   name: string;
+  /** null = the plant's default site */
   siteId: string | null;
+  /** name of the unit's site (the default site's when `siteId` is null); null while the plant has no site */
+  siteName?: string | null;
   description: string | null;
   unitOfMeasure: string | null;
   capacity: string | null;

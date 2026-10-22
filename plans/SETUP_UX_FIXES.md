@@ -1,0 +1,50 @@
+# Setup UX fixes (audit 2026-10-22)
+
+Owner decisions: `DECISIONS.md` › "2026-10-22 — Setup guide, sidebar and Setup UX". Each phase is one commit;
+unit tests + typecheck per phase, browser check at the end (screenshots once the browser tool is allowed).
+
+## Phase 1 — Plant scoping (data integrity)
+Cause: unit/asset/product creates take the plant from the header selection (`X-Tenant-Id` → `RequestContext`);
+creating a plant never switches or refreshes the selection (`hierarchy-form-page.tsx:64-77`; directory cached 10 min,
+`use-plant-directory.ts:11`, not invalidated on `admin_config`).
+- [x] `/setup/plants` page (Organizations & plants) in the Setup section; Admin `plants` tab removed; `/admin?tab=plants`
+      and `/admin/{organizations,plants}/…` redirect; repoint links (`plants-section.tsx`, `hierarchy-edit-link.tsx`,
+      `hierarchy-page.tsx:83`, `hierarchy-edit-form.tsx`); gate `isSuperAdmin || OrgAdmin` (new capability).
+- [x] After plant create: invalidate `['v2','directory']`; dialog "Plant X created — switch to it now?".
+- [x] Organization › Plant dropdown at the top of unit, asset and product create forms (defaults to the header plant;
+      change = confirm, then `setSelection`).
+- [x] Server: an OrgAdmin may select every plant of its organization (`maySelectTenant`), so no role is granted on create;
+      it also creates the plant's default site in the same transaction.
+- [ ] Sites: `siteId` on `UnitV2CreateDto`/`UnitV2ChangeDto` (validated: active site of the acting plant); site list/create
+      API + Site selector on the unit form; sites managed on the plant page. Migration only if a column is missing.
+      OpenAPI snapshot update. *(Server side done: `POST`/`PATCH /v2/sites`, `GET /v2/sites` with `unitCount`, unit
+      `siteId`/`siteName`, 422 `SITE_NOT_IN_PLANT`; no migration needed; snapshot updated.)*
+
+## Phase 2 — Save feedback standard
+- [ ] `ux-kit` `SaveResultDialog` (title, record name, actions View · Add another · Back to list · Next: <tab>) and a
+      `useSaveFeedback` built on `useCommandFeedback`; failures → `FriendlyErrorAlert` + field errors, input kept.
+- [ ] Apply to `useRecordEditor` creates (units, assets, products, RCA templates/checklists), codes/rules create,
+      profiles, rates, calendars, streams, transitions, plant flow, impact rules, finance creates, all imports,
+      stop-engine / micro-stop / grade-change / unit-state versions.
+- [ ] Small edits/approvals: toast. Settings forms return to read view after save.
+- [ ] Defects: dictionary error shown as neutral status; duplicate `RefusalNotice` (`version-actions.tsx:96,103`);
+      demand retire without confirmation; rate import stays enabled after accept; rotation form never resets.
+
+## Phase 3 — Navigation
+- [ ] Area tab bar visible on sub-pages (`master-data-layout.tsx:34`); one link-row tab pattern for codes, profiles,
+      calendars, finance (no nested shadcn Tabs).
+- [ ] Visible "← Back to <list>" on every sub-page, keeping tab, unit and filters in the query; module crumb on first tabs.
+- [ ] Cancel on code and rule editors; asset Back returns to the originating unit.
+- [ ] "Next: <tab>" from the setup step order, in the result dialog only.
+
+## Phase 4 — Add / Import placement
+- [ ] Every table page: `[Import CSV] [+ Add]` in the `PageHeader` actions.
+- [ ] + Add: dialog for small records (dictionary entry, standby, buffer level, crew, rotation), sub-page for large ones.
+- [ ] One shared CSV import page (file or paste → check → import) modelled on `rate-import-page.tsx`; replaces the paste
+      panels in `failure-dictionary-page.tsx:98-103` and `standby-page.tsx:34-46`.
+- [ ] Stop policy and unit state: read-only summary per section with Edit.
+
+## Phase 5 — Consistency
+- [ ] Names: "Production rules" vs "Stop and plan policy"; "Valuation" vs "Finance" crumb; "Master data › Cause library".
+- [ ] Unit choice in the URL everywhere (profiles, calendars); unit impact rules honours `?unitId=`.
+- [ ] Numbered pager instead of "Load more"; failure dictionary server-paged; RCA templates rows clickable.

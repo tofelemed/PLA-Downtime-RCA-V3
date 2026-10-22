@@ -4,7 +4,7 @@ import {
   PlantDetailV2View,
   PlantV2View,
 } from '../administration/hierarchy/hierarchy-v2.view';
-import { SiteV2View } from '../calendars/calendar-v2.view';
+import { SiteV2View } from '../sites/site-v2.view';
 import { ListResponse } from '../common/response';
 import { FeatureFlagsV2View } from '../feature-flags/feature-flags-v2.controller';
 

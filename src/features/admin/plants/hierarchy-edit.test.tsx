@@ -16,7 +16,7 @@ vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user'
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection, setSelection, loading: false }) }));
 
 const { OrganizationEditPage, PlantEditPage } = await import('./hierarchy-form-page');
-const { AdminPage } = await import('../admin-page');
+const { PlantsPage } = await import('./plants-page');
 const { HierarchyEditLink } = await import('@/features/master-data/hierarchy/hierarchy-edit-link');
 
 interface Call {
@@ -39,7 +39,7 @@ const STALE = { code: 'STALE_REVISION', message: 'The resource changed since it 
 
 type Responder = (call: Call) => Response | undefined;
 
-describe('organization and plant editing (Admin panel)', () => {
+describe('organization and plant editing (Setup › Organizations & plants)', () => {
   let calls: Call[];
   let client: QueryClient;
   let respond: Responder;
@@ -50,7 +50,7 @@ describe('organization and plant editing (Admin panel)', () => {
         <MemoryRouter initialEntries={[path]}>
           <Routes>
             <Route path={route} element={node} />
-            <Route path="/admin" element={<p>Admin panel list</p>} />
+            <Route path="/setup/plants" element={<p>Organizations and plants list</p>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
@@ -84,7 +84,7 @@ describe('organization and plant editing (Admin panel)', () => {
 
   it('renames an organization under its row version, keeps the code read-only and updates the header selection', async () => {
     actAs('OrgAdmin');
-    wrap(<OrganizationEditPage />, '/admin/organizations/o1/edit', '/admin/organizations/:organizationId/edit');
+    wrap(<OrganizationEditPage />, '/setup/plants/organizations/o1/edit', '/setup/plants/organizations/:organizationId/edit');
     const name = await screen.findByLabelText(/^Name/);
     const code = screen.getByLabelText(/^Code/);
     expect(code).toHaveValue('OWN');
@@ -93,7 +93,7 @@ describe('organization and plant editing (Admin panel)', () => {
     respond = (call) => (call.method === 'PATCH' ? json(200, { ...ORG, name: 'Polymers Co', rowVersion: 4 }) : undefined);
     fireEvent.change(name, { target: { value: '  Polymers Co ' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText('Admin panel list')).toBeTruthy();
+    expect(await screen.findByText('Organizations and plants list')).toBeTruthy();
     expect(patches()).toHaveLength(1);
     expect(patches()[0]).toMatchObject({ path: '/api/v2/organizations/o1', body: { name: 'Polymers Co' } });
     expect(patches()[0].headers.get('If-Match')).toBe('"3"');
@@ -101,20 +101,20 @@ describe('organization and plant editing (Admin panel)', () => {
   });
 
   it('shows a locked plant time zone with the server reason and never sends it', async () => {
-    wrap(<PlantEditPage />, '/admin/plants/tenant-a/edit', '/admin/plants/:plantId/edit');
+    wrap(<PlantEditPage />, '/setup/plants/tenant-a/edit', '/setup/plants/:plantId/edit');
     const zone = await screen.findByLabelText(/^Time zone/);
     expect(zone).toBeDisabled();
     expect(screen.getByText(/already has production events/)).toBeTruthy();
     respond = (call) => (call.method === 'PATCH' ? json(200, { ...PLANT, description: null, rowVersion: 8 }) : undefined);
     fireEvent.change(screen.getByLabelText(/^Description/), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText('Admin panel list')).toBeTruthy();
+    expect(await screen.findByText('Organizations and plants list')).toBeTruthy();
     expect(patches()[0]).toMatchObject({ path: '/api/v2/tenants/tenant-a', body: { description: null } });
     expect(patches()[0].headers.get('If-Match')).toBe('"7"');
   });
 
   it('on a stale revision loads the latest version, keeps my text and saves against the new revision', async () => {
-    wrap(<OrganizationEditPage />, '/admin/organizations/o1/edit', '/admin/organizations/:organizationId/edit');
+    wrap(<OrganizationEditPage />, '/setup/plants/organizations/o1/edit', '/setup/plants/organizations/:organizationId/edit');
     const name = await screen.findByLabelText(/^Name/);
     let patched = 0;
     respond = (call) => {
@@ -128,13 +128,13 @@ describe('organization and plant editing (Admin panel)', () => {
     expect(within(alert).getByText(/Their name/)).toBeTruthy();
     expect(screen.getByLabelText(/^Name/)).toHaveValue('My name');
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    expect(await screen.findByText('Admin panel list')).toBeTruthy();
+    expect(await screen.findByText('Organizations and plants list')).toBeTruthy();
     expect(patches().map((call) => call.headers.get('If-Match'))).toEqual(['"3"', '"4"']);
   });
 
   it('shows another organization read-only to an organization administrator (the server refuses edits)', async () => {
     actAs('OrgAdmin');
-    wrap(<OrganizationEditPage />, '/admin/organizations/o2/edit', '/admin/organizations/:organizationId/edit');
+    wrap(<OrganizationEditPage />, '/setup/plants/organizations/o2/edit', '/setup/plants/organizations/:organizationId/edit');
     expect(await screen.findByText(/Only a super administrator or the organization’s administrator can change this organization/)).toBeTruthy();
     expect(screen.getByLabelText(/^Name/)).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull();
@@ -142,23 +142,23 @@ describe('organization and plant editing (Admin panel)', () => {
 
   it('refuses the edit page to a plant administrator without calling the server', () => {
     actAs('TenantAdmin');
-    wrap(<PlantEditPage />, '/admin/plants/tenant-a/edit', '/admin/plants/:plantId/edit');
+    wrap(<PlantEditPage />, '/setup/plants/tenant-a/edit', '/setup/plants/:plantId/edit');
     expect(screen.getByText(/Only a super administrator or the organization’s administrator can edit this/)).toBeTruthy();
     expect(calls).toHaveLength(0);
   });
 
   it('offers Edit only on rows the server marks editable', async () => {
     actAs('OrgAdmin');
-    wrap(<AdminPage />, '/admin?tab=plants', '/admin');
-    expect(await screen.findByRole('link', { name: 'Edit organization Own organization' })).toHaveAttribute('href', '/admin/organizations/o1/edit');
+    wrap(<PlantsPage />, '/setup/plants', '/setup/plants');
+    expect(await screen.findByRole('link', { name: 'Edit organization Own organization' })).toHaveAttribute('href', '/setup/plants/organizations/o1/edit');
     expect(screen.queryByRole('link', { name: 'Edit organization Other organization' })).toBeNull();
-    expect(await screen.findByRole('link', { name: 'Edit plant Own plant' })).toHaveAttribute('href', '/admin/plants/tenant-a/edit');
+    expect(await screen.findByRole('link', { name: 'Edit plant Own plant' })).toHaveAttribute('href', '/setup/plants/tenant-a/edit');
     expect(screen.queryByRole('link', { name: 'Edit plant Foreign plant' })).toBeNull();
   });
 
   it('links hierarchy tree nodes to the edit page for permitted users only', () => {
     wrap(<HierarchyEditLink kind="plant" id="tenant-a" name="Own plant" canEdit />, '/master-data/hierarchy', '/master-data/hierarchy');
-    expect(screen.getByRole('link', { name: 'Edit plant Own plant' })).toHaveAttribute('href', '/admin/plants/tenant-a/edit?from=hierarchy');
+    expect(screen.getByRole('link', { name: 'Edit plant Own plant' })).toHaveAttribute('href', '/setup/plants/tenant-a/edit?from=hierarchy');
     actAs('Operator');
     wrap(<HierarchyEditLink kind="organization" id="o1" name="Own organization" canEdit />, '/master-data/hierarchy', '/master-data/hierarchy');
     expect(screen.queryByRole('link', { name: 'Edit organization Own organization' })).toBeNull();

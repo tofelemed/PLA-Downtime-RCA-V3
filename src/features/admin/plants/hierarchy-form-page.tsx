@@ -1,20 +1,23 @@
 import { useId, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { useCreateOrganization, useCreatePlant, useOrganizations } from '@/api/v2/queries/administration-config';
+import { useOrganizations } from '@/api/v2/queries/administration-config';
+import type { CreateOrganizationInput, CreatePlantInput } from '@/api/v2/types/administration';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { WEEK_START_CHOICES } from '@/features/settings/week-start-choices';
 import { StatusIcon } from '@/lib/icons';
 import { FormField } from '../shared/form-field';
 import { PageGate } from '../shared/page-gate';
-import { useCommandFeedback } from '../shared/use-command-feedback';
 import { HierarchyEditForm } from './hierarchy-edit-form';
 import { HierarchyFields, type HierarchyFieldErrors, type HierarchyFieldValues } from './hierarchy-fields';
-import { HIERARCHY_FIELD_VOCABULARY } from './hierarchy-field-vocabulary';
+import { PLANTS_PAGE } from './plants-page-path';
+import { SwitchPlantDialog } from './switch-plant-dialog';
+import { useHierarchyCreate } from './use-hierarchy-create';
 
-const BACK = { to: '/admin?tab=plants', label: 'Admin panel' };
+const BACK = { to: PLANTS_PAGE, label: pageNameOf(PLANTS_PAGE) };
 const CODE = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 /** the server picks the week start: Saturday for Iranian plants (Asia/Tehran), Monday otherwise */
 const AUTO_WEEK = 'auto';
@@ -35,10 +38,26 @@ function validate(values: Values, plant: boolean): HierarchyFieldErrors {
   return errors;
 }
 
-/** `/admin/organizations/new` and `/admin/plants/new` (was the "Create" dialog of the Admin panel). */
+/** An empty form; "Add plant" on an organization row preselects it (`?organizationId=`). */
+function initialValues(organizationId: string | null): Values {
+  return { code: '', name: '', description: '', organizationId: organizationId ?? '', timezone: '', weekStart: AUTO_WEEK };
+}
+
+function organizationBodyOf(values: Values): CreateOrganizationInput {
+  const description = values.description.trim();
+  return { code: values.code, name: values.name.trim(), ...(description ? { description } : {}) };
+}
+
+/** The week start is left out on "Automatic": the server picks it from the time zone. */
+function plantBodyOf(values: Values): CreatePlantInput {
+  const weekStart = values.weekStart === AUTO_WEEK ? {} : { weekStart: values.weekStart };
+  return { ...organizationBodyOf(values), organizationId: values.organizationId, timezone: values.timezone, ...weekStart };
+}
+
+/** `/setup/plants/organizations/new` and `/setup/plants/new` (was the "Create" dialog of the Admin panel). */
 export function HierarchyFormPage({ kind }: { kind: Kind }) {
-  const { canUseAdminPanel, isSuperAdmin, roles } = useCapabilities();
-  const allowed = canUseAdminPanel && (isSuperAdmin || (kind === 'plant' && roles.includes('OrgAdmin')));
+  const { canManagePlants, isSuperAdmin } = useCapabilities();
+  const allowed = kind === 'plant' ? canManagePlants : isSuperAdmin;
   return (
     <PageGate title={kind === 'plant' ? 'Add plant' : 'Add organization'} allowed={allowed} deniedText="Only a super administrator (or the organization’s administrator, for plants) can do this.">
       <HierarchyForm kind={kind} />
@@ -52,25 +71,21 @@ function HierarchyForm({ kind }: { kind: Kind }) {
   const [params] = useSearchParams();
   const orgId = useId();
   const weekId = useId();
-  const [values, setValues] = useState<Values>({ code: '', name: '', description: '', organizationId: params.get('organizationId') ?? '', timezone: '', weekStart: AUTO_WEEK });
+  const [values, setValues] = useState<Values>(() => initialValues(params.get('organizationId')));
   const [errors, setErrors] = useState<HierarchyFieldErrors>({});
   const organizations = useOrganizations();
   const writable = useMemo(() => (organizations.data?.items ?? []).filter((org) => org.canAddPlants), [organizations.data]);
-  const createOrg = useCreateOrganization();
-  const createPlant = useCreatePlant();
-  const feedback = useCommandFeedback(HIERARCHY_FIELD_VOCABULARY);
-  const busy = createOrg.isPending || createPlant.isPending;
+  const create = useHierarchyCreate(organizations.data?.items ?? []);
+  const busy = create.busy;
   const set = (patch: Partial<Values>) => setValues((current) => ({ ...current, ...patch }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const found = validate(values, plant);
     setErrors(found);
     if (Object.keys(found).length) return;
-    const base = { code: values.code, name: values.name.trim(), ...(values.description.trim() ? { description: values.description.trim() } : {}) };
     try {
-      if (plant) await feedback(() => createPlant.submit({ ...base, organizationId: values.organizationId, timezone: values.timezone, ...(values.weekStart === AUTO_WEEK ? {} : { weekStart: values.weekStart }) }), 'Plant created');
-      else await feedback(() => createOrg.submit(base), 'Organization created');
-      navigate(BACK.to);
+      if (plant) await create.plant(plantBodyOf(values));
+      else await create.organization(organizationBodyOf(values));
     } catch {
       // the toast explains the refusal
     }
@@ -109,22 +124,23 @@ function HierarchyForm({ kind }: { kind: Kind }) {
           </div>
         </form>
       </Section>
+      <SwitchPlantDialog created={create.created} onDone={create.finish} />
     </Page>
   );
 }
 
-/** Route element of `/admin/organizations/new`. */
+/** Route element of `/setup/plants/organizations/new`. */
 export const OrganizationNewPage = () => <HierarchyFormPage kind="organization" />;
-/** Route element of `/admin/plants/new`. */
+/** Route element of `/setup/plants/new`. */
 export const PlantNewPage = () => <HierarchyFormPage kind="plant" />;
 
-/** Route element of `/admin/organizations/:organizationId/edit`. */
+/** Route element of `/setup/plants/organizations/:organizationId/edit`. */
 export function OrganizationEditPage() {
   const { organizationId = '' } = useParams();
   return <HierarchyEditForm kind="organization" id={organizationId} />;
 }
 
-/** Route element of `/admin/plants/:plantId/edit`. */
+/** Route element of `/setup/plants/:plantId/edit`. */
 export function PlantEditPage() {
   const { plantId = '' } = useParams();
   return <HierarchyEditForm kind="plant" id={plantId} />;

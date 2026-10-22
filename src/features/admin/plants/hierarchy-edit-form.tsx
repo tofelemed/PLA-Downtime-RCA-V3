@@ -3,6 +3,7 @@ import { useOrganization, usePlant, useUpdateOrganization, useUpdatePlant } from
 import type { OrganizationView, PlantDetailView } from '@/api/v2/types/administration';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -10,23 +11,24 @@ import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { StatusIcon } from '@/lib/icons';
 import { PageGate } from '../shared/page-gate';
 import { HierarchyFields } from './hierarchy-fields';
+import { PLANTS_PAGE } from './plants-page-path';
 import { useHierarchyEditSync, type SavedHierarchyRecord } from './use-hierarchy-edit-sync';
 import { useHierarchyEditor, type EditableRecord, type HierarchyEditorOptions } from './use-hierarchy-editor';
 
 type Kind = 'organization' | 'plant';
 
-/** Back link: the plant hierarchy when the edit started there (`?from=hierarchy`), else the Admin panel. */
+/** Back link: the plant hierarchy when the edit started there (`?from=hierarchy`), else Organizations & plants. */
 function useBackTarget() {
   const [params] = useSearchParams();
   return params.get('from') === 'hierarchy'
     ? { to: '/master-data/hierarchy', label: 'Plant hierarchy' }
-    : { to: '/admin?tab=plants', label: 'Admin panel' };
+    : { to: PLANTS_PAGE, label: pageNameOf(PLANTS_PAGE) };
 }
 
-/** `/admin/organizations/:id/edit` and `/admin/plants/:id/edit`: name, description and (plants) time zone. */
+/** `/setup/plants/organizations/:id/edit` and `/setup/plants/:id/edit`: name, description and (plants) time zone. */
 export function HierarchyEditForm({ kind, id }: { kind: Kind; id: string }) {
-  const { canUseAdminPanel, isSuperAdmin, roles } = useCapabilities();
-  const allowed = canUseAdminPanel && (isSuperAdmin || roles.includes('OrgAdmin'));
+  const { canManagePlants } = useCapabilities();
+  const allowed = canManagePlants;
   return (
     <PageGate title={kind === 'plant' ? 'Edit plant' : 'Edit organization'} allowed={allowed} deniedText="Only a super administrator or the organization’s administrator can edit this.">
       {kind === 'plant' ? <PlantEditor id={id} /> : <OrganizationEditor id={id} />}
@@ -156,7 +158,7 @@ function HierarchyEditor({ kind, record, reload, save, toSaved }: EditorProps) {
       </Section>
       {plant && (
         <p className="text-sm text-muted-foreground">
-          Units and assets of a plant are edited in <Link className="underline" to="/master-data/units">Master data → Units</Link> and{' '}
+          Units and assets of a plant are edited in <Link className="underline" to="/master-data/units">Setup › Plant &amp; equipment</Link> and{' '}
           <Link className="underline" to="/master-data/assets">Assets</Link>; they act on the selected plant.
         </p>
       )}

@@ -16,6 +16,7 @@ import { recordNotFound } from '../master-data/common/master-data-errors';
 import { statusIncludes } from '../master-data/common/master-data-writer';
 import { applySearch } from '../master-data/common/search';
 import { sortedKeysetPage } from '../master-data/common/sorted-keyset-page';
+import { siteNamesOfPlant } from '../sites/site-references';
 import { toUnitView, UnitV2View } from './unit-v2.view';
 
 /**
@@ -46,14 +47,30 @@ export class UnitsV2Service {
       limit: query.limit,
     });
     const unitIds = restrictedUnitIds(context, tenantId);
-    return listResponse(page.items.map(toUnitView), page.nextCursor, {
+    const siteName = await siteNamesOfPlant(this.units.manager, tenantId);
+    const items = page.items.map((unit) => toUnitView(unit, siteName));
+    return listResponse(items, page.nextCursor, {
       tenantId,
       ...(unitIds ? { unitIds } : {}),
     });
   }
 
   async get(context: RequestContext, id: string): Promise<UnitV2View> {
-    return toUnitView(await this.find(context, id));
+    return this.view(context, id);
+  }
+
+  /** The unit's view with its site name, optionally inside a transaction. */
+  async view(
+    context: RequestContext,
+    id: string,
+    manager?: EntityManager,
+  ): Promise<UnitV2View> {
+    const unit = await this.find(context, id, manager);
+    const siteName = await siteNamesOfPlant(
+      manager ?? this.units.manager,
+      unit.tenantId,
+    );
+    return toUnitView(unit, siteName);
   }
 
   /** The unit inside the caller's scope (404 otherwise), optionally inside a transaction. */

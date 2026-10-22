@@ -13,4 +13,10 @@ describe('setup guide link texts use page names (QA re-test N5)', () => {
     const related = setupStep('analysis').related?.map((link) => link.label);
     expect(related).toEqual([pageNameOf('/pla-analytics'), 'Month close', 'RCA Analysis']);
   });
+
+  it('the plant step opens Setup › Organizations & plants (22 Oct 2026), Plant settings stays in the Admin panel', () => {
+    const plant = setupStep('plant');
+    expect([plant.page, plant.to({ unitId: '' }), plant.capability]).toEqual(['Organizations & plants', '/setup/plants', 'canAdministerTenant']);
+    expect(plant.related).toEqual([{ label: 'Plant settings', to: '/admin?tab=settings' }]);
+  });
 });

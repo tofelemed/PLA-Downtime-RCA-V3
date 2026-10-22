@@ -41,6 +41,8 @@ const UserForm = lazyNamedWithPreload(() => import('@/features/users/user-form-p
 /** SME R1 / R6: delegations of approval roles (a tab of User management, or their own page). */
 const DelegationsRoute = lazyNamedWithPreload(() => import('@/features/users/delegations-route'), 'DelegationsRoute');
 const AdminPanel = lazyNamedWithPreload(() => import('@/features/admin/admin-page'), 'AdminPage');
+/** Setup › Organizations & plants (moved from the Admin panel 22 Oct 2026) and its create / edit pages. */
+const Plants = lazyNamedWithPreload(() => import('@/features/admin/plants/plants-page'), 'PlantsPage');
 const OrganizationNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationNewPage');
 const PlantNew = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'PlantNewPage');
 const OrganizationEdit = lazyNamedWithPreload(() => import('@/features/admin/plants/hierarchy-form-page'), 'OrganizationEditPage');
@@ -97,10 +99,13 @@ const ROUTES: readonly AppRoute[] = [
   { path: '/permissions', element: <UserManagementRedirect tab="permissions" /> },
   { path: '/delegations', element: <DelegationsRoute />, preload: DelegationsRoute.preload, requires: 'canDelegateApprovals' },
   { path: '/admin', element: <AdminPanel />, preload: AdminPanel.preload },
-  { path: '/admin/organizations/new', element: <OrganizationNew />, preload: OrganizationNew.preload },
-  { path: '/admin/plants/new', element: <PlantNew />, preload: PlantNew.preload },
-  { path: '/admin/organizations/:organizationId/edit', element: <OrganizationEdit />, preload: OrganizationEdit.preload },
-  { path: '/admin/plants/:plantId/edit', element: <PlantEdit />, preload: PlantEdit.preload },
+  { path: '/setup/plants', element: <Plants />, preload: Plants.preload },
+  { path: '/setup/plants/organizations/new', element: <OrganizationNew />, preload: OrganizationNew.preload },
+  { path: '/setup/plants/new', element: <PlantNew />, preload: PlantNew.preload },
+  { path: '/setup/plants/organizations/:organizationId/edit', element: <OrganizationEdit />, preload: OrganizationEdit.preload },
+  { path: '/setup/plants/:plantId/edit', element: <PlantEdit />, preload: PlantEdit.preload },
+  { path: '/admin/organizations/*', element: <AdministrationRedirect kind="plants" /> },
+  { path: '/admin/plants/*', element: <AdministrationRedirect kind="plants" /> },
   { path: '/admin/attributes/new', element: <AttributeForm />, preload: AttributeForm.preload },
   { path: '/admin/attributes/:attributeId', element: <AttributeForm />, preload: AttributeForm.preload },
   { path: '/tasks', element: <Tasks />, preload: Tasks.preload },

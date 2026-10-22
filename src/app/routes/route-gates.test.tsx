@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { capabilitiesOf, type Capabilities } from '@/features/auth/capabilities';
 import { NAVIGATION_ITEMS } from '@/features/auth/navigation-items';
 import { RouteCapabilityGate } from './route-capability-gate';
+import { ADMINISTRATION_ROUTES } from './administration';
 import { INTEGRATION_ROUTES } from './integration';
 import { canReachPath, routeOfPath, withMenuGates } from './route-gates';
 
@@ -48,6 +49,20 @@ describe('canReachPath (breadcrumb targets, QA_MASTERDATA L23)', () => {
   });
   it('a static segment wins over a parameter', () => {
     expect(routeOfPath('/connectivity/connections/new', routes)?.path).toBe('/connectivity/connections/new');
+  });
+});
+
+describe('Setup › Organizations & plants (owner 22 Oct 2026)', () => {
+  it('its pages need the capability of the menu entry; the old Admin panel paths stay redirects', () => {
+    const routes = withMenuGates(ADMINISTRATION_ROUTES);
+    const gates = Object.fromEntries(routes.map((r) => [r.path, [r.requires, r.gateTitle]]));
+    for (const path of ['/setup/plants', '/setup/plants/new', '/setup/plants/:plantId/edit', '/setup/plants/organizations/new', '/setup/plants/organizations/:organizationId/edit']) {
+      expect(gates[path], path).toEqual(['canAdministerTenant', 'Organizations & plants']);
+    }
+    expect(routeOfPath('/setup/plants/organizations/new', routes)?.path).toBe('/setup/plants/organizations/new');
+    expect(routeOfPath('/admin/plants/tenant-a/edit', routes)?.path).toBe('/admin/plants/*');
+    expect(canReachPath('/setup/plants', capabilitiesOf(['TenantAdmin']), routes)).toBe(true);
+    expect(canReachPath('/setup/plants', capabilitiesOf(['manager_approver']), routes)).toBe(false);
   });
 });
 

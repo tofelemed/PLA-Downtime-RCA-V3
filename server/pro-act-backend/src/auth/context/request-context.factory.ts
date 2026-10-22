@@ -134,8 +134,9 @@ export class RequestContextFactory {
   }
 
   /**
-   * Whether the caller may act on `tenantId`: SuperAdmin on any tenant that exists, everyone else on
-   * a tenant present in their scopes. Shared with `TenantBindingGuard` (a tenant named in a v1 body).
+   * Whether the caller may act on `tenantId`: SuperAdmin on any tenant that exists, OrgAdmin on every
+   * tenant of its own organization (DECISIONS 2026-10-22, Setup UX), everyone else on a tenant present in
+   * their scopes. Shared with `TenantBindingGuard` (a tenant named in a v1 body).
    */
   async maySelectTenant(
     context: RequestContext,
@@ -147,7 +148,10 @@ export class RequestContextFactory {
     if (context.isSuperAdmin) {
       return (await this.tenants.countBy({ id: tenantId })) > 0;
     }
-    return context.scopes.some((scope) => scope.tenantId === tenantId);
+    if (context.scopes.some((scope) => scope.tenantId === tenantId)) {
+      return true;
+    }
+    return this.legacyRoleAppliesIn(context, tenantId);
   }
 }
 

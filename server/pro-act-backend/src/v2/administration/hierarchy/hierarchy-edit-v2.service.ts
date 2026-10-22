@@ -9,11 +9,8 @@ import {
   assertOrganizationWritable,
   isOrgAdminOf,
 } from '../../../auth/roles/org-access';
-import {
-  anonymousContext,
-  RequestContext,
-  runWithRequestContext,
-} from '../../../common/context/request-context';
+import { RequestContext } from '../../../common/context/request-context';
+import { outsideTenantBinding } from '../common/outside-tenant-binding';
 import {
   assertRevision,
   staleRevision,
@@ -195,19 +192,6 @@ export class HierarchyEditV2Service {
     await outsideTenantBinding(context, audit);
     return this.getPlant(context, id);
   }
-}
-
-/**
- * Runs `work` on connections without the caller's row-level-security tenant binding. Only after the
- * organization check: an organization administrator administers every plant of its organization but need
- * not hold a scope in it, and the lock counts / default-site sync must see that plant's rows (under the
- * binding they would read 0 and wrongly unlock the time zone).
- */
-function outsideTenantBinding<T>(
-  context: RequestContext,
-  work: () => Promise<T>,
-): Promise<T> {
-  return runWithRequestContext(anonymousContext(context.correlationId), work);
 }
 
 /** The requested time zone, validated (422 INVALID_TIMEZONE). */

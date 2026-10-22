@@ -90,6 +90,14 @@ describe('RequestContextFactory legacy role provenance', () => {
     );
   });
 
+  it('lets OrgAdmin select a plant of its organization without a grant there (DECISIONS 2026-10-22)', async () => {
+    const within = await factory([]).build(input('OrgAdmin'));
+    expect(within.tenantId).toBe(SELECTED);
+    expect(within.legacyRole).toBe('OrgAdmin');
+    await expect(factory([], false).build(input('OrgAdmin'))).rejects.toThrow();
+    await expect(factory([]).build(input('Manager'))).rejects.toThrow();
+  });
+
   it('preserves SuperAdmin in an existing selected plant', async () => {
     const context = await factory([]).build(input('SuperAdmin'));
     expect(context.legacyRole).toBe('SuperAdmin');

@@ -1,9 +1,11 @@
 import type { FormEvent } from 'react';
+import { ActingPlantField } from '../components/acting-plant-field';
 import { FormActions } from '../components/form-actions';
 import { LegacyValues } from '../components/legacy-values';
 import { TextField } from '../components/text-field';
 import type { FieldErrors } from '../model/field-errors';
 import type { UnitDraft } from './unit-form-model';
+import { SiteSelect } from './site-select';
 
 export interface UnitFormProps {
   draft: UnitDraft;
@@ -16,17 +18,18 @@ export interface UnitFormProps {
   isNew: boolean;
   /** read-only users and retired units: fields are shown, not editable */
   readOnly: boolean;
-  plantName: string;
 }
 
-/** Name, code, plant (the selected one), description, unit of measure and the folded legacy values. */
-export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly, plantName }: UnitFormProps) {
+/** Plant (the selected one), name, code, site, description, unit of measure and the folded legacy values. */
+export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew, readOnly }: UnitFormProps) {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSave();
   };
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={isNew ? 'Create production unit' : 'Edit production unit'}>
+      {/* sites belong to the plant: a switch clears the chosen one */}
+      <ActingPlantField editable={isNew && !readOnly} onSwitched={() => onChange({ siteId: '' })} />
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required disabled={readOnly} maxLength={255} />
         <TextField
@@ -41,10 +44,7 @@ export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew
           maxLength={50}
         />
       </div>
-      <p className="text-sm">
-        <span className="text-muted-foreground">Plant: </span>
-        {plantName}
-      </p>
+      <SiteSelect value={draft.siteId} onChange={(siteId) => onChange({ siteId })} disabled={readOnly} />
       <TextField id="description" label="Description" value={draft.description} onChange={(description) => onChange({ description })} multiline disabled={readOnly} />
       <TextField
         id="unitOfMeasure"

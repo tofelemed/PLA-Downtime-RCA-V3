@@ -1,5 +1,4 @@
 import { useParams } from 'react-router-dom';
-import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DataState } from '@/features/ux-kit/data-state';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -22,7 +21,6 @@ const BACK = { to: '/master-data/units', label: 'Production units' };
 
 function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
   const canWrite = useMasterDataWriter();
-  const { selection } = usePlantSelection();
   const editor = useRecordEditor<UnitDraft, MasterUnitView, UnitBody, Partial<UnitBody>>({
     source: UNITS,
     record: unit,
@@ -44,7 +42,6 @@ function UnitEditor({ unit }: { unit: MasterUnitView | null }) {
       dirty={editor.dirty}
       isNew={unit === null}
       readOnly={!canWrite || retired}
-      plantName={selection?.tenant?.name ?? 'The selected plant'}
     />
   );
 }

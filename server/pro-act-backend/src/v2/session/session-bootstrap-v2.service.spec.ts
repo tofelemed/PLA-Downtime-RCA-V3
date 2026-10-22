@@ -7,7 +7,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { BrandingV2Service } from '../administration/branding/branding-v2.service';
 import { HierarchyEditV2Service } from '../administration/hierarchy/hierarchy-edit-v2.service';
 import { HierarchyV2Service } from '../administration/hierarchy/hierarchy-v2.service';
-import { CalendarsV2Service } from '../calendars/calendars-v2.service';
+import { SitesV2Service } from '../sites/sites-v2.service';
 import { SessionBootstrapV2Service } from './session-bootstrap-v2.service';
 
 const TENANT = '433c1a69-7a32-4b32-ab20-c4139423abd2';
@@ -39,7 +39,7 @@ function services() {
     {
       unreadCount: jest.fn().mockResolvedValue(3),
     } as unknown as NotificationsService,
-    { listSites } as unknown as CalendarsV2Service,
+    { list: listSites } as unknown as SitesV2Service,
     { listOrganizations, listPlants } as unknown as HierarchyV2Service,
     { getPlant } as unknown as HierarchyEditV2Service,
   );

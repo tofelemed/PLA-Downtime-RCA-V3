@@ -1367,3 +1367,14 @@ Engineering defaults; change any of them on request.
 - Defaults on the open points: **Plans** stay under Production (`/planning`, plans only) because they are made every period; **Valuation** moves into Setup; **plant settings** stay in the Admin panel; **Work-order operations** moves to Reliability. The Master data and Finance entries leave Administration.
 - Each entry is listed for whoever may open one of its pages (new capabilities `canReachPlantEquipment`, `canReachCodesSetup`, `canReachProductionRules`, `canReachWorkOrders`); route gates do not change — every `/master-data/*` route keeps `canReachMasterData`.
 - Every old address still works: `/planning?tab=profiles|transitions|streams|calendars` redirects to the Setup pages (other query parameters kept); record pages keep their `/planning/…` and `/master-data/…` paths. A master-data page's link row shows the pages of its own Setup entry only.
+
+## 2026-10-22 — Setup guide, sidebar and Setup UX (owner answers to the Setup UX audit; `plans/SETUP_UX_FIXES.md`)
+
+- **Setup guide is a reference page only.** `/equipment-setup` lists the six phases and their steps, each with a "Go to <page>" link; no guided session and no setup bar above other pages. An optional unit choice lives in `?unitId=`.
+- **Sidebar** sections are an accordion: the section of the current page can be collapsed, and moving to a page in another section opens it and closes the others. Order: Overview (Dashboard, Reports, Pending approvals) · Production · PLA · Downtime analysis · Reliability · Setup · Integration · Administration.
+- **Organizations & plants move into Setup** (first entry after the guide); the Admin panel keeps branding and plant settings. After a plant is created the plant directory refreshes and the user is offered to switch to it.
+- **Organization administrators reach every plant of their organization** on the server too (`maySelectTenant`), matching the browser; creating a plant grants no role (approval rights stay with roles granted in User management). Creating a plant also creates its default site.
+- **Plant on create forms:** unit, asset and product create forms show an Organization › Plant dropdown defaulting to the header plant; changing it switches the selected plant after a confirmation (the server keeps taking the plant from the request context).
+- **Site level is exposed:** a Site selector on the unit form and a way to manage a plant's sites (API change, flagged; OpenAPI snapshot updated).
+- **Save feedback:** creates, new versions and imports end in a result dialog (View · Add another · Back to list · Next: <next tab>); small edits and approvals use a toast; failures always show a red alert with the offending fields marked, input kept.
+- **Next links** appear only in that result dialog and through the area tab bar, which stays visible on sub-pages; no bar on top of pages.
