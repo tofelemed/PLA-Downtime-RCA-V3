@@ -69,7 +69,7 @@ describe('QA PLA fixes', () => {
     expect(coverageText('43 %', true)).toBe('43 % of periods approved');
     expect(coverageText('86 %', false)).toBe('86 % of periods calculated');
     const response = { data: { calculationRunIds: ['r1'] }, calculationRunId: 'r1', policyVersion: null, dataQuality: { missingCount: 4, provisionalCount: 0, notes: [] }, coverage: { from: SCOPE.from, to: SCOPE.to, ratio: 3 / 7 }, isProvisional: true, asOf: SCOPE.to, scope: { tenantId: 'tenant-a' } } as AnalyticsResponse<{ calculationRunIds: string[] }>;
-    render(<SnapshotStatus scopeLabel="HDPE" timezone="UTC" timezoneIsFallback={false} response={response} approvedOnly />);
+    render(<SnapshotStatus response={response} approvedOnly />);
     expect(screen.getByTestId('snapshot-incomplete')).toHaveTextContent('only approved periods are counted (43 % of periods approved)');
     expect(screen.queryByText('Provisional')).toBeNull();
   });

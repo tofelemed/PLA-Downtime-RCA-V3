@@ -64,7 +64,7 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
     wrap(<WindowRangeControl scope={day} timeZone="Asia/Tehran" onChange={onChange} />);
     expect(screen.getByTestId('pla-window')).toHaveTextContent('Chosen dates · 2026-10-17 (production day 06:00–06:00)');
     fireEvent.click(screen.getByTestId('pla-window'));
-    const to = screen.getByLabelText('To (inclusive)');
+    const to = screen.getByLabelText('To');
     expect(to).toHaveAttribute('type', 'text');
     expect(to).toHaveValue('2026-10-17');
     fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-16' } });
@@ -72,14 +72,17 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
     expect(onChange).toHaveBeenLastCalledWith({ from: '2026-10-16T02:30:00.000Z', to: '2026-10-18T02:30:00.000Z', windowLabel: 'Chosen dates' });
   });
 
-  it('ledger and "Approved only" are one segmented row of server filters', () => {
+  it('the ledger (segmented) and the revision (select) are labelled server filters', () => {
     const onChange = vi.fn();
     wrap(<LedgerApprovedToggles ledger="plan" approvedOnly={false} showLedger showApproved onChange={onChange} />);
     const row = screen.getByTestId('pla-scope-toggles');
+    expect(row).toHaveAccessibleName('Ledger');
     expect(within(row).getByTestId('ledger-plan')).toHaveAttribute('data-state', 'on');
     fireEvent.click(within(row).getByTestId('ledger-capacity'));
     expect(onChange).toHaveBeenCalledWith({ ledger: 'capacity' });
-    fireEvent.click(within(row).getByTestId('pla-approved'));
+    const revision = screen.getByLabelText('Revision');
+    expect(revision).toHaveValue('shown');
+    fireEvent.change(revision, { target: { value: 'approved' } });
     expect(onChange).toHaveBeenCalledWith({ approvedOnly: true });
   });
 });

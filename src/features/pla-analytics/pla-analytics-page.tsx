@@ -15,7 +15,8 @@ import { AnalyticsHeader } from './components/analytics-header';
 import { useAnalyticsScope } from './hooks/use-analytics-scope';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { plaPagesFor } from './model/money-access';
-import { parseCapacityFilters } from './capacity-gap/capacity-gap-model';
+import { ReportChrome } from './components/report-chrome';
+import { ViewPicker } from './components/view-picker';
 
 const PAGES = {
   overview: lazy(() => import('./tabs/waterfall-tab').then((module) => ({ default: module.WaterfallTab }))),
@@ -47,6 +48,7 @@ export function PlaAnalyticsPage() {
   return <EventHubEnvProvider tenantId={tenantId}><PlaAnalyticsScreen view={view} /></EventHubEnvProvider>;
 }
 
+/** The PLA pages share the Reports look (`ReportChrome`): report cards and tables, one "Provisional" marker where drafts can show. */
 function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   const { scope, change } = useAnalyticsScope();
   const [params] = useSearchParams();
@@ -57,17 +59,17 @@ function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   const { canViewMoney } = useCapabilities();
   const page = PLA_PAGES.find((entry) => entry.key === view) ?? PLA_PAGES[0];
   const Content = PAGES[view];
-  // capacity gap reads one instant (its own "as of" filter), not the shared window
-  const asOfDate = view === 'capacity' ? parseCapacityFilters(params).asOf : undefined;
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="pla-analytics-v2" data-view={view}>
-        <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} description={page.description} overview={view === 'overview'} asOfDate={asOfDate} />
+        <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} overview={view === 'overview'} />
         <AnalysisPageNav label="Production loss analysis pages" pages={plaPagesFor(PLA_PAGES, canViewMoney)} />
         {/* capacity gap: no window or ledger, it has its own unit / product / as-of filters */}
-        {view !== 'capacity' && <AnalyticsFilters scope={scope} onChange={change} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />}
+        {view !== 'capacity' && <AnalyticsFilters scope={scope} onChange={change} picker={<ViewPicker view={view} scope={scope} onChange={change} />} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />}
         <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>
-          <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>
+          <ReportChrome approvedOnly={scope.approvedOnly}>
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>
+          </ReportChrome>
         </AnalysisSnapshotContext.Provider>
       </div>
     </Page>

@@ -7,7 +7,7 @@ import { ReportChromeContext } from './use-report-chrome';
  * and calculation details, keep only the notes an operator needs as an ⓘ tooltip, and use the dashboard card;
  * tables are compact with small uppercase headers, empty ones say "No data for these dates", and with
  * Revision = Provisional (`approvedOnly` false) the rows and figures the server marks provisional say so.
- * Other pages (PLA analytics, valuation, dashboard) render the same cards and tables unchanged.
+ * The PLA analysis pages use the same look (cleanup 24 Oct 2026); the dashboard renders its cards unchanged.
  */
 export function ReportChrome({ approvedOnly = true, children }: { approvedOnly?: boolean; children: ReactNode }) {
   const look = useMemo(() => ({ provisional: !approvedOnly }), [approvedOnly]);

@@ -16,7 +16,7 @@ export function SiteFilter({ unitIds, onChange }: { unitIds: readonly string[]; 
   const current = siteOfSelection(unitIds, env.units, sites);
   const choose = (siteId: string) => onChange(siteId ? unitsOfSite(siteId, env.units, sites) : []);
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-1.5">
       <Label htmlFor="pla-site">Site</Label>
       <select id="pla-site" data-testid="pla-site" className={SELECT_CLASS} value={current} onChange={(event) => choose(event.target.value)}>
         <option value="">{unitIds.length > 0 && !current ? 'Chosen units' : 'All sites'}</option>

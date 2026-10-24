@@ -13,7 +13,7 @@ vi.mock('@/features/event-hub/use-event-hub-env', () => ({
 }));
 
 const { CapacityGapPage } = await import('./capacity-gap-page');
-const { asOfHeaderText, capacityGapQueryOf, parseCapacityFilters } = await import('./capacity-gap-model');
+const { capacityGapQueryOf, parseCapacityFilters } = await import('./capacity-gap-model');
 const { AnalyticsHeader } = await import('../components/analytics-header');
 
 const kind = (value: string | null, timebase: CapacityKindView['timebase'] = 'h'): CapacityKindView => ({
@@ -122,19 +122,20 @@ describe('Capacity gap page (plan 1.2)', () => {
     expect(capacityGapQueryOf([], filters, 'Asia/Tehran')).toEqual({});
   });
 
-  it('the header names the as-of instant and the units, not the shared window or its zone badge', () => {
+  it('the header is the title only: no description, scope line, window or zone badge (the As of filter says the date)', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const scope = { unitIds: ['u1'], windowLabel: 'Last 7 days' } as Parameters<typeof AnalyticsHeader>[0]['scope'];
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <AnalyticsHeader scope={scope} title="Capacity gap" overview={false} asOfDate="2026-10-19" />
+          <AnalyticsHeader scope={scope} title="Capacity gap" overview={false} />
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByTestId('analytics-as-of-header')).toHaveTextContent('u1 · As of 2026-10-19');
+    expect(screen.getByRole('heading', { name: 'Capacity gap' })).toBeTruthy();
+    expect(screen.queryByTestId('analytics-as-of-header')).toBeNull();
+    expect(screen.queryByText(/Approved nameplate, demonstrated|Periods are grouped/)).toBeNull();
     expect(screen.queryByText(/Last 7 days/)).toBeNull();
     expect(screen.queryByTestId('scope-header')).toBeNull();
-    expect(asOfHeaderText('', { calendar: 'gregorian', digits: 'latin' })).toBe('As of now');
   });
 });
