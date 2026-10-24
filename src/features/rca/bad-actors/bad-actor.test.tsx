@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
@@ -33,14 +33,25 @@ const REPORT: BadActorReportView = {
   ],
 };
 
+const renderPage = (path = '/reliability/bad-actors?month=2027-03&rankBy=quantity') =>
+  render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MemoryRouter initialEntries={[path]}>
+        <BadActorPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
 describe('CA8 bad-actor review', () => {
   let urls: URL[];
+  let report: BadActorReportView;
   beforeEach(() => {
     actAs('SuperAdmin', 'u-1');
     urls = [];
+    report = REPORT;
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       urls.push(new URL(url));
-      return json(200, { data: REPORT, calculationRunId: null, policyVersion: null, dataQuality: { missingCount: 0, provisionalCount: 0, notes: [] }, coverage: { from: REPORT.from, to: REPORT.to, ratio: 1 }, isProvisional: false, asOf: '2027-04-01T00:00:00Z', scope: { tenantId: 'tenant-a' } });
+      return json(200, { data: report, calculationRunId: null, policyVersion: null, dataQuality: { missingCount: 0, provisionalCount: 0, notes: [] }, coverage: { from: REPORT.from, to: REPORT.to, ratio: 1 }, isProvisional: false, asOf: '2027-04-01T00:00:00Z', scope: { tenantId: 'tenant-a' } });
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   });
@@ -72,21 +83,13 @@ describe('CA8 bad-actor review', () => {
   });
 
   it('asks the server for the ranking and shows its rows as sent: provisional rate, unvalued, trigger state and case link', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={['/reliability/bad-actors?month=2027-03&rankBy=quantity']}>
-          <BadActorPage />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    );
+    renderPage();
     await screen.findByTestId('bad-actor-report');
     const request = urls.find((url) => url.pathname.endsWith('/v2/reports/bad-actors'));
     expect(request?.searchParams.get('month')).toBe('2027-03');
     expect(request?.searchParams.get('currency')).toBe('USD');
     expect(screen.getAllByTestId('bad-actor-asset').map((cell) => cell.dataset.key)).toEqual(['a1', 'p1']);
     expect(screen.getAllByTestId('bad-actor-asset')[1].getAttribute('href')).toContain('assets=p1');
-    expect(screen.getByTestId('bad-actor-window').textContent).toContain('(plant dates, both included)');
     const values = screen.getAllByTestId('bad-actor-value');
     expect(values[0].textContent).toMatch(/provisional exchange rate/);
     expect(values[1].textContent).toContain('Not valued');
@@ -95,5 +98,35 @@ describe('CA8 bad-actor review', () => {
     expect(screen.getByTestId('event-rca-chip').textContent).toContain('Investigation linked');
     fireEvent.change(screen.getByLabelText('Rank by'), { target: { value: 'stops' } });
     await waitFor(() => expect(urls.some((url) => url.searchParams.get('rankBy') === 'stops')).toBe(true));
+  });
+
+  it('cleanup: title only, filters in one labelled row, the window and value basis behind the card ⓘ', async () => {
+    renderPage();
+    await screen.findByTestId('bad-actor-report');
+    expect(screen.queryByText(/Monthly review of the assets/)).toBeNull();
+    expect(screen.queryByText(/plant dates/)).toBeNull();
+    expect(screen.queryByText(/Value basis/)).toBeNull();
+    expect(screen.queryByText(/approved plan lines/)).toBeNull();
+    const card = screen.getByRole('region', { name: 'Top bad actors' });
+    fireEvent.focus(within(card).getByRole('button', { name: 'About Top bad actors' }));
+    expect((await screen.findAllByTestId('bad-actor-window'))[0].textContent).toMatch(/Rolling 90 days: .+ \(both included\)\. Value basis: /);
+    expect(within(card).getByTestId('bad-actor-count')).toHaveTextContent('(2)');
+    const labels = Array.from(screen.getByTestId('bad-actor-controls').querySelectorAll('label')).map((label) => label.textContent);
+    expect(labels).toEqual(['Group by', 'Rank by', 'Top', 'Review month']);
+    expect(screen.queryByText('Approved value (USD)')).toBeNull();
+    expect(screen.getByRole('columnheader', { name: 'Approved value' })).toBeInTheDocument();
+  });
+
+  it('says which periods the approved figures leave out, on the card', async () => {
+    report = { ...REPORT, valuationStatus: 'provisional', periods: 30, approvedPeriods: 10, uncoveredPeriods: 20 };
+    renderPage();
+    expect(await screen.findByTestId('bad-actor-excluded')).toHaveTextContent('20 periods not included: No approved plan covers these periods');
+  });
+
+  it('a window without approved loss or stops keeps its own empty message', async () => {
+    report = { ...REPORT, items: [] };
+    renderPage();
+    expect(await screen.findByText('No approved loss or stops in this window.')).toBeInTheDocument();
+    expect(screen.queryByText('No data for these dates')).toBeNull();
   });
 });
