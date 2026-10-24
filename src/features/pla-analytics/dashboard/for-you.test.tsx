@@ -30,7 +30,7 @@ function renderRow() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ForYouRow scope={dashboardScope('7d', NOW)} />
+        <ForYouRow scope={dashboardScope('7d', {}, NOW)} />
       </MemoryRouter>
     </QueryClientProvider>,
   );

@@ -125,13 +125,13 @@ describe('PLA analytics views and dashboard window (UI guidelines §2, §8)', ()
   });
 
   it('the dashboard window rolls with the clock but is minute-stable (one cache entry per minute)', () => {
-    const a = dashboardScope('7d', Date.parse('2026-10-12T10:00:05Z'));
-    const b = dashboardScope('7d', Date.parse('2026-10-12T10:00:50Z'));
-    const later = dashboardScope('7d', Date.parse('2026-10-13T10:00:05Z'));
+    const a = dashboardScope('7d', {}, Date.parse('2026-10-12T10:00:05Z'));
+    const b = dashboardScope('7d', {}, Date.parse('2026-10-12T10:00:50Z'));
+    const later = dashboardScope('7d', {}, Date.parse('2026-10-13T10:00:05Z'));
     expect([a.from, a.to]).toEqual([b.from, b.to]);
     expect(a.to).toBe('2026-10-12T10:01:00.000Z');
     expect(later.to > a.to).toBe(true);
-    expect(dashboardScope('24h', 0).windowLabel).toBe('Last 24 h');
+    expect(dashboardScope('24h', {}, 0).windowLabel).toBe('24 h');
     expect(presetKeyOf('90d')).toBe('7d');
   });
 

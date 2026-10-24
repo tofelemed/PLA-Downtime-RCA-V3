@@ -1,5 +1,5 @@
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,8 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { SELECT_CLASS } from '../components/analytics-filters';
 import { SnapshotStatus } from '../components/snapshot-status';
 import { oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { DASHBOARD_PRESETS, dashboardScope, presetKeyOf } from '../model/dashboard-scope';
+import { DASHBOARD_PRESETS, presetKeyOf } from '../model/dashboard-scope';
+import { useDashboardScope } from './use-dashboard-scope';
 import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
 import { eventsHref, reportsHref } from './dashboard-links';
 import { DashboardOee } from './dashboard-oee';
@@ -67,12 +68,10 @@ function DashboardStatus({ scope }: { scope: AnalyticsScope }) {
 }
 
 function DashboardScreen() {
-  const [params, setParams] = useSearchParams();
-  const key = presetKeyOf(params.get('window'));
-  const scope = dashboardScope(key);
+  const { key, setKey, scope } = useDashboardScope();
   // QA re-test N2: the Reports page is closed to operators (menu gate `canViewAnalysis`), so is its link
   const { canViewAnalysis } = useCapabilities();
-  const choose = (next: string) => setParams(next === '7d' ? {} : { window: next }, { replace: true });
+  const choose = (next: string) => setKey(presetKeyOf(next));
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="analytics-dashboard">
