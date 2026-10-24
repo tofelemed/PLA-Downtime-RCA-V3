@@ -1,4 +1,4 @@
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { PlantInstant } from '../components/plant-instant';
 import { StatusIcon } from '@/lib/icons';
 import type { StageResult } from '../model/stages';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -26,7 +26,7 @@ export function StageTracker({ stages, timezone }: { stages: readonly StageResul
                 {stage.at && (
                   <>
                     {' '}
-                    · <PlantTime iso={stage.at} tz={timezone} withDate />
+                    · <PlantInstant iso={stage.at} tz={timezone} />
                   </>
                 )}
               </p>

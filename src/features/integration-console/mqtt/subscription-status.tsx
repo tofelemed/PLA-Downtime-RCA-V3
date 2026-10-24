@@ -23,14 +23,14 @@ export function SubscriptionStatus({ connection, subscription, timezone }: Subsc
   const { job, health, status, now } = subscription;
   const ago = (iso: string | null, none = 'never') => {
     const seconds = secondsSince(iso, now);
-    return seconds === null ? none : <><PlantTime iso={iso} tz={timezone} withDate /> (<DurationText seconds={seconds} variant="compact" /> ago)</>;
+    return seconds === null ? none : <><PlantTime iso={iso} tz={timezone} withDate withZone={false} /> (<DurationText seconds={seconds} variant="compact" /> ago)</>;
   };
   return (
     <section aria-label="Subscription status" className="min-w-0 space-y-4 rounded-lg border bg-background p-4 text-sm" data-testid="mqtt-status" data-status={status.status} data-job-state={job?.state ?? 'none'}>
       <SubscriptionHeading connection={connection} subscription={subscription} />
       {health.persistFailed && <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs" data-testid="mqtt-persist-failure">
         <p className="font-semibold text-destructive">Persist failed</p>
-        <p className="mt-1 break-words"><PlantTime iso={health.persistFailed.at} tz={timezone} withDate /> — {health.persistFailed.error}</p>
+        <p className="mt-1 break-words"><PlantTime iso={health.persistFailed.at} tz={timezone} withDate withZone={false} /> — {health.persistFailed.error}</p>
       </div>}
       <dl className="grid min-w-0 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3" aria-label="Operational subscription facts">
         <Fact label="Last observation">{ago(job?.lastObservationAt ?? null)}</Fact>

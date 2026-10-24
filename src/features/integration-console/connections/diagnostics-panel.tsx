@@ -2,9 +2,10 @@ import { useTestConnection } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
 import { DIAGNOSTIC_STATUS_LABELS, labelOf } from '@/features/ux-kit/labels';
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { StatusIcon, type AppIcon } from '@/lib/icons';
 import { ConsoleRefusal } from '../components/console-refusal';
+import { PlantInstant } from '../components/plant-instant';
 import { ToneBadge } from '../components/tone-badge';
 import type { SessionTest } from '../hooks/use-console-session';
 import { capabilityList, connectionHealth, diagnosticRows, HEALTH_LABEL, type DiagnosticRow } from '../model/diagnostics';
@@ -15,6 +16,8 @@ export interface DiagnosticsPanelProps {
   timezone: string;
   onTested: (result: SessionTest['result']) => void;
 }
+
+const DIAGNOSTICS_INFO = 'DNS, TLS, authentication, version, authorization and read, each as the server reported it. A reachable source does not mean accounting works: map, run a limited job and clear the quarantine first.';
 
 const ICONS: Record<DiagnosticRow['status'], AppIcon> = {
   ok: StatusIcon.success,
@@ -41,12 +44,13 @@ export function DiagnosticsPanel({ connection, last, timezone, onTested }: Diagn
         <Button size="sm" onClick={() => void run()} disabled={test.isPending} data-testid="run-diagnostics">
           {test.isPending ? 'Testing…' : 'Run diagnostics'}
         </Button>
+        <KpiInfo label="Diagnostics" text={DIAGNOSTICS_INFO} />
         <ToneBadge tone={health === 'connected' ? 'ok' : health === 'not_tested' ? 'idle' : 'error'} testId="connection-health">
           {HEALTH_LABEL[health]}
         </ToneBadge>
         {last && (
           <span className="text-xs text-muted-foreground">
-            tested <PlantTime iso={last.at} tz={timezone} withDate />
+            tested <PlantInstant iso={last.at} tz={timezone} />
           </span>
         )}
       </div>
@@ -69,7 +73,6 @@ export function DiagnosticsPanel({ connection, last, timezone, onTested }: Diagn
           Detected: {capabilityList(last?.result.capabilities).join(', ')}
         </p>
       )}
-      <p className="text-xs text-muted-foreground">A reachable source does not mean accounting works: map, run a limited job and clear the quarantine first.</p>
     </section>
   );
 }

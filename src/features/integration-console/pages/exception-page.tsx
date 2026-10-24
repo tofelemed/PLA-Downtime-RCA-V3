@@ -23,7 +23,7 @@ export function ExceptionPage() {
   const title = exception ? ERROR_CODE_INFO[exception.errorCode].label : 'Quarantined item';
   return (
     <Page>
-      <PageHeader title={title} description="A source record that could not be processed, waiting in quarantine." back={{ to: back, label: 'Quarantine' }} />
+      <PageHeader title={title} back={{ to: back, label: 'Quarantine' }} />
       {!tenantId ? (
         <DataState state="no-permission" detail="Choose a plant to see its quarantine." />
       ) : (

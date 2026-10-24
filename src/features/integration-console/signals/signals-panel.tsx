@@ -6,10 +6,23 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, SIGNAL_TYPE_LABELS, useUnitNames } from '@/features/ux-kit/labels';
+import { IntegrationCard } from '../components/integration-card';
 import { signalUomText } from '../model/signal-uom';
 import { ActionIcon } from '@/lib/icons';
 import { historianPath, newSignalPath } from '../paths';
 import { SignalActions } from './signal-actions';
+
+const SIGNALS_INFO = "The measurements this connection delivers (rates, counters, states), every version. A name opens its trend in the historian; a row's preview shows the server's quantity for a period.";
+
+function DefineSignal({ connectionId }: { connectionId: string }) {
+  return (
+    <Button asChild size="sm" variant="outline">
+      <Link to={newSignalPath(connectionId)} data-testid="new-signal">
+        <ActionIcon.add className="mr-1 h-4 w-4" aria-hidden="true" /> Define signal
+      </Link>
+    </Button>
+  );
+}
 
 interface ColumnContext {
   unitName: (id: string) => string;
@@ -36,7 +49,7 @@ function columnsOf({ unitName, selectedId, onSelect }: ColumnContext, allowBackf
       id: 'actions',
       header: allowBackfill ? 'Quantity and backfill' : 'Stored samples and quantity',
       cell: (signal) => (
-        <Button size="sm" variant={signal.id === selectedId ? 'secondary' : 'outline'} aria-pressed={signal.id === selectedId} onClick={() => onSelect(signal)}>
+        <Button size="sm" className="whitespace-nowrap" variant={signal.id === selectedId ? 'secondary' : 'outline'} aria-pressed={signal.id === selectedId} onClick={() => onSelect(signal)}>
           {allowBackfill ? 'Preview / backfill' : 'Preview samples / quantity'}
         </Button>
       ),
@@ -55,26 +68,19 @@ export function SignalsPanel({ connectionId, timezone, allowBackfill = true }: {
   const [selected, setSelected] = useState<SignalView | null>(null);
   const columns = useMemo(() => columnsOf({ unitName: units.nameOf, selectedId: selected?.id ?? null, onSelect: setSelected }, allowBackfill), [units, selected, allowBackfill]);
   return (
-    <section aria-label="Signals" className="space-y-3" data-testid="signals-panel">
-      {canWriteIntegration && (
-        <div className="flex justify-end">
-          <Button asChild size="sm" variant="outline">
-            <Link to={newSignalPath(connectionId)} data-testid="new-signal">
-              <ActionIcon.add className="mr-1 h-4 w-4" aria-hidden="true" /> Define signal
-            </Link>
-          </Button>
-        </div>
-      )}
-      <DataTable
-        caption="Signals"
-        columns={columns}
-        rows={signals.rows}
-        getRowKey={(signal) => signal.id}
-        pager={signals.pager}
-        status={signals.status}
-        empty={{ title: 'No signals yet', text: 'Define the measurements this connection delivers (rates, counters, states) to trend and account them.' }}
-      />
+    <div className="space-y-4">
+      <IntegrationCard title="Signals" info={SIGNALS_INFO} actions={canWriteIntegration ? <DefineSignal connectionId={connectionId} /> : undefined} testId="signals-panel">
+        <DataTable
+          caption="Signals"
+          columns={columns}
+          rows={signals.rows}
+          getRowKey={(signal) => signal.id}
+          pager={signals.pager}
+          status={signals.status}
+          empty={{ title: 'No signals yet', text: 'No signals defined yet.' }}
+        />
+      </IntegrationCard>
       {selected && <SignalActions key={selected.id} signal={selected} timezone={timezone} allowBackfill={allowBackfill} />}
-    </section>
+    </div>
   );
 }
