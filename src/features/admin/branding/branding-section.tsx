@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { Section } from '@/features/ux-kit/page-layout';
+import { AdminCard } from '../shared/admin-card';
 import { FormField } from '../shared/form-field';
 import { useCommandFeedback } from '../shared/use-command-feedback';
 import { contrastRatio, readableTextOn } from '@/features/shell/brand-colors';
@@ -17,7 +17,7 @@ type NumberKey = 'logoSize' | 'logoBorderRadius' | 'logoContainerSize' | 'logoCo
 /** Label and the server's limits (`BrandingV2Dto`), so a value out of range is caught before saving. */
 const NUMBER_FIELDS: ReadonlyArray<{ key: NumberKey; label: string; min: number; max: number; step?: number }> = [
   { key: 'logoSize', label: 'Logo size (px)', min: 8, max: 256 },
-  { key: 'logoContainerSize', label: 'Logo frame size (px; the header shows at most 48)', min: 8, max: 256 },
+  { key: 'logoContainerSize', label: 'Logo frame size (px)', min: 8, max: 256 },
   { key: 'logoBorderRadius', label: 'Logo corner radius (px)', min: 0, max: 128 },
   { key: 'logoContainerRadius', label: 'Frame corner radius (px)', min: 0, max: 128 },
   { key: 'logoContainerPadding', label: 'Frame padding (px)', min: 0, max: 64 },
@@ -31,6 +31,9 @@ const CLEARABLE = new Set(['appSubtitle', 'logoInitials']);
 function inputOf(view: BrandingView): BrandingInput {
   return Object.fromEntries(Object.entries(view).filter(([key]) => key !== 'isStored' && key !== 'updatedAt')) as BrandingInput;
 }
+
+const INFO =
+  'Name, logo and colors shown in the header of every plant. Initials show when there is no logo (up to 4 letters; empty = the first letters of the name). The primary color is used by buttons, links and the logo frame; the header shows the frame at most 48 px.';
 
 const announce = () => window.dispatchEvent(new Event('brandingUpdated'));
 
@@ -48,34 +51,35 @@ export function BrandingSection() {
   const body = Object.fromEntries(Object.entries(draft).filter(([key, value]) => value !== undefined && (value !== '' || CLEARABLE.has(key)))) as BrandingInput;
   const submit = () => feedback(() => save.submit(body), 'Branding saved').then(announce).catch(() => undefined);
   return (
-    <Section
+    <AdminCard
       title="Branding"
-      description="Name, logo and colors shown in the header of every plant."
+      info={INFO}
+      testId="branding"
       actions={
         <>
-          <ConfirmDialog trigger={<Button variant="outline" disabled={!branding.data.isStored}>Reset to defaults</Button>} title="Reset the branding?"
+          <ConfirmDialog trigger={<Button variant="outline" className="h-9" disabled={!branding.data.isStored}>Reset to defaults</Button>} title="Reset the branding?"
             description="The default name, logo and colors come back for every user." confirmLabel="Reset branding" destructive
             onConfirm={() => feedback(() => reset.submit(undefined), 'Branding reset').then(announce)} />
-          <Button onClick={() => void submit()} disabled={save.isPending || !draft.appName.trim()}>Save changes</Button>
+          <Button className="h-9" onClick={() => void submit()} disabled={save.isPending || !draft.appName.trim()}>Save changes</Button>
         </>
       }
     >
       <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
         <FormField htmlFor={ids.name} label="Application name" required error={draft.appName.trim() ? null : 'Enter a name.'}>
-          <Input id={ids.name} value={draft.appName} maxLength={80} onChange={(e) => set({ appName: e.target.value })} />
+          <Input id={ids.name} className="h-9" value={draft.appName} maxLength={80} onChange={(e) => set({ appName: e.target.value })} />
         </FormField>
-        <FormField htmlFor={ids.subtitle} label="Subtitle" hint="Leave empty for none.">
-          <Input id={ids.subtitle} value={draft.appSubtitle ?? ''} maxLength={120} onChange={(e) => set({ appSubtitle: e.target.value })} />
+        <FormField htmlFor={ids.subtitle} label="Subtitle">
+          <Input id={ids.subtitle} className="h-9" value={draft.appSubtitle ?? ''} maxLength={120} onChange={(e) => set({ appSubtitle: e.target.value })} />
         </FormField>
-        <FormField htmlFor={ids.initials} label="Initials" hint="Shown when there is no logo (up to 4 letters); empty = the first letters of the name.">
-          <Input id={ids.initials} value={draft.logoInitials ?? ''} maxLength={4} onChange={(e) => set({ logoInitials: e.target.value })} />
+        <FormField htmlFor={ids.initials} label="Initials">
+          <Input id={ids.initials} className="h-9" value={draft.logoInitials ?? ''} maxLength={4} onChange={(e) => set({ logoInitials: e.target.value })} />
         </FormField>
         <div className="grid grid-cols-2 gap-4">
-          <FormField htmlFor={ids.primary} label="Primary color" hint={contrastHint(draft.primaryColor)}>
-            <Input id={ids.primary} type="color" value={draft.primaryColor ?? '#2563eb'} onChange={(e) => set({ primaryColor: e.target.value })} />
+          <FormField htmlFor={ids.primary} label="Primary color" hint={contrastWarning(draft.primaryColor)}>
+            <Input id={ids.primary} type="color" className="h-9" value={draft.primaryColor ?? '#2563eb'} onChange={(e) => set({ primaryColor: e.target.value })} />
           </FormField>
           <FormField htmlFor={ids.secondary} label="Secondary color">
-            <Input id={ids.secondary} type="color" value={draft.secondaryColor ?? '#ec4899'} onChange={(e) => set({ secondaryColor: e.target.value })} />
+            <Input id={ids.secondary} type="color" className="h-9" value={draft.secondaryColor ?? '#ec4899'} onChange={(e) => set({ secondaryColor: e.target.value })} />
           </FormField>
         </div>
         <ImageField label="Logo" value={draft.logoUrl ?? ''} disabled={false} onChange={(logoUrl) => set({ logoUrl })} />
@@ -84,7 +88,7 @@ export function BrandingSection() {
           <BrandingNumber key={field.key} field={field} value={draft[field.key]} onChange={(value) => set({ [field.key]: value })} />
         ))}
       </div>
-    </Section>
+    </AdminCard>
   );
 }
 
@@ -93,17 +97,14 @@ function BrandingNumber({ field, value, onChange }: { field: (typeof NUMBER_FIEL
   const outside = value !== undefined && (value < field.min || value > field.max);
   return (
     <FormField htmlFor={id} label={field.label} error={outside ? `Enter ${field.min}–${field.max}.` : null}>
-      <Input id={id} type="number" min={field.min} max={field.max} step={field.step ?? 1} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} />
+      <Input id={id} className="h-9" type="number" min={field.min} max={field.max} step={field.step ?? 1} value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))} />
     </FormField>
   );
 }
 
-/** How the header initials read on the chosen colour (they are drawn black or white, whichever reads better). */
-function contrastHint(color: string | undefined): string {
-  const text = readableTextOn(color);
-  const ratio = contrastRatio(color ?? '', text);
-  if (ratio === null) return 'Buttons, links and the logo frame use it.';
-  return ratio < 4.5
-    ? `Low contrast (${formatNumber(ratio, 1)}:1): text on this colour is hard to read; choose a darker or lighter shade.`
-    : 'Buttons, links and the logo frame use it.';
+/** A warning when text on the chosen colour is hard to read (it is drawn black or white, whichever reads better); nothing otherwise. */
+function contrastWarning(color: string | undefined): string | undefined {
+  const ratio = contrastRatio(color ?? '', readableTextOn(color));
+  if (ratio === null || ratio >= 4.5) return undefined;
+  return `Low contrast (${formatNumber(ratio, 1)}:1): text on this colour is hard to read; choose a darker or lighter shade.`;
 }

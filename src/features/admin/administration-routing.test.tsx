@@ -57,9 +57,10 @@ describe('moved administration pages', () => {
   });
   it('a reader keeps the read-only Settings deep link, with no new administration write access', async () => {
     actAs('viewer'); show('/settings');
-    expect(await screen.findByRole('group', { name: 'Calendar system' })).toBeInTheDocument();
+    // read-only users see the values as text, not disabled radios (cleanup 25 Oct 2026)
+    expect(await screen.findByTestId('calendar-settings-read-only')).toHaveTextContent('Calendar system');
     expect(screen.queryByRole('button', { name: 'Save' })).toBeNull();
-    expect(screen.getByRole('radio', { name: /Gregorian/ })).toBeDisabled();
+    expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'Plants & organizations' })).toBeNull();
   });
 });
