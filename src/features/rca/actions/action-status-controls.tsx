@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUpdateRcaAction, useVerifyRcaAction } from '@/api/v2/queries/rca-commands';
 import type { RcaActionView } from '@/api/v2/types/rca';
 import { Badge } from '@/components/ui/badge';
@@ -27,8 +27,15 @@ interface CancelDialogProps {
 /** F-9: cancelling asks why (required here, sent as `cancelReason`; the server records who and when). */
 function CancelActionDialog({ action, open, onOpenChange, onConfirm, error }: CancelDialogProps) {
   const [reason, setReason] = useState('');
+  const field = useRef<HTMLTextAreaElement>(null);
   const id = `cancel-reason-${action.id}`;
   const trimmed = reason.trim();
+  useEffect(() => {
+    if (!open) return undefined;
+    // after the alert dialog's own focus move (to Cancel): the reason is the first thing to fill in
+    const timer = window.setTimeout(() => field.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [open]);
   return (
     <ConfirmDialog
       open={open}
@@ -37,7 +44,7 @@ function CancelActionDialog({ action, open, onOpenChange, onConfirm, error }: Ca
         onOpenChange(next);
       }}
       title={`Cancel "${action.title}"?`}
-      description="A cancelled action counts as finished for closure and is left out of the effectiveness verdict. Set it back to open to resume it."
+      description="It counts as finished for closure and leaves the effectiveness verdict; set it back to open to resume it."
       confirmLabel="Cancel action"
       cancelLabel="Keep action"
       destructive
@@ -46,7 +53,7 @@ function CancelActionDialog({ action, open, onOpenChange, onConfirm, error }: Ca
       onConfirm={() => onConfirm(trimmed)}
     >
       <FormField id={id} label="Reason for cancelling" required hint="Kept with the action, with who cancelled it and when.">
-        <Textarea id={id} value={reason} maxLength={CANCEL_REASON_MAX} onChange={(e) => setReason(e.target.value)} />
+        <Textarea ref={field} id={id} rows={3} value={reason} maxLength={CANCEL_REASON_MAX} onChange={(e) => setReason(e.target.value)} />
       </FormField>
       {error ? <RcaErrorAlert error={error} /> : null}
     </ConfirmDialog>
@@ -70,7 +77,7 @@ export function ActionStatusControls({ action }: { action: RcaActionView }) {
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
         <select
-          className="rounded border bg-background px-2 py-1 text-sm"
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
           aria-label={`Status of ${action.title}`}
           value={action.status}
           disabled={!access.canWork && !canWriteRca}
@@ -82,7 +89,7 @@ export function ActionStatusControls({ action }: { action: RcaActionView }) {
             </option>
           ))}
         </select>
-        <Badge variant="outline" data-testid="verification-status">
+        <Badge variant="outline" className="whitespace-nowrap font-normal" data-testid="verification-status">
           {verificationLabel(action)}
         </Badge>
         {action.verificationStatus === 'due' && canWriteRca && (

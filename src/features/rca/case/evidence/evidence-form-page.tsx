@@ -4,7 +4,6 @@ import type { RcaEvidenceItem } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { Section } from '@/features/ux-kit/page-layout';
 import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
 import { useRcaFormat } from '../../use-rca-format';
 import { EMPTY_EVIDENCE_FORM, evidenceFormOf, evidenceItemOf, type EvidenceForm } from '../../model/evidence-form';
@@ -12,7 +11,9 @@ import { newItemId } from '../../model/rca-form';
 import { useCaseWorkspace } from '../case-context';
 import { useCasePatch } from '../use-case-patch';
 import { AttachmentsField } from './attachments-field';
+import { CaseCard } from './case-card';
 import { EvidenceClassificationFields, EvidenceDetailsFields, EvidenceTaskFields } from './evidence-fields';
+import { FormFooter } from './form-controls';
 import { SeriesFields } from './series-fields';
 
 function useEvidenceSave(existing: RcaEvidenceItem | undefined) {
@@ -37,6 +38,10 @@ function useEvidenceSave(existing: RcaEvidenceItem | undefined) {
   return { save, error: patch.error, isPending: patch.isPending };
 }
 
+/** Where Cancel goes: the item being edited, else the list. */
+const backPath = (basePath: string, existing: RcaEvidenceItem | undefined) =>
+  existing ? `${basePath}/evidence/${encodeURIComponent(existing.id)}` : `${basePath}/evidence`;
+
 /** `/rca/:caseId/evidence/new` and `…/:evidenceId/edit`: the evidence form with files and historian query. */
 export function EvidenceFormPage() {
   const { rca, readOnly, basePath } = useCaseWorkspace();
@@ -47,12 +52,14 @@ export function EvidenceFormPage() {
   const [initial] = useState<EvidenceForm>(() => (existing ? evidenceFormOf(existing, timezone) : EMPTY_EVIDENCE_FORM));
   const [form, setForm] = useState<EvidenceForm>(initial);
   const [busy, setBusy] = useState(false);
+  const [titleTouched, setTitleTouched] = useState(false);
   const saving = useEvidenceSave(existing);
   useUnsavedChangesGuard(JSON.stringify(form) !== JSON.stringify(initial));
   if (readOnly || (evidenceId && !existing)) return <Navigate to={`${basePath}/evidence`} replace />;
   const change = (patch: Partial<EvidenceForm>) => setForm((current) => ({ ...current, ...patch }));
+  const cancel = () => navigate(backPath(basePath, existing));
   return (
-    <Section title={existing ? `Edit evidence: ${existing.title}` : 'Add evidence'}>
+    <CaseCard title={existing ? `Edit evidence: ${existing.title}` : 'Add evidence'}>
       <form
         className="space-y-6"
         data-testid="evidence-form"
@@ -61,21 +68,21 @@ export function EvidenceFormPage() {
           void saving.save(form);
         }}
       >
-        <EvidenceDetailsFields form={form} onChange={change} />
+        <EvidenceDetailsFields form={form} onChange={change} titleTouched={titleTouched} onTitleBlur={() => setTitleTouched(true)} />
         {form.type === 'Time Series' && <SeriesFields value={form.series} onChange={(series) => change({ series })} />}
         <EvidenceClassificationFields form={form} onChange={change} />
         <EvidenceTaskFields form={form} onChange={change} />
         <AttachmentsField rcaId={rca.id} value={form.attachments} onChange={(attachments) => change({ attachments })} onBusy={setBusy} />
         {saving.error ? <FriendlyErrorAlert error={saving.error} /> : null}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={form.title.trim() === '' || busy || saving.isPending} data-testid="save-evidence">
-            {existing ? 'Save evidence' : 'Add evidence'}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => navigate(existing ? `${basePath}/evidence/${encodeURIComponent(existing.id)}` : `${basePath}/evidence`)}>
+        <FormFooter>
+          <Button type="button" size="sm" variant="outline" onClick={cancel}>
             Cancel
           </Button>
-        </div>
+          <Button type="submit" size="sm" disabled={form.title.trim() === '' || busy || saving.isPending} data-testid="save-evidence">
+            {existing ? 'Save evidence' : 'Add evidence'}
+          </Button>
+        </FormFooter>
       </form>
-    </Section>
+    </CaseCard>
   );
 }

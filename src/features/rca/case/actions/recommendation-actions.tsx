@@ -28,7 +28,7 @@ export function RecommendationActions({ recommendation, basePath, readOnly }: Re
       {actions.map((action) => (
         <Link key={action.id} to={`${basePath}/actions#action-${encodeURIComponent(action.id)}`} className="inline-flex items-center gap-1 hover:underline" onClick={stop} onKeyDown={stop}>
           <span>{action.title}</span>
-          <StatusBadge tone={toneOf(RCA_ACTION_STATUS_TONES, action.status)}>{labelOf(RCA_ACTION_STATUS_LABELS, action.status)}</StatusBadge>
+          <StatusBadge tone={toneOf(RCA_ACTION_STATUS_TONES, action.status)} className="whitespace-nowrap">{labelOf(RCA_ACTION_STATUS_LABELS, action.status)}</StatusBadge>
         </Link>
       ))}
       {!readOnly && (
