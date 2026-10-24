@@ -28,6 +28,7 @@ import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
 import { MasterDataListQueryDto } from '../master-data/common/master-data-list-query.dto';
 import { MASTER_DATA_WRITERS } from '../master-data/common/master-data-writer';
 import { UnitV2ChangeDto, UnitV2CreateDto } from './unit-v2.dto';
+import { UnitAssetPresence } from './unit-asset-presence';
 import { UnitV2View } from './unit-v2.view';
 import { UnitsV2CommandsService } from './units-v2-commands.service';
 import { UnitsV2Service } from './units-v2.service';
@@ -56,6 +57,18 @@ export class UnitsV2Controller {
     @Query() query: MasterDataListQueryDto,
   ): Promise<ListResponse<UnitV2View>> {
     return this.units.list(ctx, query);
+  }
+
+  @Get('asset-presence')
+  @ApiOperation({
+    summary: 'Whether each unit of the caller scope has an active asset',
+    description:
+      'One row per visible unit (`hasAssets` = at least one non-retired asset); drives the hierarchy chevrons.',
+  })
+  assetPresence(
+    @Ctx() ctx: RequestContext,
+  ): Promise<{ data: { items: UnitAssetPresence[] } }> {
+    return this.units.assetPresence(ctx);
   }
 
   @Get(':id')

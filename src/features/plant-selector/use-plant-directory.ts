@@ -3,7 +3,7 @@ import { v2Request } from '@/api/v2/client';
 import { fromSessionBootstrap } from '@/api/v2/queries/session-bootstrap';
 import type { QueryParams } from '@/api/v2/request-url';
 import type { ListResponse } from '@/api/v2/types/envelopes';
-import type { DirectoryAsset, DirectoryOrganization, DirectoryPlant, DirectoryUnit } from '@/api/v2/types/plant-directory';
+import type { DirectoryAsset, DirectoryOrganization, DirectoryPlant, DirectoryUnit, UnitAssetPresence } from '@/api/v2/types/plant-directory';
 import { useAuth } from '@/contexts/AuthContext';
 import { selectableTenants } from '@/contexts/plant-selection-store';
 
@@ -14,6 +14,7 @@ export const plantDirectoryKeys = {
   organizations: (userId: string) => ['v2', 'directory', userId, 'organizations'] as const,
   tenants: (userId: string) => ['v2', 'directory', userId, 'tenants'] as const,
   units: (tenantId: string) => ['v2', 'directory', 'units', tenantId] as const,
+  assetPresence: (tenantId: string) => ['v2', 'directory', 'asset-presence', tenantId] as const,
   assets: (unitId: string) => ['v2', 'directory', 'assets', unitId] as const,
 };
 
@@ -88,6 +89,19 @@ export function usePlantUnits(tenantId: string, enabled: boolean) {
     staleTime: DIRECTORY_STALE_MS,
     queryFn: ({ signal }) => allPages<DirectoryUnit>('/units', {}, { tenantId, signal }),
   });
+}
+
+/** Whether each unit of a plant has an active asset (`GET /v2/units/asset-presence`); empty until loaded or while `tenantId` is null. */
+export function useUnitAssetPresence(tenantId: string | null): Map<string, boolean> {
+  const presence = useQuery({
+    queryKey: plantDirectoryKeys.assetPresence(tenantId ?? '-'),
+    enabled: tenantId !== null,
+    staleTime: DIRECTORY_STALE_MS,
+    queryFn: async ({ signal }) =>
+      (await v2Request<{ data: { items: UnitAssetPresence[] } }>({ method: 'GET', path: '/units/asset-presence', tenantId: tenantId ?? undefined, signal })).data.data.items,
+    select: (rows) => new Map(rows.map((row) => [row.unitId, row.hasAssets])),
+  });
+  return presence.data ?? new Map<string, boolean>();
 }
 
 /** Active assets of one unit (`GET /v2/assets` read as its plant), fetched when its node is expanded. */

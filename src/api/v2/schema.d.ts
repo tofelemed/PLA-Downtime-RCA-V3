@@ -6262,6 +6262,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/units/asset-presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether each unit of the caller scope has an active asset
+         * @description One row per visible unit (`hasAssets` = at least one non-retired asset); drives the hierarchy chevrons.
+         */
+        get: operations["UnitsV2Controller_assetPresence_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/units/{id}": {
         parameters: {
             query?: never;
@@ -20744,6 +20764,23 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_assetPresence_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

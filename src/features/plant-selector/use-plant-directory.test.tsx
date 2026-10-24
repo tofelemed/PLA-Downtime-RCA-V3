@@ -8,7 +8,7 @@ const auth = vi.hoisted(() => ({ session: { user: { id: 'u1', role: 'SuperAdmin'
 vi.mock('@/contexts/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
-const { usePlantDirectory, usePlantUnits, useUnitAssets } = await import('./use-plant-directory');
+const { usePlantDirectory, usePlantUnits, useUnitAssetPresence, useUnitAssets } = await import('./use-plant-directory');
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
 const page = (items: unknown[], nextCursor: string | null = null) => ({ items, nextCursor, asOf: 'now', scope: {} });
@@ -31,6 +31,7 @@ describe('plant directory on v2 (V1 of the v2-only plan)', () => {
           ? json(page([{ id: 'plant-b', code: 'B', name: 'Plant B', organizationId: 'org-1' }]))
           : json(page([{ id: 'plant-a', code: 'A', name: 'Plant A', organizationId: 'org-1' }], 'next'));
       }
+      if (parsed.pathname.endsWith('/units/asset-presence')) return json({ data: { items: [{ unitId: 'unit-1', hasAssets: false }] } });
       if (parsed.pathname.endsWith('/units')) return json(page([{ id: 'unit-1', code: 'K1', name: 'Kiln 1' }]));
       return json(page([{ id: 'asset-1', code: 'P1', name: 'Pump 1', unitId: 'unit-1' }]));
     }));
@@ -52,5 +53,11 @@ describe('plant directory on v2 (V1 of the v2-only plan)', () => {
     expect(calls.map((call) => call.tenant)).toEqual(['plant-b', 'plant-b']);
     expect(calls[1].url.searchParams.getAll('unitIds')).toEqual(['unit-1']);
     expect(calls[1].url.searchParams.get('status')).toBe('active');
+  });
+
+  it('reads unit asset presence as the browsed plant and exposes it by unit id', async () => {
+    const { result } = renderHook(() => useUnitAssetPresence('plant-b'), { wrapper });
+    await waitFor(() => expect(result.current.get('unit-1')).toBe(false));
+    expect(calls.map((call) => call.tenant)).toEqual(['plant-b']);
   });
 });

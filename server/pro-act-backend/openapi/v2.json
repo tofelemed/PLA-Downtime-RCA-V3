@@ -21550,6 +21550,27 @@
         ]
       }
     },
+    "/api/v2/units/asset-presence": {
+      "get": {
+        "description": "One row per visible unit (`hasAssets` = at least one non-retired asset); drives the hierarchy chevrons.",
+        "operationId": "UnitsV2Controller_assetPresence_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Whether each unit of the caller scope has an active asset",
+        "tags": [
+          "v2 · Units"
+        ]
+      }
+    },
     "/api/v2/units/{id}": {
       "get": {
         "operationId": "UnitsV2Controller_get_v2",

@@ -29,6 +29,12 @@ export interface DirectoryUnit {
   name: string;
 }
 
+/** One row of `GET /v2/units/asset-presence`. */
+export interface UnitAssetPresence {
+  unitId: string;
+  hasAssets: boolean;
+}
+
 export interface DirectoryAsset {
   id: string;
   code: string;
