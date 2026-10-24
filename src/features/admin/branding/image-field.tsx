@@ -34,12 +34,12 @@ export function ImageField({ label, value, disabled, onChange }: ImageFieldProps
   };
   return (
     <div className="space-y-2">
-      <FormField htmlFor={ids.url} label={`${label} address`} hint={inline ? 'An uploaded image is used. Clear to use an address.' : 'https://… or upload a file below.'} error={error}>
-        <Input id={ids.url} value={inline ? 'Uploaded image' : value} disabled={disabled || inline} onChange={(e) => onChange(e.target.value)} />
+      <FormField htmlFor={ids.url} label={`${label} address`} hint={inline ? 'An uploaded image is used. Clear to use an address.' : undefined} error={error}>
+        <Input id={ids.url} className="h-9" placeholder="https://…" value={inline ? 'Uploaded image' : value} disabled={disabled || inline} onChange={(e) => onChange(e.target.value)} />
       </FormField>
       <div className="flex flex-wrap items-center gap-3">
         <Label htmlFor={ids.file} className="sr-only">{`Upload ${label.toLowerCase()}`}</Label>
-        <Input id={ids.file} type="file" accept={WEB_IMAGES.join(',')} className="max-w-xs" disabled={disabled} onChange={upload} />
+        <Input id={ids.file} type="file" accept={WEB_IMAGES.join(',')} className="h-9 max-w-xs" disabled={disabled} onChange={upload} />
         {value && (
           <button type="button" className="text-sm underline" disabled={disabled} onClick={() => onChange('')}>
             Clear

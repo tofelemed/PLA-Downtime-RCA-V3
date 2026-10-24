@@ -11,13 +11,13 @@ export function AuditCharts({ summary }: { summary: AuditSummaryView }) {
   const byEntity = summary.byEntityType.map((row) => ({ label: labelOf(AUDIT_ENTITY_LABELS, row.key), value: row.count }));
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <ChartCard title="Activity by day" description="Entries per day (UTC days)">
+      <ChartCard title="By day">
         <TrendLineChart data={byDay} valueLabel="Entries" />
       </ChartCard>
-      <ChartCard title="By action" description="Most frequent actions">
+      <ChartCard title="By action">
         <CategoryBarChart data={byAction} valueLabel="Entries" />
       </ChartCard>
-      <ChartCard title="By record type" description="What was changed">
+      <ChartCard title="By record type">
         <CategoryBarChart data={byEntity} valueLabel="Entries" />
       </ChartCard>
     </div>

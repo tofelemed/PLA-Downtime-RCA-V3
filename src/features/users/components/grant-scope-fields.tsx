@@ -17,7 +17,7 @@ export function GrantScopeFields({ value, onChange }: { value: ScopeChoice; onCh
     <>
       <FormField htmlFor={ids.role} label="Role" required>
         <Select value={value.role} onValueChange={(role) => onChange({ ...value, role })}>
-          <SelectTrigger id={ids.role}>
+          <SelectTrigger id={ids.role} className="h-9">
             <SelectValue placeholder="Choose a role" />
           </SelectTrigger>
           <SelectContent>
@@ -31,7 +31,7 @@ export function GrantScopeFields({ value, onChange }: { value: ScopeChoice; onCh
       </FormField>
       <FormField htmlFor={ids.where} label="Where">
         <Select value={value.where} onValueChange={(where) => onChange({ ...value, where })}>
-          <SelectTrigger id={ids.where}>
+          <SelectTrigger id={ids.where} className="h-9">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

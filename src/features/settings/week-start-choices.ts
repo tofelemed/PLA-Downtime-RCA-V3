@@ -13,3 +13,6 @@ export const WEEK_START_CHOICES = [
 export function weekStartLabel(weekStart: string | null | undefined): string {
   return WEEK_START_CHOICES.find((choice) => choice.value === weekStart)?.label ?? '—';
 }
+
+/** Why a plant setting shows as text without Save: who may change the plant settings. */
+export const READ_ONLY_REASON = 'Only a plant administrator or a manager approver of this plant can change these settings.';

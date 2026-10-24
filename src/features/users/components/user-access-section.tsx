@@ -1,11 +1,11 @@
 import { useRevokeScope, useUserScopes } from '@/api/v2/queries/administration-users';
 import type { UserScopeView } from '@/api/v2/types/administration';
+import { AdminCard } from '@/features/admin/shared/admin-card';
 import { useCommandFeedback } from '@/features/admin/shared/use-command-feedback';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { IconButton } from '@/features/ux-kit/icon-button';
 import { labelOf, roleLabel, SCOPE_KIND_LABELS, SCOPE_LOCK_LABELS } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { ActionIcon } from '@/lib/icons';
@@ -38,8 +38,8 @@ function useColumns(userName: string, canWrite: boolean): ReadonlyArray<DataTabl
       cell: (scope) => (scope.scopeKind === 'tenant' ? labelOf(SCOPE_KIND_LABELS, 'tenant') : scope.scopeName ?? labelOf(SCOPE_KIND_LABELS, scope.scopeKind)),
     },
     { id: 'by', header: 'Granted by', cell: (scope) => scope.createdByName ?? '—' },
-    { id: 'on', header: 'Granted on', cell: (scope) => <PlantTime iso={scope.createdAt} tz={timezone} withDate />, nowrap: true },
-    { id: 'revoke', header: <span className="sr-only">Remove</span>, headerLabel: 'Remove', cell: (scope) => <RevokeCell scope={scope} userName={userName} canWrite={canWrite} /> },
+    { id: 'on', header: 'Granted on', cell: (scope) => <PlantTime iso={scope.createdAt} tz={timezone} withDate withZone={false} />, nowrap: true },
+    { id: 'revoke', header: <span className="sr-only">Remove</span>, headerLabel: 'Remove', nowrap: true, cell: (scope) => <RevokeCell scope={scope} userName={userName} canWrite={canWrite} /> },
   ];
 }
 
@@ -51,10 +51,11 @@ export function UserAccessSection({ userId, userName, canWrite }: { userId: stri
   const scopes = useUserScopes(userId);
   const columns = useColumns(userName, canWrite);
   return (
-    <Section
+    <AdminCard
       title="Access in this plant"
-      description="Roles the user holds here, for the whole plant or one unit. You can grant roles up to your own; nobody changes their own access."
+      info="Roles the user holds here, for the whole plant or one unit. You can grant roles up to your own; nobody changes their own access."
       actions={canWrite ? <GrantScopeDialog userId={userId} userName={userName} /> : undefined}
+      testId="user-access"
     >
       <DataTable
         caption={`Access of ${userName}`}
@@ -63,8 +64,9 @@ export function UserAccessSection({ userId, userName, canWrite }: { userId: stri
         getRowKey={(scope) => scope.id}
         pager={scopes.pager}
         status={scopes.status}
+        density="compact"
         empty={{ title: 'No plant roles listed', text: 'No plant or unit roles are listed here. Organization or system roles may still provide access.' }}
       />
-    </Section>
+    </AdminCard>
   );
 }
