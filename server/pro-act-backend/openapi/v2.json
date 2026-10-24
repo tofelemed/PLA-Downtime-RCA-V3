@@ -18723,7 +18723,7 @@
             "bearer": []
           }
         ],
-        "summary": "Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)",
+        "summary": "Unaccounted, over-accounted and overproduction quantity, plan, actual, shortfall, explained and unexplained loss per site-local shift, day, week or month, with window totals per unit of measure (plan ledger, after decisions)",
         "tags": [
           "v2 · PLA analytics"
         ]

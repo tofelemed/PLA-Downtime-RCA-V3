@@ -110,7 +110,7 @@ describe('PLA analytics display (plan 3.6, T41)', () => {
   it('chart rows copy server values per series (null stays null)', () => {
     const rows = oeeRows({ policy: 'operational', label: 'L', groupBy: 'day', calculationRunIds: [], total: [], groups: [{ key: '2026-10-01', label: null, metrics: [kpi({ value: '0.5' }), kpi({ metric: 'quality' })] }] });
     expect(rows).toEqual([{ label: '2026-10-01', values: { oee: '0.5', quality: null } }]);
-    const trend = { groupBy: 'day' as const, ledger: 'plan' as const, calculationRunIds: [], buckets: [{ key: 'd', uom: 't', unaccounted: '10', overAccounted: '0', overproduction: '0', plan: '100', shortfall: '10', unexplained: '10', unexplainedOfPlan: '0.1', unexplainedOfShortfall: '1', unexplainedTarget: '0.02', unexplainedAboveTarget: true, periods: 1, excludedSlices: 0 }] };
+    const trend = { groupBy: 'day' as const, ledger: 'plan' as const, calculationRunIds: [], totals: [], buckets: [{ key: 'd', uom: 't', unaccounted: '10', overAccounted: '0', overproduction: '0', plan: '100', actual: '90', shortfall: '10', unexplained: '10', explained: '0', unexplainedOfPlan: '0.1', unexplainedOfShortfall: '1', unexplainedTarget: '0.02', unexplainedAboveTarget: true, periods: 1, excludedSlices: 0 }] };
     expect(trendUnits(trend)).toEqual(['t']);
     expect(residualRows(trend, 't')[0].values.unaccounted).toBe('10');
   });

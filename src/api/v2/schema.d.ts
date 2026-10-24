@@ -5556,7 +5556,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)
+         * Unaccounted, over-accounted and overproduction quantity, plan, actual, shortfall, explained and unexplained loss per site-local shift, day, week or month, with window totals per unit of measure (plan ledger, after decisions)
          * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.
          */
         get: operations["PlaReportsV2Controller_reconciliationTrend_v2"];

@@ -85,7 +85,7 @@ export class PlaReportsV2Controller {
   @Get('reconciliation-trend')
   @ApiOperation({
     summary:
-      'Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)',
+      'Unaccounted, over-accounted and overproduction quantity, plan, actual, shortfall, explained and unexplained loss per site-local shift, day, week or month, with window totals per unit of measure (plan ledger, after decisions)',
     description: SCOPE_NOTE,
   })
   reconciliationTrend(
