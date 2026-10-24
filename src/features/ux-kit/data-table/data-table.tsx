@@ -4,7 +4,8 @@ import { cn } from '@/lib/utils';
 import { AnchorPageSync } from './anchor-page-sync';
 import { DataTableGrid } from './data-table-grid';
 import { ListPager } from './data-table-pager';
-import { RefreshBar } from './data-table-states';
+import { REPORT_EMPTY, useReportLook } from '../report-look/use-report-look';
+import { EmptyMessage, RefreshBar } from './data-table-states';
 import type { DataTableProps } from './data-table-types';
 import type { PagerModel } from './pager-model';
 import { useClientPager } from './use-client-pager';
@@ -18,7 +19,8 @@ function usePagedRows<T>(rows: readonly T[], pager: DataTableProps<T>['pager']):
 
 function DataTableBody<T>(props: DataTableProps<T> & { visibleRows: readonly T[] }) {
   const { virtualize, pager, status, visibleRows } = props;
-  const density = props.density ?? 'comfortable';
+  // the Reports page: every table is compact (redesign 24 Oct 2026)
+  const density = useReportLook() ? 'compact' : (props.density ?? 'comfortable');
   if (virtualize && pager === 'none' && !status?.isLoading) {
     return <VirtualDataTable {...props} rows={visibleRows} density={density} rowHeight={virtualize.rowHeight} height={virtualize.height} />;
   }
@@ -43,18 +45,33 @@ function DataTableBody<T>(props: DataTableProps<T> & { visibleRows: readonly T[]
  * - Server keyset lists: `const { rows, pager, status } = usePagedQuery<T>(…)` and pass all three.
  * - Short fixed lists: `pager="none"`; long in-memory lists without paging: `pager="none"` + `virtualize`.
  * - Deep links: with `getRowAnchor`, a client-paged table opens the page holding the row named by the URL hash.
+ * - On the Reports page (`ReportLookContext`): compact rows, small uppercase headers, and no grid at all when
+ *   there are no rows — the centred "No data for these dates" instead.
  *
  * @example
  * <DataTable caption="Production events" columns={columns} rows={rows} getRowKey={(e) => e.id}
  *   pager={pager} status={status} onRowClick={open} rowLabel={(e) => e.reasonLabel} />
  */
 export function DataTable<T>(props: DataTableProps<T>) {
-  const { status, caption, className } = props;
-  const paged = usePagedRows(props.rows, props.pager);
+  const { status, className } = props;
+  const look = useReportLook();
   if (status?.isError) {
     const state = dataStateOf({ isLoading: false, isError: true, error: status.error });
     return <DataState state={state} error={status.error} onRetry={status.onRetry} />;
   }
+  if (look && props.rows.length === 0 && !status?.isLoading) {
+    return (
+      <div className={cn('rounded-md border px-4 py-10', className)}>
+        <EmptyMessage empty={REPORT_EMPTY} />
+      </div>
+    );
+  }
+  return <PagedDataTable {...props} />;
+}
+
+function PagedDataTable<T>(props: DataTableProps<T>) {
+  const { status, caption, className } = props;
+  const paged = usePagedRows(props.rows, props.pager);
   return (
     <div className={cn('space-y-3', className)}>
       <AnchorPageSync rows={props.rows} getRowAnchor={props.getRowAnchor} pager={paged.client ? paged.pager : null} />
