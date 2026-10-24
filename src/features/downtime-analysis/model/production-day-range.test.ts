@@ -7,7 +7,7 @@ const DAY = { from: '2026-10-17T02:30:00.000Z', to: '2026-10-18T02:30:00.000Z' }
 
 describe('production-day date fields (owner decision 2026-10-19, QA L20)', () => {
   it('one production day reads as one inclusive date', () => {
-    // plant midnights of 17 Oct and 18 Oct: the input shows From 17 Oct, To (inclusive) 17 Oct
+    // plant midnights of 17 Oct and 18 Oct: the input shows From 17 Oct, To 17 Oct
     expect(toCalendarDayRange(DAY, TZ, '06:00')).toEqual({ from: '2026-10-16T20:30:00.000Z', to: '2026-10-17T20:30:00.000Z' });
   });
 

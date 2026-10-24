@@ -90,6 +90,7 @@ describe('focused analysis pages and their server reads', () => {
     expect(request?.searchParams.has('productIds')).toBe(false);
     expect(request?.searchParams.has('approvedOnly')).toBe(false);
     expect(screen.queryByLabelText('Approved only')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Revision')).not.toBeInTheDocument();
     expect(reads()).toHaveLength(0);
   });
 

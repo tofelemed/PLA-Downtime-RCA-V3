@@ -21,7 +21,7 @@ const dayStartOf = (iso: string | null, timeZone: string, dayStart: string) =>
  * Owner decision 2026-10-19 "Production-day boundaries" (QA L20): the date fields of the downtime window pick
  * production days (06:00–06:00 plant time), not calendar days. The shared date-range input works on plant
  * midnights; these two maps translate between its midnights and the production-day bounds of the filters,
- * so the window 17 Oct 06:00 – 18 Oct 06:00 reads From 17 Oct, To (inclusive) 17 Oct.
+ * so the window 17 Oct 06:00 – 18 Oct 06:00 reads From 17 Oct, To 17 Oct.
  */
 export function toCalendarDayRange(range: InstantBoundsRange, timeZone: string, dayStart: string): InstantBoundsRange {
   return {

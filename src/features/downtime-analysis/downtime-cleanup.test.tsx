@@ -88,25 +88,52 @@ describe('Downtime analysis cleanup (24 Oct 2026): header and filter bar', () =>
     expect(status).toHaveAttribute('data-run-ids', 'run-1,run-2');
     expect(within(status).getByTestId('figure-status')).toHaveTextContent('Provisional');
     expect(within(status).getByRole('button', { name: 'About Provisional figures' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getAllByText('Provisional')).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByText('Provisional', { ignore: 'option, script, style' })).toHaveLength(1));
     expect(screen.getByTestId('downtime-export')).toBeDisabled();
-    expect(screen.getByTestId('disabled-reason')).toHaveTextContent('approved figures only');
+    expect(screen.queryByTestId('disabled-reason')).toBeNull();
+    expect(screen.getByTestId('downtime-export-reason')).toHaveAttribute('title', expect.stringContaining('Revision to “Approved only”'));
+    expect(document.body.textContent).not.toMatch(/tick “Approved only”/);
+    // the label sits on the title's line, not on a row of its own
+    expect(screen.getByRole('heading', { level: 1 }).parentElement).toContainElement(status);
   });
 
-  it('filters: one bottom-aligned row in the order Units, what, window, then the toggles; labels above h-9 controls', async () => {
+  it('filters: one bottom-aligned row Units, what, window, From / To, Micro-stops, Revision last; labels above h-9 controls', async () => {
     openDowntime(`/downtime/trends?${WINDOW}`);
     const row = await screen.findByTestId('downtime-filters');
     expect(row.className).toContain('items-end');
-    const order = ['filter-units', 'analysis-comparison', 'filter-products', 'filter-shifts', 'filter-crews', 'downtime-class', 'downtime-window', 'downtime-trend', 'downtime-micro', 'downtime-approved'];
+    expect(row.className).toContain('gap-x-2');
+    const order = ['filter-units', 'analysis-comparison', 'filter-products', 'filter-shifts', 'filter-crews', 'downtime-class', 'downtime-window', 'downtime-trend', 'downtime-micro', 'downtime-revision'];
     const found = Array.from(row.querySelectorAll('[data-testid], select, button[role="checkbox"]'))
       .map((node) => node.getAttribute('data-testid') ?? node.id)
       .filter((id, index, all) => order.includes(id) && all.indexOf(id) === index);
     expect(found).toEqual(order);
-    for (const label of ['Compare', 'Schedule class', 'Window', 'Trend by']) {
+    for (const label of ['Compare', 'Schedule class', 'Window', 'Trend by', 'Revision']) {
       const control = screen.getByLabelText(label);
       expect(control.className).toContain('h-9');
       expect(control.parentElement?.className).toContain('flex-col');
     }
+    expect(screen.queryByRole('checkbox', { name: 'Approved only' })).toBeNull();
+    expect(screen.getByRole('checkbox', { name: 'Micro-stops' })).toBeInTheDocument();
+  });
+
+  it('Revision select: same choices and URL semantics as Reports (approved=1 ↔ Approved only)', async () => {
+    openDowntime(`/downtime?${WINDOW}&approved=1`);
+    const select = (await screen.findByLabelText('Revision')) as HTMLSelectElement;
+    expect([...select.options].map((option) => option.text)).toEqual(['Approved only', 'Provisional']);
+    expect(select.value).toBe('approved');
+  });
+
+  it('dates: From / To typed in the plant format with the calendar button, as on Reports', async () => {
+    const { ProductionDateRange } = await import('./components/production-date-range');
+    vi.spyOn(await import('@/features/ux-kit/use-operational-day-start'), 'useOperationalDayStart').mockReturnValue('06:00');
+    render(<ProductionDateRange from="2026-10-17T02:30:00.000Z" to="2026-10-18T02:30:00.000Z" timeZone="Asia/Tehran" onChange={() => undefined} />);
+    expect(screen.getByLabelText('From')).toBeInTheDocument();
+    expect(screen.getByLabelText('To')).toBeInTheDocument();
+    expect(screen.queryByText('To (inclusive)')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open calendar for From' })).toBeInTheDocument();
+    expect(screen.getByLabelText('From').getAttribute('type')).not.toBe('date');
+    // tightened so Units … Revision fit one line at 1440 px (measured: 1303 of 1328 px)
+    expect(screen.getByTestId('downtime-dates').className).toContain('[&_input]:w-28');
   });
 });
 
@@ -157,7 +184,7 @@ describe('Downtime analysis cleanup: Causes & Pareto', () => {
     await screen.findByTestId('lost-production');
     expect(screen.getByRole('button', { name: 'About Lost production by stop reason' })).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/Availability losses of the plan ledger|Coverage 100/);
-    await waitFor(() => expect(screen.getAllByText('Provisional')).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByText('Provisional', { ignore: 'option, script, style' })).toHaveLength(1));
     expect(screen.getByTestId('report-meta')).toHaveAttribute('data-run-count', '2');
     expect(screen.getByLabelText('Rank by')).toHaveValue('lost-production');
   });
@@ -224,6 +251,6 @@ describe('Downtime analysis cleanup: Reliability', () => {
     expect(text).not.toMatch(/Active repair from work orders|Full outage, failure to production resumed/);
     expect(screen.getByRole('button', { name: 'About Mean active repair time (MTTR)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'About Mean time to restore production' })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getAllByText('Provisional')).toHaveLength(1));
+    await waitFor(() => expect(screen.getAllByText('Provisional', { ignore: 'option, script, style' })).toHaveLength(1));
   });
 });

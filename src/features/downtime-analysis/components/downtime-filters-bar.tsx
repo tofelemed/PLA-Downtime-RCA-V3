@@ -3,6 +3,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { REVISION_OPTIONS } from '@/features/pla-analytics/reports/revision-options';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import {
@@ -39,7 +40,7 @@ const trendLabel = (value: string) => value.charAt(0).toUpperCase() + value.slic
 export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTrend = true, showSchedule = true, mode }: DowntimeFiltersBarProps) {
   const env = useEventHubEnv();
   return (
-    <div className="flex flex-wrap items-end gap-3" role="group" aria-label="Downtime filters" data-testid="downtime-filters">
+    <div className="flex flex-wrap items-end gap-x-2 gap-y-3" role="group" aria-label="Downtime filters" data-testid="downtime-filters">
       <MultiCheckSelect
         label="Units"
         testId="filter-units"
@@ -59,12 +60,25 @@ export function DowntimeFiltersBar({ filters, onChange, scope = 'period', showTr
   );
 }
 
-/** Micro-stops for period figures; approval wherever figures come from period revisions (not operational stops). */
+/** As on Reports: approved figures only, or the approved revision else the open draft (provisional). Same `approved` URL param. */
+function RevisionSelect({ approvedOnly, onChange }: { approvedOnly: boolean; onChange: Patch }) {
+  return (
+    <div className={FIELD_CLASS}>
+      <Label htmlFor="downtime-revision">Revision</Label>
+      <select id="downtime-revision" data-testid="downtime-revision" className={SELECT_CLASS} value={approvedOnly ? 'approved' : 'shown'} onChange={(event) => onChange({ approvedOnly: event.target.value === 'approved' })}>
+        <option value="approved">{REVISION_OPTIONS.approved}</option>
+        <option value="shown">{REVISION_OPTIONS.shown}</option>
+      </select>
+    </div>
+  );
+}
+
+/** Micro-stops for period figures (include them or not); approval wherever figures come from period revisions (not operational stops). */
 function ScopeToggles({ scope, filters, onChange }: { scope: NonNullable<DowntimeFiltersBarProps['scope']>; filters: DowntimeFilters; onChange: Patch }) {
   return (
     <>
-      {scope === 'period' && <Toggle id="downtime-micro" text="Include micro-stops" checked={filters.includeMicroStops} onChange={(includeMicroStops) => onChange({ includeMicroStops })} />}
-      {scope !== 'operational' && <Toggle id="downtime-approved" text="Approved only" checked={filters.approvedOnly} onChange={(approvedOnly) => onChange({ approvedOnly })} />}
+      {scope === 'period' && <Toggle id="downtime-micro" text="Micro-stops" title="Include micro-stops in the figures" checked={filters.includeMicroStops} onChange={(includeMicroStops) => onChange({ includeMicroStops })} />}
+      {scope !== 'operational' && <RevisionSelect approvedOnly={filters.approvedOnly} onChange={onChange} />}
     </>
   );
 }
@@ -99,9 +113,9 @@ function TrendSelect({ value, onChange }: { value: TrendGroup; onChange: Patch }
   );
 }
 
-function Toggle({ id, text, checked, onChange }: { id: string; text: string; checked: boolean; onChange: (value: boolean) => void }) {
+function Toggle({ id, text, title, checked, onChange }: { id: string; text: string; title: string; checked: boolean; onChange: (value: boolean) => void }) {
   return (
-    <div className="flex h-9 items-center gap-2">
+    <div className="flex h-9 items-center gap-2" title={title}>
       <Checkbox id={id} checked={checked} onCheckedChange={(value) => onChange(value === true)} />
       <Label htmlFor={id}>{text}</Label>
     </div>

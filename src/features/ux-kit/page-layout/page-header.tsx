@@ -9,6 +9,8 @@ export interface PageHeaderProps {
   description?: ReactNode;
   /** primary actions, right-aligned (one primary button, the rest outline / icon buttons) */
   actions?: ReactNode;
+  /** opt-in: a small status (e.g. a Provisional badge) on the title's line, after the h1 */
+  titleAside?: ReactNode;
   /** scope / plant / time-window slot under the title */
   meta?: ReactNode;
   /** link to the parent page, e.g. `{ to: '/planning', label: 'Planning' }` */
@@ -28,14 +30,21 @@ export interface PageHeaderProps {
  *
  * @example <PageHeader title="Production plans" description="Plans and versions per unit" actions={<Button>New plan</Button>} />
  */
-export function PageHeader({ title, description, actions, meta, back, breadcrumbs, documentTitle = true }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, meta, titleAside, back, breadcrumbs, documentTitle = true }: PageHeaderProps) {
   useDocumentTitle(title, documentTitle);
   return (
     <header className="space-y-2">
       <HeaderTrail title={title} back={back} breadcrumbs={breadcrumbs} />
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          {titleAside ? (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+              {titleAside}
+            </div>
+          ) : (
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          )}
           {description && <div className="text-sm text-muted-foreground">{description}</div>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
