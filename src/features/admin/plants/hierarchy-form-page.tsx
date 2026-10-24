@@ -97,7 +97,7 @@ function HierarchyForm({ kind }: { kind: Kind }) {
   };
   return (
     <Page>
-      <PageHeader title={plant ? 'Add plant' : 'Add organization'} back={BACK} description={plant ? 'A plant is a site with its own users, units and data.' : undefined} />
+      <PageHeader title={plant ? 'Add plant' : 'Add organization'} back={BACK} />
       <Section title="Details">
         <div className="max-w-2xl space-y-4">
           {create.alert}
