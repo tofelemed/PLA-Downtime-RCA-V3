@@ -1383,7 +1383,8 @@ Engineering defaults; change any of them on request.
 
 - **Sidebar sections renamed:** Production → **Daily operations**, Reliability → **Asset reliability**, Setup → **Configuration**. Section keys and routes are unchanged.
 - **USD/IRR display switch is hidden for now;** amounts show in USD.
-- **The dashboard follows the header hierarchy selection** (organisation, plant, site, unit) and every KPI follows it. Selecting an organisation only keeps the acting plant; cross-plant figures are not available yet.
+- **The dashboard follows the header hierarchy selection** (organisation, plant, unit, asset) and every KPI follows it. Selecting an organisation only keeps the acting plant; cross-plant figures are not available yet.
 - **KPI tiles show no change or previous-period line.**
 - **Plant-level MTBF and MTTR** over the visible units/assets: MTBF = total run time ÷ number of failures; MTTR = total repair time ÷ number of repairs. Awaiting confirmation from the reliability engineers.
 - **Explained loss = shortfall − unexplained loss, floored at 0.** Implemented by the server (Task 5).
+- **`GET /v2/units/asset-presence` is unpaginated by design:** it answers `{ data: { items } }` with one row per visible unit of the plant (bounded by the plant's units), so the hierarchy chevrons need one request.
