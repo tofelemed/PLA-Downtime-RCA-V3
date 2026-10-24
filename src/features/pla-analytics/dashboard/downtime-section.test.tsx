@@ -133,6 +133,14 @@ describe('DowntimeSection', () => {
     expect(rows[1].stops).toBe('3');
   });
 
+  it('shows the empty state instead of bars when the window has no downtime steps', async () => {
+    state.bundle = { ...bundle(), views: [] };
+    renderSection();
+    const trend = screen.getByTestId('downtime-trend');
+    expect(await within(trend).findByText('No downtime in this window.')).toBeInTheDocument();
+    expect(within(trend).queryByTestId('trend-mock')).not.toBeInTheDocument();
+  });
+
   it('draws the top 5 unplanned reasons with the server cumulative share', async () => {
     state.bundle = bundle();
     renderSection();
