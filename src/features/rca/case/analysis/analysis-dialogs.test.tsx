@@ -90,6 +90,8 @@ describe('analysis dialogs: title, labelled fields, Cancel / primary, Esc', () =
     await waitFor(() => expect(within(dialog).getByLabelText(/^What happened/)).toHaveFocus());
     for (const label of ['Kind', 'Severity', 'Asset or unit', 'Description']) expect(within(dialog).getByLabelText(label)).toBeInTheDocument();
     expect(within(dialog).getByText('When')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('When date').className).toContain('h-9');
+    expect(within(dialog).getByLabelText('When time').className).toContain('h-9');
     const { submit, cancel } = expectFooter(dialog, 'Save event');
     fireEvent.click(submit);
     expect(screen.getByTestId('field-error-event-label')).toHaveTextContent('Describe what happened.');
