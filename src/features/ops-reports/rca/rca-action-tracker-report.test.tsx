@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { RcaActionTrackerView } from '@/api/v2/types/ops-reports';
+import { ReportChrome } from '@/features/pla-analytics/components/report-chrome';
 
 const data: RcaActionTrackerView = {
   openCases: { total: 3, overdue: 1, byStatus: [{ key: 'Analysis', count: 3 }], byAge: [{ key: '0-30', count: 2 }, { key: '90+', count: 1 }] },
@@ -30,5 +31,17 @@ describe('RcaActionTrackerReport (R10)', () => {
     expect(screen.getByTestId('rca-actions-due')).toHaveTextContent('Overdue');
     expect(screen.getByTestId('rca-cases-age')).toHaveTextContent('Over 90 days');
     expect(screen.getByTestId('rca-on-time')).toHaveTextContent('75.0 %');
+  });
+
+  it('shows no Provisional marker with Revision = Provisional (actions and cases are not period revisions)', () => {
+    render(
+      <MemoryRouter>
+        <ReportChrome approvedOnly={false}>
+          <RcaActionTrackerReport scope={{ unitIds: [], from: '', to: '', approvedOnly: false } as unknown as Parameters<typeof RcaActionTrackerReport>[0]['scope']} />
+        </ReportChrome>
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('rca-open-cases')).toHaveTextContent('3');
+    expect(screen.queryByTestId('provisional-mark')).toBeNull();
   });
 });

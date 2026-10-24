@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DASHBOARD_PRESETS, dashboardScope, presetKeyOf, stepOf, type DashboardPresetKey } from './dashboard-scope';
+import { oeeQuery, scopeBase } from './analytics-scope';
 
 const NOW = Date.parse('2026-10-18T08:00:00Z');
 
@@ -26,5 +27,18 @@ describe('dashboard scope', () => {
     expect(presetKeyOf('90d')).toBe('7d');
     expect(presetKeyOf(null)).toBe('7d');
     expect(presetKeyOf('6m')).toBe('6m');
+  });
+
+  it('shows approved revisions only for every period (owner decision 24 Oct 2026)', () => {
+    for (const preset of DASHBOARD_PRESETS) {
+      expect(dashboardScope(preset.key, {}, NOW).approvedOnly).toBe(true);
+      expect(dashboardScope(preset.key, { unitId: 'u1' }, NOW).approvedOnly).toBe(true);
+    }
+  });
+
+  it('sends approvedOnly with a section request', () => {
+    const scope = dashboardScope('7d', {}, NOW);
+    expect(scopeBase(scope).approvedOnly).toBe(true);
+    expect(oeeQuery(scope, 'unit').approvedOnly).toBe(true);
   });
 });

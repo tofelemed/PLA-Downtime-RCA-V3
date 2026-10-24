@@ -32,7 +32,7 @@ export const stepOf = (key: DashboardPresetKey): TrendGroup => STEPS[key];
 /**
  * The dashboard scope: the units under the selected hierarchy node (all units in the caller's scope when none)
  * over a rolling preset (`?window=`, default 7 days) that ends now, with minute-stable bounds so the tiles
- * share one cached snapshot.
+ * share one cached snapshot. It shows approved revisions only (owner, 24 Oct 2026), so no figure is a draft.
  */
 export function dashboardScope(key: DashboardPresetKey, node: DashboardNode, now: number = Date.now()): AnalyticsScope {
   const preset = DASHBOARD_PRESETS.find((entry) => entry.key === key) ?? DASHBOARD_PRESETS[1];
@@ -40,6 +40,7 @@ export function dashboardScope(key: DashboardPresetKey, node: DashboardNode, now
     ...parseScope(new URLSearchParams(), now),
     ...presetWindowOf(preset.hours, now),
     windowLabel: preset.label,
+    approvedOnly: true,
     unitIds: node.unitId ? [node.unitId] : [],
     trendBy: stepOf(preset.key),
   };

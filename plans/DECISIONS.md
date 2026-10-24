@@ -1389,3 +1389,8 @@ Engineering defaults; change any of them on request.
 - **Explained loss = shortfall − unexplained loss, floored at 0.** Implemented by the server (Task 5).
 - Owner removed the dashboard's As-of time and Provisional/Approved badge and the For you row; pending approvals moved to a header icon.
 - **`GET /v2/units/asset-presence` is unpaginated by design:** it answers `{ data: { items } }` with one row per visible unit of the plant (bounded by the plant's units), so the hierarchy chevrons need one request.
+
+## 2026-10-24 — Approved and provisional figures are never mixed unlabelled (owner)
+
+- **Dashboard shows approved revisions only:** no draft figures, so no Provisional label is needed there.
+- **Reports, Revision = Provisional:** every report whose figures can include draft revisions and has no per-row flag shows one Provisional marker beside its card title; reports whose data does not come from period revisions (RCA actions, lot dispositions, restatements, event status) get none.
