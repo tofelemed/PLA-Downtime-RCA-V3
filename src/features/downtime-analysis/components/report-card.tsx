@@ -64,10 +64,8 @@ export interface ReportCardProps {
  * when periods lack a run) around the figures, in the shared compact report table look.
  */
 export function ReportCard(props: ReportCardProps) {
-  const { title, testId, query, response, isEmpty, emptyText, info, note, actions, showMeta = true, children } = props;
+  const { title, testId, response, info, note, actions, showMeta = true } = props;
   const headingId = useId();
-  const incomplete = response ? response.coverage.ratio < 1 || response.dataQuality.missingCount > 0 : false;
-  const state = dataStateOf(query, { isEmpty, isIncomplete: incomplete });
   return (
     <ReportLookContext.Provider value={CARD_LOOK}>
       <section aria-labelledby={headingId} className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
@@ -83,15 +81,21 @@ export function ReportCard(props: ReportCardProps) {
         </div>
         {note}
         <div data-testid={testId} className="space-y-2">
-          {state === 'empty' && emptyText ? (
-            <CardEmpty text={emptyText} />
-          ) : (
-            <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'incomplete' ? INCOMPLETE_TEXT : undefined}>
-              {children}
-            </DataState>
-          )}
+          <CardBody {...props} />
         </div>
       </section>
     </ReportLookContext.Provider>
+  );
+}
+
+/** The UX03 state of the card's query (incomplete when periods lack a run) around the figures; the card's own empty message when it has one. */
+function CardBody({ query, response, isEmpty, emptyText, children }: ReportCardProps) {
+  const incomplete = response ? response.coverage.ratio < 1 || response.dataQuality.missingCount > 0 : false;
+  const state = dataStateOf(query, { isEmpty, isIncomplete: incomplete });
+  if (state === 'empty' && emptyText) return <CardEmpty text={emptyText} />;
+  return (
+    <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'incomplete' ? INCOMPLETE_TEXT : undefined}>
+      {children}
+    </DataState>
   );
 }
