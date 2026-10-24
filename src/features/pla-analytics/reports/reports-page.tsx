@@ -68,8 +68,7 @@ function ReportsBody({ dayStart }: { dayStart: string }) {
       <div className="space-y-4" data-testid="reports-v2">
         <ReportsHeader />
         <div className="flex flex-wrap items-end gap-x-4 gap-y-3 print:hidden" role="group" aria-label="Report filters" data-testid="reports-top-bar">
-          <ReportViewPicker view={view} onViewChange={chooseView} />
-          <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} />
+          <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} picker={<ReportViewPicker view={view} onViewChange={chooseView} />} />
         </div>
         <ReportChrome approvedOnly={scope.approvedOnly}>
           <ReportViewBody view={view} scope={named} dayStart={dayStart} />

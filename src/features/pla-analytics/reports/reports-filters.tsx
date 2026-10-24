@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Label } from '@/components/ui/label';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
@@ -11,29 +12,21 @@ export interface ReportsFiltersProps {
   /** `HH:mm`: the plant's production-day start */
   dayStart: string;
   onChange: (patch: Partial<AnalyticsScope>) => void;
+  /** the report type and report dropdowns, placed between Units and the dates */
+  picker?: ReactNode;
 }
 
 /**
- * Report filters after the report picker in the top bar, each a sibling item of the bar (they wrap one by
+ * The report top bar in owner order — Units, the report picker, From / To, Revision, each a sibling item of the bar (they wrap one by
  * one, every control h-9): the plant dates the periods start on (From / To, typed or picked in the plant
  * calendar), named units (sent when the list closes), and the revision — approved only, or approved else
  * the latest draft (provisional).
  */
-export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProps) {
+export function ReportsFilters({ scope, dayStart, onChange, picker }: ReportsFiltersProps) {
   const env = useEventHubEnv();
   const setDates = (range: { from: string; to: string }) => onChange({ ...range, windowLabel: CHOSEN_DATES });
   return (
     <>
-      <PlantDaysInput
-        label="Period dates"
-        value={{ from: scope.from, to: scope.to }}
-        timeZone={env.timezone}
-        dayStart={dayStart}
-        onChange={setDates}
-        toLabel="To"
-        calendarPicker
-        toolbar
-      />
       {/* the button names itself ("Units: All"); the bar aligns every control on its bottom edge */}
       <div>
         <MultiCheckSelect
@@ -45,6 +38,17 @@ export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProp
           commitOnClose
         />
       </div>
+      {picker}
+      <PlantDaysInput
+        label="Period dates"
+        value={{ from: scope.from, to: scope.to }}
+        timeZone={env.timezone}
+        dayStart={dayStart}
+        onChange={setDates}
+        toLabel="To"
+        calendarPicker
+        toolbar
+      />
       <div className={FIELD_CLASS}>
         <Label htmlFor="report-revision">Revision</Label>
         <select
