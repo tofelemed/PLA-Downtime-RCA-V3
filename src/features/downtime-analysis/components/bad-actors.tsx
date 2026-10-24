@@ -60,6 +60,7 @@ export function BadActors({ bundle, views, filters }: { bundle: DowntimeBundleRe
       query={bundle}
       response={bundle.data}
       showMeta={false}
+      emptyText="No asset downtime in this window."
       isEmpty={rows.length === 0}
       info="Allocated: overlapping stops of several assets share each moment, so asset totals add up to the unit downtime. Stops without an asset are listed as “No asset”."
     >

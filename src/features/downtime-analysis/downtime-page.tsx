@@ -50,7 +50,7 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="downtime-analysis">
-        <DowntimeHeader filters={filters} bundle={bundled ? bundle : null} title={`Downtime analysis · ${page.label}`} />
+        <DowntimeHeader filters={filters} bundle={bundled ? bundle : null} title={`Downtime analysis · ${page.label}`} showStatus={!(view === 'trends' && mode === 'calendar')} />
         <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
         <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={showSchedule} mode={<ModeSelect view={view} />} />
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>

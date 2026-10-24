@@ -19,6 +19,8 @@ export interface DowntimeHeaderProps {
   /** the page snapshot; null on pages whose cards read their own figures (each card then carries its label) */
   bundle: DowntimeBundleResult | null;
   title: string;
+  /** false where each figure set states its own approval (the previous-period comparison) */
+  showStatus?: boolean;
 }
 type Snapshot = ReturnType<typeof reportSnapshot> | null;
 
@@ -26,12 +28,12 @@ type Snapshot = ReturnType<typeof reportSnapshot> | null;
  * Title, and for snapshot pages the one Provisional / Approved label of the figures (runs and as-of in its ⓘ)
  * and the period-summary export tied to the same snapshot. No scope line or timezone: the app header has them.
  */
-export function DowntimeHeader({ filters, bundle, title }: DowntimeHeaderProps) {
+export function DowntimeHeader({ filters, bundle, title, showStatus = true }: DowntimeHeaderProps) {
   const snapshot = bundle?.data ? reportSnapshot(bundle.data, reportBase(filters)) : null;
   return (
     <PageHeader
       title={title}
-      meta={snapshot && bundle?.data ? <SnapshotStatus snapshot={snapshot} provisional={bundle.data.isProvisional} asOf={bundle.data.asOf} /> : undefined}
+      meta={showStatus && snapshot && bundle?.data ? <SnapshotStatus snapshot={snapshot} provisional={bundle.data.isProvisional} asOf={bundle.data.asOf} /> : undefined}
       actions={bundle ? <DowntimeExport filters={filters} snapshot={snapshot} /> : undefined}
     />
   );

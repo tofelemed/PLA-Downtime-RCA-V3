@@ -41,6 +41,7 @@ export function TrendPanel({ filters, bundle, views }: TrendPanelProps) {
       query={bundle}
       response={bundle.data}
       showMeta={false}
+      emptyText="No downtime in this window."
       isEmpty={rows.length === 0}
       info="Buckets use the plant's operational date and shift; stop time is clipped to each bucket."
     >

@@ -32,6 +32,7 @@ export function CrewComparison({ bundle, views }: { bundle: DowntimeBundleResult
       query={bundle}
       response={bundle.data}
       showMeta={false}
+      emptyText="No downtime in this window."
       isEmpty={groups.length === 0}
       info="Crew of the shift each period belongs to; periods without a crew rotation are “No crew”."
     >

@@ -23,9 +23,9 @@ const FROM = '2026-10-01T00:00:00.000Z';
 const TO = '2026-10-08T00:00:00.000Z';
 const WINDOW = `from=${FROM}&to=${TO}&units=u1`;
 const kpi = (metric: string, value: string) => ({ metric, numerator: value, denominator: null, value, unit: 's', quality: 'ok', reason: null, rows: 1, missing: 0 });
-const envelope = (data: unknown) => ({
+const envelope = (data: unknown, isProvisional = true) => ({
   data, asOf: TO, calculationRunId: null, policyVersion: null, scope: { tenantId: 'tenant-a' }, coverage: { from: FROM, to: TO, ratio: 1 },
-  dataQuality: { missingCount: 0, provisionalCount: 0 }, isProvisional: true,
+  dataQuality: { missingCount: 0, provisionalCount: 0 }, isProvisional,
 });
 const REPORT = {
   calculationRunIds: ['run-1', 'run-2'], groups: [], total: '0', totals: [], views: [], groupBy: 'reason', metric: 'duration', unit: 's', scheduleClass: null,
@@ -55,7 +55,8 @@ beforeEach(() => {
   configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
   vi.stubGlobal('fetch', vi.fn(async (input: string) => {
     const url = new URL(input);
-    if (url.pathname.includes('/reports/')) return json(envelope(REPORT));
+    // the chosen window is provisional; any earlier window (previous-period comparison) is approved
+    if (url.pathname.includes('/reports/')) return json(envelope(REPORT, url.searchParams.get('from') === FROM));
     return json({ items: [], nextCursor: null, asOf: TO, scope: { tenantId: 'tenant-a' } });
   }));
 });
@@ -161,6 +162,21 @@ describe('Downtime analysis cleanup: Causes & Pareto', () => {
     expect(screen.getByLabelText('Rank by')).toHaveValue('lost-production');
   });
 
+  it('no losses: the card says so in the centred empty style, not the generic "No data for these dates"', async () => {
+    openDowntime(`/downtime/causes?${WINDOW}`);
+    const empty = await screen.findByTestId('card-empty');
+    expect(empty).toHaveTextContent(/^No availability losses in this scope\.$/);
+    expect(document.body.textContent).not.toMatch(/No data for these dates|Try other dates or units/);
+  });
+
+  it('a card without its own message keeps the generic empty state', async () => {
+    const { ReportCard } = await import('./components/report-card');
+    const query = { isLoading: false, isError: false, isSuccess: true, error: null, refetch: () => undefined };
+    render(<ReportCard title="Any" testId="any" query={query} response={undefined} isEmpty>{null}</ReportCard>);
+    expect(screen.getByText('No data for these dates')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-empty')).toBeNull();
+  });
+
   it('asset bad actors: the allocation note is the ⓘ', async () => {
     openDowntime(`/downtime/causes?${WINDOW}&analysis=assets`);
     await screen.findByRole('button', { name: 'About Asset bad actors' });
@@ -182,12 +198,21 @@ describe('Downtime analysis cleanup: Trends & comparisons', () => {
     expect(document.body.textContent).not.toMatch(/Crew of the shift each period belongs to/);
   });
 
-  it('previous-period comparison: a card, dashboard tiles, each window with its own approval label', async () => {
+  it('previous-period comparison: no header label; each window states its own approval on tiles in a card', async () => {
     openDowntime(`/downtime/trends?${WINDOW}&comparison=calendar`);
     const grid = await screen.findByTestId('calendar-comparison');
     await waitFor(() => expect(within(grid).getAllByTestId('report-meta')).toHaveLength(2));
+    const [previous, chosen] = within(grid).getAllByTestId('figure-status');
+    expect(previous).toHaveTextContent(/^Approved$/);
+    expect(chosen).toHaveTextContent(/^Provisional$/);
+    expect(screen.queryByTestId('snapshot-runs')).toBeNull();
     expect(within(grid).getAllByTestId('kpi-downtime_total')).toHaveLength(2);
     expect(grid).not.toHaveTextContent(/Union of stop time/);
+  });
+
+  it('time trend keeps the one header label', async () => {
+    openDowntime(`/downtime/trends?${WINDOW}`);
+    expect(await screen.findByTestId('snapshot-runs')).toHaveTextContent('Provisional');
   });
 });
 

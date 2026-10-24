@@ -6,6 +6,7 @@ import { dataStateOf, type QueryLike } from '@/features/ux-kit/data-state-of';
 import { policyVersionsLabel } from '@/features/ux-kit/labels';
 import { ReportLookContext, type ReportLook } from '@/features/ux-kit/report-look';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { StatusIcon } from '@/lib/icons';
 import { formatRatio, INCOMPLETE_TEXT } from '../model/kpi-display';
 import { FigureStatus } from './figure-status';
 
@@ -26,12 +27,26 @@ export function ReportMeta({ response }: { response: RunResponse }) {
   return <FigureStatus provisional={response.isProvisional} info={parts.join(' · ')} testId="report-meta" data={{ 'data-run-count': runs }} />;
 }
 
+/**
+ * A card's own empty result (e.g. no losses in the window: a real, good result) in the centred report empty
+ * style, without the generic "try other dates" hint; cards without a message keep the shared empty state.
+ */
+function CardEmpty({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-10 text-center" data-state="empty" data-testid="card-empty">
+      <StatusIcon.empty aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
+      <p className="font-medium">{text}</p>
+    </div>
+  );
+}
+
 export interface ReportCardProps {
   title: string;
   testId: string;
   query: QueryLike & { refetch: () => unknown };
   response: RunResponse | undefined;
   isEmpty?: boolean;
+  /** the card's own empty message (shown instead of the generic "No data for these dates") */
   emptyText?: string;
   /** what the figures mean, behind the ⓘ beside the title */
   info?: ReactNode;
@@ -68,14 +83,13 @@ export function ReportCard(props: ReportCardProps) {
         </div>
         {note}
         <div data-testid={testId} className="space-y-2">
-          <DataState
-            state={state}
-            error={query.error}
-            onRetry={() => query.refetch()}
-            detail={state === 'empty' ? emptyText : state === 'incomplete' ? INCOMPLETE_TEXT : undefined}
-          >
-            {children}
-          </DataState>
+          {state === 'empty' && emptyText ? (
+            <CardEmpty text={emptyText} />
+          ) : (
+            <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'incomplete' ? INCOMPLETE_TEXT : undefined}>
+              {children}
+            </DataState>
+          )}
         </div>
       </section>
     </ReportLookContext.Provider>
