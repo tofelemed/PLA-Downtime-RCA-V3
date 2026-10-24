@@ -18,7 +18,6 @@ vi.mock('@/features/plant-selector/plant-selector', () => ({ PlantSelector: () =
 vi.mock('@/features/shell/plant-timezone-readout', () => ({ PlantTimezoneReadout: () => null }));
 vi.mock('@/features/notifications/notification-bell', () => ({ NotificationBell: () => null }));
 vi.mock('@/features/shell/user-badge', () => ({ UserBadge: () => null }));
-vi.mock('@/features/shell/live-indicator', () => ({ LiveIndicator: () => null }));
 vi.mock('@/features/v2-foundation/plant-access-guard', () => ({ PlantAccessGuard: passThrough }));
 
 const { Layout } = await import('@/components/Layout');
