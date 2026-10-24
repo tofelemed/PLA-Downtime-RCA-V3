@@ -1,6 +1,7 @@
 import type { AnalyticsScope } from '../model/analytics-scope';
 import type { DashboardNode } from '../model/dashboard-scope';
 import { KpiSection } from './kpi-section';
+import { useReliabilityLinks } from './reliability-links';
 import { MtbfTrendChart } from './mtbf-trend-chart';
 import { RcaTiles } from './rca-tiles';
 import { TopAssetsTable } from './top-assets-table';
@@ -10,8 +11,9 @@ export const RCA_PLANT_WIDE_NOTE = 'Investigation counts cover every unit of the
 
 /** Asset reliability: investigation and action counts, MTBF and MTTR by month for the selected node, and the most stopped assets. */
 export function ReliabilitySection({ scope, node }: { scope: AnalyticsScope; node: DashboardNode }) {
+  const links = useReliabilityLinks();
   return (
-    <KpiSection title="Asset reliability">
+    <KpiSection title="Asset reliability" links={links}>
       <div className="space-y-4" data-testid="dashboard-reliability">
         {(node.unitId || node.assetId) && (
           <p className="text-xs text-muted-foreground" data-testid="dashboard-rca-plant-note">
@@ -19,7 +21,7 @@ export function ReliabilitySection({ scope, node }: { scope: AnalyticsScope; nod
           </p>
         )}
         <RcaTiles />
-        <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
           <MtbfTrendChart scope={scope} node={node} />
           <TopAssetsTable scope={scope} />
         </div>

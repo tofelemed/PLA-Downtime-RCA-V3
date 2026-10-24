@@ -15,6 +15,7 @@ const CATEGORY_COLOURS: Readonly<Record<string, string>> = {
   quality: 'hsl(var(--warning))',
 };
 const FALLBACK_COLOUR = 'hsl(var(--chart-8))';
+const LOSS_TITLE = 'Where production was lost';
 const NOT_CODED = 'Not categorised';
 
 const categoryLabel = (group: LossTreeGroupView) => (group.key ? (OEE_METRIC_LABELS[group.key] ?? group.label ?? group.key) : NOT_CODED);
@@ -31,7 +32,7 @@ function UnitBars({ uom, groups }: { uom: string | null; groups: readonly LossTr
   const values = points.map((p) => `${p.name} ${p.amount === null ? 'not available' : number(p.amount, 2)}`).join(', ');
   return (
     <div data-testid="oee-loss-unit" data-uom={uom ?? ''}>
-      <p className="text-xs font-medium text-muted-foreground">{uom ?? 'Unit not stated'}</p>
+      <h3 className="mb-1 text-sm font-medium">{LOSS_TITLE} · {uom ?? 'unit not stated'}</h3>
       <ChartFigure caption={`Lost quantity in ${uom ?? 'unknown unit'} by OEE category: ${values}.`} chartClassName="h-40 w-full">
         <ResponsiveContainer>
           <BarChart data={points} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
@@ -59,7 +60,7 @@ export function OeeLossChart({ scope }: { scope: AnalyticsScope }) {
   const state = dataStateOf(query, { isEmpty: groups.length === 0 });
   return (
     <div className="space-y-2" data-testid="oee-loss">
-      <h3 className="text-sm font-medium">Where production was lost</h3>
+      {groups.length === 0 && <h3 className="text-sm font-medium">{LOSS_TITLE}</h3>}
       <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail="No losses recorded in this window.">
         <div className="space-y-3">
           {byUnit(groups).map((unit) => (

@@ -29,7 +29,7 @@ function CountLink({ to, count, testId, stateKey }: { to: string; count: number;
 
 function Tiles({ data, to }: { data: ReconciliationStatusView; to: string }) {
   return (
-    <KpiTileRow>
+    <KpiTileRow className="xl:grid-cols-3">
       {data.workflow.map((w) => (
         <KpiTile
           key={w.state}

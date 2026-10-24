@@ -18,7 +18,7 @@ vi.mock('@/api/v2/queries/approvals', () => ({ useApprovalInbox: () => ({ query:
 
 function Harness() {
   const nav = useNavState('u-test');
-  return <AppSidebar nav={nav} branding={undefined} />;
+  return <AppSidebar nav={nav} />;
 }
 
 const renderAt = (path: string) =>
@@ -156,12 +156,22 @@ describe('AppSidebar', () => {
     expect(sections.slice(0, 5)).toEqual(['Overview', 'Daily operations', 'Production loss analysis (PLA)', 'Downtime analysis', 'Asset reliability']);
   });
 
-  it('brand block links to the dashboard', async () => {
+  it('the section header holding the active page is highlighted with the active tokens, the others are not', async () => {
+    window.localStorage.clear();
+    renderAt('/downtime/causes');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    expect(within(nav).getByRole('button', { name: 'Downtime analysis' })).toHaveClass('bg-sidebar-active-bg', 'text-sidebar-active-fg', 'font-semibold');
+    expect(within(nav).getByRole('button', { name: 'Overview' })).not.toHaveClass('bg-sidebar-active-bg');
+  });
+
+  it('on the Dashboard the Overview header is the highlighted one', async () => {
     window.localStorage.clear();
     renderAt('/dashboard');
-    await userEvent.click(screen.getByRole('button', { name: 'Expand sidebar' }));
-    expect(screen.getByRole('link', { name: 'Traverse Forge — go to Dashboard' })).toHaveAttribute('href', '/dashboard');
-    expect(screen.getByText('Marun Petrochemical')).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveClass('bg-sidebar-active-bg', 'text-sidebar-active-fg');
+    expect(within(nav).getByRole('button', { name: 'Downtime analysis' })).not.toHaveClass('bg-sidebar-active-bg');
   });
 
   it('collapse button sits after the menu list', async () => {

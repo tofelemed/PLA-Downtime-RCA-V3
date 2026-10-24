@@ -9,13 +9,12 @@ import { useDashboardScope } from './use-dashboard-scope';
 import { DowntimeSection } from './downtime-section';
 import { OeeSection } from './oee-section';
 import { ProductionPlanSection } from './production-plan-section';
-import { ForYouRow } from './for-you-row';
 import { LatestEvents } from './latest-events';
 import { ReconciliationTiles } from './reconciliation-tiles';
 import { ReliabilitySection } from './reliability-section';
 
 /**
- * Dashboard (plan 3.6 step 3): a role-aware "For you" row first (UX audit §5.6), then every unit in the caller's scope over a rolling window — OEE with its policy
+ * Dashboard (plan 3.6 step 3): every unit in the caller's scope over a rolling window — OEE with its policy
  * label (operational with its components, and the labelled reconciled tile, D04), downtime, asset reliability
  * (RCA counts, MTBF and MTTR, the most stopped assets), open and overdue reconciliations and the latest loss events. Every tile is a server
  * snapshot of the same scope and appears as soon as its own figures arrive. Every link carries the dashboard's
@@ -39,13 +38,12 @@ function DashboardScreen() {
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="analytics-dashboard">
-        <DashboardHeader scope={scope} keyValue={key} onKey={setKey} orgOnly={orgOnly} plantName={plantName} />
-        <ForYouRow scope={scope} />
+        <DashboardHeader keyValue={key} onKey={setKey} orgOnly={orgOnly} plantName={plantName} />
         <OeeSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <ProductionPlanSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <DowntimeSection scope={scope} assetId={node.assetId} />
         <ReliabilitySection scope={scope} node={node} />
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <ReconciliationTiles scope={scope} />
           <LatestEvents scope={scope} />
         </div>

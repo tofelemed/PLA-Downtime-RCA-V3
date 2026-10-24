@@ -1387,4 +1387,5 @@ Engineering defaults; change any of them on request.
 - **KPI tiles show no change or previous-period line.**
 - **Plant-level MTBF and MTTR** over the visible units/assets: MTBF = total run time ÷ number of failures; MTTR = total repair time ÷ number of repairs. Awaiting confirmation from the reliability engineers.
 - **Explained loss = shortfall − unexplained loss, floored at 0.** Implemented by the server (Task 5).
+- Owner removed the dashboard's As-of time and Provisional/Approved badge and the For you row; pending approvals moved to a header icon.
 - **`GET /v2/units/asset-presence` is unpaginated by design:** it answers `{ data: { items } }` with one row per visible unit of the plant (bounded by the plant's units), so the hierarchy chevrons need one request.

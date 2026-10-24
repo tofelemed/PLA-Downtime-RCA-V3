@@ -13,9 +13,10 @@ const state = vi.hoisted(() => ({
   bundle: undefined as unknown,
   charts: [] as ReliabilityBar[][],
   refetch: vi.fn(),
+  caps: { canViewOperations: true, canViewAnalysis: true },
 }));
 
-vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewOperations: true, canViewAnalysis: true }) }));
+vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => state.caps }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
 vi.mock('@/api/v2/queries/rca-cases', () => ({
   useRcaSummary: () => ({ data: { open: 4, overdue: 1, critical: 0, overdueActions: 3, effectivenessPending: 2 }, isLoading: false, isError: false, error: null, refetch: vi.fn() }),
@@ -81,8 +82,24 @@ describe('ReliabilitySection', () => {
     for (const title of ['Open investigations', 'Overdue investigations', 'Open critical', 'Overdue actions', 'Effectiveness pending']) {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
-    expect(screen.getByRole('link', { name: 'Investigations' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cause portfolio' })).toBeInTheDocument();
+  });
+
+  it('puts Cause portfolio and Investigations in the section header link area, above the tiles', () => {
+    state.caps = { canViewOperations: true, canViewAnalysis: true };
+    renderSection();
+    const heading = screen.getByRole('heading', { name: 'Asset reliability' });
+    const header = heading.parentElement as HTMLElement;
+    expect(within(header).getByRole('link', { name: /Cause portfolio/ })).toHaveAttribute('href', '/reliability/portfolio');
+    expect(within(header).getByRole('link', { name: /Investigations/ })).toHaveAttribute('href', '/rca');
+    expect(within(screen.getByTestId('dashboard-rca')).queryByRole('link', { name: /^(Cause portfolio|Investigations)/ })).toBeNull();
+  });
+
+  it('keeps the capability gates: operators without analysis access get Investigations only', () => {
+    state.caps = { canViewOperations: true, canViewAnalysis: false };
+    renderSection();
+    expect(screen.getByRole('link', { name: /Investigations/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Cause portfolio/ })).toBeNull();
+    state.caps = { canViewOperations: true, canViewAnalysis: true };
   });
 
   it('says the investigation counts are plant-wide only when a unit or asset is selected', () => {

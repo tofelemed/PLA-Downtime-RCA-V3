@@ -13,6 +13,12 @@ export interface ParetoBar {
   cumulativeShare: string | null;
 }
 
+/** "CODE · Name" → "CODE" for the axis (the tooltip keeps the full label); a label without " · " is kept whole. */
+export function reasonCodeOf(label: string): string {
+  const cut = label.indexOf(' · ');
+  return cut > 0 ? label.slice(0, cut) : label;
+}
+
 interface TooltipItem {
   payload?: { cumulativeShare: string | null };
 }
@@ -27,9 +33,9 @@ export function DowntimeParetoBars({ rows }: { rows: readonly ParetoBar[] }) {
   return (
     <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="downtime-pareto-chart">
       <ResponsiveContainer>
-        <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+        <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 16, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
+          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-35} textAnchor="end" height={64} tickMargin={4} tickFormatter={reasonCodeOf} />
           <YAxis yAxisId="time" tick={{ fontSize: 11 }} width={80} tickFormatter={(value: unknown) => unbreakable(seconds(value))} />
           <YAxis yAxisId="share" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} tickFormatter={(v: number) => localizeNumber(`${v} %`, digits)} />
           <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(value: unknown, name: string, item: TooltipItem) => (name === 'Cumulative share' ? formatRatio(item.payload?.cumulativeShare, 1, digits) : seconds(value))} />

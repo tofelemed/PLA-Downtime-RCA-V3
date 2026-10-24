@@ -135,6 +135,8 @@ describe('OeeSection charts', () => {
     expect(units.map((unit) => unit.getAttribute('data-uom'))).toEqual(['t', 'm']);
     expect(units[0]).toHaveTextContent('Availability 10.00, Quality 2.00');
     expect(units[1]).toHaveTextContent('Availability 5.00');
+    expect(screen.getByRole('heading', { name: 'Where production was lost · t' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Where production was lost · m' })).toBeInTheDocument();
   });
 });
 

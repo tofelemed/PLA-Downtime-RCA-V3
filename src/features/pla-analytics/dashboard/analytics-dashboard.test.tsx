@@ -10,7 +10,6 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 vi.mock('@/features/event-hub/event-hub-env', () => ({ EventHubEnvProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('./use-dashboard-scope', () => ({ useDashboardScope: () => ({ key: '7d', setKey: vi.fn(), scope: {}, node: {}, orgOnly: false }) }));
 vi.mock('./dashboard-header', () => ({ DashboardHeader: () => null }));
-vi.mock('./for-you-row', () => ({ ForYouRow: () => null }));
 vi.mock('./reconciliation-tiles', () => ({ ReconciliationTiles: heading('Reconciliation') }));
 vi.mock('./latest-events', () => ({ LatestEvents: heading('Latest loss events') }));
 vi.mock('./oee-section', () => ({ OeeSection: heading('OEE') }));

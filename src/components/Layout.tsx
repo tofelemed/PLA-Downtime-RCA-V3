@@ -69,8 +69,11 @@ export const Layout = ({ children }: LayoutProps) => {
       >
         Skip to content
       </a>
-      <AppHeader navigation={mode === 'drawer' ? { open: drawer.open, onOpen: () => drawer.setOpen(true) } : undefined} />
-      {mode === 'drawer' && <NavigationDrawer open={drawer.open} onOpenChange={drawer.setOpen} nav={nav} branding={branding} />}
+      <AppHeader
+        branding={branding}
+        navigation={mode === 'drawer' ? { open: drawer.open, onOpen: () => drawer.setOpen(true) } : undefined}
+      />
+      {mode === 'drawer' && <NavigationDrawer open={drawer.open} onOpenChange={drawer.setOpen} nav={nav} />}
       <div className="flex">
         {mode !== 'drawer' && (
           <aside
@@ -79,7 +82,7 @@ export const Layout = ({ children }: LayoutProps) => {
               nav.collapsed ? 'w-16' : 'w-60',
             )}
           >
-            <AppSidebar nav={nav} branding={branding} />
+            <AppSidebar nav={nav} />
           </aside>
         )}
         <main ref={mainRef} id="main-content" tabIndex={-1} className="min-w-0 flex-1 p-4 outline-none md:p-6">
