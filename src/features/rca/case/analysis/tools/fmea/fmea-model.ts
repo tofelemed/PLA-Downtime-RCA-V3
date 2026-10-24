@@ -35,6 +35,17 @@ export function causeScore(scored: FmeaScoredCause | undefined, method: FmeaReco
   return { text: `${main}${extra}${scored.needsAction ? ' · needs action' : ''}`, alert: scored.needsAction === true };
 }
 
+/** The RPN column of a cause: the server's number, or "—" before a save or while a rating is missing. */
+export const rpnText = (scored: FmeaScoredCause | undefined): string => (scored?.rpn === null || scored?.rpn === undefined ? '—' : String(scored.rpn));
+
+/** The assessment column (beside the RPN column): priority and "needs action", the missing ratings, or "Scored after save". */
+export function causeStatus(scored: FmeaScoredCause | undefined): CauseScore {
+  if (!scored) return { text: 'Scored after save', alert: false };
+  if (scored.missing.length > 0) return { text: `Incomplete: ${scored.missing.map((rating) => RATING_WORDS[rating] ?? rating).join(', ')} missing`, alert: false };
+  const parts = [scored.actionPriority ? `Priority ${scored.actionPriority}` : '', scored.needsAction ? 'needs action' : ''].filter(Boolean);
+  return { text: parts.length ? parts.join(' · ') : scored.needsAction === false ? 'No action needed' : '—', alert: scored.needsAction === true };
+}
+
 /** The scoring rules of the saved record, as the server returned them. */
 export function rulesText(record: FmeaRecord | null): string {
   if (!record) return 'Scored by the server with the RCA policy rules when saved.';
