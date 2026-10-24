@@ -22,6 +22,9 @@ const REFS = {
   loading: false,
 };
 vi.mock('../hooks/use-planning-refs', () => ({ usePlanningRefs: () => REFS }));
+// the plant's today (never a UTC date) is where an empty date's calendar opens
+const { plantTodayMock } = vi.hoisted(() => ({ plantTodayMock: vi.fn((tz: string) => (tz === 'Asia/Tehran' ? '2031-03-15' : '2031-07-01')) }));
+vi.mock('@/lib/dates/zoned-time', async (original) => ({ ...(await original<typeof import('@/lib/dates/zoned-time')>()), plantToday: plantTodayMock }));
 
 const { PlanningPage } = await import('../planning-page');
 const { NewCalendarVersionPage } = await import('./calendar-editor-page');
@@ -135,5 +138,33 @@ describe('Calendars & crews cleanup', () => {
     expect(from).toHaveAttribute('type', 'text');
     expect(from).toHaveClass('h-9');
     expect(screen.getByTestId('preview-empty')).toHaveTextContent('No preview yet');
+  });
+
+  it('rotation dialog: both empty dates open the calendar on the plant today', async () => {
+    open();
+    await screen.findByText('No crew chosen');
+    await waitFor(() => expect(screen.getByTestId('rotation-add')).not.toBeDisabled());
+    fireEvent.click(screen.getByTestId('rotation-add'));
+    const dialog = await screen.findByRole('dialog', { name: 'Add rotation' });
+    for (const label of ['Cycle day 1', 'Effective from']) {
+      fireEvent.click(within(dialog).getByRole('button', { name: `Open calendar for ${label}` }));
+      expect(await screen.findByRole('grid', { name: 'March 2031' })).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole('grid', { name: 'March 2031' }), { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('grid')).toBeNull());
+    }
+  });
+
+  it('editor: Effective from opens on the plant today in the calendar zone; Effective to on the chosen from date', async () => {
+    open('/planning/calendars/new');
+    await screen.findByLabelText(/^Effective from \(operational date\)/);
+    fireEvent.click(screen.getByRole('button', { name: /^Open calendar for Effective from/ }));
+    expect(await screen.findByRole('grid', { name: 'March 2031' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('grid', { name: 'March 2031' }), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('grid')).toBeNull());
+    const from = screen.getByLabelText(/^Effective from \(operational date\)/);
+    fireEvent.change(from, { target: { value: '2030-05-20' } });
+    fireEvent.blur(from);
+    fireEvent.click(screen.getByRole('button', { name: /^Open calendar for Effective to/ }));
+    await waitFor(() => expect(screen.getByRole('grid')).toHaveAccessibleName('May 2030'));
   });
 });

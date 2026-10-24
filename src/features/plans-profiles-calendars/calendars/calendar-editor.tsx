@@ -6,6 +6,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { Section } from '@/features/ux-kit/page-layout';
 import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
+import { plantToday } from '@/lib/dates/zoned-time';
 import { FormField } from '../components/form-field';
 import { SaveRefusalAlert } from '../components/save-refusal-alert';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
@@ -33,11 +34,15 @@ export interface CalendarEditorProps {
 
 type Editor = ReturnType<typeof useCalendarEditor>;
 
-/** The plant-calendar button of the date fields (typed in the plant format too). */
-const PICKER = {};
+/** The calendar buttons of the effective dates: an empty field opens on the plant today in the calendar's zone, "to" on "from". */
+function pickersOf(draft: CalendarDraft, plantZone: string) {
+  const today = plantToday(draft.timezone || plantZone);
+  return { from: { fallbackDate: today }, to: { fallbackDate: draft.effectiveFrom || today } };
+}
 
-function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
+function BasicsFields({ editor, readOnly, plantZone }: { editor: Editor; readOnly: boolean; plantZone: string }) {
   const { draft, errors } = editor;
+  const pickers = pickersOf(draft, plantZone);
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -47,8 +52,8 @@ function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean 
       <FormField id="calDayStart" label="Operational day starts at" error={errors.operationalDayStart} required={!readOnly}>
         <Input id="calDayStart" value={draft.operationalDayStart} placeholder="06:00" disabled={readOnly} onChange={(e) => set('operationalDayStart', e.target.value)} />
       </FormField>
-      <DateInput id="calFrom" label="Effective from (operational date)" compact textEntry calendarPicker={PICKER} value={draft.effectiveFrom} disabled={readOnly} required={!readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
-      <DateInput id="calTo" label="Effective to (exclusive, optional)" compact textEntry calendarPicker={PICKER} value={draft.effectiveTo} disabled={readOnly} error={errors.effectiveTo} onChange={(v) => set('effectiveTo', v)} />
+      <DateInput id="calFrom" label="Effective from (operational date)" compact textEntry calendarPicker={pickers.from} value={draft.effectiveFrom} disabled={readOnly} required={!readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
+      <DateInput id="calTo" label="Effective to (exclusive, optional)" compact textEntry calendarPicker={pickers.to} value={draft.effectiveTo} disabled={readOnly} error={errors.effectiveTo} onChange={(v) => set('effectiveTo', v)} />
     </div>
   );
 }
@@ -124,7 +129,7 @@ export function CalendarEditor(props: CalendarEditorProps) {
               Your roles in this plant do not include calendar editing: you can view and preview this version.
             </p>
           )}
-          <BasicsFields editor={editor} readOnly={readOnly} />
+          <BasicsFields editor={editor} readOnly={readOnly} plantZone={displayTimezone} />
         </div>
       </Section>
       <Section title="Shifts">

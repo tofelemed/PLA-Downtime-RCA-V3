@@ -7,6 +7,9 @@ import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes'
 import { TableCard } from '@/features/plans-profiles-calendars/components/table-card';
 import { FxRateTable } from './fx-rate-table';
 
+/** Empty list: a filter that matches nothing, or no rate yet (the next step). */
+const FILTERED_EMPTY = 'No exchange rates match these filters.';
+const NO_RATES = 'Add an exchange rate draft; without an approved rate, amounts stay in the currency they were entered in.';
 const FX_INFO =
   'Versions per currency pair: 1 from = rate to, valid up to (not including) the end. A loss whose date no approved rate covers keeps no amount in the other currency; nothing is estimated.';
 
@@ -46,7 +49,7 @@ export function FxRatesTab() {
         </div>
       </div>
       <TableCard title="Exchange rates" info={FX_INFO}>
-        <FxRateTable rates={rates.rows} pager={rates.pager} status={rates.status} empty={{ title: 'No exchange rates', text: 'No exchange rates match these filters.' }} />
+        <FxRateTable rates={rates.rows} pager={rates.pager} status={rates.status} empty={{ title: 'No exchange rates', text: pair || state ? FILTERED_EMPTY : NO_RATES }} />
       </TableCard>
     </div>
   );

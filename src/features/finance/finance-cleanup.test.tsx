@@ -41,12 +41,15 @@ const footerLabels = (dialog: HTMLElement) => within(dialog).getAllByRole('butto
 
 describe('Valuation cleanup', () => {
   let approved: boolean;
+  let empty: boolean;
   beforeEach(() => {
     actAs('SuperAdmin', 'someone-else');
     approved = true;
+    empty = false;
     stubV2Fetch((call) => {
       if (call.method !== 'GET') return undefined;
       const path = call.url.pathname;
+      if (empty) return jsonResponse(200, listPage([]));
       if (path.endsWith('/valuation-policies')) return jsonResponse(200, listPage([policy(approved)]));
       if (path.endsWith('/fx-rates/f1')) return jsonResponse(200, FX);
       if (path.endsWith('/fx-rates')) return jsonResponse(200, listPage([FX]));
@@ -120,5 +123,20 @@ describe('Valuation cleanup', () => {
     fireEvent.click(screen.getByTestId('fx-retire'));
     const confirm = await screen.findByRole('alertdialog', { name: 'Retire version 1?' });
     expect(within(confirm).getAllByRole('button').map((b) => b.textContent)).toEqual(['Cancel', 'Retire rate']);
+  });
+
+  it('empty lists say what to do next, not the title again', async () => {
+    empty = true;
+    const { unmount } = open('/finance');
+    expect(await screen.findByText('Create a policy version; losses stay unvalued until one is approved.')).toBeInTheDocument();
+    unmount();
+    const fx = open('/finance?tab=fx');
+    expect(await screen.findByText('Add an exchange rate draft; without an approved rate, amounts stay in the currency they were entered in.')).toBeInTheDocument();
+    fx.unmount();
+    const filtered = open('/finance?tab=fx&pair=USD-IRR');
+    expect(await screen.findByText('No exchange rates match these filters.')).toBeInTheDocument();
+    filtered.unmount();
+    open('/finance?tab=demand');
+    expect(await screen.findByText('Without an approved status, the economic view of lost output stays unvalued.')).toBeInTheDocument();
   });
 });

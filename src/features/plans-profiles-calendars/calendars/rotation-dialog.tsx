@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Input } from '@/components/ui/input';
 import { useCreateCrewRotation } from '@/api/v2/queries/calendars';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { plantToday } from '@/lib/dates/zoned-time';
 import { FormButtons } from '../components/form-buttons';
 import { FormDialog } from '../components/form-dialog';
 import { FormField } from '../components/form-field';
@@ -21,7 +22,6 @@ export interface RotationDialogProps {
 }
 
 const INFO = 'A cycle of shift names from day 1 (“-” = a day off); the server re-assigns the crew’s future shift instances.';
-const PICKER = {};
 
 /**
  * "Add rotation" dialog: missing fields are said under each field on Add; a toast and the dialog closes on
@@ -34,6 +34,8 @@ export function RotationDialog({ crewOptions, crewId: chosen, timezone, onClose 
   const createRotation = useCreateCrewRotation();
   const feedback = useSaveFeedback();
   const busy = createRotation.isPending;
+  // an empty date's calendar opens on the plant's today, never a UTC date
+  const picker = useMemo(() => ({ fallbackDate: plantToday(timezone) }), [timezone]);
   const set = (patch: Partial<RotationValues>) => setValues((prev) => ({ ...prev, ...patch }));
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -55,8 +57,8 @@ export function RotationDialog({ crewOptions, crewId: chosen, timezone, onClose 
           <Input id="rotationCycle" className="h-9" value={values.cycle} placeholder="A,A,B,B,C,C,-,-" onChange={(e) => set({ cycle: e.target.value })} />
         </FormField>
         <div className="grid gap-3 sm:grid-cols-2">
-          <DateInput id="rotationAnchor" label="Cycle day 1" required compact textEntry calendarPicker={PICKER} value={values.anchorDate} error={errors.anchorDate} onChange={(anchorDate) => set({ anchorDate })} />
-          <DateInput id="rotationFrom" label="Effective from" required compact textEntry calendarPicker={PICKER} value={values.effectiveFrom} error={errors.effectiveFrom} onChange={(effectiveFrom) => set({ effectiveFrom })} />
+          <DateInput id="rotationAnchor" label="Cycle day 1" required compact textEntry calendarPicker={picker} value={values.anchorDate} error={errors.anchorDate} onChange={(anchorDate) => set({ anchorDate })} />
+          <DateInput id="rotationFrom" label="Effective from" required compact textEntry calendarPicker={picker} value={values.effectiveFrom} error={errors.effectiveFrom} onChange={(effectiveFrom) => set({ effectiveFrom })} />
         </div>
         <FormButtons label="Add rotation" busy={busy} onCancel={() => onClose()} />
       </form>

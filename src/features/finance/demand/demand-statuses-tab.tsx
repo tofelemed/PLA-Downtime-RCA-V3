@@ -6,13 +6,13 @@ import { DEMAND_STATUS_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { TableCard } from '@/features/plans-profiles-calendars/components/table-card';
 import { DemandActions } from './demand-actions';
-
-const DEMAND_INFO =
-  'Lost output counts as a lost sale only where an approved status says the product was sold out; elsewhere the economic view shows the tonnes with no lost-sales value.';
 import { useProductName } from './use-product-name';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
+
+const DEMAND_INFO =
+  'Lost output counts as a lost sale only where an approved status says the product was sold out; elsewhere the economic view shows the tonnes with no lost-sales value.';
 
 /**
  * Demand statuses of the plant's products (SME V3): lost output counts as a lost sale only where an
@@ -45,7 +45,7 @@ export function DemandStatusesTab() {
           getRowAnchor={(s) => `demand-status-${s.id}`}
           pager={statuses.pager}
           status={statuses.status}
-          empty={{ title: 'No demand statuses', text: 'No demand statuses: the economic view of lost output stays unvalued.' }}
+          empty={{ title: 'No demand statuses', text: 'Without an approved status, the economic view of lost output stays unvalued.' }}
         />
       </TableCard>
     </div>

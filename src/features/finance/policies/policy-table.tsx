@@ -52,7 +52,7 @@ export function PolicyTable({ policies, pager, status }: PolicyTableProps) {
       getRowKey={(policy) => policy.id}
       pager={pager}
       status={status}
-      empty={{ title: 'No valuation policy versions', text: 'No valuation policy versions yet.' }}
+      empty={{ title: 'No valuation policy versions', text: 'Create a policy version; losses stay unvalued until one is approved.' }}
       onRowClick={(policy) => navigate(`/finance/policies/${policy.id}`)}
       rowLabel={(policy) => `Valuation policy version ${policy.version}`}
     />
