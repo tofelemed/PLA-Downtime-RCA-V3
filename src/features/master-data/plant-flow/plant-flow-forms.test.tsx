@@ -171,4 +171,17 @@ describe('plant flow save feedback (DECISIONS 2026-10-22)', () => {
     expect(within(routes).getByRole('button', { name: 'About Routes' })).toBeTruthy();
     expect(within(routes).getByTestId('flow-route-new')).toHaveClass('h-9');
   });
+
+  it('Routes: a draft route keeps Approve, and Retire opens its 420 px confirmation; the effective time has no zone', async () => {
+    reply = (call) => (call.method === 'GET' && call.url.pathname === '/api/v2/flow-routes' ? jsonResponse(200, { items: [ROUTE], nextCursor: null }) : undefined);
+    wrap(<PlantFlowPage />);
+    const row = (await screen.findByTestId('flow-route-row')).closest('tr') as HTMLElement;
+    expect(row.textContent).not.toMatch(/Asia\/Tehran|\+03:30/);
+    expect(within(row).getByTestId('approve-version')).toBeTruthy();
+    fireEvent.click(within(row).getByRole('button', { name: 'Retire' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Retire this flow route?' });
+    expect(dialog).toHaveClass('sm:max-w-[420px]');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
 });
