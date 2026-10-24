@@ -73,6 +73,30 @@ describe('My work page (UX audit §5.7)', () => {
     expect(calls.every((call) => call.url.pathname.endsWith('/reconciliation-queue'))).toBe(true);
   });
 
+  it('cleanup: no description lines; each table sits in a titled card with its count and an info tip', async () => {
+    stubV2Fetch(reply);
+    open();
+    await screen.findByRole('table', { name: 'My reconciliation queue: Overdue' });
+    expect(screen.queryByText(/What is waiting for you in this plant/)).toBeNull();
+    expect(screen.queryByText(/Periods waiting for you/)).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: /Overdue\s*\(1\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About the queue' })).toBeInTheDocument();
+  });
+
+  it('cleanup: Tasks and RCA actions are titled cards with the link beside the title', async () => {
+    stubV2Fetch(reply);
+    open('/my-queue?tab=tasks');
+    const heading = await screen.findByRole('heading', { level: 2, name: 'My open tasks' });
+    const row = heading.parentElement;
+    expect(row).toContainElement(screen.getByRole('link', { name: 'All my tasks' }));
+  });
+
+  it('cleanup: RCA actions sit in a titled card', () => {
+    stubV2Fetch(reply);
+    open('/my-queue?tab=rca-actions');
+    expect(screen.getByRole('heading', { level: 2, name: 'My RCA actions' })).toBeInTheDocument();
+  });
+
   it('QA P-0: a row without its plan says no approved plan covers it and leads to Plans, not a dead end', async () => {
     stubV2Fetch((call) => (call.url.pathname.endsWith('/reconciliation-queue') ? jsonResponse(200, listPage([{ ...base, planId: null }])) : undefined));
     open();

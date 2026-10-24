@@ -27,7 +27,7 @@ export function EventRcaChip({ rcaState, caseId }: EventRcaChipProps) {
     const chip = CASE_CHIPS[rcaState ?? ''] ?? CASE_CHIPS.linked;
     return (
       <Link to={`/rca/${encodeURIComponent(caseId)}`} className="w-fit rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" data-testid="event-rca-chip">
-        <StatusBadge tone={chip.tone} icon={chip.tone === 'success' ? StatusIcon.success : StatusIcon.info}>
+        <StatusBadge tone={chip.tone} icon={chip.tone === 'success' ? StatusIcon.success : StatusIcon.info} className="whitespace-nowrap">
           {chip.text}
           <span className="sr-only"> (open it)</span>
         </StatusBadge>
@@ -37,14 +37,14 @@ export function EventRcaChip({ rcaState, caseId }: EventRcaChipProps) {
   const unlinked = CASE_CHIPS[rcaState ?? ''];
   if (unlinked) {
     return (
-      <StatusBadge tone={unlinked.tone} icon={unlinked.tone === 'success' ? StatusIcon.success : StatusIcon.info} className="w-fit" data-testid="event-rca-chip">
+      <StatusBadge tone={unlinked.tone} icon={unlinked.tone === 'success' ? StatusIcon.success : StatusIcon.info} className="w-fit whitespace-nowrap" data-testid="event-rca-chip">
         {unlinked.text}
       </StatusBadge>
     );
   }
   if (rcaState !== 'required') return null;
   return (
-    <StatusBadge tone="info" icon={StatusIcon.info} className="w-fit" data-testid="event-rca-chip">
+    <StatusBadge tone="info" icon={StatusIcon.info} className="w-fit whitespace-nowrap" data-testid="event-rca-chip">
       {EVENT_RCA_STATE_LABELS.required}
     </StatusBadge>
   );

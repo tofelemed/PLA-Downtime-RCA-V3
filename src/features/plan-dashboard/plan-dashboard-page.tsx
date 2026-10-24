@@ -1,13 +1,13 @@
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DataState } from '@/features/ux-kit/data-state';
-import { labelOf, VERSION_STATE_LABELS } from '@/features/ux-kit/labels';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { ScopeHeader } from '@/features/ux-kit/scope-header';
+import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { PeriodGrid } from './components/period-grid';
 import { PlanSummary } from './components/plan-summary';
 import { usePlanContext } from './hooks/use-plan-context';
 import { periodGridTitle } from './model/period-title';
+import { planMetaText } from './model/plan-meta';
 
 const BACK = { to: '/planning', label: 'Plans' };
 
@@ -39,7 +39,7 @@ export function PlanDashboardPage() {
         <PageHeader
           title={periodGridTitle(plan.data.name)}
           back={BACK}
-          meta={<ScopeHeader scopeLabel={unitName} timezone={zone.timezone} timezoneIsFallback={zone.source === 'utc-fallback'} baseline={`Plan version ${version.version} (${labelOf(VERSION_STATE_LABELS, version.approvalState).toLowerCase()})`} />}
+          meta={<span className="inline-flex flex-wrap items-center gap-2">{planMetaText(unitName, version.version)} <VersionStateBadge state={version.approvalState} /></span>}
         />
         <Tabs value={tab} onValueChange={(next) => setParams(next === 'plan' ? { tab: next } : {}, { replace: true })}>
           <TabsList className="h-auto flex-wrap">

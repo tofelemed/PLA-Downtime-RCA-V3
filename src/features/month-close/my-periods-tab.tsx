@@ -6,7 +6,8 @@ import { QUEUE_TASK_LABELS } from '@/features/plan-dashboard/model/sla-labels';
 import { SlaBadges } from '@/features/plan-dashboard/sla/sla-badges';
 import { DataTable, ListPager, type DataTableColumn, type DataTableProps } from '@/features/ux-kit/data-table';
 import { EmptyMessage } from '@/features/ux-kit/data-table/data-table-states';
-import { Section } from '@/features/ux-kit/page-layout';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -14,6 +15,8 @@ import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { type CalendarPreference, formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { NoPlanLink } from './components/no-plan-notice';
 import { groupQueueRows } from './my-queue-groups';
+import { MyWorkCard } from './my-work-card';
+import { MY_WORK_LOOK } from './my-work-look';
 
 const periodHref = (row: QueueItemView) => (row.planId ? `/plans/${row.planId}/periods/${row.periodId}` : null);
 
@@ -76,6 +79,10 @@ function QueueTable({ title, ...props }: QueueTableProps & { title: string }) {
   );
 }
 
+const DEADLINES_INFO = (
+  <KpiInfo label="the queue" text="Periods waiting for you, to prepare, to review, or escalated to your role, earliest due first. Deadlines follow the plant's reconciliation policy." />
+);
+
 const EMPTY = { title: 'Nothing waiting for you', text: 'No ended period of the last two months needs your action.' };
 
 /**
@@ -93,18 +100,21 @@ export function MyPeriodsTab() {
   const settled = loaded && queue.rows.length > 0;
   const empty = loaded && queue.rows.length === 0 && !queue.pager.canPrevious;
   return (
-    <div className="space-y-4" data-testid="my-work-periods">
-      <p className="text-sm text-muted-foreground">
-        Periods waiting for you — to prepare, to review, or escalated to your role — earliest due first. Deadlines follow the plant&apos;s reconciliation policy.
-      </p>
-      {empty && <div className="rounded-md border p-6" data-testid="my-work-periods-empty"><EmptyMessage empty={EMPTY} /></div>}
-      {!settled && !empty && <QueueTable title="My reconciliation queue" columns={cols} rows={queue.rows} pager={queue.pager} status={queue.status} empty={EMPTY} />}
-      {settled && groupQueueRows(queue.rows, now, timezone).map((group) => (
-        <Section key={group.key} title={`${group.title} (${number(group.rows.length)})`} headingLevel={3}>
-          <QueueTable title={`My reconciliation queue: ${group.title}`} columns={cols} rows={group.rows} pager="none" />
-        </Section>
-      ))}
-      {settled && <ListPager pager={queue.pager} label="My reconciliation queue pages" />}
-    </div>
+    <ReportLookContext.Provider value={MY_WORK_LOOK}>
+      <div className="space-y-4" data-testid="my-work-periods">
+        {empty && <div className="rounded-lg border bg-card p-6" data-testid="my-work-periods-empty"><EmptyMessage empty={EMPTY} /></div>}
+        {!settled && !empty && (
+          <MyWorkCard title="My reconciliation queue" info={DEADLINES_INFO}>
+            <QueueTable title="My reconciliation queue" columns={cols} rows={queue.rows} pager={queue.pager} status={queue.status} empty={EMPTY} />
+          </MyWorkCard>
+        )}
+        {settled && groupQueueRows(queue.rows, now, timezone).map((group, index) => (
+          <MyWorkCard key={group.key} title={group.title} count={number(group.rows.length)} info={index === 0 ? DEADLINES_INFO : undefined}>
+            <QueueTable title={`My reconciliation queue: ${group.title}`} columns={cols} rows={group.rows} pager="none" />
+          </MyWorkCard>
+        ))}
+        {settled && <ListPager pager={queue.pager} label="My reconciliation queue pages" />}
+      </div>
+    </ReportLookContext.Provider>
   );
 }

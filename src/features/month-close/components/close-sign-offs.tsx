@@ -1,8 +1,8 @@
 import type { MonthCloseView, PersonRef } from '@/api/v2/types/month-close';
 import { resolvedActorText } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { Section } from '@/features/ux-kit/page-layout';
 import { CloseActions } from './close-actions';
+import { CloseCard } from './close-card';
 
 function SignOff({ label, who, at, timezone, testId }: { label: string; who: PersonRef | null; at: string | null; timezone: string; testId: string }) {
   return (
@@ -10,7 +10,7 @@ function SignOff({ label, who, at, timezone, testId }: { label: string; who: Per
       <span className="font-medium">{label}:</span>{' '}
       {who ? (
         <>
-          {resolvedActorText(who.id, who.name)} · <PlantTime iso={at} tz={timezone} withDate />
+          {resolvedActorText(who.id, who.name)} · <PlantTime iso={at} tz={timezone} withDate withZone={false} />
         </>
       ) : (
         <span className="text-muted-foreground">not yet</span>
@@ -24,7 +24,7 @@ export function CloseSignOffs({ view }: { view: MonthCloseView }) {
   const { signOffs, deadlines } = view;
   const tz = deadlines.timezone;
   return (
-    <Section title="Sign-offs" description="Plant management closes the quantities; finance signs off independently and locks the month.">
+    <CloseCard title="Sign-offs" info="Plant management closes the quantities; finance signs off independently and locks the month.">
       <div className="space-y-3">
         <ul className="space-y-1 text-sm">
           <SignOff label="Quantities closed (plant management)" who={signOffs.quantitiesClosedBy} at={signOffs.quantitiesClosedAt} timezone={tz} testId="signoff-quantities" />
@@ -53,6 +53,6 @@ export function CloseSignOffs({ view }: { view: MonthCloseView }) {
         )}
         <CloseActions view={view} />
       </div>
-    </Section>
+    </CloseCard>
   );
 }

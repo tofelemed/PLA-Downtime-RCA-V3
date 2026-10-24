@@ -137,11 +137,12 @@ describe('month-close section navigation and command ownership', () => {
       missingPeriods: [{ unitId: 'u1', unitName: 'Extruder 1', localDate: '2026-10-21', shiftName: 'A', utcStart: '2026-10-21T02:30:00Z' }] };
     mount(); await screen.findByTestId('close-month-end');
     expect(screen.getByTestId('step-close-quantities')).toBeDisabled();
-    expect(screen.getByTestId('close-month-end-status')).toHaveTextContent(/Month ends .*not ended yet/);
+    expect(screen.getByTestId('close-month-end-status')).toHaveTextContent(/^Month ends 2026-10-23/);
     const missing = screen.getByTestId('close-missing-periods');
     expect(missing).toHaveTextContent('13 expected periods do not exist yet');
     expect(missing).toHaveTextContent('Extruder 1 · 2026-10-21 · shift A');
     expect(missing).toHaveTextContent('and 12 more');
+    expect(screen.getByRole('button', { name: 'About the month end' })).toBeInTheDocument();
   });
 
   it('shows explicit empty states for all lists and history', async () => {

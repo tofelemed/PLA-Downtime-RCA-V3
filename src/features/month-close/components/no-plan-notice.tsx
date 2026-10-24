@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { MonthCloseView, UncoveredDayView } from '@/api/v2/types/month-close';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { plural } from '@/features/ux-kit/format/plural';
 import { formatOperationalDate, useCalendarPreference, type CalendarPreference } from '@/lib/dates';
@@ -16,7 +17,7 @@ export function NoPlanLink({ text = NO_PLAN_TEXT }: { text?: string }) {
       {text}
       {canViewAnalysis && (
         <>
-          {' · '}
+          {text && ' · '}
           <Link to="/planning" className="underline underline-offset-2" onClick={(event) => event.stopPropagation()}>
             Open Plans
           </Link>
@@ -28,7 +29,7 @@ export function NoPlanLink({ text = NO_PLAN_TEXT }: { text?: string }) {
 
 function columns(pref: CalendarPreference): DataTableColumn<UncoveredDayView>[] {
   return [
-    { id: 'date', header: 'Operational date', cell: (d) => formatOperationalDate(d.localDate, pref), nowrap: true },
+    { id: 'date', header: 'Date', cell: (d) => formatOperationalDate(d.localDate, pref), nowrap: true },
     { id: 'unit', header: 'Unit', cell: (d) => <span className="break-words">{d.unitName ?? 'Unit'}</span> },
     { id: 'shifts', header: 'Shifts', align: 'right', cell: (d) => d.shifts },
   ];
@@ -45,9 +46,10 @@ export function UncoveredDays({ view }: { view: MonthCloseView }) {
   if (count === 0) return null;
   return (
     <div className="space-y-2 rounded-md border border-dashed p-3" role="note" data-testid="uncovered-days">
-      <p className="text-sm">
-        <span className="font-medium">{plural(count, 'production day has', 'production days have')} no approved plan.</span>{' '}
-        Their periods are not counted above and need no approval until a plan covers them. <NoPlanLink text="Create or approve a plan version to include them" />
+      <p className="flex flex-wrap items-center gap-x-1.5 text-sm">
+        <span className="font-medium">{plural(count, 'production day has', 'production days have')} no approved plan.</span>
+        <KpiInfo label="days without an approved plan" text="Their periods are not counted above and need no approval until a plan covers them. Create or approve a plan version to include them." />
+        <NoPlanLink text="" />
       </p>
       {days.length > 0 && (
         <DataTable caption="Days without an approved plan" columns={columns(pref)} rows={days} getRowKey={(d) => `${d.unitId}-${d.localDate}`} pager="none" density="compact" maxHeight="16rem" />

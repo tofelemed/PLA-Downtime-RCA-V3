@@ -14,7 +14,6 @@ export function MonthNav({ view, onSelect }: { view: MonthCloseView; onSelect: (
       </Button>
       <span className="text-sm font-medium" data-testid="month-label" data-month={view.monthKey}>
         {label(view.monthKey)} · {formatOperationalDate(view.firstDate, pref)} – {formatOperationalDate(view.lastDate, pref)}
-        {view.calendar === 'persian' ? ' (Solar Hijri month)' : ''}
       </span>
       <Button variant="outline" size="sm" data-testid="month-next" onClick={() => onSelect(view.nextMonthKey)}>
         {label(view.nextMonthKey)} →

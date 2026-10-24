@@ -34,3 +34,4 @@ playwright-report/
 uploads/
 
 .superpowers/
+.playwright-mcp/

@@ -98,11 +98,30 @@ describe('measurement uncertainty screen (SME E4)', () => {
     expect(calls.find((c) => c.url.pathname.endsWith('/uncertainty-budgets'))?.url.searchParams.get('unitId')).toBe('unit-1');
   });
 
-  it('QA re-test N7: the intro uses the glossary term Unaccounted, not "residual"', async () => {
+  it('has no intro paragraph or timezone suffix; the definitions sit behind an info button', async () => {
     renderPage();
     await screen.findByTestId('budget-card');
-    expect(screen.getByText(/Unaccounted figures are always published/)).toBeInTheDocument();
-    expect(screen.queryByText(/residuals/)).toBeNull();
+    expect(screen.queryByText(/Uncertainty budget per measurement boundary/)).toBeNull();
+    expect(screen.queryByText(/Unaccounted figures are always published/)).toBeNull();
+    expect(screen.queryByText(/Asia\/Tehran/)).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'Uncertainty budgets' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About Uncertainty budgets' })).toBeInTheDocument();
+  });
+
+  it('shows no count badge while the budgets load', async () => {
+    const base = fetch as unknown as (url: string, init: RequestInit) => Promise<Response>;
+    vi.stubGlobal('fetch', vi.fn((url: string, init: RequestInit) => (new URL(url).pathname.endsWith('/uncertainty-budgets') ? new Promise<Response>(() => undefined) : base(url, init))));
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Uncertainty budgets' })).toBeInTheDocument();
+    expect(screen.queryByTestId('budget-count')).toBeNull();
+  });
+
+  it('shows a clear empty state when the unit has no budget', async () => {
+    const base = fetch as unknown as (url: string, init: RequestInit) => Promise<Response>;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => (new URL(url).pathname.endsWith('/uncertainty-budgets') ? json(200, { items: [], nextCursor: null }) : base(url, init))));
+    renderPage();
+    expect(await screen.findByText('No uncertainty budget for this unit')).toBeInTheDocument();
+    expect(screen.queryByTestId('budget-card')).toBeNull();
   });
 
   it('production accounting cannot approve a budget: the metrology owner decides', async () => {

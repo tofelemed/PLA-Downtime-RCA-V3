@@ -1,4 +1,6 @@
 import { Label } from '@/components/ui/label';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import type { ShiftInstanceView } from '@/api/v2/types/units';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { presetWindow, WINDOW_PRESETS } from '../model/event-filters';
@@ -35,7 +37,8 @@ function shiftHint(unitCount: number): string | null {
 /**
  * Window of the list (UX04 "choose unit and shift", E-2): a rolling preset (resolved from now on every
  * fetch, A-5), the current or a recent shift of the one chosen unit, or a custom range on the plant clock.
- * Instants are taken when the user picks, never during render.
+ * Two items of the filter bar (the labelled select, then "Custom range…"); why no shift is offered is the
+ * ⓘ next to the label. Instants are taken when the user picks, never during render.
  */
 export function WindowSelect({ unitIds, label, bounds, onChange }: WindowSelectProps) {
   const { dateTime, timezone } = usePlantFormat();
@@ -56,45 +59,36 @@ export function WindowSelect({ unitIds, label, bounds, onChange }: WindowSelectP
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Label htmlFor="event-window" className="text-sm">
-        Window
-      </Label>
-      <select
-        id="event-window"
-        data-testid="event-window"
-        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-        value={selected}
-        aria-describedby={hint ? 'event-window-hint' : undefined}
-        onChange={(event) => choose(event.target.value)}
-      >
-        {!shownPreset && (
-          <option value="" disabled>
-            {label}
-          </option>
-        )}
-        {WINDOW_PRESETS.map((preset) => (
-          <option key={preset.key} value={`preset:${preset.key}`}>
-            {preset.label}
-          </option>
-        ))}
-        {current && <option value={CURRENT_SHIFT}>{`Current shift (${current.shiftName})`}</option>}
-        {instances.length > 0 && (
-          <optgroup label="Shifts">
-            {instances.map((shift) => (
-              <option key={shift.utcStart} value={`shift:${shift.utcStart}`}>
-                {`${shiftLabel(shift)} · ${dateTime(shift.utcStart)}`}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
-      <CustomRangePopover value={bounds} timeZone={timezone} onApply={(range) => onChange({ ...range, label: 'Custom range' })} />
-      {hint && (
-        <span id="event-window-hint" className="text-xs text-muted-foreground" data-testid="event-window-shift-hint">
-          {hint}
+    <>
+      <div className={FIELD_CLASS}>
+        <span className="flex items-center gap-1">
+          <Label htmlFor="event-window">Window</Label>
+          {hint && <KpiInfo label="Window" text={hint} />}
         </span>
-      )}
-    </div>
+        <select id="event-window" data-testid="event-window" className={SELECT_CLASS} value={selected} onChange={(event) => choose(event.target.value)}>
+          {!shownPreset && (
+            <option value="" disabled>
+              {label}
+            </option>
+          )}
+          {WINDOW_PRESETS.map((preset) => (
+            <option key={preset.key} value={`preset:${preset.key}`}>
+              {preset.label}
+            </option>
+          ))}
+          {current && <option value={CURRENT_SHIFT}>{`Current shift (${current.shiftName})`}</option>}
+          {instances.length > 0 && (
+            <optgroup label="Shifts">
+              {instances.map((shift) => (
+                <option key={shift.utcStart} value={`shift:${shift.utcStart}`}>
+                  {`${shiftLabel(shift)} · ${dateTime(shift.utcStart)}`}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+      </div>
+      <CustomRangePopover value={bounds} timeZone={timezone} onApply={(range) => onChange({ ...range, label: 'Custom range' })} />
+    </>
   );
 }

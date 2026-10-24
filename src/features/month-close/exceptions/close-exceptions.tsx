@@ -4,6 +4,8 @@ import type { ExceptionType, ReconciliationExceptionView } from '@/api/v2/types/
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { type CalendarPreference, formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { CloseCard } from '../components/close-card';
+import { CloseEmpty } from '../components/close-empty';
 import { NoPlanLink } from '../components/no-plan-notice';
 import { exceptionHref, exceptionLinkText, isExceptionType, typeLabel, WORKFLOW_LABELS } from './exception-model';
 import { ExceptionFilters } from './exception-filters';
@@ -66,22 +68,24 @@ export function CloseExceptions({ view }: { view: Pick<MonthCloseView, 'firstDat
   const pref = useCalendarPreference();
   const filters = useExceptionParams();
   const list = useCloseExceptions({ fromDate: view.firstDate, toDate: view.endDate, type: filters.type, unitId: filters.unitId });
+  const empty = list.rows.length === 0 && !list.status.isLoading && !list.status.isError;
   return (
-    <div className="space-y-4" data-testid="close-exceptions">
-      <p className="text-sm text-muted-foreground">
-        Open problems of this month&apos;s periods that are not approved yet, from the latest calculation and the recorded stops. Fix each one on the screen its link opens.
-      </p>
-      <ExceptionFilters type={filters.type} unitId={filters.unitId} onChange={filters.set} />
-      <DataTable
-        caption="Accounting exceptions"
-        columns={columns(pref)}
-        rows={list.rows}
-        pager={list.pager}
-        status={list.status}
-        empty={EMPTY}
-        getRowKey={(row) => row.id}
-        density="compact"
-      />
-    </div>
+    <CloseCard title="Exceptions" info="Open problems of this month's periods that are not approved yet, from the latest calculation and the recorded stops. Fix each one on the screen its link opens.">
+      <div className="space-y-4" data-testid="close-exceptions">
+        <ExceptionFilters type={filters.type} unitId={filters.unitId} onChange={filters.set} />
+        {empty ? <CloseEmpty title={EMPTY.title} text={EMPTY.text} /> : (
+          <DataTable
+            caption="Accounting exceptions"
+            columns={columns(pref)}
+            rows={list.rows}
+            pager={list.pager}
+            status={list.status}
+            empty={EMPTY}
+            getRowKey={(row) => row.id}
+            density="compact"
+          />
+        )}
+      </div>
+    </CloseCard>
   );
 }

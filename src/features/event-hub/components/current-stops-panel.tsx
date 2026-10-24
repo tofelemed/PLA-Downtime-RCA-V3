@@ -7,9 +7,9 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
-import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { defaultFilters, currentStopsQuery } from '../model/event-filters';
+import { stopSinceText } from '../model/stop-since';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { usePrefetchEvent } from '../hooks/use-prefetch-event';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -28,7 +28,7 @@ export interface CurrentStopsPanelProps {
 
 /**
  * Ongoing (open) events of the chosen units (§16.2 current stops), independent of the list window: cards
- * that fill the available width (a strip above the Event Hub table), one quiet line when none is running.
+ * that fill the available width (a strip above the Event Hub table), one quiet line ("Current stops (0)") when none is running.
  */
 export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPanelProps) {
   const { number } = useNumberFormat();
@@ -39,10 +39,10 @@ export function CurrentStopsPanel({ unitIds, onClose, onCode }: CurrentStopsPane
   const state = dataStateOf(query, { isEmpty: stops.length === 0 });
   const count = query.hasNextPage ? `${number(stops.length)}+` : number(stops.length);
   if (state === 'empty') {
-    // nothing running: one quiet line instead of an empty box
+    // nothing running: one quiet line instead of an empty box (the count says it)
     return (
-      <p className="rounded-md border px-3 py-2 text-sm text-muted-foreground" data-testid="current-stops" data-empty="true">
-        <span className="font-medium text-foreground">Current stops (0)</span> · No ongoing stops.
+      <p className="rounded-md border px-3 py-2 text-sm font-medium" data-testid="current-stops" data-empty="true">
+        Current stops (0)
       </p>
     );
   }
@@ -88,7 +88,7 @@ function CurrentStop({ stop, onClose, onCode }: CurrentStopProps) {
         </span>
       </div>
       <div className="text-xs text-muted-foreground">
-        {labelOf(PHYSICAL_TYPE_LABELS, stop.classification.physicalType)} since {dateTime(stop.startTime)} · as of {dateTime(stop.asOf)}
+        {stopSinceText(dateTime(stop.startTime), dateTime(new Date().toISOString()))}
       </div>
       <div className="text-xs">{env.reasonName(stop.reasonCodeId)}</div>
       <div className="mt-1 flex gap-2">

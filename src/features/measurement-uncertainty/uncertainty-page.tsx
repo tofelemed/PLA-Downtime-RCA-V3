@@ -12,23 +12,38 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { BudgetCard } from './components/budget-card';
 import { BudgetForm } from './components/budget-form';
+
+const INFO = (
+  <>
+    One budget per measurement boundary (meters, scales, inventory, conversion, timing). The server combines the standard uncertainties (root sum of squares, with correlations) and expands them by the coverage
+    factor. An approved budget can justify the unit&apos;s absolute reconciliation tolerance, but only when someone adopts it. Unaccounted figures are always published.
+  </>
+);
 
 function UnitBudgets({ unitId, timezone }: { unitId: string; timezone: string }) {
   const budgets = useUncertaintyBudgets(unitId);
   const items = budgets.data?.items ?? [];
   return (
-    <DataState state={dataStateOf(budgets)} error={budgets.error} onRetry={() => void budgets.refetch()}>
-      {items.length === 0 && <p className="text-sm text-muted-foreground">No uncertainty budget for this unit yet; its reconciliation tolerance stays at zero until one is approved and adopted.</p>}
-      <div className="space-y-3" data-testid="budget-list">
-        {items.map((budget) => (
-          <div key={budget.id} id={`uncertainty-budget-${budget.id}`} className="scroll-mt-24" data-highlight-label="the uncertainty budget">
-            <BudgetCard budget={budget} timezone={timezone} />
+    <ReportCard title="Uncertainty budgets" badge={budgets.data && <span className="text-sm text-muted-foreground" data-testid="budget-count">{items.length}</span>} info={INFO} testId="budget-section">
+      <DataState state={dataStateOf(budgets)} error={budgets.error} onRetry={() => void budgets.refetch()}>
+        {items.length === 0 && (
+          <div className="py-8 text-center" data-testid="budget-empty">
+            <p className="font-medium">No uncertainty budget for this unit</p>
+            <p className="text-sm text-muted-foreground">Its reconciliation tolerance stays at zero until a budget is approved and adopted.</p>
           </div>
-        ))}
-      </div>
-    </DataState>
+        )}
+        <div className="space-y-3" data-testid="budget-list">
+          {items.map((budget) => (
+            <div key={budget.id} id={`uncertainty-budget-${budget.id}`} className="scroll-mt-24" data-highlight-label="the uncertainty budget">
+              <BudgetCard budget={budget} timezone={timezone} />
+            </div>
+          ))}
+        </div>
+      </DataState>
+    </ReportCard>
   );
 }
 
@@ -47,7 +62,6 @@ function UncertaintyScreen() {
       <div className="space-y-6" data-testid="measurement-uncertainty">
         <PageHeader
           title="Measurement uncertainty"
-          description="Uncertainty budget per measurement boundary: meters, scales, inventory, conversion and timing. The server combines the standard uncertainties (root sum of squares, with correlations) and expands them by the coverage factor. An approved budget can justify the unit's absolute reconciliation tolerance, but only when someone adopts it. Unaccounted figures are always published."
           actions={
             canWriteUncertaintyBudgets &&
             chosen && (
@@ -57,9 +71,11 @@ function UncertaintyScreen() {
             )
           }
         />
-        <div className="max-w-sm space-y-1">
-          <Label htmlFor="budget-unit">Unit</Label>
-          <NativeSelect id="budget-unit" testId="budget-unit" value={chosen} onChange={(v) => { setUnitId(v); setDrafting(false); }} options={unitOptions} />
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex w-full max-w-sm flex-col gap-1.5">
+            <Label htmlFor="budget-unit">Unit</Label>
+            <NativeSelect id="budget-unit" testId="budget-unit" value={chosen} onChange={(v) => { setUnitId(v); setDrafting(false); }} options={unitOptions} />
+          </div>
         </div>
         {drafting && chosen && <BudgetForm key={chosen} unitId={chosen} timezone={timezone} onDone={() => setDrafting(false)} />}
         {chosen ? <UnitBudgets unitId={chosen} timezone={timezone} /> : <DataState state={dataStateOf(units)} error={units.error} />}

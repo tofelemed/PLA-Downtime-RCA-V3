@@ -24,13 +24,13 @@ import {
   VERIFICATION_STATES,
   type ArrayFilter,
   type EventFilterState,
-  type OpenFilter,
 } from '../model/event-filters';
 import { useAssetOptions } from '../hooks/use-asset-options';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { MultiCheckSelect, type CheckOption } from './multi-check-select';
 import { FilterFlagToggle } from './filter-flag-toggle';
 import { MinDurationSelect } from './min-duration-select';
+import { OpenSelect } from './open-select';
 import { WindowSelect } from './window-select';
 
 export interface EventFiltersBarProps {
@@ -55,8 +55,8 @@ interface FilterSpec {
 }
 
 /**
- * Server filters of the list (§16.2): search, units, window, kind, reason and ongoing / ended up
- * front; event family, schedule class, asset, coding / verification (E-7) / RCA / physical state, source,
+ * Server filters of the list (§16.2), one bottom-aligned row: units, kind, reason, window (+ custom range),
+ * ongoing / ended and search up front, then More filters / To code / Reset; event family, schedule class, asset, coding / verification (E-7) / RCA / physical state, source,
  * severity and minimum duration (E-1) under "More filters" (with possible duplicate stops, DT-04). AND between filters, OR within one; ticks are sent when a list closes.
  */
 export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarProps) {
@@ -89,18 +89,17 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
     <MultiCheckSelect key={spec.field} commitOnClose label={spec.label} testId={spec.testId} options={spec.options} selected={filters[spec.field]} onChange={(v) => set(spec.field, v)} />
   );
   return (
-    <div className="space-y-2" role="search" aria-label="Event filters">
-      <div className="flex flex-wrap items-center gap-2">
-        <DebouncedSearchInput label="Search description or source id" placeholder="Search events" value={filters.q} onChange={(q) => set('q', q)} className="w-56" />
-        {select(primary[0])}
+    <div className="space-y-3" role="search" aria-label="Event filters">
+      <div className="flex flex-wrap items-end gap-x-2 gap-y-3">
+        {primary.map(select)}
         <WindowSelect
           unitIds={filters.unitIds}
           label={filters.windowLabel}
           bounds={{ from: filters.from, to: filters.to }}
           onChange={(w) => onChange({ ...filters, from: w.from, to: w.to, windowLabel: w.label, relativeWindow: w.relative ?? null })}
         />
-        {primary.slice(1).map(select)}
         <OpenSelect value={filters.isOpen} onChange={(value) => set('isOpen', value)} />
+        <DebouncedSearchInput label="Search description or source id" placeholder="Search events" value={filters.q} onChange={(q) => set('q', q)} className="w-44 [&_input]:h-9" />
         <Button variant="outline" size="sm" aria-expanded={showMore} onClick={() => setShowMore((open) => !open)} data-testid="more-filters">
           More filters{moreActive > 0 ? ` (${moreActive})` : ''}
         </Button>
@@ -110,7 +109,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
         <Button variant="ghost" size="sm" onClick={onReset}>Reset filters</Button>
       </div>
       {showMore && (
-        <div className="flex flex-wrap items-center gap-2" data-testid="more-filter-row">
+        <div className="flex flex-wrap items-end gap-x-3 gap-y-3" data-testid="more-filter-row">
           {secondary.map(select)}
           <MinDurationSelect value={filters.minDurationSeconds} onChange={(value) => set('minDurationSeconds', value)} />
           <FilterFlagToggle
@@ -130,21 +129,5 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
         </div>
       )}
     </div>
-  );
-}
-
-function OpenSelect({ value, onChange }: { value: OpenFilter; onChange: (value: OpenFilter) => void }) {
-  return (
-    <select
-      aria-label="Ongoing or ended"
-      data-testid="filter-open"
-      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-      value={value}
-      onChange={(event) => onChange(event.target.value as OpenFilter)}
-    >
-      <option value="any">Ongoing and ended</option>
-      <option value="open">Ongoing only</option>
-      <option value="closed">Ended only</option>
-    </select>
   );
 }
