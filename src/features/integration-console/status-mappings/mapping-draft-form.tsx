@@ -23,7 +23,7 @@ function StatusRows({ rows, onChange }: { rows: SourceStatusEntry[]; onChange: (
     <div className="space-y-2" data-testid="mapping-status-rows">
       {rows.map((row, index) => (
         <div key={index} className="flex flex-wrap items-center gap-2">
-          <Input aria-label={`Source status ${index + 1}`} className="w-48" maxLength={64} value={row.status} onChange={(e) => set(index, { status: e.target.value })} data-testid="mapping-status" />
+          <Input aria-label={`Source status ${index + 1}`} className="h-9 w-48" maxLength={64} value={row.status} onChange={(e) => set(index, { status: e.target.value })} data-testid="mapping-status" />
           <label className="flex items-center gap-1 text-sm">
             <Checkbox checked={row.released} onCheckedChange={(checked) => set(index, { released: checked === true })} data-testid="mapping-released" />
             Released (authorised final record)
@@ -56,11 +56,18 @@ export function MappingDraftForm({ basis, timezone, onDone }: MappingDraftFormPr
     create.submit(mappingCreateBody(values)).then(onDone, () => undefined);
   };
   return (
-    <div className="space-y-3 rounded-md border p-3" data-testid="mapping-draft-form">
-      <Field id="mapping-source" label="Source system" error={errors.sourceSystem} hint="`import` = API and file imports of production reports">
-        <Input id="mapping-source" value={values.sourceSystem} disabled={Boolean(basis)} onChange={(e) => set('sourceSystem', e.target.value)} data-testid="mapping-source" />
-      </Field>
-      <DateTimeInput label="Effective from" value={values.effectiveFrom} timeZone={timezone} error={errors.effectiveFrom ?? null} onChange={(iso) => set('effectiveFrom', iso)} />
+    <div className="space-y-4" data-testid="mapping-draft-form">
+      {basis ? (
+        <div className="space-y-1 text-sm">
+          <p className="font-medium">Source system</p>
+          <p data-testid="mapping-source">{values.sourceSystem}</p>
+        </div>
+      ) : (
+        <Field id="mapping-source" label="Source system" error={errors.sourceSystem} hint="`import` = API and file imports of production reports">
+          <Input id="mapping-source" className="h-9" value={values.sourceSystem} onChange={(e) => set('sourceSystem', e.target.value)} data-testid="mapping-source" />
+        </Field>
+      )}
+      <DateTimeInput compact label="Effective from" value={values.effectiveFrom} timeZone={timezone} error={errors.effectiveFrom ?? null} onChange={(iso) => set('effectiveFrom', iso)} />
       <Field id="mapping-statuses" label="Status rules" error={errors.statuses}>
         <StatusRows rows={values.statuses} onChange={(rows) => set('statuses', rows)} />
       </Field>
@@ -68,12 +75,12 @@ export function MappingDraftForm({ basis, timezone, onDone }: MappingDraftFormPr
         <Textarea id="mapping-notes" rows={2} maxLength={2000} value={values.notes} onChange={(e) => set('notes', e.target.value)} />
       </Field>
       <ConsoleRefusal error={create.error} />
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={create.isPending} data-testid="mapping-save">
-          Save draft
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onDone}>
           Cancel
+        </Button>
+        <Button onClick={save} disabled={create.isPending} data-testid="mapping-save">
+          Save draft
         </Button>
       </div>
     </div>
