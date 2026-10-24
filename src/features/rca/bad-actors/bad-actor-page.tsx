@@ -71,16 +71,21 @@ function ReportInfo({ report }: { report: BadActorReportView }) {
   );
 }
 
-function ReportBody({ report }: { report: BadActorReportView }) {
+/** Which periods the approved figures leave out; shown with the table and with the empty message alike. */
+function ExcludedNote({ report }: { report: BadActorReportView }) {
   const excluded = excludedPeriodsNote(report);
+  if (!excluded) return null;
+  return (
+    <p className="text-xs text-muted-foreground" data-testid="bad-actor-excluded">
+      {excluded.charAt(0).toUpperCase()}
+      {excluded.slice(1)}.
+    </p>
+  );
+}
+
+function ReportBody({ report }: { report: BadActorReportView }) {
   return (
     <div className="space-y-2" data-testid="bad-actor-report" data-rank-by={report.rankBy}>
-      {excluded && (
-        <p className="text-xs text-muted-foreground" data-testid="bad-actor-excluded">
-          {excluded.charAt(0).toUpperCase()}
-          {excluded.slice(1)}.
-        </p>
-      )}
       <BadActorTable report={report} />
     </div>
   );
@@ -111,6 +116,7 @@ export function BadActorPage() {
         <Controls filters={filters} latestMonth={latestMonth} onChange={change} />
         <ReportLookContext.Provider value={RELIABILITY_LOOK}>
           <ReportCard title={TITLE} info={report ? <ReportInfo report={report} /> : undefined} badge={count}>
+            {report && <ExcludedNote report={report} />}
             <DataState
               state={dataStateOf(query, { isEmpty: report !== undefined && report.items.length === 0 })}
               detail={report?.items.length === 0 ? EMPTY_TEXT : undefined}

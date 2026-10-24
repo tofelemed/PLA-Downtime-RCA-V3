@@ -6,7 +6,6 @@ import type { ExportRequest } from '@/api/v2/queries/reports';
 import { Button } from '@/components/ui/button';
 import { createLogger } from '@/lib/logger';
 import { ActionIcon } from '@/lib/icons';
-import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { labelOf } from '@/features/ux-kit/labels';
 import { exportFileName, plantFileDay } from '@/features/ux-kit/format/export-file-name';
@@ -26,7 +25,7 @@ export interface ScopeExportProps {
   /** csv (default): every column; pdf: a printable report in the plant calendar and the display currency */
   format?: 'csv' | 'pdf';
   testId?: string;
-  /** why there is no request (`exportBlockedReason`), shown under the disabled button */
+  /** why there is no request (`exportBlockedReason`): the disabled button's tooltip and accessible description */
   disabledReason?: string | null;
   /** id of a reason the page shows once for several exports (then none is shown here) */
   reasonShownAt?: string;
@@ -72,11 +71,13 @@ export function ScopeExport({ request: base, label, timezone, format = 'csv', te
   const { number } = useNumberFormat();
   return (
     <div className="space-y-1 text-sm" data-testid={testId} data-request={request ? JSON.stringify(request) : ''}>
-      <Button size="sm" variant="outline" disabled={!request || exporter.isPending} aria-describedby={reason ? reasonId : undefined} onClick={() => void start()} data-testid={`${testId}-start`}>
-        <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />
-        {label} ({format.toUpperCase()})
-      </Button>
-      {!reasonShownAt && <DisabledReason id={reasonId} reason={reason} />}
+      <span title={!reasonShownAt && reason ? reason : undefined} data-testid={`${testId}-reason`}>
+        <Button size="sm" variant="outline" disabled={!request || exporter.isPending} title={!reasonShownAt && reason ? reason : undefined} aria-describedby={reason ? reasonId : undefined} onClick={() => void start()} data-testid={`${testId}-start`}>
+          <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />
+          {label} ({format.toUpperCase()})
+        </Button>
+        {!reasonShownAt && reason && <span id={reasonId} className="sr-only">{reason}</span>}
+      </span>
       {data && (
         <p data-testid={`${testId}-job`} data-state={data.state} role="status">
           Export {labelOf(EXPORT_STATE_LABELS, data.state)}

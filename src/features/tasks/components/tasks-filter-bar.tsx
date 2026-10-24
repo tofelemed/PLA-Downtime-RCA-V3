@@ -33,16 +33,16 @@ export function TasksFilterBar({ values, statusOptions, priorityOptions, onChang
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className={`${FIELD_CLASS} w-full sm:w-64`}>
-        <Label>Search</Label>
-        <DebouncedSearchInput label="Search tasks" placeholder="Search tasks" className="max-w-none [&_input]:h-9" value={values.q} onChange={(q) => onChange({ q })} />
+        <Label htmlFor="tasks-search">Search</Label>
+        <DebouncedSearchInput id="tasks-search" label="Search tasks" placeholder="Search tasks" className="max-w-none [&_input]:h-9" value={values.q} onChange={(q) => onChange({ q })} />
       </div>
       <div className={FIELD_CLASS}>
-        <Label>Status</Label>
-        <FilterSelect label="Status filter" className="h-9" value={values.status} options={statusOptions} onChange={(status) => onChange({ status })} />
+        <Label htmlFor="tasks-status">Status</Label>
+        <FilterSelect id="tasks-status" label="Status filter" className="h-9" value={values.status} options={statusOptions} onChange={(status) => onChange({ status })} />
       </div>
       <div className={FIELD_CLASS}>
-        <Label>Priority</Label>
-        <FilterSelect label="Priority filter" className="h-9" value={values.priority} options={priorityOptions} onChange={(priority) => onChange({ priority })} />
+        <Label htmlFor="tasks-priority">Priority</Label>
+        <FilterSelect id="tasks-priority" label="Priority filter" className="h-9" value={values.priority} options={priorityOptions} onChange={(priority) => onChange({ priority })} />
       </div>
       <Toggle id="tasks-mine" label="My tasks" checked={values.mine === '1'} onChange={(on) => onChange({ mine: on ? '1' : '' })} />
       <Toggle id="tasks-overdue" label="Overdue only" checked={values.overdue === '1'} onChange={(on) => onChange({ overdue: on ? '1' : '' })} />

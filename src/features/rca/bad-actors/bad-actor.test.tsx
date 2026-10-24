@@ -123,6 +123,13 @@ describe('CA8 bad-actor review', () => {
     expect(await screen.findByTestId('bad-actor-excluded')).toHaveTextContent('20 periods not included: No approved plan covers these periods');
   });
 
+  it('when every period is excluded, the excluded-periods line shows with the empty message', async () => {
+    report = { ...REPORT, items: [], valuationStatus: 'provisional', periods: 30, approvedPeriods: 0, uncoveredPeriods: 30 };
+    renderPage();
+    expect(await screen.findByText('No approved loss or stops in this window.')).toBeInTheDocument();
+    expect(screen.getByTestId('bad-actor-excluded')).toHaveTextContent('30 periods not included');
+  });
+
   it('a window without approved loss or stops keeps its own empty message', async () => {
     report = { ...REPORT, items: [] };
     renderPage();

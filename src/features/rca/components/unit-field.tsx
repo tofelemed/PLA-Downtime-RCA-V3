@@ -10,9 +10,9 @@ export interface UnitFieldProps {
   onChange: (unitId: string) => void;
 }
 
-/** The plant's active units by code as a filter-bar select, "All units" first (emits ''). */
+/** The plant's active units by code as a filter-bar select, "All units" first (emits ''); disabled until the units load, so a URL unit never flashes as "All units". */
 export function UnitField({ id, value, onChange }: UnitFieldProps) {
   const units = useRecordLookup<MasterUnitView>(UNITS, { status: 'active', sort: 'code' });
   const options = units.items.map((unit) => ({ value: unit.id, label: `${unit.code} — ${unit.name}` }));
-  return <SelectField id={id} label="Unit" value={value} options={options} onChange={onChange} placeholder="All units" />;
+  return <SelectField id={id} label="Unit" value={value} options={options} onChange={onChange} placeholder="All units" disabled={units.isPending} />;
 }
