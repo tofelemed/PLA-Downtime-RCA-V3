@@ -1,5 +1,6 @@
 import type { RcaRecommendationItem } from '@/api/v2/types/rca';
 import { FormField } from '@/features/ux-kit/form-field';
+import { NATIVE_SELECT_CLASS } from './native-select';
 
 export interface RecommendationSelectProps {
   id: string;
@@ -16,7 +17,7 @@ export function RecommendationSelect({ id, value, recommendations, onChange }: R
   const listed = recommendations.some((rec) => rec.id === value);
   return (
     <FormField id={id} label="Implements recommendation">
-      <select id={id} className="h-10 w-full rounded border bg-background px-2 text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select id={id} className={NATIVE_SELECT_CLASS} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">None</option>
         {value && !listed && <option value={value}>A removed recommendation</option>}
         {recommendations.map((rec) => (

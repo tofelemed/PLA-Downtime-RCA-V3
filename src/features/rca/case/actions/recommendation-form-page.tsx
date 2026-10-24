@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { Section } from '@/features/ux-kit/page-layout';
 import { useUnsavedChangesGuard } from '@/features/ux-kit/use-unsaved-changes-guard';
+import { ActionIcon } from '@/lib/icons';
 import { newItemId } from '../../model/rca-form';
 import {
   EMPTY_RECOMMENDATION_FORM,
@@ -20,8 +20,14 @@ import {
 } from '../../model/recommendation-form';
 import { useAssignableUsers } from '../../use-assignable-users';
 import { useCaseWorkspace } from '../case-context';
-import { AreaField, ChoiceField, optionsOf, TextField } from '../evidence/form-controls';
+import { CaseCard } from '../evidence/case-card';
+import { AreaField, ChoiceField, FormFooter, optionsOf, TextField } from '../evidence/form-controls';
 import { useCasePatch } from '../use-case-patch';
+
+const COST_INVALID = 'Enter the estimated cost as a number, e.g. 1250.50.';
+
+/** A title and a valid (or no) estimated cost: the form may be saved. */
+const isComplete = (form: RecommendationForm) => form.title.trim() !== '' && isCostValid(form.estimatedCost);
 
 function Fields({ form, onChange }: { form: RecommendationForm; onChange: (patch: Partial<RecommendationForm>) => void }) {
   const { users } = useAssignableUsers();
@@ -33,9 +39,34 @@ function Fields({ form, onChange }: { form: RecommendationForm; onChange: (patch
       <ChoiceField id="rec-priority" label="Priority" value={form.priority} options={optionsOf(RECOMMENDATION_PRIORITIES)} onChange={(priority) => onChange({ priority })} />
       <ChoiceField id="rec-status" label="Status" value={form.status} options={RECOMMENDATION_STATUS_OPTIONS} onChange={(status) => onChange({ status })} />
       <ChoiceField id="rec-owner" label="Owner" value={form.ownerId} options={owners} allowNone="No owner" onChange={(ownerId) => onChange({ ownerId })} />
-      <DateInput id="rec-due" label="Due date" value={form.dueDate} onChange={(dueDate) => onChange({ dueDate })} />
-      <TextField id="rec-cost" label="Estimated cost" value={form.estimatedCost} placeholder="e.g. 1250.50" onChange={(estimatedCost) => onChange({ estimatedCost })} />
+      <DateInput id="rec-due" label="Due date" compact value={form.dueDate} onChange={(dueDate) => onChange({ dueDate })} />
+      <TextField
+        id="rec-cost"
+        label="Estimated cost"
+        value={form.estimatedCost}
+        placeholder="e.g. 1250.50"
+        error={isCostValid(form.estimatedCost) ? null : COST_INVALID}
+        onChange={(estimatedCost) => onChange({ estimatedCost })}
+      />
     </div>
+  );
+}
+
+function DeleteRecommendation({ onConfirm }: { onConfirm: () => Promise<void> }) {
+  return (
+    <ConfirmDialog
+      trigger={
+        <Button type="button" size="sm" variant="outline" className="text-destructive hover:text-destructive">
+          <ActionIcon.delete aria-hidden="true" className="mr-1 h-4 w-4" />
+          Delete
+        </Button>
+      }
+      title="Delete this recommendation?"
+      description="Tasks already created stay in Task Management."
+      confirmLabel="Delete recommendation"
+      destructive
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -61,9 +92,9 @@ export function RecommendationFormPage() {
     await patch.save({ recommendations: storedRecommendations(rca.recommendations.filter((row) => row.id !== existing?.id)) });
     back();
   };
-  const costOk = isCostValid(form.estimatedCost);
+  const ready = isComplete(form) && !patch.isPending;
   return (
-    <Section title={existing ? `Edit recommendation: ${existing.title}` : 'Add recommendation'}>
+    <CaseCard title={existing ? `Edit recommendation: ${existing.title}` : 'Add recommendation'}>
       <form
         className="space-y-4"
         onSubmit={(e) => {
@@ -72,27 +103,16 @@ export function RecommendationFormPage() {
         }}
       >
         <Fields form={form} onChange={(next) => setForm((current) => ({ ...current, ...next }))} />
-        {!costOk && <p className="text-sm text-destructive">Enter the estimated cost as a number, e.g. 1250.50.</p>}
         {patch.error ? <FriendlyErrorAlert error={patch.error} /> : null}
-        <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={form.title.trim() === '' || !costOk || patch.isPending} data-testid="save-recommendation">
-            {existing ? 'Save recommendation' : 'Add recommendation'}
-          </Button>
-          <Button type="button" variant="outline" onClick={back}>
+        <FormFooter start={existing ? <DeleteRecommendation onConfirm={remove} /> : null}>
+          <Button type="button" size="sm" variant="outline" onClick={back}>
             Cancel
           </Button>
-          {existing && (
-            <ConfirmDialog
-              trigger={<Button type="button" variant="outline">Delete</Button>}
-              title="Delete this recommendation?"
-              description="It is removed from the investigation; tasks already created stay in Task Management."
-              confirmLabel="Delete recommendation"
-              destructive
-              onConfirm={remove}
-            />
-          )}
-        </div>
+          <Button type="submit" size="sm" disabled={!ready} data-testid="save-recommendation">
+            {existing ? 'Save recommendation' : 'Add recommendation'}
+          </Button>
+        </FormFooter>
       </form>
-    </Section>
+    </CaseCard>
   );
 }

@@ -1,6 +1,7 @@
 import { FormField } from '@/features/ux-kit/form-field';
 import { useUserNames } from '@/features/ux-kit/labels';
 import { useAssignableUsers } from '../use-assignable-users';
+import { NATIVE_SELECT_CLASS } from './native-select';
 
 export interface OwnerSelectProps {
   id: string;
@@ -21,7 +22,7 @@ export function OwnerSelect({ id, value, onChange, label = 'Owner', noneLabel = 
   const listed = users.some((user) => user.id === value);
   return (
     <FormField id={id} label={label} hint={isLoading ? 'Loading the plant members…' : undefined}>
-      <select id={id} className="h-10 w-full rounded border bg-background px-2 text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select id={id} className={NATIVE_SELECT_CLASS} value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">{noneLabel}</option>
         {value && !listed && <option value={value}>{names.nameOf(value)}</option>}
         {users.map((user) => (

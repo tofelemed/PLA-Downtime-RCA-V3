@@ -5,6 +5,7 @@ import type { RcaActionBaseline, RcaBaselineCorrection } from '@/api/v2/types/rc
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
@@ -17,6 +18,7 @@ import { useOptionalCaseWorkspace } from '../case/case-context';
 import { useCanWriteRca } from './use-can-write-rca';
 
 const MIN_REASON = 10;
+const CORRECTION_INFO = 'A manager approver approves it before it counts. SuperAdmin may approve their own correction.';
 
 function CorrectionState({ correction, selfDecided }: { correction: RcaBaselineCorrection; selfDecided?: boolean }) {
   const users = useUserNames();
@@ -43,18 +45,20 @@ function ProposeForm({ action }: { action: RcaActionView }) {
       <summary className="cursor-pointer text-xs text-muted-foreground">Propose a correction of the baseline</summary>
       <div className="mt-2 grid gap-2 md:grid-cols-[10rem_1fr_auto] md:items-end">
         <div className="space-y-1">
-          <Label htmlFor={`${prefix}-value`}>Corrected value</Label>
-          <Input id={`${prefix}-value`} inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} />
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor={`${prefix}-value`}>Corrected value</Label>
+            <KpiInfo label="Baseline correction" text={CORRECTION_INFO} />
+          </div>
+          <Input id={`${prefix}-value`} className="h-9" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} />
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${prefix}-reason`}>Reason (at least {MIN_REASON} characters)</Label>
-          <Input id={`${prefix}-reason`} value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} />
+          <Input id={`${prefix}-reason`} className="h-9" value={reason} maxLength={2000} onChange={(e) => setReason(e.target.value)} />
         </div>
         <Button size="sm" disabled={!ready} onClick={submit} data-testid="propose-correction">
           Propose
         </Button>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">A manager approver approves it before it counts. SuperAdmin may approve their own correction.</p>
       {propose.error ? <RcaErrorAlert error={propose.error} /> : null}
     </details>
   );
@@ -69,7 +73,7 @@ function DecideButtons({ action }: { action: RcaActionView }) {
       <div className="flex flex-wrap items-end gap-2">
         <div className="space-y-1">
           <Label htmlFor={`decision-${action.id}`}>Decision note (optional)</Label>
-          <Input id={`decision-${action.id}`} value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} />
+          <Input id={`decision-${action.id}`} className="h-9" value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} />
         </div>
         <Button size="sm" disabled={decide.isPending} onClick={() => run(true)} data-testid="approve-correction">
           Approve correction

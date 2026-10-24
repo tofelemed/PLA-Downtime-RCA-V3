@@ -14,15 +14,17 @@ import { useOptionalCaseWorkspace } from '../case/case-context';
 import { OwnerSelect } from './owner-select';
 import { RecommendationSelect } from './recommendation-select';
 import { VerificationPlanFields } from './verification-plan-fields';
+import { FormFooter } from '../case/evidence/form-controls';
 
+const TITLE_REQUIRED = 'Enter the action.';
 const WINDOW_LOCKED = 'The verification window is fixed once the action is done; reopen the action to change it.';
 
 /** Verify from / until; read-only with the reason once the action is done (server 409 VERIFICATION_WINDOW_LOCKED). */
 function WindowFields({ prefix, form, set, locked }: { prefix: string; form: Form; set: (patch: Partial<Form>) => void; locked: boolean }) {
   return (
     <>
-      <DateInput id={`${prefix}-window-start`} label="Verify from" value={form.windowStart} disabled={locked} onChange={(windowStart) => set({ windowStart })} />
-      <DateInput id={`${prefix}-window-end`} label="Verify until" value={form.windowEnd} disabled={locked} onChange={(windowEnd) => set({ windowEnd })} />
+      <DateInput id={`${prefix}-window-start`} label="Verify from" compact value={form.windowStart} disabled={locked} onChange={(windowStart) => set({ windowStart })} />
+      <DateInput id={`${prefix}-window-end`} label="Verify until" compact value={form.windowEnd} disabled={locked} onChange={(windowEnd) => set({ windowEnd })} />
       {locked && (
         <p className="text-xs text-muted-foreground md:col-span-3" data-testid="window-locked">
           {WINDOW_LOCKED}
@@ -57,28 +59,28 @@ export function ActionEditForm({ action, onDone }: ActionEditFormProps) {
     if (saved) onDone();
   };
   return (
-    <fieldset className="grid gap-2 rounded border p-2 md:grid-cols-3" disabled={update.isPending} data-testid="action-edit-form">
-      <legend className="px-1 text-sm font-medium">Edit action</legend>
-      <FormField id={`${prefix}-title`} label="Action" required>
-        <Input id={`${prefix}-title`} value={form.title} maxLength={255} onChange={(e) => set({ title: e.target.value })} />
+    <fieldset className="grid gap-4 rounded-md border p-3 md:grid-cols-3" disabled={update.isPending} data-testid="action-edit-form">
+      <legend className="px-1 text-sm font-semibold text-heading">Edit action</legend>
+      <FormField id={`${prefix}-title`} label="Action" required error={form.title.trim() === '' ? TITLE_REQUIRED : null}>
+        <Input id={`${prefix}-title`} className="h-9" value={form.title} maxLength={255} onChange={(e) => set({ title: e.target.value })} />
       </FormField>
       <OwnerSelect id={`${prefix}-owner`} value={form.ownerId} onChange={(ownerId) => set({ ownerId })} />
       {(recommendations.length > 0 || form.recommendationId) && (
         <RecommendationSelect id={`${prefix}-recommendation`} value={form.recommendationId} recommendations={recommendations} onChange={(recommendationId) => set({ recommendationId })} />
       )}
-      <DateInput id={`${prefix}-due`} label="Due" value={form.dueDate} onChange={(dueDate) => set({ dueDate })} />
+      <DateInput id={`${prefix}-due`} label="Due" compact value={form.dueDate} onChange={(dueDate) => set({ dueDate })} />
       <VerificationPlanFields idPrefix={prefix} value={form} onChange={set} />
       <WindowFields prefix={prefix} form={form} set={set} locked={action.verificationWindowLocked} />
       <div className="space-y-2 md:col-span-3">
         {update.error ? <RcaErrorAlert error={update.error} /> : null}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" disabled={!changed || form.title.trim() === '' || verifierIsOwner(form)} onClick={() => void save()} data-testid="save-action-edit">
-            Save changes
-          </Button>
+        <FormFooter>
           <Button size="sm" variant="outline" onClick={onDone}>
             Cancel
           </Button>
-        </div>
+          <Button size="sm" disabled={!changed || form.title.trim() === '' || verifierIsOwner(form)} onClick={() => void save()} data-testid="save-action-edit">
+            Save changes
+          </Button>
+        </FormFooter>
       </div>
     </fieldset>
   );

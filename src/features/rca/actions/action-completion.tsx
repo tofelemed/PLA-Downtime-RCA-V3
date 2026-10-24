@@ -16,6 +16,7 @@ import type { ActionAccess } from '../model/action-access';
 import { asActionType, buildCompletionPatch, buildOwnerEvidencePatch, completionFormOf, type CompletionForm } from '../model/action-form';
 import { useRcaFormat } from '../use-rca-format';
 import { CompletionFiles } from './completion-files';
+import { NATIVE_SELECT_CLASS } from './native-select';
 
 function Recorded({ action }: { action: RcaActionView }) {
   const users = useUserNames();
@@ -34,7 +35,7 @@ function TypeSelect({ id, value, onChange }: { id: string; value: CompletionForm
   return (
     <div className="space-y-1">
       <Label htmlFor={id}>Type of action</Label>
-      <select id={id} className="h-10 w-full rounded border bg-background px-2 text-sm" value={value} onChange={(e) => onChange(asActionType(e.target.value))}>
+      <select id={id} className={NATIVE_SELECT_CLASS} value={value} onChange={(e) => onChange(asActionType(e.target.value))}>
         <option value="">Not chosen yet</option>
         {RCA_ACTION_TYPES.map((type) => (
           <option key={type} value={type}>
@@ -87,7 +88,7 @@ function EvidenceFields({ prefix, form, set, rcaId }: FieldsProps) {
     <>
       <div className="space-y-1">
         <Label htmlFor={`${prefix}-evidence`}>Evidence reference</Label>
-        <Input id={`${prefix}-evidence`} value={form.evidenceRef} maxLength={500} placeholder="Work order, document or record number" onChange={(e) => set({ evidenceRef: e.target.value })} />
+        <Input id={`${prefix}-evidence`} className="h-9" value={form.evidenceRef} maxLength={500} placeholder="Work order, document or record number" onChange={(e) => set({ evidenceRef: e.target.value })} />
       </div>
       <div className="md:col-span-3">
         <CompletionFiles rcaId={rcaId} value={form.attachments} onChange={(attachments) => set({ attachments })} />
@@ -120,7 +121,7 @@ export function ActionCompletion({ action, access }: { action: RcaActionView; ac
       {access.canWork ? (
         <fieldset className="grid gap-2 md:grid-cols-3" disabled={update.isPending}>
           {!access.ownerOnly && <TypeSelect id={`${prefix}-type`} value={form.actionType} onChange={(actionType) => set({ actionType })} />}
-          {!access.ownerOnly && <DateInput id={`${prefix}-completed`} label="Completed on" value={form.completedAt} onChange={(completedAt) => set({ completedAt })} />}
+          {!access.ownerOnly && <DateInput id={`${prefix}-completed`} label="Completed on" compact value={form.completedAt} onChange={(completedAt) => set({ completedAt })} />}
           <EvidenceFields prefix={prefix} form={form} set={set} rcaId={action.rcaId} />
           <div className="flex flex-wrap gap-2 md:col-span-3">
             <Button size="sm" variant="outline" onClick={() => save(false)} data-testid="save-evidence">

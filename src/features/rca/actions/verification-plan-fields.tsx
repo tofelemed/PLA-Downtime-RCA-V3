@@ -24,7 +24,7 @@ export function VerificationPlanFields({ idPrefix, value, onChange }: Verificati
   return (
     <>
       <FormField id={methodId} label="Verification method" hint="How the completion is checked: inspection, test, record review.">
-        <Input id={methodId} value={value.verificationMethod} maxLength={2000} onChange={(e) => onChange({ verificationMethod: e.target.value })} />
+        <Input id={methodId} className="h-9" value={value.verificationMethod} maxLength={2000} onChange={(e) => onChange({ verificationMethod: e.target.value })} />
       </FormField>
       <div className="space-y-1">
         <OwnerSelect

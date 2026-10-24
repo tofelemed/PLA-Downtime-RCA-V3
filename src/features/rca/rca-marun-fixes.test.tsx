@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -125,7 +125,8 @@ describe('Marun E2E RCA fixes: screens', () => {
     expect(screen.queryByLabelText('Type of action')).toBeNull();
     expect(screen.queryByTestId('mark-done')).toBeNull();
     expect(screen.queryByTestId('edit-action')).toBeNull();
-    expect(await screen.findByTestId('action-meta')).toHaveTextContent('verified by: Acceptance test');
+    const meta = await screen.findByTestId('action-meta');
+    expect(within(meta).getByText('Verification method').nextSibling).toHaveTextContent('Acceptance test');
   });
 
   it('another operator sees the action read-only', () => {

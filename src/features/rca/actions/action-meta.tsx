@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import type { RcaActionView } from '@/api/v2/types/rca';
 import { currencyDigits } from '@/features/display-currency/money-format';
@@ -20,6 +21,15 @@ export function ActionOverdueBadge({ action }: { action: Pick<RcaActionView, 'du
   );
 }
 
+function MetaItem({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
+      <dd className="break-words">{children}</dd>
+    </div>
+  );
+}
+
 /** Type, owner, due day (with the overdue badge), verifier and verification method, and the owner's claim of one action. */
 export function ActionMeta({ action }: { action: RcaActionView }) {
   const users = useUserNames([action.ownerId, action.verifierId].filter((id): id is string => Boolean(id)));
@@ -28,20 +38,22 @@ export function ActionMeta({ action }: { action: RcaActionView }) {
   const { canViewMoney } = useCapabilities();
   const claim = canViewMoney ? action.claimedAvoidedLoss : null;
   return (
-    <p className="flex flex-wrap items-center gap-x-1 gap-y-1 text-muted-foreground" data-testid="action-meta">
-      <span>
-        {action.actionType ? `${labelOf(RCA_ACTION_TYPE_LABELS, action.actionType)} · ` : 'Type not chosen · '}
-        {action.ownerId ? `owner ${users.nameOf(action.ownerId)} · ` : 'no owner · '}
-        {action.dueDate ? `due ${day(action.dueDate)}` : 'no due date'}
-        {action.verifierId ? ` · verifier ${users.nameOf(action.verifierId)}` : ''}
-        {action.verificationMethod ? ` · verified by: ${action.verificationMethod}` : ''}
-        {claim && (
-          <>
-            {' '}· claimed <Quantity value={claim.amount} uom={claim.currency} fractionDigits={currencyDigits(claim.currency)} />
-          </>
-        )}
-      </span>
-      <ActionOverdueBadge action={action} />
-    </p>
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 xl:grid-cols-6" data-testid="action-meta">
+      <MetaItem label="Type">{action.actionType ? labelOf(RCA_ACTION_TYPE_LABELS, action.actionType) : 'Not chosen'}</MetaItem>
+      <MetaItem label="Owner">{action.ownerId ? users.nameOf(action.ownerId) : 'No owner'}</MetaItem>
+      <MetaItem label="Due">
+        <span className="inline-flex flex-wrap items-center gap-1 whitespace-nowrap">
+          {action.dueDate ? day(action.dueDate) : 'No due date'}
+          <ActionOverdueBadge action={action} />
+        </span>
+      </MetaItem>
+      <MetaItem label="Verifier">{action.verifierId ? users.nameOf(action.verifierId) : '—'}</MetaItem>
+      <MetaItem label="Verification method">{action.verificationMethod || '—'}</MetaItem>
+      {claim && (
+        <MetaItem label="Claimed avoided loss">
+          <Quantity value={claim.amount} uom={claim.currency} fractionDigits={currencyDigits(claim.currency)} />
+        </MetaItem>
+      )}
+    </dl>
   );
 }

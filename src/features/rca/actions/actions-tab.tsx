@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useRcaActions } from '@/api/v2/queries/rca-cases';
 import { DataState } from '@/features/ux-kit/data-state';
+import { ActionIcon } from '@/lib/icons';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ActionForm } from './action-form';
 import { ActionRow } from './action-row';
@@ -23,16 +24,23 @@ export function ActionsTab({ rcaId }: { rcaId: string }) {
   return (
     <div className="space-y-3" data-testid="actions-tab">
       <DataState state={dataStateOf(actions, { isEmpty: items.length === 0 })} error={actions.error} detail="No actions yet.">
-        <ul className="divide-y rounded border">
+        <ul className="divide-y rounded-md border">
           {items.map((action) => (
             <ActionRow key={action.id} action={action} />
           ))}
         </ul>
       </DataState>
-      {canWriteRca && <details key={preset} id="new-action" open={preset ? true : undefined} className="rounded border p-3" data-testid="new-action-disclosure">
-        <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Add action</summary>
-        <div className="mt-3"><ActionForm rcaId={rcaId} recommendationId={preset} /></div>
-      </details>}
+      {canWriteRca && (
+        <details key={preset} id="new-action" open={preset ? true : undefined} className="group rounded-md border" data-testid="new-action-disclosure">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            <ActionIcon.add aria-hidden="true" className="h-4 w-4" />
+            Add action
+          </summary>
+          <div className="border-t p-3">
+            <ActionForm rcaId={rcaId} recommendationId={preset} />
+          </div>
+        </details>
+      )}
     </div>
   );
 }
