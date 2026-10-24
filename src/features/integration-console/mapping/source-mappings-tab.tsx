@@ -9,6 +9,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, MAPPING_TARGET_LABELS, MATCH_KIND_LABELS, useAssetNames, useUnitNames } from '@/features/ux-kit/labels';
 import { ActionIcon } from '@/lib/icons';
+import { EmptyNextStep } from '../components/empty-next-step';
 import { FilterField } from '../components/filter-field';
 import { FilterToggle } from '../components/filter-toggle';
 import { IntegrationCard } from '../components/integration-card';
@@ -64,6 +65,7 @@ export function SourceMappingsTab() {
   const { canWriteIntegration } = useCapabilities();
   const [inactive, setInactive] = useUrlParam('inactive', INACTIVE, 'no');
   const [kind, setKind] = useUrlParam('kind', KINDS, 'any');
+  const filtered = kind !== 'any' || inactive === 'yes';
   const list = useSourceMappingsPage(inactive === 'yes', kind === 'any' ? undefined : kind);
   const units = useUnitNames();
   const assets = useAssetNames();
@@ -95,7 +97,7 @@ export function SourceMappingsTab() {
         getRowKey={(rule) => rule.id}
         pager={list.pager}
         status={list.status}
-        empty={{ title: 'No mapping rules yet', text: 'No mapping rules match these filters.' }}
+        empty={{ title: 'No mapping rules', text: 'No mapping rules', action: <EmptyNextStep text={filtered ? 'No mapping rules match these filters.' : 'Bind a source from the quarantine, or add one with New mapping.'} /> }}
       />
     </IntegrationCard>
   );

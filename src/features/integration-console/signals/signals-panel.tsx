@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, SIGNAL_TYPE_LABELS, useUnitNames } from '@/features/ux-kit/labels';
+import { EmptyNextStep } from '../components/empty-next-step';
 import { IntegrationCard } from '../components/integration-card';
 import { signalUomText } from '../model/signal-uom';
 import { ActionIcon } from '@/lib/icons';
@@ -77,7 +78,7 @@ export function SignalsPanel({ connectionId, timezone, allowBackfill = true }: {
           getRowKey={(signal) => signal.id}
           pager={signals.pager}
           status={signals.status}
-          empty={{ title: 'No signals yet', text: 'No signals defined yet.' }}
+          empty={{ title: 'No signals yet', text: 'No signals yet', action: <EmptyNextStep text="Define the measurements this connection delivers." /> }}
         />
       </IntegrationCard>
       {selected && <SignalActions key={selected.id} signal={selected} timezone={timezone} allowBackfill={allowBackfill} />}

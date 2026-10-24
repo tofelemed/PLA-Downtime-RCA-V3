@@ -34,10 +34,13 @@ export function SignalPicker({ catalog, chosenIds, isLoading, onChange }: Signal
       <FilterField id="trend-signal" label="Signal" className="w-full sm:w-64">
         <NativeSelect id="trend-signal" testId="trend-signal" value={candidate} disabled={full} placeholder={isLoading ? 'Loading…' : 'Choose a signal'} options={options} onChange={setCandidate} />
       </FilterField>
-      <Button size="sm" variant="outline" className="h-9 whitespace-nowrap" onClick={add} disabled={!candidate || full} aria-describedby={full ? 'trend-full' : undefined} data-testid="trend-add">
-        <ActionIcon.add className="mr-1 h-4 w-4" aria-hidden="true" /> Add to trend
-      </Button>
-      <DisabledReason id="trend-full" reason={full ? FULL_REASON : null} />
+      {/* the reason under the button, in its own column: the row stays aligned on the controls' bottom edge */}
+      <div className="flex flex-col gap-1">
+        <Button size="sm" variant="outline" className="h-9 whitespace-nowrap" onClick={add} disabled={!candidate || full} aria-describedby={full ? 'trend-full' : undefined} data-testid="trend-add">
+          <ActionIcon.add className="mr-1 h-4 w-4" aria-hidden="true" /> Add to trend
+        </Button>
+        <DisabledReason id="trend-full" reason={full ? FULL_REASON : null} />
+      </div>
     </div>
   );
 }

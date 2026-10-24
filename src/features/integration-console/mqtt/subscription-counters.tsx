@@ -20,9 +20,8 @@ export function SubscriptionCounters({ health }: { health: MqttHealthView }) {
     <div className="flex items-center gap-1.5">
       <h3 className="text-sm font-medium">Counters</h3>
       <KpiInfo label="Counters" text={COUNTERS_NOTE} />
-      <span className="sr-only" id="mqtt-counters-note">{COUNTERS_NOTE}</span>
     </div>
-    <dl className="grid grid-cols-4 gap-2 text-center text-xs sm:grid-cols-7" aria-label="Subscription counters since the worker started" aria-describedby="mqtt-counters-note" data-testid="mqtt-counters">
+    <dl className="grid grid-cols-4 gap-2 text-center text-xs sm:grid-cols-7" aria-label="Subscription counters since the worker started" data-testid="mqtt-counters">
       {COUNTER_KEYS.map((key) => (
         <div key={key} className="rounded-md border p-2" data-counter={key}>
           <dt className="text-muted-foreground">{LABELS[key]}</dt>

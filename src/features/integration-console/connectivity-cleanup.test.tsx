@@ -4,7 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
-import type { ConnectionView, IngestionExceptionDetailView } from '@/api/v2/types/integrations';
+import type { ConnectionView, IngestionExceptionDetailView, IngestionJobView } from '@/api/v2/types/integrations';
+import type { SignalView } from '@/api/v2/types/integration-mappings';
+import type { MqttHealthView } from './mqtt/model/mqtt-health';
 import { actAs } from '@/test/acting-user';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
@@ -19,6 +21,10 @@ const { BindSourceDialog } = await import('./mapping/bind-source-dialog');
 const { ExceptionActions } = await import('./quarantine/exception-actions');
 const { MqttWizardBody } = await import('./mqtt/mqtt-wizard-body');
 const { MqttTestPanel } = await import('./mqtt/mqtt-test-panel');
+const { JobRow } = await import('./jobs/job-row');
+const { SignalsPanel } = await import('./signals/signals-panel');
+const { SubscriptionCounters } = await import('./mqtt/subscription-counters');
+const { SignalPicker } = await import('./historian/signal-picker');
 
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 const EMPTY = { items: [], nextCursor: null };
@@ -57,7 +63,11 @@ describe('Connectivity cleanup (25 Oct 2026)', () => {
     expect(card.className).toContain('bg-card');
     expect(within(card).getByRole('button', { name: 'About Connections' })).toBeInTheDocument();
     expect(within(card).getByLabelText('Show inactive').parentElement?.className).toContain('h-9');
-    expect(await within(card).findByText('No active connections.')).toBeInTheDocument();
+    expect(await within(card).findByText('No active connections')).toBeInTheDocument();
+    expect(within(card).getByText('Turn on Show inactive, or create one with New connection.')).toBeInTheDocument();
+    fireEvent.click(within(card).getByLabelText('Show inactive'));
+    expect(await within(card).findByText('No connections yet')).toBeInTheDocument();
+    expect(within(card).getByText('Create one with New connection.')).toBeInTheDocument();
     expect(screen.queryByText('No data for these dates')).toBeNull();
   });
 
@@ -79,6 +89,9 @@ describe('Connectivity cleanup (25 Oct 2026)', () => {
     expect(within(card).getByLabelText('Match').className).toContain('h-9');
     expect(within(card).getByLabelText('Show inactive')).toBeInTheDocument();
     expect(within(card).getByTestId('new-mapping')).toBeInTheDocument();
+    expect(await within(card).findByText('No mapping rules')).toBeInTheDocument();
+    expect(within(card).getByText('Bind a source from the quarantine, or add one with New mapping.')).toBeInTheDocument();
+    fireEvent.change(within(card).getByLabelText('Match'), { target: { value: 'pattern' } });
     expect(await within(card).findByText('No mapping rules match these filters.')).toBeInTheDocument();
   });
 
@@ -93,6 +106,30 @@ describe('Connectivity cleanup (25 Oct 2026)', () => {
     expect(screen.queryByText(/A reachable source does not mean accounting works/)).toBeNull();
     expect(screen.getByRole('button', { name: 'About Diagnostics' })).toBeInTheDocument();
     expect(screen.getByTestId('run-diagnostics')).toBeInTheDocument();
+  });
+
+  it('signals: the empty text is a next step, not the title again', async () => {
+    wrap(<SignalsPanel connectionId="c1" timezone="UTC" />);
+    expect(await screen.findByText('Define the measurements this connection delivers.')).toBeInTheDocument();
+    expect(screen.queryByText('No signals defined yet.')).toBeNull();
+  });
+
+  it('MQTT counters: the note is announced once (the ⓘ), not also as a hidden description', () => {
+    const counters = { received: 1, accepted: 1, duplicate: 0, stale: 0, conflict: 0, quarantined: 0, parked: 0 };
+    wrap(<SubscriptionCounters health={{ counters } as unknown as MqttHealthView} />);
+    expect(screen.getByRole('button', { name: 'About Counters' })).toBeInTheDocument();
+    expect(screen.queryByText(/Counted since the worker last started/)).toBeNull();
+    expect(screen.getByTestId('mqtt-counters').getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('historian picker: the full-trend reason sits under Add to trend, in the same column', () => {
+    const signals = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id, name: `S-${id}`, effectiveTo: null }) as unknown as SignalView);
+    wrap(<div data-testid="row"><SignalPicker catalog={signals} chosenIds={signals.map((s) => s.id)} isLoading={false} onChange={() => undefined} /></div>);
+    const add = screen.getByTestId('trend-add');
+    const reason = screen.getByTestId('disabled-reason');
+    expect(add.getAttribute('aria-describedby')).toBe(reason.id);
+    expect(reason.parentElement).toBe(add.parentElement);
+    expect(add.parentElement?.className).toContain('flex-col');
   });
 
   it('MQTT connection test: the CONNACK note moves behind ⓘ', () => {
@@ -129,6 +166,23 @@ describe('Connectivity dialogs and wizard steps open and close', () => {
     expect(buttonsOf(dialog)).toEqual(['Cancel', 'Deactivate']);
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('Job command: opened from a job row, 560 px, Cancel before the action', async () => {
+    const job = {
+      id: 'j1', connectionId: 'c1', scope: { mode: 'window', purpose: 'limited' }, state: 'running', leaseOwner: null, leaseExpiry: null, heartbeatAt: null,
+      committedCursor: null, lastObservationAt: null, lastSuccessAt: null, retryCount: 0, lastError: null,
+      cadence: { intervalSeconds: 60, pageSize: 50 }, nextRunAt: null, health: {}, rowVersion: 1, createdAt: null, updatedAt: null,
+    } as IngestionJobView;
+    wrap(<JobRow job={job} timezone="UTC" now={Date.parse('2026-10-10T08:00:00Z')} />);
+    fireEvent.click(screen.getByTestId('job-stop'));
+    const dialog = await screen.findByTestId('job-command-dialog');
+    expect(dialog.className).toContain('sm:max-w-[560px]');
+    const buttons = buttonsOf(dialog).filter((label) => label !== 'Close');
+    expect(buttons.indexOf('Cancel')).toBe(buttons.length - 2);
+    expect(within(dialog).getByTestId('job-command-confirm')).toBe(within(dialog).getAllByRole('button').filter((b) => b.textContent?.trim() !== 'Close').at(-1));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('job-command-dialog')).toBeNull());
   });
 
   it('Bind source: 560 px, Unit labelled above its select, Cancel then Bind, Esc closes', async () => {
