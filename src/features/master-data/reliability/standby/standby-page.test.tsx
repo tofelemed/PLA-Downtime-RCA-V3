@@ -131,3 +131,40 @@ describe('Standby equipment page (SME D9)', () => {
     expect(screen.queryByTestId('standby-register-new')).toBeNull();
   });
 });
+
+// Configuration cleanup (24 Oct 2026): no header description; Registrations, Measures and Log entries cards; a compact window row
+describe('Standby equipment cleanup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
+
+  it('has no description; three report cards with own empty messages; the window is typed dates, not browser date inputs', async () => {
+    stubV2Fetch((call) => (call.url.pathname.endsWith('/standby-equipment/metrics') ? jsonResponse(200, []) : call.url.pathname.endsWith('/assets') ? reply(call) : undefined));
+    renderPage();
+    expect(screen.queryByText(/judged on failed starts per demand, not on calendar time\.$/)).toBeNull();
+    for (const title of ['Registrations', 'Measures', 'Log entries']) expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About Registrations' })).toBeInTheDocument();
+    expect(await screen.findByText('No standby equipment in this window.')).toBeInTheDocument();
+    expect(await screen.findByText('No log entries in this window.')).toBeInTheDocument();
+    expect(screen.queryByText('No data for these dates')).toBeNull();
+    const window = screen.getByTestId('standby-window');
+    expect(window.querySelector('input[type=date]')).toBeNull();
+    expect(within(window).getAllByRole('textbox').every((input) => input.className.includes('h-9'))).toBe(true);
+  });
+
+  it('Register standby: Asset focused, Cancel before Register, Cancel closes and Esc closes', async () => {
+    stubV2Fetch(reply);
+    renderPage();
+    fireEvent.click(await screen.findByTestId('standby-register-new'));
+    const dialog = await screen.findByTestId('standby-register-dialog');
+    await waitFor(() => expect(within(dialog).getByLabelText('Asset')).toHaveFocus());
+    const names = within(dialog).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Register'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByTestId('standby-register-dialog')).toBeNull());
+    fireEvent.click(screen.getByTestId('standby-register-new'));
+    fireEvent.keyDown(await screen.findByTestId('standby-register-dialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('standby-register-dialog')).toBeNull());
+  });
+});

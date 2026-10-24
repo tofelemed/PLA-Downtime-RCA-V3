@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { AddDialog, useAddDialog } from '@/features/ux-kit/add-dialog';
-import { Section } from '@/features/ux-kit/page-layout';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { ActionIcon } from '@/lib/icons';
 import { MasterDataLayout } from '../../components/master-data-layout';
 import { useReliabilityFormat } from '../shared/use-reliability-format';
@@ -34,17 +34,14 @@ export function StandbyEquipmentPage() {
     <MasterDataLayout
       title="Standby equipment"
       alsoAllowed={canWriteStandby}
-      description="Equipment that waits on standby is judged on failed starts per demand, not on calendar time."
       actions={canWriteStandby ? <HeaderActions onAdd={adding.open} /> : undefined}
     >
-      <Section title="Registrations">
+      <RcaCard title="Registrations" info="Equipment that waits on standby is judged on failed starts per demand, not on calendar time." testId="standby-registrations">
         <StandbyRegistrationsTable format={format} canWrite={canWriteStandby} />
-      </Section>
-      <Section title="Measures">
-        <StandbyMetricsSection format={format} />
-      </Section>
+      </RcaCard>
+      <StandbyMetricsSection format={format} />
       <AddDialog open={adding.isOpen} onOpenChange={adding.setOpen} title="Register standby equipment" testId="standby-register-dialog">
-        <StandbyRegisterForm format={format} onSaved={adding.saved} />
+        <StandbyRegisterForm format={format} onSaved={adding.saved} onCancel={adding.close} />
       </AddDialog>
       {adding.resultElement}
     </MasterDataLayout>

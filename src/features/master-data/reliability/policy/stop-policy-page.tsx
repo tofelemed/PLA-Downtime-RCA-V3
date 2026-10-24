@@ -2,6 +2,7 @@ import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { useSearchParams } from 'react-router-dom';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { MasterDataLayout } from '../../components/master-data-layout';
+import { COMPACT_FIELDS } from '../../components/compact-fields';
 import { UnitSelect } from '../../components/unit-select';
 import { useReliabilityFormat } from '../shared/use-reliability-format';
 import { DerivedStopPreviewSection } from './derived-stop-preview-section';
@@ -26,9 +27,8 @@ export function StopPolicyPage() {
     <MasterDataLayout
       title="Stop and plan policy"
       alsoAllowed={canWriteOeePolicy}
-      description="Settings that decide how short stops and grade changes count. Each change is a new version from now on."
     >
-      <div className="max-w-sm">
+      <div className={`w-72 ${COMPACT_FIELDS}`}>
         <UnitSelect id="policy-scope" label="Applies to" value={unitId} onChange={choose} allowAll allLabel="The whole plant" />
       </div>
       {!canWriteOeePolicy && <p className="text-sm text-muted-foreground">Only manager approvers record new versions.</p>}

@@ -9,6 +9,7 @@ import { PlantDateTimeField } from '@/features/plans-profiles-calendars/componen
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
 import { refusalOf } from '@/features/plans-profiles-calendars/model/refusal';
 import { useSaveFeedback, type SaveResult } from '@/features/ux-kit/save-result';
+import { COMPACT_FIELDS } from '../../components/compact-fields';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleConflicts } from './impact-rule-conflicts';
 import { emptyImpactRuleForm, IMPACT_MODE_LABELS, impactRuleCreateBody, type ImpactRuleFormValues, validateImpactRuleForm } from './impact-rule-form-model';
@@ -53,7 +54,7 @@ export function ImpactRuleForm({ unitOptions, initialUnitId = '', timezone, resu
   };
 
   return (
-    <div className="space-y-2" data-testid="impact-rule-form">
+    <div className={`space-y-2 ${COMPACT_FIELDS}`} data-testid="impact-rule-form">
       {feedback.alert}
       <ImpactRuleConflicts error={feedback.failure} timezone={timezone} />
       <div className="grid gap-2 sm:grid-cols-3">
@@ -85,12 +86,12 @@ export function ImpactRuleForm({ unitOptions, initialUnitId = '', timezone, resu
         <PlantDateTimeField id="impactFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
         <PlantDateTimeField id="impactTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={create.isPending}>
-          Add draft rule
-        </Button>
+      <div className="flex justify-end gap-2">
         <Button size="sm" variant="outline" onClick={onCancel}>
           Cancel
+        </Button>
+        <Button size="sm" onClick={save} disabled={create.isPending}>
+          Add draft rule
         </Button>
       </div>
     </div>

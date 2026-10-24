@@ -27,9 +27,11 @@ interface SettingsFormProps {
   policy: StopEnginePolicy;
   unitId: string;
   saving: PolicySaveFeedback;
+  /** closes the side panel (the draft is dropped) */
+  onCancel: () => void;
 }
 /** A new version, starting from the settings in force; it opens in the section's side panel. */
-function SettingsForm({ policy, unitId, saving }: SettingsFormProps) {
+function SettingsForm({ policy, unitId, saving, onCancel }: SettingsFormProps) {
   const [values, setValues] = useState<StopEngineSettings>(policy);
   const [notes, setNotes] = useState(isSeedNote(policy.notes) ? '' : policy.notes ?? '');
   const failure = saving.feedback.failure;
@@ -59,16 +61,19 @@ function SettingsForm({ policy, unitId, saving }: SettingsFormProps) {
     </fieldset>
     <CommissioningBackdateFields idPrefix="stop-engine" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="record" disabled={command.isPending} />
     {!valid && <p className="text-sm text-destructive">Enter whole seconds between 0 and 86400.</p>}
-    <Button disabled={!valid || command.isPending} onClick={() => void save()}>{recordLabel(backdate.effectiveFrom !== null)}</Button>
+    <div className="flex justify-end gap-2">
+      <Button type="button" variant="outline" className="h-9" onClick={onCancel}>Cancel</Button>
+      <Button className="h-9" disabled={!valid || command.isPending} onClick={() => void save()}>{recordLabel(backdate.effectiveFrom !== null)}</Button>
+    </div>
   </div>;
 }
 /** The stop-engine settings in force for the scope; "Record new version" opens the form in a side panel. */
 export function StopEngineSection({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const policy = useStopEnginePolicy(unitId);
   const editor = usePolicyEditor('Stop-engine settings', unitId, format);
-  const form = canWrite && policy.data ? <SettingsForm key={policy.data.id} policy={policy.data} unitId={unitId} saving={editor.saving} /> : null;
+  const form = canWrite && policy.data ? <SettingsForm key={policy.data.id} policy={policy.data} unitId={unitId} saving={editor.saving} onCancel={() => editor.setOpen(false)} /> : null;
   return (
-    <PolicySection title="Stop-engine settings" description="Existing derived events keep their recorded settings." editor={editor} form={form}>
+    <PolicySection title="Stop-engine settings" info="How stops are derived from the unit state. Existing derived events keep their recorded settings." editor={editor} form={form}>
       <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>
         {policy.data && <StopEngineSummary policy={policy.data} format={format} />}
       </DataState>

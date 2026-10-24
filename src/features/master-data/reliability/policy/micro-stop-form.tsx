@@ -18,10 +18,12 @@ export interface MicroStopFormProps {
   current: MicroStopPolicyView | undefined;
   /** the section's save feedback: it outlives this form, which the saved version remounts */
   saving: PolicySaveFeedback;
+  /** closes the side panel (the draft is dropped) */
+  onCancel: () => void;
 }
 
 /** A new approved micro-stop version of the unit or plant, effective now (or a commissioning backdate); every other policy field is kept. */
-export function MicroStopForm({ unitId, current, saving }: MicroStopFormProps) {
+export function MicroStopForm({ unitId, current, saving, onCancel }: MicroStopFormProps) {
   const [draft, setDraft] = useState<MicroStopDraft>(() => microStopDraftOf(current));
   const [errors, setErrors] = useState<MicroStopErrors>({});
   const [backdate, setBackdate] = useState(EMPTY_BACKDATE);
@@ -48,7 +50,10 @@ export function MicroStopForm({ unitId, current, saving }: MicroStopFormProps) {
       <TextField id="micro-trips" label="Trip reason codes" value={draft.tripCodes} onChange={(v) => set({ tripCodes: v })} hint="Comma separated. A process trip is always an availability event, never a micro-stop." multiline />
       <TextField id="micro-notes" label="Notes" value={draft.notes} onChange={(v) => set({ notes: v })} maxLength={1000} />
       <CommissioningBackdateFields idPrefix="micro" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="record" />
-      <Button type="submit" disabled={record.isPending}>{backdate.effectiveFrom ? 'Record new version (backdated)' : 'Record new version (effective now)'}</Button>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" className="h-9" onClick={onCancel}>Cancel</Button>
+        <Button type="submit" className="h-9" disabled={record.isPending}>{backdate.effectiveFrom ? 'Record new version (backdated)' : 'Record new version (effective now)'}</Button>
+      </div>
     </form>
   );
 }

@@ -1,6 +1,5 @@
 import type { StopEnginePolicy } from '@/api/v2/types/stop-policy';
-import { EffectiveFrom } from '@/features/ux-kit/effective-from';
-import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
+import { policyNoteText, sinceText } from '@/features/ux-kit/format/built-in-default';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { PolicySummary, type PolicySummaryRow } from './policy-summary';
 
@@ -8,11 +7,8 @@ const yesNo = (value: boolean) => (value ? 'Yes' : 'No');
 
 function rowsOf(policy: StopEnginePolicy, format: ReliabilityFormat): PolicySummaryRow[] {
   const note = policyNoteText(policy.notes);
-  const inForce = (
-    <>
-      Version {format.number(policy.version)} ({policy.unitId ? 'unit override' : 'plant-wide'}) · <EffectiveFrom iso={policy.effectiveFrom} tz={format.timezone} prefix="since" />
-    </>
-  );
+  // the plant clock without a zone suffix: the app header shows the plant timezone
+  const inForce = `Version ${format.number(policy.version)} (${policy.unitId ? 'unit override' : 'plant-wide'}) · ${sinceText(policy.effectiveFrom, format.dateTime)}`;
   return [
     { label: 'In force', value: inForce },
     { label: 'Derive stops from unit state', value: yesNo(policy.deriveFromState) },

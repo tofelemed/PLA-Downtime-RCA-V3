@@ -65,7 +65,7 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(micro).toHaveTextContent('Version 1 · plant-wide · Built-in default (from the start)');
     expect(micro).toHaveTextContent('Built-in default; change it by recording a new version.');
     expect(await screen.findByTestId('transition-allowance')).toHaveTextContent('Built-in default (from the start)');
-    await waitFor(() => expect(screen.getAllByTestId('built-in-default-start').length).toBeGreaterThan(0));
+    expect(await screen.findByTestId('stop-engine-current')).toHaveTextContent('Version 1 (plant-wide) · Built-in default (from the start)');
     expect(document.body).not.toHaveTextContent('1970');
     expect(document.body).not.toHaveTextContent('D04');
   });
@@ -113,7 +113,9 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     const form = await screen.findByTestId('transition-allowance-form');
     expect(within(form).getByText('Plans already allow for standard grade changes')).toBeInTheDocument();
     expect(within(form).getByText('Count the allowance against the plan')).toBeInTheDocument();
-    expect(within(form).getByText(/Periods already calculated keep the version/)).toBeInTheDocument();
+    // what saving does is behind the panel title's ⓘ (configuration cleanup 24 Oct 2026)
+    expect(within(form).queryByText(/Periods already calculated keep the version/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About new versions' })).toBeInTheDocument();
     const record = screen.getByRole('button', { name: 'Record (effective from now)' });
     expect(record).toBeDisabled();
     fireEvent.click(screen.getByLabelText(/Count the allowance against the plan/));
@@ -215,5 +217,58 @@ describe('Stop and plan policy page (SME D6, engine 2.5.6)', () => {
     expect(screen.queryByRole('button', { name: /Record/ })).toBeNull();
     // the preview is a tool for everyone, once a unit is chosen
     expect(screen.getByRole('button', { name: 'Preview derived stops' })).toBeDisabled();
+  });
+});
+
+// Configuration cleanup (24 Oct 2026): cards with ⓘ instead of descriptions; side panels with Cancel then the primary action
+describe('Stop and plan policy cleanup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
+
+  it('has no header description; every section is a card titled h2 with its ⓘ', async () => {
+    stubV2Fetch(reply);
+    actAs('manager_approver');
+    renderPage();
+    await screen.findByTestId('stop-engine-current');
+    expect(screen.queryByText(/Settings that decide how short stops/)).toBeNull();
+    expect(screen.queryByText('Existing derived events keep their recorded settings.')).toBeNull();
+    for (const title of ['Stop-engine settings', 'State engine preview', 'Micro-stops and trips']) {
+      expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `About ${title}` })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('heading', { level: 2, name: 'Grade-change allowance' })).toBeInTheDocument();
+    expect(screen.getByTestId('state-engine-preview')).toHaveTextContent('Choose a unit above to preview its state engine.');
+  });
+
+  it('the grade-change choice in force keeps its title; its explanation is behind an ⓘ', async () => {
+    stubV2Fetch(reply);
+    renderPage();
+    const summary = await screen.findByTestId('transition-allowance');
+    expect(summary).toHaveTextContent('Plans already allow for standard grade changes');
+    expect(summary).not.toHaveTextContent('The plan target already leaves time');
+    expect(within(summary).getByRole('button', { name: 'About this choice' })).toBeInTheDocument();
+  });
+
+  it.each(['Stop-engine settings', 'Micro-stops and trips', 'Grade-change allowance'])('%s: the side panel has an ⓘ, Cancel before the primary action, Cancel and Esc close it', async (section) => {
+    stubV2Fetch(reply);
+    actAs('manager_approver');
+    renderPage();
+    await screen.findByTestId('transition-allowance');
+    await waitFor(() => expect(screen.getByRole('button', { name: `Record new version of ${section}` })).toBeInTheDocument());
+    openEditor(section);
+    const panel = await screen.findByRole('dialog', { name: `${section}: new version` });
+    expect(within(panel).getByRole('button', { name: 'About new versions' })).toBeInTheDocument();
+    expect(within(panel).queryByText('Saving records a new version. Periods already calculated keep the version they used.')).toBeNull();
+    const names = within(panel).getAllByRole('button').map((button) => button.textContent?.trim() ?? '');
+    const primary = names.findIndex((name) => name.startsWith('Record'));
+    expect(names.indexOf('Cancel')).toBeGreaterThan(-1);
+    expect(names.indexOf('Cancel')).toBeLessThan(primary);
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: `${section}: new version` })).toBeNull());
+    openEditor(section);
+    fireEvent.keyDown(await screen.findByRole('dialog', { name: `${section}: new version` }), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: `${section}: new version` })).toBeNull());
   });
 });

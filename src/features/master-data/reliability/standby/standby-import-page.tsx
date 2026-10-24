@@ -29,7 +29,6 @@ export function StandbyImportPage() {
       title="Import standby log"
       alsoAllowed={canWriteStandby}
       back={{ to: STANDBY_PATH, label: sectionNameOf(STANDBY_PATH) }}
-      description="Demands, tests and running periods of standby equipment from a CSV file."
     >
       {canWriteStandby ? <StandbyImportForm /> : <DataState state="no-permission" detail="Your role does not record the standby log." />}
     </MasterDataLayout>

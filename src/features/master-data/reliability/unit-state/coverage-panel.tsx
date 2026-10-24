@@ -3,6 +3,7 @@ import type { UnitStateCoverageView } from '@/api/v2/types/reliability';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DateRangeInput } from '@/features/ux-kit/date-inputs';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { usePlantWindow } from '../shared/use-plant-window';
 import type { ReliabilityFormat } from '../shared/use-reliability-format';
 import { StateTimeline } from './state-timeline';
@@ -27,6 +28,9 @@ function CoverageResult({ view, format }: { view: UnitStateCoverageView; format:
   );
 }
 
+const COVERAGE_INFO =
+  'Unknown time is never filled: availability is shown as lower and upper bounds with the share of the scheduled time the data covers. The window is whole production days, at most 31.';
+
 /**
  * SME D2 coverage of a unit over a window (at most 31 days): unknown time is never filled, so availability
  * is published as lower / upper bounds with the share of the scheduled time the data covers.
@@ -37,13 +41,17 @@ export function CoveragePanel({ unitId, format }: { unitId: string; format: Reli
   const dayStart = useOperationalDayStart();
   const days = window && dayStart ? productionDayWindow(window, dayStart, format.timezone) : null;
   const coverage = useUnitStateCoverage(days?.from && days.to ? { unitId, from: days.from, to: days.to } : null);
+  const dayNote = dayStart && dayStart !== '00:00' ? ` Each production day runs from ${dayStart} to ${dayStart} the next day.` : '';
   return (
-    <div className="space-y-3">
-      <DateRangeInput label="Window (whole production days, at most 31)" value={range} timeZone={format.timezone} onChange={setRange} />
-      {dayStart && dayStart !== '00:00' && <p className="text-xs text-muted-foreground">Each production day runs from {dayStart} to {dayStart} the next day.</p>}
-      <DataState state={dataStateOf(coverage)} error={coverage.error} onRetry={() => void coverage.refetch()}>
-        {coverage.data && <CoverageResult view={coverage.data} format={format} />}
-      </DataState>
-    </div>
+    <RcaCard title="Coverage" info={`${COVERAGE_INFO}${dayNote}`} testId="unit-state-coverage">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-end gap-3" data-testid="coverage-window">
+          <DateRangeInput label="Window (whole production days, at most 31)" toLabel="To" value={range} timeZone={format.timezone} onChange={setRange} textEntry calendarPicker toolbar />
+        </div>
+        <DataState state={dataStateOf(coverage)} error={coverage.error} onRetry={() => void coverage.refetch()}>
+          {coverage.data && <CoverageResult view={coverage.data} format={format} />}
+        </DataState>
+      </div>
+    </RcaCard>
   );
 }

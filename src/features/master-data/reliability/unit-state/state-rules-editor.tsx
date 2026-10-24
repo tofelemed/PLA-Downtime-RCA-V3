@@ -1,6 +1,7 @@
 import type { PhysicalState, StateRule } from '@/api/v2/types/reliability';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { SELECT_CLASS } from '../shared/use-asset-lookup';
 import { PHYSICAL_STATES, STATE_LABELS } from './mapping-editor-model';
 
@@ -16,7 +17,10 @@ export interface StateRulesEditorProps {
 export function StateRulesEditor({ rules, onChange, onAdd, onRemove, error }: StateRulesEditorProps) {
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-medium">Signal value → state</legend>
+      <legend className="flex items-center gap-1.5 text-sm font-medium">
+        Signal value → state
+        <KpiInfo label="signal values" text="A value not listed here counts as unknown time, never as running or stopped." />
+      </legend>
       {rules.map((rule, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2" data-testid="state-rule">
           <Input
@@ -38,7 +42,6 @@ export function StateRulesEditor({ rules, onChange, onAdd, onRemove, error }: St
         </div>
       ))}
       <Button type="button" size="sm" variant="outline" onClick={onAdd}>Add a value</Button>
-      <p className="text-xs text-muted-foreground">A value not listed here counts as unknown time, never as running or stopped.</p>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </fieldset>
   );
