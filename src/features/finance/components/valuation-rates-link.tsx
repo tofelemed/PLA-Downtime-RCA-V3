@@ -1,25 +1,21 @@
 import { Link } from 'react-router-dom';
-import { pageNameOf } from '@/features/auth/navigation-items';
+import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { ActionIcon } from '@/lib/icons';
 
 /**
  * QA L22: valuation rates (margins, costs, price differences) are versions of each production profile, so
- * Finance points to them; a user who cannot open planning reads the sentence without a link.
+ * Valuation links to them beside the page title; users who cannot open Profiles & rates get no link.
  */
 export function ValuationRatesLink() {
   const { canViewAnalysis } = useCapabilities();
-  const page = pageNameOf('/setup/profiles');
+  if (!canViewAnalysis) return null;
   return (
-    <p className="text-sm text-muted-foreground" data-testid="valuation-rates-link">
-      Valuation rates (margins, costs, price differences) are kept on each production profile:{' '}
-      {canViewAnalysis ? (
-        <Link className="underline" to="/setup/profiles">
-          Setup › {page}
-        </Link>
-      ) : (
-        `Setup › ${page}`
-      )}
-      .
-    </p>
+    <Button asChild size="sm" variant="outline" className="whitespace-nowrap" data-testid="valuation-rates-link">
+      <Link to="/setup/profiles" title="Margins, costs and price differences are kept on each production profile">
+        <ActionIcon.view className="h-4 w-4" aria-hidden="true" />
+        Profile valuation rates
+      </Link>
+    </Button>
   );
 }

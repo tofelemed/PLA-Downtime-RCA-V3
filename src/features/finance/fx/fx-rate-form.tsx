@@ -48,7 +48,7 @@ export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
   return (
     <div className="space-y-3" data-testid="fx-form">
       {feedback.alert}
-      <FinanceField id="rateType" label="Rate table" hint="Which conversion basis this rate belongs to; name the market or fixing under Source." error={fieldError('rateType')}>
+      <FinanceField id="rateType" label="Rate table" error={fieldError('rateType')}>
         <NativeSelect id="rateType" value={values.rateType} options={RATE_TYPES} onChange={(v) => set('rateType', v as FxRateType)} />
       </FinanceField>
       <div className="grid gap-3 sm:grid-cols-3">
@@ -63,28 +63,23 @@ export function FxRateForm({ timezone, onSaved, onCancel }: FxRateFormProps) {
         </FinanceField>
       </div>
       <FinanceField id="effectiveFrom" label="Valid from" withLabel={false} error={fieldError('effectiveFrom')}>
-        <DateTimeInput label={`Valid from (${timezone})`} value={values.effectiveFrom} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveFrom', iso)} required />
+        <DateTimeInput compact label="Valid from" value={values.effectiveFrom} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveFrom', iso)} required />
       </FinanceField>
-      <FinanceField id="effectiveTo" label="Valid until" withLabel={false} hint="Optional; the rate applies up to, not including, this time." error={fieldError('effectiveTo')}>
-        <DateTimeInput label="Valid until (optional)" value={values.effectiveTo} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveTo', iso)} />
+      <FinanceField id="effectiveTo" label="Valid until" withLabel={false} error={fieldError('effectiveTo')}>
+        <DateTimeInput compact label="Valid until (optional)" value={values.effectiveTo} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveTo', iso)} />
       </FinanceField>
-      <div className="flex items-start gap-2 rounded-md border p-3">
+      <div className="flex items-center gap-2">
         <Checkbox id="fxProvisional" checked={values.provisional} onCheckedChange={(on) => set('provisional', on === true)} data-testid="fx-provisional" />
-        <div className="space-y-1">
-          <Label htmlFor="fxProvisional">Provisional rate</Label>
-          <p className="text-xs text-muted-foreground">
-            Only for dates without an approved final rate. Values it converts are marked provisional and are revalued when the final rate is approved. Needs an end date.
-          </p>
-        </div>
+        <Label htmlFor="fxProvisional">Provisional rate (only for dates without an approved final rate; needs an end date)</Label>
       </div>
       <FinanceField id="fxSource" label="Source (optional)" error={fieldError('source')}>
         <Input id="fxSource" value={values.source} placeholder="e.g. CBI official fixing, treasury, exchange market" onChange={(e) => set('source', e.target.value)} />
       </FinanceField>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button size="sm" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={save} disabled={create.isPending} data-testid="fx-save">
+        <Button size="sm" onClick={save} disabled={create.isPending} data-testid="fx-save">
           Save draft
         </Button>
       </div>

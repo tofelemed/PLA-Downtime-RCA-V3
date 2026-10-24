@@ -13,7 +13,7 @@ export function auditColumns(formatDateTime: (iso: string) => string): ReadonlyA
   return [
     { id: 'time', header: 'Time', cell: (entry) => formatDateTime(entry.timestamp), nowrap: true },
     { id: 'user', header: 'User', cell: (entry) => resolvedActorText(entry.actorId, entry.actorName) },
-    { id: 'action', header: 'Action', cell: (entry) => <Badge variant="outline">{actionLabel(entry.action)}</Badge>, nowrap: true },
+    { id: 'action', header: 'Action', cell: (entry) => <Badge variant="outline" className="whitespace-nowrap">{actionLabel(entry.action)}</Badge>, nowrap: true },
     { id: 'entity', header: 'Record', cell: (entry) => entityLabel(entry.entityType) },
     {
       id: 'summary',

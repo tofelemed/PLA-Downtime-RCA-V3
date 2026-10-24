@@ -3,14 +3,16 @@ import { useGrantScope, useUserLookup } from '@/api/v2/queries/administration-us
 import { V2ApiError } from '@/api/v2/errors';
 import type { UserView } from '@/api/v2/types/administration';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { AdminDialog } from '@/features/admin/shared/admin-dialog';
 import { FormField } from '@/features/admin/shared/form-field';
 import { useCommandFeedback } from '@/features/admin/shared/use-command-feedback';
 import { roleLabel } from '@/features/ux-kit/labels';
 import { ActionIcon, StatusIcon } from '@/lib/icons';
 import { EMPTY_SCOPE_CHOICE, scopeOf } from '../model/scope-choice';
 import { GrantScopeFields } from './grant-scope-fields';
+
+const INFO = 'Find a user of your organization by exact e-mail (no partial search) and give them a role in this plant. Their profile stays with their home plant. The change is recorded in the audit log.';
 
 function LookupResult({ email, user, error, loading }: { email: string | null; user: UserView | null; error: unknown; loading: boolean }) {
   if (!email) return null;
@@ -66,46 +68,45 @@ export function GrantByEmailDialog() {
       // the toast explains the refusal; the dialog stays open
     }
   };
+  const footer = (
+    <>
+      <Button variant="outline" className="h-9" onClick={() => reset(false)} disabled={grant.isPending}>
+        Cancel
+      </Button>
+      <Button className="h-9" onClick={() => void submit()} disabled={!found || !choice.role || grant.isPending} aria-busy={grant.isPending || undefined}>
+        {grant.isPending && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
+        Grant access
+      </Button>
+    </>
+  );
 
   return (
-    <Dialog open={open} onOpenChange={reset}>
-      <DialogTrigger asChild>
-        <Button variant="outline">
+    <AdminDialog
+      open={open}
+      onOpenChange={reset}
+      trigger={
+        <Button variant="outline" className="h-9">
           <ActionIcon.add aria-hidden="true" />
           Grant access by e-mail
         </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Grant access to a user of another plant</DialogTitle>
-          <DialogDescription>
-            Find a user of your organization by exact e-mail and give them a role in this plant. Their profile stays with their home plant. The change is recorded in the audit log.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <form onSubmit={find}>
-            <FormField htmlFor={emailId} label="E-mail" hint="The exact e-mail address; no partial search.">
-              <div className="flex gap-2">
-                <Input id={emailId} type="email" value={draft} autoComplete="off" onChange={(e) => setDraft(e.target.value)} />
-                <Button type="submit" variant="outline" disabled={!draft.trim()}>
-                  Find
-                </Button>
-              </div>
-            </FormField>
-          </form>
-          <LookupResult email={email} user={found} error={lookup.error} loading={lookup.isLoading} />
-          {found && <GrantScopeFields value={choice} onChange={setChoice} />}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => reset(false)} disabled={grant.isPending}>
-            Cancel
-          </Button>
-          <Button onClick={() => void submit()} disabled={!found || !choice.role || grant.isPending} aria-busy={grant.isPending || undefined}>
-            {grant.isPending && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
-            Grant access
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      }
+      title="Grant access to a user of another plant"
+      info={INFO}
+      footer={footer}
+      testId="grant-by-email-dialog"
+    >
+      <form onSubmit={find}>
+        <FormField htmlFor={emailId} label="E-mail">
+          <div className="flex gap-2">
+            <Input id={emailId} type="email" className="h-9" value={draft} autoComplete="off" onChange={(e) => setDraft(e.target.value)} />
+            <Button type="submit" variant="outline" className="h-9" disabled={!draft.trim()}>
+              Find
+            </Button>
+          </div>
+        </FormField>
+      </form>
+      <LookupResult email={email} user={found} error={lookup.error} loading={lookup.isLoading} />
+      {found && <GrantScopeFields value={choice} onChange={setChoice} />}
+    </AdminDialog>
   );
 }

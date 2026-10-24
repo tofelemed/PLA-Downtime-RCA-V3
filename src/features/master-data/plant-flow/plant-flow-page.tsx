@@ -31,11 +31,7 @@ export function PlantFlowPage() {
     [approved.items, refs],
   );
   return (
-    <MasterDataLayout
-      title="Plant flow"
-      alsoAllowed={canWriteProfiles}
-      description="Which unit feeds which and the buffers between them: a stop upstream uses the buffer's cover before it costs the unit downstream."
-    >
+    <MasterDataLayout title="Plant flow" alsoAllowed={canWriteProfiles}>
       <FlowRoutesSection refs={refs} routes={routes} anchor={anchor} canWrite={canWriteProfiles} />
       <BufferLevelsSection refs={refs} bufferOptions={bufferOptions} canWrite={canWritePeriods} />
     </MasterDataLayout>

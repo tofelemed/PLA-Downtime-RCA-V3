@@ -32,13 +32,13 @@ export function EndRunAction({ runId, timezone }: EndRunActionProps) {
   return (
     <div className="space-y-1">
       <SaveRefusalAlert error={feedback.failure} timezone={timezone} />
-      <PlantDateTimeField id={`end-${runId}`} label="End" value={end} timezone={timezone} onChange={setEnd} />
-      <div className="flex gap-1">
-        <Button size="sm" onClick={save} disabled={patch.isPending || !end}>
-          Save end
-        </Button>
+      <PlantDateTimeField compact id={`end-${runId}`} label="End" value={end} timezone={timezone} onChange={setEnd} />
+      <div className="flex justify-end gap-1">
         <Button size="sm" variant="outline" onClick={() => setOpen(false)}>
           Cancel
+        </Button>
+        <Button size="sm" className="whitespace-nowrap" onClick={save} disabled={patch.isPending || !end}>
+          Save end
         </Button>
       </div>
     </div>

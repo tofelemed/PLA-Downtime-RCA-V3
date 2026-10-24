@@ -35,11 +35,7 @@ export function SignalEditorPage() {
   };
   return (
     <Page>
-      <PageHeader
-        title="Define signal"
-        description={`A measurement delivered by ${connection.data?.displayName ?? 'this connection'}, used for trends and output accounting.`}
-        back={{ to: back, label: 'Signals' }}
-      />
+      <PageHeader title="Define signal" back={{ to: back, label: 'Signals' }} />
       {!canWriteIntegration ? (
         <DataState state="no-permission" detail="Defining signals needs an integration administrator or manager approver." />
       ) : (

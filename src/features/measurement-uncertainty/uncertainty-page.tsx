@@ -11,6 +11,7 @@ import { NativeSelect } from '@/features/integration-console/components/native-s
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { BudgetCard } from './components/budget-card';
@@ -26,8 +27,9 @@ const INFO = (
 function UnitBudgets({ unitId, timezone }: { unitId: string; timezone: string }) {
   const budgets = useUncertaintyBudgets(unitId);
   const items = budgets.data?.items ?? [];
+  const format = useNumberFormat();
   return (
-    <ReportCard title="Uncertainty budgets" badge={budgets.data && <span className="text-sm text-muted-foreground" data-testid="budget-count">{items.length}</span>} info={INFO} testId="budget-section">
+    <ReportCard title="Uncertainty budgets" badge={budgets.data && <span className="text-sm text-muted-foreground" data-testid="budget-count">{format.number(items.length)}</span>} info={INFO} testId="budget-section">
       <DataState state={dataStateOf(budgets)} error={budgets.error} onRetry={() => void budgets.refetch()}>
         {items.length === 0 && (
           <div className="py-8 text-center" data-testid="budget-empty">

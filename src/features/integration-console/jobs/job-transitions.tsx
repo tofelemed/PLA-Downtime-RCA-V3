@@ -26,7 +26,7 @@ export function JobTransitions({ jobId, timezone }: { jobId: string; timezone: s
           const reason = typeof row.detail?.reason === 'string' ? row.detail.reason : null;
           return (
             <li key={row.id} data-testid="job-transition" data-action={row.action}>
-              {row.at ? <PlantTime iso={row.at} tz={timezone} withDate /> : '—'} · <span className="font-medium">{humanize(row.action)}</span> {stateLabel(row.fromState)} → {stateLabel(row.toState)}
+              {row.at ? <PlantTime iso={row.at} tz={timezone} withDate withZone={false} /> : '—'} · <span className="font-medium">{humanize(row.action)}</span> {stateLabel(row.fromState)} → {stateLabel(row.toState)}
               {actorText(row, users.nameOf)}
               {reason ? ` · “${reason}”` : ''}
             </li>

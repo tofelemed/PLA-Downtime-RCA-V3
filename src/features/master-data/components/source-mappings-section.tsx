@@ -1,11 +1,15 @@
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { SourceMappingView } from '@/api/v2/types/integration-mappings';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, MATCH_KIND_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
+
+const MAPPINGS_INFO = 'Source ids and PI elements that resolve to this record. A SuperAdmin edits the rules in the integration console.';
 
 const COLUMNS: DataTableColumn<SourceMappingView>[] = [
   { id: 'system', header: 'Source system', cell: (mapping) => mapping.sourceSystem, nowrap: true },
@@ -14,7 +18,7 @@ const COLUMNS: DataTableColumn<SourceMappingView>[] = [
   {
     id: 'state',
     header: 'State',
-    cell: (mapping) => <Badge variant={mapping.isActive ? 'secondary' : 'outline'}>{mapping.isActive ? 'Active' : 'Inactive'}</Badge>,
+    cell: (mapping) => <Badge variant={mapping.isActive ? 'secondary' : 'outline'} className="whitespace-nowrap">{mapping.isActive ? 'Active' : 'Inactive'}</Badge>,
   },
 ];
 
@@ -36,21 +40,13 @@ export function SourceMappingsSection({ targetId }: { targetId: string }) {
       headingLevel={2}
       collapsible
       defaultOpen={false}
-      description={
-        <>
-          Source ids and PI elements that resolve to this record.{' '}
-          {canReachIntegration ? (
-            <>
-              Edit them in the{' '}
-              <Link className="underline" to="/connectivity">
-                integration console
-              </Link>
-              .
-            </>
-          ) : (
-            'A SuperAdmin edits them in the integration console.'
-          )}
-        </>
+      titleAside={<KpiInfo label="Data source mappings" text={MAPPINGS_INFO} />}
+      actions={
+        canReachIntegration ? (
+          <Button asChild size="sm" variant="outline" className="h-9">
+            <Link to="/connectivity">Open integration console</Link>
+          </Button>
+        ) : undefined
       }
     >
       <DataTable

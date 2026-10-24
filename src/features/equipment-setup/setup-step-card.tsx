@@ -4,7 +4,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { UiIcon } from '@/lib/icons';
 import { StepReadinessBadge } from './readiness-status';
-import { canOpenStep, linksToUnit, SETUP_STEPS, type SetupStep } from './setup-steps';
+import { canOpenStep, SETUP_STEPS, type SetupStep } from './setup-steps';
 
 function StepLinks({ step, unitId }: { step: SetupStep; unitId: string }) {
   const allowed = canOpenStep(step, useCapabilities());
@@ -19,18 +19,17 @@ function StepLinks({ step, unitId }: { step: SetupStep; unitId: string }) {
 
 /** One step of the guide: what to do, how to check it and a direct link to the page where it is done. */
 export function SetupStepCard({ step, unitId }: { step: SetupStep; unitId: string }) {
-  const unitHint = linksToUnit(step) && !unitId ? 'Select a unit above to open this unit directly.' : null;
   return <li aria-labelledby={`setup-step-${step.id}`} className="flex gap-3 p-4 sm:gap-4">
     <span aria-hidden className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-medium text-muted-foreground"><NumberText value={SETUP_STEPS.indexOf(step) + 1} /></span>
     <div className="min-w-0 flex-1 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <h3 id={`setup-step-${step.id}`} className="font-medium">{step.title}</h3>
-        {step.optional && <span className="rounded border px-1.5 py-0.5 text-xs text-muted-foreground">Optional</span>}
+        {step.optional && <span className="whitespace-nowrap rounded border px-1.5 py-0.5 text-xs text-muted-foreground">Optional</span>}
         <StepReadinessBadge stepId={step.id} />
       </div>
       <p className="text-sm">{step.action}</p>
       <p className="text-sm text-muted-foreground"><span className="font-medium">Check:</span> {step.verify}</p>
-      {(step.hint || unitHint) && <p className="text-xs text-muted-foreground">{[step.hint, unitHint].filter(Boolean).join(' ')}</p>}
+      {step.hint && <p className="text-xs text-muted-foreground">{step.hint}</p>}
       <StepLinks step={step} unitId={unitId} />
     </div>
   </li>;

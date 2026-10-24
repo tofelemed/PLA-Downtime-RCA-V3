@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { Section, withReturnTo } from '@/features/ux-kit/page-layout';
+import { withReturnTo } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import type { MasterAssetView } from '../api/master-data-types';
 import { ASSETS } from '../api/record-resource';
 import { usePrefetchRecord, useRecordPage } from '../api/use-record-queries';
 import { RecordLink } from '../components/record-link';
+import { RecordListCard } from '../components/record-list-card';
 
 /** The active assets under one unit (20 per page), with "Add asset" pre-set to the unit. */
 export function UnitAssetsSection({ unitId, canAdd }: { unitId: string; canAdd: boolean }) {
@@ -29,7 +30,7 @@ export function UnitAssetsSection({ unitId, canAdd }: { unitId: string; canAdd: 
     { id: 'criticality', header: 'Criticality', cell: (asset) => asset.criticality ?? '—' },
   ];
   const add = canAdd ? (
-    <Button size="sm" variant="outline" asChild>
+    <Button size="sm" variant="outline" className="h-9" asChild>
       <Link to={withReturnTo(`/master-data/assets/new?unitId=${unitId}`, here)}>
         <ActionIcon.add aria-hidden="true" className="mr-2 h-4 w-4" />
         Add asset
@@ -37,7 +38,7 @@ export function UnitAssetsSection({ unitId, canAdd }: { unitId: string; canAdd: 
     </Button>
   ) : undefined;
   return (
-    <Section title="Assets of this unit" actions={add}>
+    <RecordListCard title="Assets of this unit" actions={add} testId="unit-assets-card">
       <DataTable
         caption="Assets of this unit"
         columns={columns}
@@ -47,6 +48,6 @@ export function UnitAssetsSection({ unitId, canAdd }: { unitId: string; canAdd: 
         status={assets.status}
         empty={{ title: 'No assets', text: 'This unit has no active assets.' }}
       />
-    </Section>
+    </RecordListCard>
   );
 }

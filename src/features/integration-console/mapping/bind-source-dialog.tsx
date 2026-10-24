@@ -63,7 +63,7 @@ export function BindSourceDialog({ connectionId, target, onClose, onBound }: Bin
   };
   return (
     <Dialog open={target !== null} onOpenChange={(next) => !next && close()}>
-      <DialogContent data-testid="bind-source-dialog">
+      <DialogContent className="sm:max-w-[560px]" data-testid="bind-source-dialog">
         <DialogHeader>
           <DialogTitle>Bind source to a unit</DialogTitle>
           <DialogDescription>

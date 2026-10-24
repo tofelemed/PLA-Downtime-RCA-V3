@@ -48,39 +48,54 @@ export function UserDetailsForm({ mode, initial, choosePlant, readOnly = false, 
     }
   };
 
+  if (readOnly) return <ReadOnlyDetails values={values} />;
   return (
     <form onSubmit={submit} className="grid max-w-2xl gap-4 sm:grid-cols-2" noValidate>
       <FormField htmlFor={ids.name} label="Name" error={errors.name} required>
-        <Input id={ids.name} value={values.name} disabled={readOnly} autoComplete="off" onChange={(e) => set({ name: e.target.value })} />
+        <Input id={ids.name} className="h-9" value={values.name} autoComplete="off" onChange={(e) => set({ name: e.target.value })} />
       </FormField>
       <FormField htmlFor={ids.email} label="E-mail" error={errors.email} required>
-        <Input id={ids.email} type="email" value={values.email} disabled={readOnly} autoComplete="off" onChange={(e) => set({ email: e.target.value })} />
+        <Input id={ids.email} type="email" className="h-9" value={values.email} autoComplete="off" onChange={(e) => set({ email: e.target.value })} />
       </FormField>
-      {!readOnly && <SignInTypeField id={ids.role} mode={mode} value={values.role} current={initial.role} error={errors.role} onChange={(role) => set({ role })} />}
-      {!readOnly && (
-        <FormField
-          htmlFor={ids.password}
-          label={mode === 'create' ? 'Password' : 'New password'}
-          hint={mode === 'create' ? `At least ${MIN_PASSWORD_LENGTH} characters.` : 'Leave empty to keep the current password.'}
-          error={errors.password}
-          required={mode === 'create'}
-        >
-          <Input id={ids.password} type="password" value={values.password} autoComplete="new-password" onChange={(e) => set({ password: e.target.value })} />
-        </FormField>
-      )}
+      <SignInTypeField id={ids.role} mode={mode} value={values.role} current={initial.role} error={errors.role} onChange={(role) => set({ role })} />
+      <FormField
+        htmlFor={ids.password}
+        label={mode === 'create' ? 'Password' : 'New password'}
+        hint={mode === 'create' ? `At least ${MIN_PASSWORD_LENGTH} characters.` : 'Leave empty to keep the current password.'}
+        error={errors.password}
+        required={mode === 'create'}
+      >
+        <Input id={ids.password} type="password" className="h-9" value={values.password} autoComplete="new-password" onChange={(e) => set({ password: e.target.value })} />
+      </FormField>
       {mode === 'create' && choosePlant && <PlantField id={ids.plant} value={values.tenantId} onChange={(tenantId) => set({ tenantId })} />}
-      {!readOnly && (
-        <div className="flex gap-2 sm:col-span-2">
-          <Button type="submit" disabled={busy} aria-busy={busy || undefined}>
-            {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
-            {submitLabel}
-          </Button>
-          <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-            Cancel
-          </Button>
-        </div>
-      )}
+      <FormButtons busy={busy} submitLabel={submitLabel} onCancel={onCancel} />
     </form>
+  );
+}
+
+function FormButtons({ busy, submitLabel, onCancel }: { busy: boolean; submitLabel: string; onCancel: () => void }) {
+  return (
+    <div className="flex gap-2 sm:col-span-2">
+      <Button type="button" variant="outline" className="h-9" onClick={onCancel} disabled={busy}>
+        Cancel
+      </Button>
+      <Button type="submit" className="h-9" disabled={busy} aria-busy={busy || undefined}>
+        {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
+        {submitLabel}
+      </Button>
+    </div>
+  );
+}
+
+/** A profile the caller may not change: its values as text (no disabled inputs); no password or sign-in type. */
+function ReadOnlyDetails({ values }: { values: UserFormValues }) {
+  return (
+    <dl className="grid max-w-2xl gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]" data-testid="user-details-read-only">
+      <dt className="text-muted-foreground">Name</dt>
+      <dd>{values.name}</dd>
+      <dt className="text-muted-foreground">E-mail</dt>
+      <dd className="break-all">{values.email}</dd>
+    </dl>
   );
 }
 
@@ -106,7 +121,7 @@ function SignInTypeField({ id, mode, value, current, error, onChange }: SignInTy
   return (
     <FormField htmlFor={id} label="Sign-in type" error={error} hint={signInTypeHint(mode)} required={mode === 'create'}>
       <Select value={value} onValueChange={(role) => onChange(role as UserFormValues['role'])} disabled={grantable.isLoading}>
-        <SelectTrigger id={id}>
+        <SelectTrigger id={id} className="h-9">
           <SelectValue placeholder={grantable.isLoading ? 'Loading sign-in types…' : 'Choose a sign-in type'} />
         </SelectTrigger>
         <SelectContent>
@@ -125,9 +140,9 @@ function PlantField({ id, value, onChange }: { id: string; value: string; onChan
   const plants = usePlantOptions();
   const items = plants.data?.items ?? [];
   return (
-    <FormField htmlFor={id} label="Plant" hint="Leave on the selected plant unless the user works elsewhere.">
+    <FormField htmlFor={id} label="Plant">
       <Select value={value} onValueChange={onChange} disabled={plants.isLoading}>
-        <SelectTrigger id={id}>
+        <SelectTrigger id={id} className="h-9">
           <SelectValue placeholder="The selected plant" />
         </SelectTrigger>
         <SelectContent>

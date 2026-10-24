@@ -89,12 +89,12 @@ function EditorForm({ initial, unitId, onDone }: { initial: HierarchyFormValues;
       <CommissioningBackdateFields idPrefix="authority" value={backdate} onChange={setBackdate} errors={backdateProblems} takesEffect="approval" />
       <ConsoleRefusal error={draft.error} />
       <BackdateOverlapList error={draft.error} />
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={draft.isPending} data-testid="authority-save">
-          Save draft
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={onDone}>
           Cancel
+        </Button>
+        <Button onClick={save} disabled={draft.isPending} data-testid="authority-save">
+          Save draft
         </Button>
       </div>
     </div>
@@ -110,7 +110,7 @@ export function HierarchyEditor({ unitId, onDone }: { unitId: string; onDone: ()
   const [scope, setScope] = useState<'unit' | 'plant'>('unit');
   const base = useSourceAuthorityInForce(scope === 'unit' ? unitId : null);
   return (
-    <div className="space-y-3 rounded-md border p-3" data-testid="authority-draft-form">
+    <div className="space-y-3" data-testid="authority-draft-form">
       <Field id="authority-scope" label="Applies to">
         <NativeSelect id="authority-scope" testId="authority-scope" value={scope} onChange={(v) => setScope(v === 'plant' ? 'plant' : 'unit')} options={SCOPE_OPTIONS} />
       </Field>

@@ -11,13 +11,13 @@ const calendarButton = (label: string) => screen.getByRole('button', { name: `Op
 
 describe('CalendarPopover compact option', () => {
   it('is a 40 px button by default', () => {
-    render(<CalendarPopover label="From" value="2026-10-15" onSelect={vi.fn()} calendar="gregorian" digits="latin" weekStart="saturday" />);
+    render(<CalendarPopover label="From" value="2026-10-15" onSelect={vi.fn()} calendar="gregorian" digits="latin" weekStart="saturday" fallbackDate="2026-10-15" />);
     expect(calendarButton('From')).toHaveClass('h-10', 'w-10');
     expect(calendarButton('From')).not.toHaveClass('h-9');
   });
 
   it('is a 36 px button with `compact`', () => {
-    render(<CalendarPopover label="From" value="2026-10-15" onSelect={vi.fn()} calendar="gregorian" digits="latin" weekStart="saturday" compact />);
+    render(<CalendarPopover label="From" value="2026-10-15" onSelect={vi.fn()} calendar="gregorian" digits="latin" weekStart="saturday" fallbackDate="2026-10-15" compact />);
     expect(calendarButton('From')).toHaveClass('h-9', 'w-9');
     expect(calendarButton('From')).not.toHaveClass('h-10');
   });
@@ -25,13 +25,13 @@ describe('CalendarPopover compact option', () => {
 
 describe('DateInput compact option', () => {
   it('keeps the default field height without `compact`', () => {
-    render(<DateInput label="Day" value="2026-10-12" onChange={vi.fn()} calendarPicker={{ weekStart: 'saturday' }} />);
+    render(<DateInput label="Day" value="2026-10-12" onChange={vi.fn()} calendarPicker={{ weekStart: 'saturday', fallbackDate: '2026-10-12' }} />);
     expect(screen.getByLabelText('Day')).not.toHaveClass('h-9');
     expect(calendarButton('Day')).toHaveClass('h-10');
   });
 
   it('makes the Gregorian field and its calendar button h-9 with `compact`', () => {
-    render(<DateInput label="Day" value="2026-10-12" onChange={vi.fn()} calendarPicker={{ weekStart: 'saturday' }} compact />);
+    render(<DateInput label="Day" value="2026-10-12" onChange={vi.fn()} calendarPicker={{ weekStart: 'saturday', fallbackDate: '2026-10-12' }} compact />);
     expect(screen.getByLabelText('Day')).toHaveClass('h-9');
     expect(calendarButton('Day')).toHaveClass('h-9');
   });

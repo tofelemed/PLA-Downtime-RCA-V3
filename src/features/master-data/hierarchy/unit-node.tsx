@@ -6,6 +6,7 @@ import { useV2InfiniteList, flattenPages } from '@/api/v2/queries/use-v2-list';
 import { EntityIcon } from '@/lib/icons';
 import type { MasterAssetView, MasterUnitView } from '../api/master-data-types';
 import { HierarchyNode } from './hierarchy-node';
+import { codeAndName } from './record-label';
 
 /** records opened from the hierarchy return to it (Back, Cancel) */
 const HIERARCHY_PATH = '/master-data/hierarchy';
@@ -38,7 +39,7 @@ function UnitAssets({ unitId, level }: { unitId: string; level: number }) {
           level={level}
           icon={EntityIcon.asset}
           kind="Asset"
-          label={`${asset.code} — ${asset.name}`}
+          label={codeAndName(asset.code, asset.name)}
           expandable={false}
           expanded={false}
           onToggle={() => undefined}
@@ -80,7 +81,7 @@ export function UnitNode({ unit, level, canWrite }: { unit: MasterUnitView; leve
       level={level}
       icon={EntityIcon.unit}
       kind="Unit"
-      label={`${unit.code} — ${unit.name}`}
+      label={codeAndName(unit.code, unit.name)}
       expandable
       expanded={expanded}
       onToggle={() => setExpanded((open) => !open)}

@@ -5,11 +5,10 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
-import { EffectiveFrom } from '@/features/ux-kit/effective-from';
 import { policyNoteText } from '@/features/ux-kit/format/built-in-default';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { ConsoleRefusal } from '../components/console-refusal';
+import { EffectiveFromText, PlantInstant } from '../components/plant-instant';
 
 const STATE_LABELS: Readonly<Record<string, string>> = { draft: 'Draft — waiting for the source owner', approved: 'Approved', retired: 'Retired' };
 
@@ -35,15 +34,15 @@ export function MappingVersionCard({ version, timezone }: { version: SourceStatu
     <div id={`status-mapping-${version.id}`} className="scroll-mt-24 space-y-2 rounded-md border p-3 text-sm" data-testid="mapping-version" data-state={version.state} data-in-force={version.inForce}>
       <p className="flex flex-wrap items-center gap-2">
         <span className="font-medium">Version {version.version}</span>
-        <Badge variant={version.state === 'draft' ? 'outline' : 'secondary'}>{STATE_LABELS[version.state] ?? version.state}</Badge>
-        {version.inForce && <Badge data-testid="mapping-in-force">In force</Badge>}
+        <Badge variant={version.state === 'draft' ? 'outline' : 'secondary'} className="whitespace-nowrap">{STATE_LABELS[version.state] ?? version.state}</Badge>
+        {version.inForce && <Badge className="whitespace-nowrap" data-testid="mapping-in-force">In force</Badge>}
       </p>
       <p className="text-muted-foreground">
-        <EffectiveFrom iso={version.effectiveFrom} tz={timezone} prefix="From" />
+        <EffectiveFromText iso={version.effectiveFrom} tz={timezone} prefix="From" />
         {version.effectiveTo ? (
           <>
             {' '}
-            until <PlantTime iso={version.effectiveTo} tz={timezone} withDate />
+            until <PlantInstant iso={version.effectiveTo} tz={timezone} />
           </>
         ) : (
           ' (open-ended)'
@@ -61,7 +60,7 @@ export function MappingVersionCard({ version, timezone }: { version: SourceStatu
         {version.approvedAt && (
           <>
             {' '}
-            · approved by {resolvedActorText(version.approvedBy, version.approvedByName)} on <PlantTime iso={version.approvedAt} tz={timezone} withDate />{' '}
+            · approved by {resolvedActorText(version.approvedBy, version.approvedByName)} on <PlantInstant iso={version.approvedAt} tz={timezone} />{' '}
             <SelfDecisionBadge selfDecided={version.selfDecided} />
           </>
         )}

@@ -13,7 +13,9 @@ import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anc
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
-import { AddDialog } from '@/features/ux-kit/add-dialog';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
+import { FormDialog } from '../components/form-dialog';
+import { SETUP_LOOK } from '../model/setup-look';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { RateForm } from './rate-form';
 import { VersionActions } from './version-actions';
@@ -49,7 +51,7 @@ function columnsOf(profile: ProfileView, timezone: string, withActions: boolean)
       nowrap: true,
       cell: (r) => (
         <span className="text-xs">
-          <PlantTime iso={r.effectiveFrom} tz={timezone} withDate /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={timezone} withDate /> : 'open-ended'}
+          <PlantTime iso={r.effectiveFrom} tz={timezone} withDate withZone={false} /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={timezone} withDate withZone={false} /> : 'open-ended'}
         </span>
       ),
     },
@@ -79,33 +81,35 @@ export function RateTable({ profile, timezone }: RateTableProps) {
   const items = byKind(flattenPages(rates.data?.pages));
   useSeekAnchor(anchor, infiniteListState(rates));
   const add = canWriteProfiles && (
-    <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="rate-add">
+    <Button size="sm" variant="outline" className="whitespace-nowrap" onClick={() => setAdding(true)} data-testid="rate-add">
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
       Add rate version
     </Button>
   );
   return (
-    <Section title="Rates" actions={add || undefined}>
-      <div className="space-y-3" data-testid="rate-table">
-        <FocusedListNotice anchor={anchor} what="rate versions" />
-        <AddDialog open={adding} onOpenChange={setAdding} title="Add rate version" description="A draft rate version of this profile; another manager approves it." testId="rate-dialog">
-          <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />
-        </AddDialog>
-        <DataTable
-          caption="Rate versions"
-          columns={columnsOf(profile, timezone, canApproveProfiles)}
-          rows={items}
-          getRowKey={(r) => r.id}
-          getRowAnchor={(r) => `rate-${r.id}`}
-          status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
-          empty={{ text: 'No rate versions yet. Plans need approved planning and sustained rates.' }}
-        />
-        {rates.hasNextPage && (
-          <Button size="sm" variant="ghost" onClick={() => void rates.fetchNextPage()} disabled={rates.isFetchingNextPage}>
-            Load older rate versions
-          </Button>
-        )}
-      </div>
-    </Section>
+    <ReportLookContext.Provider value={SETUP_LOOK}>
+      <Section title="Rates" actions={add || undefined} className="rounded-lg border bg-card p-4">
+        <div className="space-y-3" data-testid="rate-table">
+          <FocusedListNotice anchor={anchor} what="rate versions" />
+          <FormDialog open={adding} onOpenChange={setAdding} title="Add rate version" info="A draft rate version of this profile; another manager approves it." testId="rate-dialog">
+            <RateForm profileId={profile.id} timebase={profile.rateTimebase} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />
+          </FormDialog>
+          <DataTable
+            caption="Rate versions"
+            columns={columnsOf(profile, timezone, canApproveProfiles)}
+            rows={items}
+            getRowKey={(r) => r.id}
+            getRowAnchor={(r) => `rate-${r.id}`}
+            status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
+            empty={{ title: 'No rate versions', text: 'No rate versions yet. Plans need approved planning and sustained rates.' }}
+          />
+          {rates.hasNextPage && (
+            <Button size="sm" variant="ghost" onClick={() => void rates.fetchNextPage()} disabled={rates.isFetchingNextPage}>
+              Load older rate versions
+            </Button>
+          )}
+        </div>
+      </Section>
+    </ReportLookContext.Provider>
   );
 }

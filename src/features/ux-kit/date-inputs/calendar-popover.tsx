@@ -35,7 +35,7 @@ export function CalendarPopover({ label, value, onSelect, weekStart, fallbackDat
   const preference = useCalendarPreference();
   const [open, setOpen] = useState(false);
   const panel = {
-    value: value || fallbackDate || new Date().toISOString().slice(0, 10),
+    value: value || fallbackDate,
     selected: value,
     calendar: shown.calendar ?? preference.calendar,
     digits: shown.digits ?? preference.digits,

@@ -91,7 +91,7 @@ export function PolicyForm({ source, freshBasis = null, onSaved, cancelTo }: Pol
       </div>
       <FinanceField id="effectiveFrom" label="Starts" withLabel={false} error={fieldError('effectiveFrom')}>
         <DateTimeInput
-          label={`Starts (${timezone})`}
+          label="Starts"
           value={values.effectiveFrom}
           timeZone={timezone}
           calendar={calendar}

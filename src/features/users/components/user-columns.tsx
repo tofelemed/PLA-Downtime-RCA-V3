@@ -18,7 +18,10 @@ export function plantRolesText(user: UserView): string {
   return user.plantRoles ? roleListLabel(user.plantRoles) : roleLabel(user.role);
 }
 
-/** Columns of the users table (name and e-mail, plant roles, plant, status, open). */
+/**
+ * Columns of the users table (name and e-mail, plant roles, status, open). No plant column (cleanup 25 Oct 2026):
+ * it repeats the selected plant on every row; a user from another plant carries the "From <home plant>" badge.
+ */
 export const USER_COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
   {
     id: 'name',
@@ -34,7 +37,6 @@ export const USER_COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
     ),
   },
   { id: 'role', header: 'Plant roles', cell: plantRolesText },
-  { id: 'place', header: 'Plant', cell: placeOf },
   { id: 'status', header: 'Status', cell: (user) => <UserStatusBadge isActive={user.isActive} />, nowrap: true },
   {
     id: 'open',

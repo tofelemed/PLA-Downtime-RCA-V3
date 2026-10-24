@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { labelOf, SAMPLE_QUALITY_LABELS } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { Field } from '../components/field';
+import { FilterField } from '../components/filter-field';
 import { NativeSelect } from '../components/native-select';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { sampleDisplayValue, type SignalSample } from './historian-model';
@@ -21,7 +21,7 @@ export function SamplesTable({ series, timezone }: SamplesTableProps) {
   const uom = shown?.uom ?? null;
   const columns = useMemo<DataTableColumn<SignalSample>[]>(
     () => [
-      { id: 'time', header: 'Time', nowrap: true, cell: (sample) => <PlantTime iso={sample.observedAt} tz={timezone} withDate /> },
+      { id: 'time', header: 'Time', nowrap: true, cell: (sample) => <PlantTime iso={sample.observedAt} tz={timezone} withDate withZone={false} /> },
       { id: 'value', header: uom ? `Value (${uom})` : 'Value', align: 'right', nowrap: true, cell: (sample) => sampleDisplayValue(sample, digits) },
       { id: 'quality', header: 'Quality', nowrap: true, cell: (sample) => labelOf(SAMPLE_QUALITY_LABELS, sample.quality) },
       { id: 'revisions', header: 'Revisions', align: 'right', nowrap: true, cell: (sample) => sample.revisions },
@@ -32,10 +32,10 @@ export function SamplesTable({ series, timezone }: SamplesTableProps) {
   return (
     <div className="space-y-3" data-testid="trend-samples">
       {series.length > 1 && (
-        <div className="max-w-xs">
-          <Field id="samples-of" label="Samples of">
+        <div className="flex flex-wrap items-end gap-3">
+          <FilterField id="samples-of" label="Samples of" className="w-full sm:w-64">
             <NativeSelect id="samples-of" value={shown.id} options={series.map((entry) => ({ value: entry.id, label: entry.name }))} onChange={setChosen} />
-          </Field>
+          </FilterField>
         </div>
       )}
       <DataTable

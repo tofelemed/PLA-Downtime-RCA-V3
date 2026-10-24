@@ -10,7 +10,7 @@ import { AddFxRate } from './fx/add-fx-rate';
 
 function NewPolicyVersion() {
   return (
-    <Button asChild data-testid="policy-new">
+    <Button asChild size="sm" className="whitespace-nowrap" data-testid="policy-new">
       <Link to="/finance/policies/new">
         <ActionIcon.add aria-hidden="true" />
         New policy version

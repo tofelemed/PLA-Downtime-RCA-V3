@@ -12,9 +12,10 @@ describe('WeekStartForm (DT-10)', () => {
     expect(onSave).toHaveBeenCalledWith('saturday');
   });
 
-  it('read-only users see the setting and why they cannot change it', () => {
+  it('read-only users see the setting as text (no disabled radios) and why they cannot change it', () => {
     render(<WeekStartForm saved="saturday" canEdit={false} pending={false} error={null} onSave={vi.fn()} />);
-    expect(screen.getByRole('radio', { name: /Saturday/ })).toBeChecked();
+    expect(screen.getByTestId('week-start-value')).toHaveTextContent('First day of the week: Saturday');
+    expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.queryByTestId('save-week-start')).toBeNull();
     expect(screen.getByText(/Only a plant administrator/)).toBeInTheDocument();
   });

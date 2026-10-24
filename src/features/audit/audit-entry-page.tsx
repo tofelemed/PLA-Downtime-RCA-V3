@@ -7,6 +7,7 @@ import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { resolvedActorText } from '@/features/ux-kit/labels/actor-labels';
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { actionLabel, entityLabel } from './components/audit-columns';
@@ -54,7 +55,12 @@ function EntryDetail({ entry }: { entry: AuditEntryView }) {
           ))}
         </dl>
       </Section>
-      <Section title="Technical details" description="As recorded, including the record reference, for support and investigations." collapsible defaultOpen={false}>
+      <Section
+        title="Technical details"
+        titleAside={<KpiInfo label="Technical details" text="As recorded, including the record reference, for support and investigations." />}
+        collapsible
+        defaultOpen={false}
+      >
         <dl className="mb-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[10rem_1fr]">
           <dt className="text-muted-foreground">Record reference</dt>
           <dd className="break-all font-mono text-xs">{entry.entityId}</dd>

@@ -16,7 +16,7 @@ export function ReadinessResults({ snapshot, timezone }: { snapshot: EquipmentRe
   const counts = (status: string) => numbers.number(snapshot.checks.filter((check) => check.status === status).length);
   return <div className="space-y-3">
     <p role="status" className="text-sm">Passed {counts('ready')} · Missing {counts('missing')} · Needs attention {counts('needs_attention')} · Not checked {counts('not_checked')} · Optional {counts('optional')}</p>
-    <p className="text-xs text-muted-foreground">Last checked: {formatDateTime(snapshot.asOf, { ...preference, timeZone: timezone, withZone: true })}. Results apply to the product, mode and window above. Manual review and period evidence gates remain required.</p>
+    <p className="text-xs text-muted-foreground">Last checked: {formatDateTime(snapshot.asOf, { ...preference, timeZone: timezone, withZone: false })}</p>
     <details open={snapshot.checks.some((check) => check.status === 'missing' || check.status === 'needs_attention')}>
       <summary className="cursor-pointer font-medium">Readiness checks and next actions</summary>
       <ul aria-label="Equipment readiness checks" className="mt-3 grid gap-3 lg:grid-cols-2">

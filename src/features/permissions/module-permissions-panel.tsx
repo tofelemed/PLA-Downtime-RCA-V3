@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
 import type { UserView } from '@/api/v2/types/administration';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
+import { AdminCard } from '@/features/admin/shared/admin-card';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { useMenuFlags } from '@/features/shell/use-menu-flags';
 import { roleListLabel } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
-import { EntityIcon, StatusIcon } from '@/lib/icons';
+import { EntityIcon } from '@/lib/icons';
 import { sidebarNameOf } from '@/features/auth/navigation-items';
 import { reachableModules, userRolesInPlant } from './reachable-modules';
 
@@ -22,11 +22,7 @@ export interface ModulePermissionsPanelProps {
  */
 export function ModulePermissionsPanel({ user }: ModulePermissionsPanelProps) {
   return (
-    <Section
-      title="Module permissions"
-      headingLevel={2}
-      description={user ? `What ${user.name} reaches in this plant` : 'Select a user to see the modules they reach'}
-    >
+    <AdminCard title="Module permissions" testId="module-permissions">
       {user ? (
         <ReachableModules user={user} />
       ) : (
@@ -35,7 +31,7 @@ export function ModulePermissionsPanel({ user }: ModulePermissionsPanelProps) {
           <p>Select a user to see their permissions</p>
         </div>
       )}
-    </Section>
+    </AdminCard>
   );
 }
 
@@ -45,7 +41,8 @@ function ReachableModules({ user }: { user: UserView }) {
   const acting = selection?.tenant?.id || session?.tenant?.id || null;
   const groups = reachableModules(userRolesInPlant(user, acting), useMenuFlags());
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">What {user.name} reaches in this plant</p>
       {groups.length === 0 ? (
         <p className="text-sm text-muted-foreground" data-testid="modules-none">{user.name} reaches no page in this plant.</p>
       ) : (
@@ -58,19 +55,23 @@ function ReachableModules({ user }: { user: UserView }) {
           ))}
         </ul>
       )}
-      <Alert data-testid="permissions-read-only-note">
-        <StatusIcon.info aria-hidden="true" className="h-4 w-4" />
-        <AlertTitle>Per-user permission overrides are not stored</AlertTitle>
-        <AlertDescription>
-          <p>
-            This is the menu of <strong>{roleListLabel(user.plantRoles ?? [user.role])}</strong> in this plant; the server decides from the
-            user’s roles and access grants. Grant or remove access on the user’s page.
-          </p>
-          <Button asChild variant="outline" size="sm" className="mt-3">
-            <Link to={`/users/${user.id}`}>Open user and access</Link>
-          </Button>
-        </AlertDescription>
-      </Alert>
+      <ReadOnlyNote user={user} />
+    </div>
+  );
+}
+
+/** Why there is nothing to save, in one line (the detail behind ⓘ), and the way to the user's access grants. */
+function ReadOnlyNote({ user }: { user: UserView }) {
+  const why = `This is the menu of ${roleListLabel(user.plantRoles ?? [user.role])} in this plant; the server decides from the user's roles and access grants. Grant or remove access on the user's page.`;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm" data-testid="permissions-read-only-note">
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        Per-user permission overrides are not stored
+        <KpiInfo label="permission overrides" text={why} />
+      </span>
+      <Button asChild variant="outline" className="h-9 whitespace-nowrap">
+        <Link to={`/users/${user.id}`}>Open user and access</Link>
+      </Button>
     </div>
   );
 }

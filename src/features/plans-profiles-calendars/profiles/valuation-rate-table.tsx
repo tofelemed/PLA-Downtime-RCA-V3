@@ -11,7 +11,9 @@ import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { ActionIcon } from '@/lib/icons';
-import { AddDialog } from '@/features/ux-kit/add-dialog';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
+import { FormDialog } from '../components/form-dialog';
+import { SETUP_LOOK } from '../model/setup-look';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { ValuationRateForm } from './valuation-rate-form';
 import { VersionActions } from './version-actions';
@@ -52,7 +54,7 @@ function columnsOf(timezone: string, withActions: boolean): DataTableColumn<Valu
       nowrap: true,
       cell: (r) => (
         <span className="text-xs">
-          <PlantTime iso={r.effectiveFrom} tz={timezone} withDate /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={timezone} withDate /> : 'open-ended'}
+          <PlantTime iso={r.effectiveFrom} tz={timezone} withDate withZone={false} /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={timezone} withDate withZone={false} /> : 'open-ended'}
         </span>
       ),
     },
@@ -71,34 +73,36 @@ export function ValuationRateTable({ profile, timezone }: ValuationRateTableProp
   const items = flattenPages(rates.data?.pages);
   useSeekAnchor(anchor, infiniteListState(rates));
   const add = canMaintainValuation && (
-    <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+    <Button size="sm" variant="outline" className="whitespace-nowrap" onClick={() => setAdding(true)} data-testid="valuation-rate-add">
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
       Add valuation rate
     </Button>
   );
   return (
-    <Section title="Valuation rates" actions={add || undefined}>
-      <div className="space-y-3" data-testid="valuation-rate-table">
-        <LegacyCost profile={profile} />
-        <FocusedListNotice anchor={anchor} what="valuation rates" />
-        <AddDialog open={adding} onOpenChange={setAdding} title="Add valuation rate" description="A draft margin or standard-cost version of this profile; another person approves it." testId="valuation-rate-dialog">
-          <ValuationRateForm profileId={profile.id} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />
-        </AddDialog>
-        <DataTable
-          caption="Valuation rate versions"
-          columns={columnsOf(timezone, canApproveValuation)}
-          rows={items}
-          getRowKey={(r) => r.id}
-          getRowAnchor={(r) => `valuation-rate-${r.id}`}
-          status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
-          empty={{ text: 'No valuation rates: losses of this profile stay unvalued.' }}
-        />
-        {rates.hasNextPage && (
-          <Button size="sm" variant="ghost" onClick={() => void rates.fetchNextPage()} disabled={rates.isFetchingNextPage}>
-            Load older valuation rates
-          </Button>
-        )}
-      </div>
-    </Section>
+    <ReportLookContext.Provider value={SETUP_LOOK}>
+      <Section title="Valuation rates" actions={add || undefined} className="rounded-lg border bg-card p-4">
+        <div className="space-y-3" data-testid="valuation-rate-table">
+          <LegacyCost profile={profile} />
+          <FocusedListNotice anchor={anchor} what="valuation rates" />
+          <FormDialog open={adding} onOpenChange={setAdding} title="Add valuation rate" info="A draft margin or standard-cost version of this profile; another person approves it." testId="valuation-rate-dialog">
+            <ValuationRateForm profileId={profile.id} uom={profile.quantityUom} timezone={timezone} onDone={() => setAdding(false)} />
+          </FormDialog>
+          <DataTable
+            caption="Valuation rate versions"
+            columns={columnsOf(timezone, canApproveValuation)}
+            rows={items}
+            getRowKey={(r) => r.id}
+            getRowAnchor={(r) => `valuation-rate-${r.id}`}
+            status={{ isLoading: rates.isLoading, isError: rates.isError, error: rates.error, onRetry: () => void rates.refetch() }}
+            empty={{ title: 'No valuation rates', text: 'No valuation rates: losses of this profile stay unvalued.' }}
+          />
+          {rates.hasNextPage && (
+            <Button size="sm" variant="ghost" onClick={() => void rates.fetchNextPage()} disabled={rates.isFetchingNextPage}>
+              Load older valuation rates
+            </Button>
+          )}
+        </div>
+      </Section>
+    </ReportLookContext.Provider>
   );
 }

@@ -178,4 +178,43 @@ describe('source priority screen (maker-checker source authority)', () => {
     expect(refusal.getAttribute('data-code')).toBe('INVALID_POLICY');
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ unitId: 'unit-1' });
   });
+
+  it('cleanup: no header description (behind ⓘ); Unit labelled above an h-9 select; In force now and versions as cards; times without zone', async () => {
+    actAs('viewer', 'viewer-1');
+    renderPage();
+    await screen.findAllByTestId('authority-version');
+    expect(screen.queryByText(/Which measurement source counts/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Source priority' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Unit').className).toContain('h-9');
+    expect(screen.getByRole('region', { name: 'In force now' }).className).toContain('bg-card');
+    expect(screen.getByRole('region', { name: 'Versions of this unit and of the whole plant' })).toBeInTheDocument();
+    expect(screen.queryByText(/Asia\/Tehran/)).toBeNull();
+  });
+
+  it('New version opens the editor in a side panel: Applies to focused first, Cancel then Save draft, Esc closes', async () => {
+    actAs('integration_admin', 'integration-1');
+    renderPage();
+    expect(screen.queryByTestId('authority-draft-form')).toBeNull();
+    fireEvent.click(await screen.findByTestId('authority-new'));
+    const panel = await screen.findByRole('dialog');
+    expect(within(panel).getByRole('heading', { name: 'New source priority version' })).toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(within(panel).getByTestId('authority-scope')));
+    await within(panel).findByTestId('authority-save');
+    const buttons = within(panel).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(buttons.indexOf('Cancel')).toBe(buttons.indexOf('Save draft') - 1);
+    fireEvent.keyDown(panel, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('authority-draft-form')).toBeNull());
+  });
+
+  it('Reject… asks for a required reason in a confirm dialog; Esc closes it', async () => {
+    actAs('production_accountant', 'checker-1');
+    renderPage();
+    const [reject] = await screen.findAllByTestId('authority-reject');
+    fireEvent.click(reject);
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('Reject this version?')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Reject version' })).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
 });

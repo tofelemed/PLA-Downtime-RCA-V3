@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import type { SignalView } from '@/api/v2/types/integration-mappings';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/features/ux-kit/icon-button';
+import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { ActionIcon } from '@/lib/icons';
-import { Field } from '../components/field';
+import { FilterField } from '../components/filter-field';
 import { NativeSelect } from '../components/native-select';
 import { MAX_TREND_SIGNALS } from './historian-model';
 
@@ -15,12 +14,15 @@ export interface SignalPickerProps {
   onChange: (ids: readonly string[]) => void;
 }
 
-/** Chooses up to five current signals of the plant for one trend; each chosen signal can be removed. */
+const FULL_REASON = `At most ${MAX_TREND_SIGNALS} signals per trend.`;
+
+/**
+ * Chooses up to five current signals of the plant for one trend: a labelled h-9 select and its Add button,
+ * laid out as items of the page's filter row (the chosen signals are listed by `ChosenSignals`).
+ */
 export function SignalPicker({ catalog, chosenIds, isLoading, onChange }: SignalPickerProps) {
   const [candidate, setCandidate] = useState('');
-  const current = catalog.filter((signal) => signal.effectiveTo === null);
-  const options = current.filter((signal) => !chosenIds.includes(signal.id)).map((signal) => ({ value: signal.id, label: signal.name }));
-  const nameOf = (id: string) => catalog.find((signal) => signal.id === id)?.name ?? 'Unknown signal';
+  const options = catalog.filter((signal) => signal.effectiveTo === null && !chosenIds.includes(signal.id)).map((signal) => ({ value: signal.id, label: signal.name }));
   const full = chosenIds.length >= MAX_TREND_SIGNALS;
   const add = () => {
     if (!candidate) return;
@@ -28,29 +30,17 @@ export function SignalPicker({ catalog, chosenIds, isLoading, onChange }: Signal
     setCandidate('');
   };
   return (
-    <div className="space-y-2" data-testid="signal-picker">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-64">
-          <Field id="trend-signal" label="Signal" hint={full ? `At most ${MAX_TREND_SIGNALS} signals per trend.` : undefined}>
-            <NativeSelect id="trend-signal" testId="trend-signal" value={candidate} disabled={full} placeholder={isLoading ? 'Loading…' : 'Choose a signal'} options={options} onChange={setCandidate} />
-          </Field>
-        </div>
-        <Button size="sm" variant="outline" onClick={add} disabled={!candidate || full} data-testid="trend-add">
+    <div className="contents" data-testid="signal-picker">
+      <FilterField id="trend-signal" label="Signal" className="w-full sm:w-64">
+        <NativeSelect id="trend-signal" testId="trend-signal" value={candidate} disabled={full} placeholder={isLoading ? 'Loading…' : 'Choose a signal'} options={options} onChange={setCandidate} />
+      </FilterField>
+      {/* the reason under the button, in its own column: the row stays aligned on the controls' bottom edge */}
+      <div className="flex flex-col gap-1">
+        <Button size="sm" variant="outline" className="h-9 whitespace-nowrap" onClick={add} disabled={!candidate || full} aria-describedby={full ? 'trend-full' : undefined} data-testid="trend-add">
           <ActionIcon.add className="mr-1 h-4 w-4" aria-hidden="true" /> Add to trend
         </Button>
+        <DisabledReason id="trend-full" reason={full ? FULL_REASON : null} />
       </div>
-      {chosenIds.length > 0 && (
-        <ul className="flex flex-wrap gap-2" aria-label="Signals in the trend">
-          {chosenIds.map((id) => (
-            <li key={id}>
-              <Badge variant="secondary" className="gap-1 pr-0">
-                {nameOf(id)}
-                <IconButton label={`Remove ${nameOf(id)}`} icon={ActionIcon.remove} className="h-5 w-5" onClick={() => onChange(chosenIds.filter((other) => other !== id))} />
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

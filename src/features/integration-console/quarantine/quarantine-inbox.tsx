@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useIngestionExceptionsPage, usePrefetchIngestionException } from '@/api/v2/queries/ingestion-exceptions';
 import { useConnections } from '@/api/v2/queries/integration-connections';
 import type { IngestionExceptionView } from '@/api/v2/types/integrations';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { EXCEPTION_STATE_LABELS, INGESTION_ERROR_LABELS, labelOf } from '@/features/ux-kit/labels';
@@ -12,6 +13,7 @@ import { useQuarantineFilters } from '../hooks/use-quarantine-filters';
 import { ERROR_CODE_INFO, exceptionSummary } from '../model/exception-flow';
 import { exceptionPath } from '../paths';
 import { QuarantineFilters } from './quarantine-filters';
+import { IntegrationCard } from '../components/integration-card';
 import { SourceRef } from '../components/source-ref';
 
 export interface QuarantineInboxProps {
@@ -26,6 +28,8 @@ interface ColumnContext {
   nameOf: (id: string) => string;
   prefetch: (id: string) => void;
 }
+
+const QUARANTINE_INFO = 'Source records that could not be processed, newest first: unmapped PI events and rejected MQTT messages. Open an item to resolve it.';
 
 function columnsOf({ timezone, from, nameOf, prefetch }: ColumnContext): DataTableColumn<IngestionExceptionView>[] {
   return [
@@ -52,8 +56,17 @@ function columnsOf({ timezone, from, nameOf, prefetch }: ColumnContext): DataTab
     { id: 'source', header: 'Source object', cell: (item) => <SourceRef value={item.sourceObjectId} /> },
     { id: 'what', header: 'Detail', cell: (item) => <span className="block max-w-56 truncate text-xs" title={exceptionSummary(item)}>{exceptionSummary(item)}</span> },
     { id: 'occurrences', header: 'Occurrences', align: 'right', nowrap: true, cell: (item) => item.occurrences },
-    { id: 'lastSeen', header: 'Last seen', nowrap: true, cell: (item) => <PlantTime iso={item.lastSeen} tz={timezone} withDate stacked /> },
-    { id: 'state', header: 'State', nowrap: true, cell: (item) => labelOf(EXCEPTION_STATE_LABELS, item.state) },
+    { id: 'lastSeen', header: 'Last seen', nowrap: true, cell: (item) => <PlantTime iso={item.lastSeen} tz={timezone} withDate withZone={false} /> },
+    {
+      id: 'state',
+      header: 'State',
+      nowrap: true,
+      cell: (item) => (
+        <Badge variant={item.state === 'open' ? 'outline' : 'secondary'} className="whitespace-nowrap">
+          {labelOf(EXCEPTION_STATE_LABELS, item.state)}
+        </Badge>
+      ),
+    },
   ];
 }
 
@@ -74,17 +87,15 @@ export function QuarantineInbox({ timezone, connectionId }: QuarantineInboxProps
     const nameOf = (id: string) => names.find((connection) => connection.id === id)?.displayName ?? 'Unknown connection';
     return columnsOf({ timezone, from, nameOf, prefetch });
   }, [timezone, from, names, prefetch]);
+  const refresh = (
+    <Button size="sm" variant="outline" onClick={() => list.status.onRetry()} disabled={list.status.isRefreshing} data-testid="quarantine-refresh">
+      <ActionIcon.refresh className="mr-1 h-4 w-4" aria-hidden="true" />
+      Refresh
+    </Button>
+  );
   return (
-    <section aria-label="Quarantine" className="space-y-3" data-testid="quarantine-inbox">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="flex-1">
-          <QuarantineFilters filters={filters} connections={connections.items} fixedConnection={Boolean(connectionId)} onChange={setFilters} />
-        </div>
-        <Button size="sm" variant="outline" onClick={() => list.status.onRetry()} disabled={list.status.isRefreshing} data-testid="quarantine-refresh">
-          <ActionIcon.refresh className="mr-1 h-4 w-4" aria-hidden="true" />
-          Refresh
-        </Button>
-      </div>
+    <IntegrationCard title="Quarantined items" info={QUARANTINE_INFO} actions={refresh} testId="quarantine-inbox">
+      <QuarantineFilters filters={filters} connections={connections.items} fixedConnection={Boolean(connectionId)} onChange={setFilters} />
       <DataTable
         caption="Quarantined items"
         columns={columns}
@@ -94,6 +105,6 @@ export function QuarantineInbox({ timezone, connectionId }: QuarantineInboxProps
         status={list.status}
         empty={{ title: 'Nothing quarantined', text: 'Nothing is waiting for these filters.' }}
       />
-    </section>
+    </IntegrationCard>
   );
 }

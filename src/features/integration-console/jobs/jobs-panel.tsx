@@ -4,11 +4,14 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { ListPager, useClientPager } from '@/features/ux-kit/data-table';
 import { Section } from '@/features/ux-kit/page-layout';
+import { IntegrationCard } from '../components/integration-card';
 import { useJobClock } from '../hooks/use-job-clock';
 import type { SourceScope } from '../model/discovery';
 import { JobCreateForm } from './job-create-form';
 import { JobRow } from './job-row';
 import { ReplayWizard } from './replay-wizard';
+
+const JOBS_INFO = 'Durable ingestion jobs of this connection with their live lease, heartbeat, cursor and health from the server. Start, pause, resume, drain and stop ask for a reason kept in the audit trail.';
 
 export interface JobsPanelProps {
   connectionId: string;
@@ -40,7 +43,7 @@ export function JobsPanel({ connectionId, scope, timezone, jobs, onScope }: Jobs
           <JobCreateForm connectionId={connectionId} scope={scope} onScope={onScope} />
         </Section>
       )}
-      <Section title="Jobs" headingLevel={3}>
+      <IntegrationCard title="Jobs" info={JOBS_INFO}>
         <DataState state={dataStateOf(jobs, { isEmpty: jobs.items.length === 0 })} error={jobs.error} detail={jobs.items.length === 0 ? 'No job yet for this connection.' : undefined}>
           <ul className="space-y-2" aria-label="Jobs">
             {paged.rows.map((job) => (
@@ -49,7 +52,7 @@ export function JobsPanel({ connectionId, scope, timezone, jobs, onScope }: Jobs
           </ul>
           <ListPager pager={paged.pager} label="Job pages" />
         </DataState>
-      </Section>
+      </IntegrationCard>
       {canWriteIntegration && <ReplayWizard connectionId={connectionId} timezone={timezone} />}
     </div>
   );

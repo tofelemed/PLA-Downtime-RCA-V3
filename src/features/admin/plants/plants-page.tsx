@@ -17,7 +17,7 @@ export function PlantsPage() {
   return (
     <PageGate title={title} allowed={canAdministerTenant} deniedText="Only the plant’s administrators can open organizations and plants.">
       <Page width="wide">
-        <PageHeader title={title} description="Companies, the plants they own and the sites of the selected plant. New units, assets and products go to the plant selected in the header." />
+        <PageHeader title={title} />
         <PlantsSection />
         <SitesSection />
       </Page>

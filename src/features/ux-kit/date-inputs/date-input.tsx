@@ -13,8 +13,8 @@ import { WithTrailing } from './with-trailing';
 export interface CalendarPickerOptions {
   /** defaults to the acting plant's week start */
   weekStart?: string | null;
-  /** the date the calendar opens on while the field is empty */
-  fallbackDate?: string;
+  /** the date the calendar opens on while the field is empty (today on the plant clock) */
+  fallbackDate: string;
 }
 
 /** Props of {@link DateInput}. Dates are ISO `YYYY-MM-DD` whatever calendar is shown. */

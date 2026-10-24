@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ConsoleRefusal } from '../components/console-refusal';
-import { Field } from '../components/field';
+import { FilterField } from '../components/filter-field';
 import { canReplayAfterDryRun } from '../model/exception-flow';
 import { ReplayRunStatus } from './replay-run-status';
 
@@ -40,11 +40,11 @@ export function ReplayWizard({ connectionId, timezone }: { connectionId: string;
   return (
     <Section title="Backfill from retained data (replay)" headingLevel={3}>
       <div className="space-y-3" data-testid="replay-wizard">
-        <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
-          <DateRangeInput label="Period" value={range} timeZone={timezone} onChange={choose} />
-          <Field id="replay-reason" label="Reason (audited)">
-            <Input id="replay-reason" value={reason} onChange={(event) => setReason(event.target.value)} />
-          </Field>
+        <div className="flex flex-wrap items-end gap-3">
+          <DateRangeInput label="Period" value={range} timeZone={timezone} onChange={choose} textEntry toLabel="To" calendarPicker toolbar />
+          <FilterField id="replay-reason" label="Reason (audited)" className="w-full sm:w-72">
+            <Input id="replay-reason" className="h-9" value={reason} onChange={(event) => setReason(event.target.value)} />
+          </FilterField>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => void start(true)} disabled={request.isPending || !range.from || !range.to} data-testid="replay-dry-run">

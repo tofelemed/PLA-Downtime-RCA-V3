@@ -3,12 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { usePlantDirectory } from '@/features/plant-selector/use-plant-directory';
+import { Button } from '@/components/ui/button';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
-import { Section } from '@/features/ux-kit/page-layout';
 import { EntityIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant } from '@/api/v2/types/plant-directory';
 import { MasterDataLayout } from '../components/master-data-layout';
+import { RecordListCard } from '../components/record-list-card';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { HierarchyEditLink } from './hierarchy-edit-link';
 import { HierarchyNode } from './hierarchy-node';
@@ -64,6 +66,8 @@ function Tree() {
   );
 }
 
+const HIERARCHY_INFO = 'Organizations, plants, units and assets of the plants you can work in. Units and assets are those of the plant selected in the header.';
+
 /**
  * `/master-data/hierarchy`: organization → plants → units → assets. Units and assets load when their node
  * opens; a search lists matching units and assets of the selected plant instead of the tree.
@@ -73,21 +77,22 @@ export function HierarchyPage() {
   const q = params.get('q') ?? '';
   const { canAdministerTenant } = useCapabilities();
   const setQ = (next: string) => setParams(next ? { q: next } : {}, { replace: true });
+  const plants = canAdministerTenant ? (
+    <Button asChild size="sm" variant="outline" className="h-9">
+      <Link to="/setup/plants">Organizations &amp; plants</Link>
+    </Button>
+  ) : undefined;
   return (
-    <MasterDataLayout title="Plant hierarchy" description="Organization, plants, units and assets of the plants you can work in.">
-      <Section
-        title="Hierarchy"
-        description={
-          canAdministerTenant ? (
-            <>
-              Organizations and plants are managed in <Link className="underline" to="/setup/plants">Setup › Organizations &amp; plants</Link>.
-            </>
-          ) : undefined
-        }
-      >
-        <DebouncedSearchInput value={q} onChange={setQ} label="Search units and assets" placeholder="Search units and assets..." className="max-w-sm" />
+    <MasterDataLayout title="Plant hierarchy">
+      <RecordListCard title="Hierarchy" info={HIERARCHY_INFO} actions={plants} testId="hierarchy-card">
+        <div className={FIELD_CLASS}>
+          <p className="text-sm font-medium leading-none" aria-hidden="true">
+            Search
+          </p>
+          <DebouncedSearchInput value={q} onChange={setQ} label="Search units and assets" placeholder="Search units and assets..." className="w-full sm:w-72 [&_input]:h-9" />
+        </div>
         {q.trim() ? <HierarchySearchResults q={q.trim()} /> : <Tree />}
-      </Section>
+      </RecordListCard>
     </MasterDataLayout>
   );
 }

@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ReadOnlyField } from '@/features/master-data/components/read-only-field';
 import { FormField } from '../shared/form-field';
 
 /** Shown under a read-only code on the edit pages (DECISIONS 2026-10-19). */
@@ -30,10 +31,30 @@ export interface HierarchyFieldsProps {
   /** why the time zone cannot change (field disabled); null / undefined = editable */
   timezoneLockedReason?: string | null;
   disabled?: boolean;
+  /** read-only users see the values as text under their labels */
+  asText?: boolean;
+}
+
+/** The values as text, for users who cannot change this record. */
+function HierarchyValues({ values, plant }: Pick<HierarchyFieldsProps, 'values' | 'plant'>) {
+  return (
+    <>
+      <ReadOnlyField label="Code" value={values.code} />
+      <ReadOnlyField label="Name" value={values.name} />
+      {plant && <ReadOnlyField label="Time zone" value={values.timezone} />}
+      <div className="sm:col-span-2">
+        <ReadOnlyField label="Description" value={values.description} multiline />
+      </div>
+    </>
+  );
 }
 
 /** Code, name, time zone (plants) and description of an organization or plant: create and edit pages. */
-export function HierarchyFields({ values, errors, set, plant, codeReadOnly, timezoneLockedReason, disabled }: HierarchyFieldsProps) {
+export function HierarchyFields(props: HierarchyFieldsProps) {
+  return props.asText ? <HierarchyValues values={props.values} plant={props.plant} /> : <EditableHierarchyFields {...props} />;
+}
+
+function EditableHierarchyFields({ values, errors, set, plant, codeReadOnly, timezoneLockedReason, disabled }: HierarchyFieldsProps) {
   const ids = { code: useId(), name: useId(), description: useId(), zone: useId() };
   const zoneLocked = Boolean(timezoneLockedReason);
   return (

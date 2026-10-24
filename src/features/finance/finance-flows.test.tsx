@@ -72,8 +72,8 @@ describe('finance — exchange rates and valuation policy commands', () => {
     reply = (call) => (call.method === 'POST' ? json(422, refusal('VALIDATION_FAILED', { fieldErrors: [{ field: 'rate', message: 'rate must be a decimal string with at most 10 decimals' }] })) : json(200, { items: [], nextCursor: null }));
     wrap(<FxRateForm timezone={TZ} onSaved={() => undefined} onCancel={() => undefined} />);
     fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '585000.1234567891' } });
-    fireEvent.change(screen.getByLabelText(`Valid from (${TZ}) date`), { target: { value: '2026-10-01' } });
-    fireEvent.change(screen.getByLabelText(`Valid from (${TZ}) time`), { target: { value: '06:00' } });
+    fireEvent.change(screen.getByLabelText('Valid from date'), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText('Valid from time'), { target: { value: '06:00' } });
     fireEvent.click(screen.getByTestId('fx-save'));
     await waitFor(() => expect(screen.getByTestId('field-error-rate').textContent).toMatch(/at most 10 decimals/));
     expect(posts()[0].url.pathname).toMatch(/\/v2\/fx-rates$/);
@@ -85,8 +85,8 @@ describe('finance — exchange rates and valuation policy commands', () => {
     reply = (call) => (call.method === 'POST' ? json(201, { ...FX, provisional: true }) : json(200, { items: [], nextCursor: null }));
     wrap(<FxRateForm timezone={TZ} onSaved={() => undefined} onCancel={() => undefined} />);
     fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '600000' } });
-    fireEvent.change(screen.getByLabelText(`Valid from (${TZ}) date`), { target: { value: '2026-10-01' } });
-    fireEvent.change(screen.getByLabelText(`Valid from (${TZ}) time`), { target: { value: '00:00' } });
+    fireEvent.change(screen.getByLabelText('Valid from date'), { target: { value: '2026-10-01' } });
+    fireEvent.change(screen.getByLabelText('Valid from time'), { target: { value: '00:00' } });
     fireEvent.click(screen.getByTestId('fx-provisional'));
     fireEvent.click(screen.getByTestId('fx-save'));
     await waitFor(() => expect(screen.getByTestId('field-error-effectiveTo').textContent).toMatch(/provisional rate needs an end date/));

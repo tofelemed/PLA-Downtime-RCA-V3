@@ -4,7 +4,7 @@ import { CalendarPopover, type CalendarPopoverProps } from './calendar-popover';
 
 const setup = (props: Partial<CalendarPopoverProps> = {}) => {
   const onSelect = vi.fn();
-  render(<CalendarPopover label="From" value="2026-10-15" onSelect={onSelect} calendar="gregorian" digits="latin" weekStart="saturday" {...props} />);
+  render(<CalendarPopover label="From" value="2026-10-15" onSelect={onSelect} calendar="gregorian" digits="latin" weekStart="saturday" fallbackDate="2026-10-15" {...props} />);
   const trigger = screen.getByRole('button', { name: 'Open calendar for From' });
   fireEvent.click(trigger);
   return { onSelect, trigger };

@@ -29,7 +29,7 @@ export function EventDialog({ title, initial = EMPTY, onSave, onClose }: { title
       <div className="grid gap-3 md:grid-cols-2">
         <ChoiceSelect id="event-type" label="Kind" value={fields.type ?? ''} options={choicesOf(DIAGRAM_EVENT_TYPES)} onChange={(type) => set({ type })} />
         <ChoiceSelect id="event-severity" label="Severity" value={fields.severity ?? ''} options={choicesOf(SEVERITIES)} onChange={(severity) => set({ severity })} />
-        <DateTimeInput label="When" value={fields.timestamp} timeZone={timezone} onChange={(timestamp) => set({ timestamp })} />
+        <DateTimeInput compact label="When" value={fields.timestamp} timeZone={timezone} onChange={(timestamp) => set({ timestamp })} />
         <TextInputField id="event-asset" label="Asset or unit" value={fields.asset ?? ''} maxLength={255} onChange={(asset) => set({ asset: asset || null })} />
       </div>
       <TextInputField id="event-description" label="Description" value={fields.description ?? ''} maxLength={2000} multiline onChange={(description) => set({ description: description || null })} />

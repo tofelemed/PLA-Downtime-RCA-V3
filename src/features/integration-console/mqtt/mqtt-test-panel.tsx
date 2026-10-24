@@ -2,6 +2,7 @@ import { useTestConnection } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { Button } from '@/components/ui/button';
 import { PlantTime } from '@/features/ux-kit/plant-time';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { ToneBadge } from '../components/tone-badge';
 import type { SessionTest } from '../hooks/use-console-session';
@@ -13,6 +14,8 @@ export interface MqttTestPanelProps {
   timezone: string;
   onTested: (result: SessionTest['result']) => void;
 }
+
+const TEST_INFO = 'A CONNACK-only test with a throwaway client id: nothing is subscribed or stored. It proves the broker, credentials and TLS; whether messages arrive is shown by the subscription above (last message, counters).';
 
 const TONE_CLASS = { ok: 'text-success', error: 'text-destructive', neutral: '' } as const;
 
@@ -36,9 +39,10 @@ export function MqttTestPanel({ connection, last, timezone, onTested }: MqttTest
         <ToneBadge tone={health === 'connected' ? 'ok' : health === 'failed' ? 'error' : 'idle'} testId="connection-health">
           {health === 'connected' ? 'Broker answered' : health === 'failed' ? 'Test failed' : 'Not tested'}
         </ToneBadge>
+        <KpiInfo label="Connection test" text={TEST_INFO} />
         {last && (
           <span className="text-xs text-muted-foreground">
-            tested <PlantTime iso={last.at} tz={timezone} withDate />
+            tested <PlantTime iso={last.at} tz={timezone} withDate withZone={false} />
           </span>
         )}
       </div>
@@ -54,7 +58,6 @@ export function MqttTestPanel({ connection, last, timezone, onTested }: MqttTest
           ))}
         </dl>
       )}
-      <p className="text-xs text-muted-foreground">A CONNACK proves the broker, credentials and TLS; whether messages arrive is shown by the subscription above (last message, counters).</p>
     </section>
   );
 }

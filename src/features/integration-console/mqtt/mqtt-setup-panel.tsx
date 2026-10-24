@@ -8,12 +8,14 @@ import type { SignalView } from '@/api/v2/types/integration-mappings';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { UnitSelect } from '@/features/master-data/components/unit-select';
 import { DerivedStopPreview } from '@/features/master-data/reliability/policy/derived-stop-preview';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { formatDuration } from '@/features/ux-kit/format/duration';
 import { formatPlantTime } from '@/features/ux-kit/format/plant-time';
+import { splitZone } from '@/features/ux-kit/plant-time';
 import { useCalendarPreference } from '@/lib/dates';
 import { labelOf, SIGNAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { ACTUALS_SOURCE_LABELS } from '@/features/plan-dashboard/model/actuals-labels';
@@ -39,28 +41,32 @@ function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; con
     </DataState>
     <DataState state={dataStateOf(authority)} error={authority.error} onRetry={() => void authority.refetch()}>
       {authority.data && <div className="space-y-1 rounded border p-3">
-        <p>Approved primary output source: <strong>{ACTUALS_SOURCE_LABELS[authority.data.policy.primarySource] ?? authority.data.policy.primarySource}</strong> (version {authority.data.version}).</p>
-        <p>MQTT output is counted only when the approved priority permits it and the selected signal has usable samples. Defining a signal or checking “authority” on it does not approve MQTT as the output source.</p>
+        <p className="flex items-center gap-1.5">
+          <span>Approved primary output source: <strong>{ACTUALS_SOURCE_LABELS[authority.data.policy.primarySource] ?? authority.data.policy.primarySource}</strong> (version {authority.data.version}).</span>
+          <KpiInfo label="the approved output source" text="MQTT output is counted only when the approved priority permits it and the selected signal has usable samples. Defining a signal or checking “authority” on it does not approve MQTT as the output source." />
+        </p>
         <Link className="underline" to={`/connectivity/source-authority?unitId=${unitId}`}>Review and approve Source Priority</Link>
       </div>}
     </DataState>
     <div className="space-y-3 rounded border p-3">
       <h3 className="font-medium">Stored state coverage</h3>
-      <DateRangeInput label="Coverage period" timeZone={timezone} value={range} onChange={setRange} />
+      <div className="flex flex-wrap items-end gap-3">
+        <DateRangeInput label="Coverage period" timeZone={timezone} value={range} onChange={setRange} textEntry toLabel="To" calendarPicker toolbar />
+      </div>
       <DataState state={dataStateOf(coverage)} error={coverage.error} onRetry={() => void coverage.refetch()}>
-        {coverage.data && <p>{coverageSummaryText(coverage.data, (seconds) => formatDuration(seconds, 'long', numbers.digits), (iso) => formatPlantTime(iso, timezone, true, calendarPreference))}</p>}
+        {coverage.data && <p>{coverageSummaryText(coverage.data, (seconds) => formatDuration(seconds, 'long', numbers.digits), (iso) => splitZone(formatPlantTime(iso, timezone, true, calendarPreference)).clock)}</p>}
       </DataState>
       <Link className="underline" to={`/master-data/unit-state?unitId=${unitId}`}>Configure Unit State rules and heartbeat</Link>
     </div>
     <DerivedStopPreview key={unitId} unitId={unitId} timezone={timezone} />
-    <nav aria-label="Remaining extruder setup" className="flex flex-wrap gap-3">
+    <nav aria-label="Remaining extruder setup" className="flex flex-wrap items-center gap-3">
+      <KpiInfo label="the remaining setup" text="Use Signals → Preview quantity to inspect actual stored output samples, quality and coverage. In the plan period, recalculate and review the ledgers, coding gate and valuation before submitting or approving." />
       <Link className="underline" to={`/master-data/stop-policy?unitId=${unitId}`}>Stop-engine settings</Link>
       <Link className="underline" to="/setup/profiles">Profiles and approved rates</Link>
       <Link className="underline" to="/setup/calendars">Published calendars</Link>
       <Link className="underline" to="/planning">Plans and period accounting</Link>
       <Link className="underline" to="/finance">Valuation and FX</Link>
     </nav>
-    <p className="text-muted-foreground">Use Signals → Preview quantity to inspect actual stored output samples, quality and coverage. In the plan period, recalculate and review the ledgers, coding gate and valuation before submitting or approving.</p>
   </div>;
 }
 export function MqttSetupPanel({ connectionId, timezone }: { connectionId: string; timezone: string }) {
@@ -69,7 +75,10 @@ export function MqttSetupPanel({ connectionId, timezone }: { connectionId: strin
   const setUnitId = (id: string) => setParams((current) => { const next = new URLSearchParams(current); if (id) next.set('unitId', id); else next.delete('unitId'); return next; });
   const { canWriteIntegration } = useCapabilities();
   return <div className="space-y-5">
-    <p className="text-sm text-muted-foreground">Broker connectivity, sample decoding, state coverage and accounting readiness are separate checks. No configuration is approved automatically here.</p>
+    <div className="flex items-center gap-1.5">
+      <h2 className="text-base font-semibold text-heading">Setup readiness</h2>
+      <KpiInfo label="Setup readiness" text="Broker connectivity, sample decoding, state coverage and accounting readiness are separate checks. No configuration is approved automatically here." />
+    </div>
     {canWriteIntegration && <MqttSamplePreview connectionId={connectionId} timezone={timezone} />}
     <UnitSelect id="mqtt-setup-unit" label="Production unit" value={unitId} onChange={setUnitId} />
     {unitId && <UnitReadiness key={unitId} unitId={unitId} connectionId={connectionId} timezone={timezone} />}

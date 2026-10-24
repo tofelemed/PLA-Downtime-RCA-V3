@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { ATTRIBUTE_DATA_TYPE_LABELS, ATTRIBUTE_ENTITY_LABELS, ATTRIBUTE_SCOPE_LABELS, labelOf } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
+import { Label } from '@/components/ui/label';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { ActionIcon, UiIcon } from '@/lib/icons';
+import { AdminCard } from '../shared/admin-card';
 import { FilterSelect } from '../shared/filter-select';
 import { useUrlFilters } from '../shared/use-url-filters';
 
@@ -22,7 +24,7 @@ const COLUMNS: ReadonlyArray<DataTableColumn<AttributeDefinitionView>> = [
   {
     id: 'state',
     header: 'State',
-    cell: (definition) => <Badge variant={definition.isActive ? 'secondary' : 'outline'}>{definition.isActive ? 'In use' : 'Hidden'}</Badge>,
+    cell: (definition) => <Badge variant={definition.isActive ? 'secondary' : 'outline'} className="whitespace-nowrap">{definition.isActive ? 'In use' : 'Hidden'}</Badge>,
     nowrap: true,
   },
   { id: 'open', header: <span className="sr-only">Open</span>, headerLabel: 'Open', cell: () => <UiIcon.next aria-hidden="true" className="h-4 w-4 text-muted-foreground" />, width: '2.5rem' },
@@ -39,12 +41,13 @@ export function AttributeDefinitionsPanel() {
   const level = values.level as AttributeEntityType;
   const definitions = useAttributeDefinitionsPage(level);
   return (
-    <Section
+    <AdminCard
       title="Custom attributes"
-      description="Extra fields of organizations, plants, units and assets, filled in Master data."
+      info="Extra fields of organizations, plants, units and assets, filled in Master data."
+      testId="custom-attributes"
       actions={
         canManageMasterData && (
-          <Button asChild variant="outline">
+          <Button asChild variant="outline" className="h-9">
             <Link to={`/admin/attributes/new?level=${encodeURIComponent(level)}`}>
               <ActionIcon.add aria-hidden="true" />
               Add attribute
@@ -53,7 +56,10 @@ export function AttributeDefinitionsPanel() {
         )
       }
     >
-      <FilterSelect label="Hierarchy level" value={level} options={LEVEL_OPTIONS} onChange={(next) => setValues({ level: next })} />
+      <div className={FIELD_CLASS}>
+        <Label htmlFor="attributes-level">Level</Label>
+        <FilterSelect id="attributes-level" label="Hierarchy level" className="h-9" value={level} options={LEVEL_OPTIONS} onChange={(next) => setValues({ level: next })} />
+      </div>
       <DataTable
         caption={`Custom attributes of ${labelOf(ATTRIBUTE_ENTITY_LABELS, level).toLowerCase()}`}
         columns={COLUMNS}
@@ -61,10 +67,11 @@ export function AttributeDefinitionsPanel() {
         getRowKey={(definition) => definition.id}
         pager={definitions.pager}
         status={definitions.status}
+        density="compact"
         empty={{ title: 'No custom attributes', text: 'This level has no extra fields yet.' }}
         onRowClick={(definition) => navigate(`/admin/attributes/${definition.id}`)}
         rowLabel={(definition) => `Open attribute ${definition.displayName}`}
       />
-    </Section>
+    </AdminCard>
   );
 }

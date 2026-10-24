@@ -33,12 +33,12 @@ function Facts({ profile, tz }: { profile: ProfileView; tz: string }) {
     <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
       <VersionStateBadge state={profile.state} />
       <span>
-        Rates in {profile.quantityUom ?? '—'} {perUnit} · {labelOf(CAPACITY_MODEL_LABELS, profile.capacityModel)} · effective <PlantTime iso={profile.effectiveFrom} tz={tz} withDate /> →{' '}
-        {profile.effectiveTo ? <PlantTime iso={profile.effectiveTo} tz={tz} withDate /> : 'open-ended'}
+        Rates in {profile.quantityUom ?? '—'} {perUnit} · {labelOf(CAPACITY_MODEL_LABELS, profile.capacityModel)} · effective <PlantTime iso={profile.effectiveFrom} tz={tz} withDate withZone={false} /> →{' '}
+        {profile.effectiveTo ? <PlantTime iso={profile.effectiveTo} tz={tz} withDate withZone={false} /> : 'open-ended'}
         {profile.approvedAt && (
           <>
             {' '}
-            · approved <PlantTime iso={profile.approvedAt} tz={tz} withDate /> <SelfDecisionBadge selfDecided={profile.selfDecided} />
+            · approved <PlantTime iso={profile.approvedAt} tz={tz} withDate withZone={false} /> <SelfDecisionBadge selfDecided={profile.selfDecided} />
           </>
         )}
       </span>
@@ -51,7 +51,7 @@ export function ProfileDetail({ profile, refs, onEdit }: ProfileDetailProps) {
   const tz = refs.timezone;
   return (
     <div className="space-y-6" data-testid="profile-detail" data-profile-id={profile.id}>
-      <Section id="profile-version" title="Profile version">
+      <Section id="profile-version" title="Profile version" className="rounded-lg border bg-card p-4">
         <div className="space-y-3">
           <Facts profile={profile} tz={tz} />
           <LegacyValues profile={profile} />

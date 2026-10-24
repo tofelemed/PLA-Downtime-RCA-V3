@@ -13,7 +13,8 @@ vi.mock('@/features/event-hub/event-hub-env', () => ({ EventHubEnvProvider: ({ c
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ units: [], unitsLoading: false }) }));
 vi.mock('@/features/pla-analytics/reports/reports-header', () => ({ ReportsHeader: () => <h1>Reports</h1> }));
 vi.mock('@/features/pla-analytics/hooks/use-production-day-start', () => ({ useProductionDayStart: () => ({ dayStart: '06:00', loading: false }) }));
-vi.mock('@/features/pla-analytics/reports/reports-filters', () => ({ ReportsFilters: () => null }));
+// the Reports filter row now carries the report picker (Reports cleanup, 24 Oct 2026): render only that slot
+vi.mock('@/features/pla-analytics/reports/reports-filters', () => ({ ReportsFilters: ({ picker }: { picker: ReactNode }) => <>{picker}</> }));
 vi.mock('@/features/pla-analytics/reports/production-report', () => ({ OeeByDay: () => null, DowntimeReasonCard: () => null }));
 
 const { AuditPage } = await import('./audit-page');
@@ -72,7 +73,8 @@ describe('Work summary under Audit Logs', () => {
     fireEvent.mouseDown(screen.getByRole('tab', { name: 'Work summary' }), { button: 0, ctrlKey: false });
     expect(await screen.findByText('Investigations')).toBeInTheDocument();
     expect(screen.getByText('Tasks')).toBeInTheDocument();
-    expect(screen.getByText('Audit activity (3 entries)')).toBeInTheDocument();
+    expect(within(screen.getByTestId('report-audit-activity')).getByRole('heading', { name: 'Audit activity' })).toBeInTheDocument();
+    expect(within(screen.getByTestId('report-audit-activity')).getByText('3')).toBeInTheDocument();
     expect(screen.queryByLabelText('Action filter')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     const request = calls.find((url) => url.pathname.endsWith('/activity-summary'));
@@ -102,6 +104,35 @@ describe('Work summary under Audit Logs', () => {
     expect(location).toContain(`to=${encodeURIComponent(TO)}`);
     expect(location).not.toContain('units=');
     expect(location).not.toContain('approved=');
+  });
+
+  it('cleanup (25 Oct 2026): no description or section captions; one labelled filter row; charts open on request', async () => {
+    open(`/audit?${WINDOW}`);
+    await waitFor(() => expect(screen.getByLabelText('Action filter')).toHaveTextContent('All actions'));
+    expect(screen.queryByText(/Changes, work items and audit activity/)).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Period' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Filters' })).toBeNull();
+    expect(screen.queryByText(/Activity uses the selected period/)).toBeNull();
+    ['Search actions, records and details', 'Action', 'Record'].forEach((name) => expect(screen.getByText(name, { selector: 'label' })).toBeInTheDocument());
+    expect(screen.getByRole('searchbox', { name: 'Search actions, records and details' })).not.toHaveAttribute('aria-label');
+    expect(within(screen.getByTestId('audit-filters')).getByLabelText('From')).toBeInTheDocument();
+    const activity = screen.getByTestId('audit-activity');
+    expect(within(activity).getByRole('button', { name: 'About Activity' })).toBeInTheDocument();
+    await waitFor(() => expect(within(activity).getByText('3')).toBeInTheDocument());
+    const toggle = within(activity).getByRole('button', { name: 'Show charts' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(within(activity).getByRole('button', { name: 'Hide charts' })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(screen.getByTestId('audit-entries')).getByText('Nothing was recorded for these filters.')).toBeInTheDocument();
+  });
+
+  it('work summary: no intro paragraph (ⓘ on the cards); only the period in the filter row', async () => {
+    open(`/audit?view=work-summary&${WINDOW}`);
+    expect(await screen.findByText('Investigations')).toBeInTheDocument();
+    expect(screen.queryByText(/Records created on the chosen dates/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Investigations' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Search actions, records and details')).toBeNull();
+    expect(within(screen.getByTestId('audit-filters')).getByLabelText('From')).toBeInTheDocument();
   });
 
   it('removes Work summary from Reports while retaining the production reports', () => {

@@ -161,7 +161,9 @@ test.describe('Manager persona — users and the MQTT demo connection', () => {
     await expect(row.getByText('From Demo Plant 2')).toBeVisible();
     await row.click();
     await expect(page.getByText(/Home plant: Demo Plant 2/)).toBeVisible({ timeout: 60_000 });
-    await expect(nameField(page)).toBeDisabled();
+    // a profile from another plant reads as text, not disabled inputs (admin cleanup 25 Oct 2026)
+    await expect(page.getByTestId('user-details-read-only')).toContainText(graceEmail);
+    await expect(nameField(page)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Grant access' })).toBeVisible();
   });
 

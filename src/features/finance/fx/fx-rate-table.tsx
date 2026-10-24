@@ -39,8 +39,9 @@ export function FxRateTable({ rates, pager, status, empty }: FxRateTableProps) {
     {
       id: 'state',
       header: 'State',
+      nowrap: true,
       cell: (rate) => (
-        <span className="flex flex-wrap gap-1">
+        <span className="flex gap-1">
           <VersionStateBadge state={rate.state} />
           <ProvisionalRateBadge provisional={rate.provisional} />
         </span>
