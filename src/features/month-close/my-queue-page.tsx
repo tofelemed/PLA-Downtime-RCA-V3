@@ -4,8 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { MyRcaActionsList } from '@/features/rca/actions/my-rca-actions-list';
 import { DataState } from '@/features/ux-kit/data-state';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { MyPeriodsTab } from './my-periods-tab';
+import { MyWorkCard } from './my-work-card';
+import { MY_WORK_LOOK } from './my-work-look';
 import { MyTasksTab } from './my-tasks-tab';
 import { MY_WORK_TABS, myWorkSearchOf, myWorkTabOf } from './my-work-tabs';
 
@@ -22,7 +25,7 @@ function MyWorkScreen() {
   return (
     <Page width="wide">
       <div className="space-y-4" data-testid="my-queue">
-        <PageHeader title="My work" description="What is waiting for you in this plant: periods to prepare or review, your RCA actions and your tasks." />
+        <PageHeader title="My work" />
         <Tabs value={tab} onValueChange={(next) => setParams(myWorkSearchOf(myWorkTabOf(next)), { replace: true })}>
           <TabsList className="h-auto flex-wrap justify-start">
             {tabs.map((entry) => (
@@ -37,7 +40,11 @@ function MyWorkScreen() {
             </TabsContent>
           )}
           <TabsContent value="rca-actions">
-            <MyRcaActionsList mine statusFilter limit={RCA_ACTIONS_PAGE_SIZE} />
+            <ReportLookContext.Provider value={MY_WORK_LOOK}>
+              <MyWorkCard title="My RCA actions">
+                <MyRcaActionsList mine statusFilter limit={RCA_ACTIONS_PAGE_SIZE} />
+              </MyWorkCard>
+            </ReportLookContext.Provider>
           </TabsContent>
           <TabsContent value="tasks">
             <MyTasksTab />
