@@ -16,10 +16,11 @@ import { AnalyticsCard } from './analytics-card';
 
 const SeriesChart = lazy(() => import('../charts/series-chart').then((m) => ({ default: m.SeriesChart })));
 
+/** Semantic colours: unaccounted loss red, over-accounted (a data-quality flag) amber, overproduction green. */
 const SERIES = [
-  { key: 'unaccounted', label: 'Unaccounted' },
-  { key: 'overAccounted', label: 'Over-accounted' },
-  { key: 'overproduction', label: 'Overproduction' },
+  { key: 'unaccounted', label: 'Unaccounted', colour: 'hsl(var(--danger))' },
+  { key: 'overAccounted', label: 'Over-accounted', colour: 'hsl(var(--warning))' },
+  { key: 'overproduction', label: 'Overproduction', colour: 'hsl(var(--success))' },
 ] as const;
 
 type Bucket = ReconciliationTrendView['buckets'][number];
@@ -73,7 +74,7 @@ export function ResidualTrendCard({ scope }: { scope: AnalyticsScope }) {
       query={query}
       response={query.data}
       isEmpty={data?.buckets.length === 0}
-      note="After the saved decisions of each period; buckets without a computable slice show —. Unaccounted loss counts the open remainder, tolerance adjustments and classified Unaccounted lines; it is shown against the gap (shortfall) and the plan, in red above the policy's improvement target."
+      info="After the saved decisions of each period; buckets without a computable slice show —. Unaccounted loss counts the open remainder, tolerance adjustments and classified Unaccounted lines; it is shown against the gap (shortfall) and the plan, in red above the policy's improvement target."
     >
       {data && (
         <div className="space-y-4" data-testid="residual-trend" data-group-by={data.groupBy}>

@@ -1,5 +1,5 @@
 import { Label } from '@/components/ui/label';
-import { FIELD_CLASS, SELECT_CLASS } from '../components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '../components/filter-classes';
 import { REPORT_TYPES, firstViewOf, reportsOfType, typeOfView } from './report-catalog';
 
 export interface ReportViewPickerProps {

@@ -4,7 +4,7 @@ import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-se
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { CHOSEN_DATES, type AnalyticsScope } from '../model/analytics-scope';
 import { PlantDaysInput } from '../components/plant-days-input';
-import { FIELD_CLASS, SELECT_CLASS } from '../components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '../components/filter-classes';
 import { REVISION_OPTIONS } from './revision-options';
 
 export interface ReportsFiltersProps {

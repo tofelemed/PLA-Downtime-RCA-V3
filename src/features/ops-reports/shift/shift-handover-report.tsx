@@ -5,7 +5,7 @@ import type { ShiftHandoverView } from '@/api/v2/types/ops-reports';
 import { Label } from '@/components/ui/label';
 import { useShiftOptions } from '@/features/downtime-analysis/model/use-shift-options';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import type { AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataState } from '@/features/ux-kit/data-state';

@@ -4,7 +4,6 @@ import { usePagedQuery } from '@/api/v2/queries/use-paged-query';
 import type { QueryParams } from '@/api/v2/request-url';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { humanize } from '@/features/ux-kit/labels';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
@@ -14,12 +13,11 @@ import { Quantity } from '@/features/ux-kit/quantity';
 import { useEventHubEnv, type EventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { EventRcaChip } from '@/features/rca/components/event-rca-chip';
 import { StartRcaLink } from '@/features/rca/components/start-rca-link';
-import { SELECT_CLASS } from '../components/analytics-filters';
-import { eventLossQuery, LOSS_EVENT_TYPES, lossEventsQuery, type AnalyticsScope, type LossEventType } from '../model/analytics-scope';
+import { ReportCard } from '../components/report-card';
+import { eventLossQuery, lossEventsQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { eventLossesOf, type EventLoss } from '../model/event-losses';
 import { linesWithoutEventQuery } from '../model/lines-without-event';
 import { LinesWithoutEvent } from './lines-without-event';
-import { LOSS_EVENT_TYPE_LABELS } from '../model/display';
 
 function AttributedLoss({ losses }: { losses: readonly EventLoss[] | undefined }) {
   if (!losses?.length) return <span title="No loss line of the shown periods is attributed to this event">—</span>;
@@ -56,6 +54,21 @@ function columnsOf(env: EventHubEnv, losses: ReadonlyMap<string, EventLoss[]>): 
   ];
 }
 
+const EVENTS_INFO = "Stops, slowdowns and quality losses of these units overlapping the window, newest first. Lost quantity is what the periods' loss lines attribute to the event (approved, else the draft).";
+
+/** The OEE component the events were opened for (a waterfall drill), with the way back to all components. */
+function OeeFilterChip({ scope, onChange }: LossEventsProps) {
+  if (scope.eventOee === 'all') return null;
+  return (
+    <span className="flex items-center gap-1 whitespace-nowrap text-sm" data-testid="loss-event-oee" data-oee={scope.eventOee}>
+      OEE component: {humanize(scope.eventOee)}
+      <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ eventOee: 'all' })}>
+        Show all components
+      </Button>
+    </span>
+  );
+}
+
 export interface LossEventsProps {
   scope: AnalyticsScope;
   onChange: (patch: Partial<AnalyticsScope>) => void;
@@ -81,37 +94,21 @@ export function LossEvents({ scope, onChange }: LossEventsProps) {
     key: { scope: { unitIds }, window: { from, to }, filters },
   });
   return (
-    <div className="space-y-2" data-testid="loss-events">
-      <div className="flex items-center gap-2">
-        <Label htmlFor="loss-event-type">Show</Label>
-        <select id="loss-event-type" data-testid="loss-event-type" className={SELECT_CLASS} value={scope.eventType} onChange={(e) => onChange({ eventType: e.target.value as LossEventType })}>
-          {LOSS_EVENT_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {LOSS_EVENT_TYPE_LABELS[type]}
-            </option>
-          ))}
-        </select>
-        {scope.eventOee !== 'all' && (
-          <span className="flex items-center gap-1 text-sm" data-testid="loss-event-oee" data-oee={scope.eventOee}>
-            OEE component: {humanize(scope.eventOee)}
-            <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ eventOee: 'all' })}>
-              Show all components
-            </Button>
-          </span>
-        )}
-      </div>
-      <DataTable
-        caption="Loss events of this scope"
-        columns={columnsOf(env, eventLossesOf(losses.data?.data))}
-        rows={events.rows}
-        getRowKey={(e) => e.id}
-        pager={events.pager}
-        status={events.status}
-        empty={{ text: eventless > 0 ? 'No loss events in this window: the loss is in the loss lines with no event below.' : 'No loss events in this window.' }}
-        onRowClick={(e) => navigate(`/events/${e.id}`, { state: { listSearch: `${location.pathname}${location.search}` } })}
-        rowLabel={(e) => `${labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType)} on ${env.unitName(e.unitId)}`}
-        density="compact"
-      />
+    <div className="space-y-4" data-testid="loss-events">
+      <ReportCard title="Loss events" testId="loss-events-card" info={EVENTS_INFO} provisional={losses.data?.isProvisional === true} actions={<OeeFilterChip scope={scope} onChange={onChange} />}>
+        <DataTable
+          caption="Loss events of this scope"
+          columns={columnsOf(env, eventLossesOf(losses.data?.data))}
+          rows={events.rows}
+          getRowKey={(e) => e.id}
+          pager={events.pager}
+          status={events.status}
+          empty={{ text: eventless > 0 ? 'No loss events in this window: the loss is in the loss lines with no event below.' : 'No loss events in this window.' }}
+          onRowClick={(e) => navigate(`/events/${e.id}`, { state: { listSearch: `${location.pathname}${location.search}` } })}
+          rowLabel={(e) => `${labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType)} on ${env.unitName(e.unitId)}`}
+          density="compact"
+        />
+      </ReportCard>
       <LinesWithoutEvent scope={scope} />
     </div>
   );

@@ -1,4 +1,6 @@
+import { useContext } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { AnalysisSnapshotContext } from '@/features/analysis-navigation/analysis-snapshot-context';
 import { useReconciliationStatus } from '@/api/v2/queries/pla-analytics';
 import type { OverduePeriodView } from '@/api/v2/types/pla-analytics';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +16,24 @@ import { ageText } from '../model/display';
 import { withPeriodList } from '../model/period-list';
 import { periodLabel } from '../model/period-label';
 
+type StatusData = NonNullable<ReturnType<typeof useReconciliationStatus>['data']>['data'];
+
+/**
+ * The card's title, caption and ⓘ. Reports: the counts sentence as the ⓘ. PLA page (snapshot context): the
+ * period count in the title, the waiting / escalated counts as badges and only the overdue rule in the ⓘ.
+ */
+function useStatusTexts(data: StatusData | undefined) {
+  const { number } = useNumberFormat();
+  const report = useReportChrome();
+  const onPla = useContext(AnalysisSnapshotContext) !== null;
+  const title = 'Reconciliation status and age';
+  if (!data) return { onPla, title, note: undefined, info: undefined };
+  const limits = `not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted)`;
+  const note = `${number(data.periods)} periods · overdue = ${limits} · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`;
+  if (onPla) return { onPla, title: `${title} (${number(data.periods)} periods)`, note, info: `Overdue = ${limits}.` };
+  return { onPla, title, note, info: report ? note : undefined };
+}
+
 /**
  * Reconciliation status and age (AN02): periods per workflow and residual state of their current revision,
  * the age of the periods not approved since they ended, and the overdue list (20 per page) with a link to
@@ -25,29 +45,28 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
   const query = useReconciliationStatus(statusQuery(scope), env.timezone);
   const data = query.data?.data;
   const { number } = useNumberFormat();
-  const report = useReportChrome();
-  const note = data
-    ? `${number(data.periods)} periods · overdue = not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted) · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`
-    : undefined;
+  const texts = useStatusTexts(data);
+  const onPla = texts.onPla;
   return (
     <AnalyticsCard
-      title="Reconciliation status and age"
+      title={texts.title}
       testId="pla-reconciliation"
       query={query}
       response={query.data}
       approvedOnly={scope.approvedOnly}
       isEmpty={data?.periods === 0}
       emptyText="No production periods in this scope."
-      note={note}
-      info={report ? note : undefined}
+      note={texts.note}
+      info={texts.info}
     >
       {data && (
         <div className="space-y-3" data-testid="reconciliation-status" data-overdue={data.overdueCount}>
           <CountRow title="Workflow" testId="workflow-count" linked items={data.workflow.map((w) => ({ key: w.state, label: GRID_WORKFLOW_LABELS[w.state], count: w.periods }))} />
           <CountRow title="Unaccounted" testId="residual-count" linked items={data.residual.map((r) => ({ key: r.state, label: RESIDUAL_LABELS[r.state], count: r.periods }))} />
           <CountRow title="Age (not approved)" testId="age-count" items={data.ages.map((a) => ({ key: a.key, label: a.label, count: a.periods }))} />
+          {onPla && <CountRow title="Held up" testId="held-count" items={[{ key: 'waiting', label: 'Waiting for data', count: data.waitingForData }, { key: 'escalated', label: 'Escalated after rejections', count: data.rejectionEscalated }]} />}
           <h4 className="text-sm font-medium">Overdue ({number(data.overdueCount)})</h4>
-          <OverdueTable rows={data.overdue} timezone={env.timezone} />
+          <OverdueTable rows={data.overdue} timezone={env.timezone} firstRevisionQuiet={onPla} />
           {data.overdueCount > data.overdue.length && <p className="text-xs text-muted-foreground">Listing the {number(data.overdue.length)} oldest; the count covers all of them.</p>}
         </div>
       )}
@@ -89,7 +108,13 @@ function CountRow({ title, items, testId, linked = false }: { title: string; tes
   );
 }
 
-function OverdueTable({ rows, timezone }: { rows: readonly OverduePeriodView[]; timezone: string }) {
+function revisionText(revision: number | null, firstRevisionQuiet: boolean): string {
+  if (revision === null || (firstRevisionQuiet && revision === 1)) return '';
+  return ` · revision ${revision}`;
+}
+
+/** `firstRevisionQuiet` (PLA page): the first revision is the usual case, so only a later one is named. */
+function OverdueTable({ rows, timezone, firstRevisionQuiet }: { rows: readonly OverduePeriodView[]; timezone: string; firstRevisionQuiet: boolean }) {
   const pref = useCalendarPreference();
   const columns: Array<DataTableColumn<OverduePeriodView>> = [
     { id: 'unit', header: 'Unit', cell: (row) => row.unitName ?? 'Unknown unit' },
@@ -103,7 +128,7 @@ function OverdueTable({ rows, timezone }: { rows: readonly OverduePeriodView[]; 
         </span>
       ),
     },
-    { id: 'state', header: 'State', cell: (row) => `${GRID_WORKFLOW_LABELS[row.workflowState]}${row.revision !== null ? ` · revision ${row.revision}` : ''}` },
+    { id: 'state', header: 'State', nowrap: true, cell: (row) => `${GRID_WORKFLOW_LABELS[row.workflowState]}${revisionText(row.revision, firstRevisionQuiet)}` },
     { id: 'residual', header: 'Unaccounted', cell: (row) => (row.residualState ? RESIDUAL_LABELS[row.residualState] : '—') },
     { id: 'age', header: 'Age', align: 'right', nowrap: true, cell: (row) => ageText(row.ageSeconds, pref.digits) },
     {

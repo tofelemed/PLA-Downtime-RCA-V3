@@ -91,13 +91,16 @@ describe('PLA analytics data flows (plan 3.6)', () => {
     expect(screen.getByTestId('oee-tile-value').textContent).toBe('—');
     // QA PLA (24 h dashboard): "Not available" is said once, not twice
     expect(screen.getByTestId('tile').textContent?.match(/Not available/g)).toHaveLength(1);
-    expect(screen.getByTestId('oee-tile-reason').textContent).toBe('No scheduled time');
-    expect(screen.getByText(/Operational OEE \(ISO 22400\)/)).toBeTruthy();
+    // the reason and the policy label are in the ⓘ, not a caption under the value
+    expect(screen.getByTestId('tile')).toHaveAttribute('data-reason-text', 'No scheduled time');
+    expect(screen.getByRole('button', { name: 'About OEE' })).toBeTruthy();
+    expect(screen.getByTestId('tile')).not.toHaveTextContent(/ISO 22400|over scheduled time/);
+    expect(screen.getByText('OEE')).toHaveClass('uppercase');
   });
 
   it('says the page status once: policy versions in words, run count, one incomplete note — no keys or run ids', () => {
     const response = { ...(envelope({ calculationRunIds: ['3f2a0000-0000-4000-8000-000000000001', '3f2a0000-0000-4000-8000-000000000002'] }) as AnalyticsResponse<{ calculationRunIds: string[] }>), policyVersion: 'oee_policy@1,loss_policy@2', coverage: { from: SCOPE.from, to: SCOPE.to, ratio: 0.5 } };
-    render(<SnapshotStatus scopeLabel="All units" timezone="UTC" timezoneIsFallback={false} response={response} />);
+    render(<SnapshotStatus response={response} />);
     expect(screen.getByText(/2 calculation runs · OEE policy v1 · Loss policy v2 · 50 % of periods calculated/)).toBeTruthy();
     expect(screen.getAllByText(/Incomplete data/)).toHaveLength(1);
     expect(document.body.textContent).not.toMatch(/oee_policy@1|3f2a0000/);

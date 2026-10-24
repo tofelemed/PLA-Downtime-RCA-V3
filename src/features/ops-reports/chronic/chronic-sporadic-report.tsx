@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '@/features/pla-analytics/components/analytics-card';
-import { SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';

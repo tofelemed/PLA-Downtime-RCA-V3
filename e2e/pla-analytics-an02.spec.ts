@@ -129,9 +129,9 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     }
 
     await page.getByTestId('tab-oee').click();
-    await expect(page.getByTestId('pla-oee-operational')).toContainText('Operational OEE (ISO 22400)');
+    await expect(page.getByTestId('pla-oee-operational').getByRole('heading', { name: 'OEE', exact: true })).toBeVisible(); // titles drop "Operational" / "(ISO 22400)"
     await expect(page.getByTestId('pla-oee-reconciled')).toContainText('Reconciled PLA OEE');
-    await expect(page.getByTestId('oee-operational-oee').getByTestId('oee-tile-value')).toHaveText(/%|^Not available: /);
+    await expect(page.getByTestId('oee-operational-oee').getByTestId('oee-tile-value')).toHaveText(/%|^—$/); // "—" + "Not available", the reason in the ⓘ
     await expect(page.getByRole('tab')).toHaveCount(5); // at most 5 views (UI guidelines §2)
   });
 
@@ -140,9 +140,11 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     await openAnalytics(page, scopeUrl('/pla-analytics', [world.t41.unitId], world.day, '&tab=oee'));
     const tile = page.getByTestId('oee-operational-oee');
     await expect(tile).toHaveAttribute('data-reason', 'no_scheduled_time', { timeout: 60_000 });
-    await expect(tile.getByTestId('oee-tile-value')).toHaveText('Not available: no scheduled time');
+    await expect(tile).toHaveAttribute('data-reason-text', /no scheduled time/i); // the reason is said in the tile's ⓘ
+    await expect(tile).toContainText('Not available');
     const values = await page.getByTestId('pla-oee-operational').getByTestId('oee-tile-value').allTextContents();
-    expect(values).toEqual(Array(4).fill('Not available: no scheduled time')); // OEE, A, P, Q: never 87 % / 100 %
+    expect(values).toEqual(Array(4).fill('—')); // OEE, A, P, Q: never 87 % / 100 %
+    for (const reason of await page.getByTestId('pla-oee-operational').locator('[data-reason-text]').evaluateAll((tiles) => tiles.map((t) => t.getAttribute('data-reason-text')))) expect(reason).toMatch(/no scheduled time/i);
     await expect(page.getByTestId('oee-operational-units').getByTestId('oee-group')).not.toContainText('%');
   });
 

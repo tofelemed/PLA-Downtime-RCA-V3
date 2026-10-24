@@ -1,19 +1,16 @@
 import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
-import type { LossTreeGroupBy, LossTreeMetricParam, LossTreeView } from '@/api/v2/types/pla-analytics';
-import { Label } from '@/components/ui/label';
+import type { LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
-import { LEDGER_LABELS } from '@/features/ux-kit/labels';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
-import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { LOSS_GROUPS, lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { lossMetricsFor, scopeForMoneyAccess } from '../model/money-access';
-import { inSentence, LOSS_GROUP_LABELS, METRIC_LABELS, shownMetricLabel } from '../model/display';
+import { lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { scopeForMoneyAccess } from '../model/money-access';
+import { inSentence, LOSS_GROUP_LABELS, shownMetricLabel } from '../model/display';
 import { downtimeLink, lossLinesNote, lossGroupLink, noLinkReason } from '../model/links';
 
 const LossTreemap = lazy(() => import('../charts/loss-treemap').then((m) => ({ default: m.LossTreemap })));
@@ -23,50 +20,25 @@ export interface LossTreeTabProps {
   onChange: (patch: Partial<AnalyticsScope>) => void;
 }
 
-function LossTreeControls({ scope, onChange }: LossTreeTabProps) {
-  const { canViewMoney } = useCapabilities();
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Label htmlFor="loss-group">Group by</Label>
-      <select id="loss-group" data-testid="loss-group-by" className={SELECT_CLASS} value={scope.lossGroupBy} onChange={(e) => onChange({ lossGroupBy: e.target.value as LossTreeGroupBy })}>
-        {LOSS_GROUPS.map((g) => (
-          <option key={g} value={g}>
-            {LOSS_GROUP_LABELS[g]}
-          </option>
-        ))}
-      </select>
-      <Label htmlFor="loss-metric">Metric</Label>
-      <select id="loss-metric" data-testid="loss-metric" className={SELECT_CLASS} value={scope.lossMetric} onChange={(e) => onChange({ lossMetric: e.target.value as LossTreeMetricParam })}>
-        {lossMetricsFor(canViewMoney).map((m) => (
-          <option key={m} value={m}>
-            {METRIC_LABELS[m]}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 /**
  * Loss tree (AN02): the shown runs' loss lines per reason, impact, OEE component, kind or unit, as lost
  * quantity or one valuation view (policy default, economic impact, margin, standard cost, operational cost — never added together), largest
- * first with the cumulative share; grouping and metric go to the server (`groupBy`, `metric`).
+ * first with the cumulative share; grouping and metric (filter bar) go to the server (`groupBy`, `metric`).
  */
-export function LossTreeTab({ scope: shown, onChange }: LossTreeTabProps) {
+export function LossTreeTab({ scope: shown }: LossTreeTabProps) {
   const env = useEventHubEnv();
   const scope = scopeForMoneyAccess(shown, useCapabilities().canViewMoney);
   const query = useLossTree(lossTreeQuery(scope), env.timezone);
   const data = query.data?.data;
   return (
     <AnalyticsCard
-      title={`${shownMetricLabel(scope.lossMetric, data)} by ${inSentence(LOSS_GROUP_LABELS[scope.lossGroupBy])} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
+      title={`${shownMetricLabel(scope.lossMetric, data)} by ${inSentence(LOSS_GROUP_LABELS[scope.lossGroupBy])}`}
       testId="pla-loss-tree"
       query={query}
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No loss lines in this scope."
-      note={lossLinesNote(scope.approvedOnly)}
-      actions={<LossTreeControls scope={scope} onChange={onChange} />}
+      info={lossLinesNote(scope.approvedOnly)}
     >
       {data && <LossTreeBody data={data} scope={scope} />}
       <p className="text-xs">

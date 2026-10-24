@@ -1,7 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { useCapacityGapReport } from '@/api/v2/queries/capacity-gap';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { AnalyticsCard } from '../components/analytics-card';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { CapacityGapFilters } from './capacity-gap-filters';
@@ -36,7 +35,6 @@ export function CapacityGapPage({ scope, onChange }: CapacityGapPageProps) {
   return (
     <div className="space-y-4" data-testid="pla-capacity-gap">
       <CapacityGapFilters unitIds={scope.unitIds} filters={filters} onUnits={(unitIds) => onChange({ unitIds })} onFilters={setFilters} />
-      <KindDefinitions />
       <AnalyticsCard
         title="Approved rates and gaps"
         testId="capacity-gap-card"
@@ -44,7 +42,7 @@ export function CapacityGapPage({ scope, onChange }: CapacityGapPageProps) {
         response={undefined}
         isEmpty={data?.items.length === 0}
         emptyText="No approved production profile is in force for these units and products at this date."
-        note={data ? <>Approved versions in force at <PlantTime iso={data.at} tz={env.timezone} withDate />.</> : undefined}
+        info={<KindDefinitionsInfo />}
       >
         {data && <CapacityGapTable rows={data.items} />}
         {data?.truncated && <p className="text-xs text-muted-foreground" data-testid="capacity-gap-truncated">Only the first {data.limit} profiles are shown: choose units or products to narrow the report.</p>}
@@ -53,16 +51,17 @@ export function CapacityGapPage({ scope, onChange }: CapacityGapPageProps) {
   );
 }
 
-function KindDefinitions() {
+/** The rate kinds and how the gaps are read: the card's ⓘ (no definitions box on the page). */
+export function KindDefinitionsInfo() {
   return (
-    <div className="rounded-md border bg-muted/40 p-3 text-sm" role="note" aria-label="Rate kind definitions" data-testid="capacity-gap-definitions">
-      <ul className="grid gap-1 sm:grid-cols-2">
+    <div className="space-y-1" data-testid="capacity-gap-definitions">
+      <ul>
         {[...CHAIN_KINDS, ...REFERENCE_KINDS].map((kind) => (
           <li key={kind}><span className="font-medium">{kindLabel(kind)}</span>: {KIND_DEFINITIONS[kind]}</li>
         ))}
       </ul>
-      <p className="mt-2 text-muted-foreground">
-        Only approved, effective-dated rate versions are used. Each gap is the upper kind minus the next one (ratio = gap ÷ upper kind); a kind without an approved version reads “not set” and nothing is estimated for it. Kinds are shown side by side, never added together, and different units or timebases are never converted.
+      <p>
+        Only approved, effective-dated rate versions in force at the As of date are used. Each gap is the upper kind minus the next one (ratio = gap ÷ upper kind); a kind without an approved version reads “not set” and nothing is estimated for it. Kinds are shown side by side, never added together, and different units or timebases are never converted.
       </p>
     </div>
   );

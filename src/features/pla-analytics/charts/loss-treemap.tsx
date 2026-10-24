@@ -26,7 +26,7 @@ export function LossTreemap({ groups, unit }: { groups: readonly LossTreeGroupVi
   return (
     <ChartFigure caption={caption} chartClassName="h-64 w-full" testId="loss-treemap">
       <ResponsiveContainer>
-        <Treemap data={leaves} dataKey="size" nameKey="name" stroke="hsl(var(--background))" fill="hsl(var(--chart-1))" isAnimationActive={false}>
+        <Treemap data={leaves} dataKey="size" nameKey="name" stroke="hsl(var(--background))" fill="hsl(var(--danger))" isAnimationActive={false}>
           <Tooltip formatter={(_value: unknown, _name: string, item: { payload?: Leaf }) => `${decimal(item.payload?.amount, currencyDigits(unit))} ${unit ?? ''}`} />
         </Treemap>
       </ResponsiveContainer>

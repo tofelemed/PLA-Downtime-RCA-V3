@@ -12,9 +12,10 @@ vi.mock('@/features/event-hub/use-event-hub-env', () => ({
   useEventHubEnv: () => ({ timezone: 'Asia/Tehran', units: [{ id: 'u1', name: 'Reactor 1' }], unitName: (id: string) => id }),
 }));
 
-const { CapacityGapPage } = await import('./capacity-gap-page');
-const { asOfHeaderText, capacityGapQueryOf, parseCapacityFilters } = await import('./capacity-gap-model');
+const { CapacityGapPage, KindDefinitionsInfo } = await import('./capacity-gap-page');
+const { capacityGapQueryOf, parseCapacityFilters } = await import('./capacity-gap-model');
 const { AnalyticsHeader } = await import('../components/analytics-header');
+const { ReportChrome } = await import('../components/report-chrome');
 
 const kind = (value: string | null, timebase: CapacityKindView['timebase'] = 'h'): CapacityKindView => ({
   value,
@@ -58,6 +59,8 @@ const ROW: CapacityGapRowView = {
 
 const REPORT: CapacityGapReportView = { at: '2026-10-19T08:00:00.000Z', items: [ROW], limit: 200, truncated: true, asOf: '2026-10-19T08:00:01.000Z' };
 
+const report = vi.hoisted(() => ({ empty: false }));
+
 describe('Capacity gap page (plan 1.2)', () => {
   let urls: URL[];
   beforeEach(() => {
@@ -67,7 +70,7 @@ describe('Capacity gap page (plan 1.2)', () => {
       vi.fn(async (input: string) => {
         const url = new URL(input);
         urls.push(url);
-        const body = url.pathname.endsWith('/reports/capacity-gap') ? REPORT : { items: [], nextCursor: null, asOf: REPORT.asOf, scope: { tenantId: 'tenant-a' } };
+        const body = url.pathname.endsWith('/reports/capacity-gap') ? (report.empty ? { ...REPORT, items: [], truncated: false } : REPORT) : { items: [], nextCursor: null, asOf: REPORT.asOf, scope: { tenantId: 'tenant-a' } };
         return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }),
     );
@@ -81,7 +84,9 @@ describe('Capacity gap page (plan 1.2)', () => {
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[`/pla-analytics/capacity-gap${search}`]}>
-          <CapacityGapPage scope={scope} onChange={() => undefined} />
+          <ReportChrome approvedOnly={false} ownEmpty>
+            <CapacityGapPage scope={scope} onChange={() => undefined} />
+          </ReportChrome>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -104,9 +109,14 @@ describe('Capacity gap page (plan 1.2)', () => {
     expect(screen.getByTestId('capacity-gap-truncated')).toHaveTextContent('first 200 profiles');
   });
 
-  it('states the kind definitions and sends units, products and the as-of instant to the server', async () => {
+  it('says the kind definitions behind the card ⓘ (no definitions box) and sends units, products and the as-of instant to the server', async () => {
     renderPage('?products=pr1&asOf=2026-10-19');
     await screen.findByText('HDPE-A');
+    expect(screen.queryByTestId('capacity-gap-definitions')).toBeNull();
+    const card = screen.getByTestId('capacity-gap-card');
+    expect(within(card).getByRole('button', { name: 'About Approved rates and gaps' })).toBeInTheDocument();
+    expect(card).not.toHaveTextContent(/Approved versions in force|\+03:30|Asia\/Tehran/);
+    render(<KindDefinitionsInfo />);
     expect(screen.getByTestId('capacity-gap-definitions')).toHaveTextContent('Sustained: approved sustainable capability (capacity ledger)');
     expect(screen.getByTestId('capacity-gap-definitions')).toHaveTextContent('never added together');
     const request = urls.find((url) => url.pathname.endsWith('/reports/capacity-gap'));
@@ -116,25 +126,43 @@ describe('Capacity gap page (plan 1.2)', () => {
     expect(request?.searchParams.get('at')).toBe('2026-10-18T20:30:00.000Z');
   });
 
+  it('no profile in force: the card says so itself, not "No data for these dates" / "Try other dates or units"', async () => {
+    report.empty = true;
+    renderPage();
+    expect(await screen.findByText('No approved production profile is in force for these units and products at this date.')).toBeInTheDocument();
+    expect(screen.queryByText(/No data for these dates|Try other dates/)).toBeNull();
+    report.empty = false;
+  });
+
+  it('the filters are one bottom-aligned row: Units, Products, then "As of" labelled above (no hint in the label)', async () => {
+    renderPage();
+    const bar = screen.getByTestId('capacity-gap-filters');
+    expect(bar).toHaveClass('items-end');
+    expect(within(bar).getByLabelText('As of')).toBeInTheDocument();
+    expect(bar).not.toHaveTextContent(/empty = now|plant date/);
+    expect(within(bar).getByRole('button', { name: 'About As of' })).toBeInTheDocument();
+  });
+
   it('asks for "now" when no date is chosen and ignores a malformed one', () => {
     const filters = parseCapacityFilters(new URLSearchParams('asOf=19-10-2026'));
     expect(filters.asOf).toBe('');
     expect(capacityGapQueryOf([], filters, 'Asia/Tehran')).toEqual({});
   });
 
-  it('the header names the as-of instant and the units, not the shared window or its zone badge', () => {
+  it('the header is the title only: no description, scope line, window or zone badge (the As of filter says the date)', () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const scope = { unitIds: ['u1'], windowLabel: 'Last 7 days' } as Parameters<typeof AnalyticsHeader>[0]['scope'];
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <AnalyticsHeader scope={scope} title="Capacity gap" overview={false} asOfDate="2026-10-19" />
+          <AnalyticsHeader scope={scope} title="Capacity gap" overview={false} />
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByTestId('analytics-as-of-header')).toHaveTextContent('u1 · As of 2026-10-19');
+    expect(screen.getByRole('heading', { name: 'Capacity gap' })).toBeTruthy();
+    expect(screen.queryByTestId('analytics-as-of-header')).toBeNull();
+    expect(screen.queryByText(/Approved nameplate, demonstrated|Periods are grouped/)).toBeNull();
     expect(screen.queryByText(/Last 7 days/)).toBeNull();
     expect(screen.queryByTestId('scope-header')).toBeNull();
-    expect(asOfHeaderText('', { calendar: 'gregorian', digits: 'latin' })).toBe('As of now');
   });
 });

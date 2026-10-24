@@ -5,6 +5,11 @@ import type { DataTableEmpty } from '../data-table/data-table-types';
 export interface ReportLook {
   /** Revision = Provisional: rows and figures the server marks provisional carry a "Provisional" marker */
   provisional: boolean;
+  /**
+   * opt-in (PLA analysis pages): a table or state with its own empty message (e.g. "Nothing overdue.", a real
+   * result) shows that message, centred, instead of the generic "No data for these dates"; default false
+   */
+  ownEmpty?: boolean;
 }
 
 /** null outside the Reports page: tables, states and markers look as they always did. */

@@ -1,6 +1,6 @@
 import type { CapacityGapQuery, CapacityGapReason, CapacityKindView } from '@/api/v2/types/capacity-gap';
 import type { RateKind } from '@/api/v2/types/profiles';
-import { formatOperationalDate, startOfPlantDayUtc, type CalendarDisplayOptions } from '@/lib/dates';
+import { startOfPlantDayUtc } from '@/lib/dates';
 import { RATE_KIND_LABELS, RATE_TIMEBASE_LABELS } from '@/features/ux-kit/labels';
 
 /** The capability chain whose steps the server reports gaps for, then the imported references. */
@@ -66,9 +66,4 @@ export function capacityGapQueryOf(unitIds: readonly string[], filters: Capacity
   if (unitIds.length > 0) query.unitIds = [...unitIds].sort();
   if (filters.productIds.length > 0) query.productIds = filters.productIds;
   return query;
-}
-
-/** The page header's instant: `As of 2026-10-19` (plant date in the user's calendar) or `As of now`. */
-export function asOfHeaderText(asOf: string, pref: CalendarDisplayOptions): string {
-  return `As of ${asOf ? formatOperationalDate(asOf, pref) : 'now'}`;
 }

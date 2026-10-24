@@ -21,14 +21,14 @@ export interface AnalyticsCardProps {
   approvedOnly?: boolean;
   isEmpty?: boolean;
   emptyText?: string;
-  /** a label the figures need (scope or cohort note); not shown on the Reports page */
+  /** a label the figures need (scope or cohort note); not shown inside `ReportChrome` (Reports, PLA pages) */
   note?: ReactNode;
   /** what an operator needs to read the figures, behind an ⓘ beside the title */
   info?: ReactNode;
   actions?: ReactNode;
   /** `data-*` attributes of the card element (e.g. the units and runs end-to-end tests read) */
   attributes?: CardDataAttributes;
-  /** Reports page: the rows or figures carry their own "Provisional" markers, so none beside the title */
+  /** the rows or figures carry their own "Provisional" markers, so none beside the title */
   provisionalRows?: boolean;
   children: ReactNode;
 }
@@ -37,9 +37,10 @@ export interface AnalyticsCardProps {
  * One analytics widget: title, its own loading / empty / error state and the figures. The page-wide facts
  * (incomplete coverage, calculation runs, policy versions) are said once in the page header (UI guidelines
  * §2 "say it once"); the card carries at most a "Provisional" chip. While a new scope loads the previous
- * figures stay, under a thin refreshing bar. On the Reports page (`ReportChrome`) it is a `ReportCard`: the
- * title and ⓘ only (no chip, caption or calculation details), and with Revision = Provisional one marker
- * beside the title when the response is provisional and its rows do not say so themselves.
+ * figures stay, under a thin refreshing bar. On the Reports page and the PLA analysis pages (`ReportChrome`)
+ * it is a `ReportCard`: the title and ⓘ only (no chip or caption), and with Revision = Provisional one marker
+ * beside the title when the response is provisional and its rows do not say so themselves. On the PLA pages
+ * (`AnalysisSnapshotContext`) the card also says when its data is incomplete, with the runs behind "Details".
  */
 export function AnalyticsCard(props: AnalyticsCardProps) {
   const report = useReportChrome();
@@ -54,7 +55,7 @@ function ReportAnalyticsCard(props: AnalyticsCardProps) {
   const refreshing = isRefreshing(query);
   return (
     <ReportCard title={title} testId={testId} info={info} actions={actions} attributes={attributes} provisional={!provisionalRows && response?.isProvisional === true} aria-busy={refreshing || undefined}>
-      <CardBody {...props} refreshing={refreshing} />
+      <CardBody {...props} refreshing={refreshing} lead={<CalculationDetails response={response} approvedOnly={props.approvedOnly} />} />
     </ReportCard>
   );
 }
@@ -78,7 +79,7 @@ function PlainAnalyticsCard(props: AnalyticsCardProps) {
           refreshing={refreshing}
           lead={
             <>
-              <CalculationDetails response={response} />
+              <CalculationDetails response={response} approvedOnly={approvedOnly} />
               {note && <p className="text-xs text-muted-foreground">{note}</p>}
             </>
           }
@@ -106,8 +107,12 @@ function hasSnapshot(response: Pick<AnalyticsResponse<unknown>, 'isProvisional'>
   return 'data' in response && 'coverage' in response && 'dataQuality' in response && 'asOf' in response;
 }
 
-function CalculationDetails({ response }: Pick<AnalyticsCardProps, 'response'>) {
+/**
+ * PLA analysis pages (`AnalysisSnapshotContext` set): the incomplete-data note and the runs / policies behind
+ * "Details". Not on the Reports page and not on the PLA overview, whose header says it once for the page.
+ */
+function CalculationDetails({ response, approvedOnly }: Pick<AnalyticsCardProps, 'response' | 'approvedOnly'>) {
   const scope = useContext(AnalysisSnapshotContext);
   if (!scope || !response || !hasSnapshot(response)) return null;
-  return <details><summary className="cursor-pointer text-xs text-primary">Calculation details</summary><SnapshotStatus {...scope} response={response} /></details>;
+  return <SnapshotStatus response={response} approvedOnly={approvedOnly} timezone={scope.timezone} />;
 }

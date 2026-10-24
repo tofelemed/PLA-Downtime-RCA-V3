@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { LinesWithoutEventView } from '@/api/v2/types/pla-analytics';
@@ -58,7 +58,10 @@ describe('QA PLA M3 re-test: the Performance drill of a manual line', () => {
     expect(section).toHaveTextContent('SPEED-LOSS Reduced extrusion rate');
     expect(section).toHaveTextContent('4.00 t');
     expect(section).toHaveTextContent('Observed rate deficit after the 09:00 restart · Log: shift log');
-    expect(section).toHaveTextContent('1 loss line of this component (Performance)');
+    // a titled report card with its count; the explanation is behind the ⓘ, not a paragraph
+    expect(within(section).getByRole('heading', { level: 2 })).toHaveTextContent('Loss lines with no event (1)');
+    expect(within(section).getByRole('button', { name: /^About Loss lines with no event/ })).toBeInTheDocument();
+    expect(section).not.toHaveTextContent('explain no stop or event');
     expect(screen.getByTestId('line-without-event-period')).toHaveAttribute('href', '/plans/plan-1/periods/p-a');
   });
 

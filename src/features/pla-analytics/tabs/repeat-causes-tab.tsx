@@ -48,10 +48,10 @@ export function RepeatCausesTab({ scope }: { scope: AnalyticsScope }) {
   const byAsset = useDowntimeReport(repeatQuery(scope, 'asset'), env.timezone);
   return (
     <div className="grid gap-4 xl:grid-cols-2">
-      <AnalyticsCard title="By reason" testId="pla-repeat-reasons" query={byReason} response={byReason.data} isEmpty={byReason.data?.data.groups.length === 0} emptyText="No stops in this scope." note="Stops starting in the window; “periods” = shifts the cause recurred in.">
+      <AnalyticsCard title="By reason" testId="pla-repeat-reasons" query={byReason} response={byReason.data} isEmpty={byReason.data?.data.groups.length === 0} emptyText="No stops in this scope." info="Stops starting in the window; “periods” = shifts the cause recurred in.">
         {byReason.data && <RepeatTable report={byReason.data.data} title="Reason" testId="repeat-reasons" />}
       </AnalyticsCard>
-      <AnalyticsCard title="By asset" testId="pla-repeat-assets" query={byAsset} response={byAsset.data} isEmpty={byAsset.data?.data.groups.length === 0} emptyText="No stops on assets in this scope." note="Allocated to the asset of the stop.">
+      <AnalyticsCard title="By asset" testId="pla-repeat-assets" query={byAsset} response={byAsset.data} isEmpty={byAsset.data?.data.groups.length === 0} emptyText="No stops on assets in this scope." info="Allocated to the asset of the stop.">
         {byAsset.data && <RepeatTable report={byAsset.data.data} title="Asset" testId="repeat-assets" />}
       </AnalyticsCard>
     </div>
