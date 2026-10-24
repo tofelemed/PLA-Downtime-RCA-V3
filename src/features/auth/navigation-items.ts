@@ -14,11 +14,11 @@ export interface NavSection {
 
 export const NAV_SECTIONS: readonly NavSection[] = [
   { key: 'overview', label: 'Overview', icon: EntityIcon.dashboard },
-  { key: 'production', label: 'Production', icon: EntityIcon.plant },
+  { key: 'production', label: 'Daily operations', icon: EntityIcon.plant },
   { key: 'pla', label: 'Production loss analysis (PLA)', icon: EntityIcon.lossAnalysis },
   { key: 'downtime', label: 'Downtime analysis', icon: EntityIcon.downtime },
-  { key: 'reliability', label: 'Reliability', icon: EntityIcon.rcaCase },
-  { key: 'setup', label: 'Setup', icon: EntityIcon.equipmentSetup },
+  { key: 'reliability', label: 'Asset reliability', icon: EntityIcon.rcaCase },
+  { key: 'setup', label: 'Configuration', icon: EntityIcon.equipmentSetup },
   { key: 'integration', label: 'Integration', icon: EntityIcon.integration },
   { key: 'administration', label: 'Administration', icon: EntityIcon.administration },
 ];

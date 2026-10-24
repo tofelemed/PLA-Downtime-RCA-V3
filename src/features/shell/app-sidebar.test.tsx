@@ -98,7 +98,7 @@ describe('AppSidebar', () => {
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
     expect(within(nav).getByRole('button', { name: 'Collapse sidebar' })).toBeInTheDocument();
-    const reliability = within(nav).getByRole('button', { name: 'Reliability' });
+    const reliability = within(nav).getByRole('button', { name: 'Asset reliability' });
     expect(reliability).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(reliability);
     expect(reliability).toHaveAttribute('aria-expanded', 'true');
@@ -150,6 +150,6 @@ describe('AppSidebar', () => {
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
     const sections = within(nav).getAllByRole('button').filter((button) => button.hasAttribute('aria-controls')).map((button) => button.textContent);
-    expect(sections.slice(0, 5)).toEqual(['Overview', 'Production', 'Production loss analysis (PLA)', 'Downtime analysis', 'Reliability']);
+    expect(sections.slice(0, 5)).toEqual(['Overview', 'Daily operations', 'Production loss analysis (PLA)', 'Downtime analysis', 'Asset reliability']);
   });
 });

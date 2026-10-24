@@ -71,7 +71,7 @@ describe('responsive shell (UX audit H-1)', () => {
     expect(within(nav).queryByRole('button', { name: /sidebar/ })).toBeNull();
     // the drawer opens the current page's section (Overview) and closes the others, like the sidebar
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
-    expect(within(nav).getByRole('button', { name: 'Production' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(nav).getByRole('button', { name: 'Daily operations' })).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(within(nav).getByRole('link', { name: 'Reports' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull());
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false');

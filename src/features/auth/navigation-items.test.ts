@@ -243,6 +243,10 @@ describe('navigation sections', () => {
     expect(NAVIGATION_ITEMS.filter((item) => item.section === 'overview').map((item) => item.name)).toEqual(['Dashboard', 'Reports', 'Pending approvals']);
   });
 
+  it('section labels use the agreed copy', () => {
+    expect(NAV_SECTIONS.map((s) => s.label)).toEqual(['Overview', 'Daily operations', 'Production loss analysis (PLA)', 'Downtime analysis', 'Asset reliability', 'Configuration', 'Integration', 'Administration']);
+  });
+
   it('every item has its own icon', () => {
     expect(new Set(NAVIGATION_ITEMS.map((item) => item.icon)).size).toBe(NAVIGATION_ITEMS.length);
   });
