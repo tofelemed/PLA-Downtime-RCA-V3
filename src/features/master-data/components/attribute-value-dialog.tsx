@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { focusFirstField } from './focus-first-field';
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import type { AttributeDefinitionView as CustomAttributeDefinition } from '@/api/v2/types/administration';
@@ -61,14 +62,6 @@ function ValueInput({ definition, value, onChange }: { definition: CustomAttribu
   );
 }
 
-/** The value field gets focus on open (not the ⓘ in the title). */
-function focusField(event: Event) {
-  const field = document.getElementById('attribute-value');
-  if (!field) return;
-  event.preventDefault();
-  field.focus();
-}
-
 /** Edit one custom attribute value of a unit or asset (a short dialog: one field). */
 export function AttributeValueDialog({ definition, value, saving, onSave, onClose }: AttributeValueDialogProps) {
   const [draft, setDraft] = useState(value);
@@ -76,7 +69,7 @@ export function AttributeValueDialog({ definition, value, saving, onSave, onClos
   const missing = definition.isRequired && draft.trim() === '';
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusField}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('attribute-value')}>
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             <DialogTitle>Edit {definition.displayName}</DialogTitle>

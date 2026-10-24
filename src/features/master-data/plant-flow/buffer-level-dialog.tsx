@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useRecordBufferLevel } from '@/api/v2/queries/plant-model';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
-import { focusFirstField } from './focus-first-field';
+import { focusFirstField } from '../components/focus-first-field';
 import { FormField } from '@/features/plans-profiles-calendars/components/form-field';
 import { NativeSelect, type Option } from '@/features/plans-profiles-calendars/components/native-select';
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';

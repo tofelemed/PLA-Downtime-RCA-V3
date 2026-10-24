@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RequiredMarker } from '@/features/ux-kit/form-field';
 import { Textarea } from '@/components/ui/textarea';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { ReadOnlyField } from './read-only-field';
 
 export interface TextFieldProps {
@@ -19,6 +20,8 @@ export interface TextFieldProps {
   maxLength?: number;
   /** opt-in: read-only users see the value as text under the label (no input, no hint) */
   asText?: boolean;
+  /** opt-in: what the field means, behind an ⓘ beside the label */
+  info?: string;
 }
 
 /** A labelled text input with its hint and error wired to `aria-describedby` / `aria-invalid`. */
@@ -42,10 +45,13 @@ function EditableTextField(props: TextFieldProps) {
   };
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>
-        {label}
-        {required && <RequiredMarker />}
-      </Label>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={id}>
+          {label}
+          {required && <RequiredMarker />}
+        </Label>
+        {rest.info && <KpiInfo label={label} text={rest.info} />}
+      </div>
       {multiline ? (
         <Textarea {...common} rows={3} onChange={(event) => onChange(event.target.value)} />
       ) : (

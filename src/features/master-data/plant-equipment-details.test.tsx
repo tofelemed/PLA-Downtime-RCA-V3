@@ -11,6 +11,7 @@ const selection = {
 };
 /** read-only master-data users (the plant administrators without a master-data writer role) */
 const writer = vi.hoisted(() => ({ value: true }));
+const retiredUnit = vi.hoisted(() => ({ value: false }));
 vi.mock('./hooks/use-master-data-writer', () => ({ useMasterDataWriter: () => writer.value }));
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection, setSelection: vi.fn(), loading: false }) }));
@@ -46,10 +47,16 @@ describe('Plant & equipment record pages (cleanup 25 Oct 2026)', () => {
   beforeEach(() => {
     actAs('SuperAdmin');
     writer.value = true;
+    retiredUnit.value = false;
     stubV2Fetch((call) => {
       const path = call.url.pathname;
       if (path === '/api/v2/units/u1') return jsonResponse(200, UNIT);
-      if (path === '/api/v2/units') return jsonResponse(200, listPage([UNIT]));
+      // a retired unit is listed only when retired units are asked for
+      if (path === '/api/v2/units') {
+        const status = call.url.searchParams.get('status');
+        if (retiredUnit.value) return jsonResponse(200, listPage(status === 'active' ? [] : [{ ...UNIT, retiredAt: '2026-10-10T00:00:00Z' }]));
+        return jsonResponse(200, listPage([UNIT]));
+      }
       if (path === '/api/v2/assets/a1') return jsonResponse(200, ASSET);
       if (path === '/api/v2/products/p1') return jsonResponse(200, PRODUCT);
       if (path === '/api/v2/sites') return jsonResponse(200, listPage(SITES));
@@ -126,5 +133,14 @@ describe('Plant & equipment record pages (cleanup 25 Oct 2026)', () => {
     expect(screen.getByRole('button', { name: 'About Details' })).toBeTruthy();
     expect(screen.getByText('Available to:')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'About Available to' })).toBeTruthy();
+  });
+
+  it('asset: read-only, a retired unit is still named', async () => {
+    writer.value = false;
+    retiredUnit.value = true;
+    show(<AssetDetailPage />, '/master-data/assets/a1', '/master-data/assets/:assetId');
+    await screen.findByRole('heading', { level: 1, name: 'Gearbox' });
+    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Production unit' })).getByText('EXT-1 — Extruder 1')).toBeTruthy());
+    expect(screen.queryByText('Unknown unit')).toBeNull();
   });
 });

@@ -5,6 +5,7 @@ import type { SiteV2View } from '@/api/v2/types/sites';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { focusFirstField } from '@/features/master-data/components/focus-first-field';
 import { TextField } from '@/features/master-data/components/text-field';
 import { StatusIcon } from '@/lib/icons';
 import { useCommandFeedback } from '../shared/use-command-feedback';
@@ -39,14 +40,6 @@ function useSiteSave(site: SiteV2View | null, onClose: () => void) {
   return { save, errors, busy: create.isPending || rename.isPending };
 }
 
-/** The Name field gets focus on open (not the ⓘ next to the title). */
-function focusName(event: Event) {
-  const field = document.getElementById('site-name');
-  if (!field) return;
-  event.preventDefault();
-  field.focus();
-}
-
 /** Add a site to the selected plant (name, optional time zone and day start) or rename one: a short dialog. */
 export function SiteDialog({ site, plantName, onClose }: SiteDialogProps) {
   const [draft, setDraft] = useState<SiteDraft>({ name: site?.name ?? '', timezone: '', operationalDayStart: '' });
@@ -59,7 +52,7 @@ export function SiteDialog({ site, plantName, onClose }: SiteDialogProps) {
   const title = site ? `Rename ${site.name}` : `Add site to ${plantName}`;
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusName}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('site-name')}>
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             <DialogTitle>{title}</DialogTitle>
@@ -70,8 +63,8 @@ export function SiteDialog({ site, plantName, onClose }: SiteDialogProps) {
           <TextField id="site-name" label="Name" value={draft.name} onChange={(name) => set({ name })} error={errors.name} required maxLength={255} disabled={busy} />
           {!site && (
             <>
-              <TextField id="site-timezone" label="Time zone" value={draft.timezone} onChange={(timezone) => set({ timezone })} placeholder="e.g. Asia/Tehran" disabled={busy} />
-              <TextField id="site-day-start" label="Day start" value={draft.operationalDayStart} onChange={(operationalDayStart) => set({ operationalDayStart })} error={errors.operationalDayStart} placeholder="HH:MM" disabled={busy} maxLength={5} />
+              <TextField id="site-timezone" label="Time zone" value={draft.timezone} onChange={(timezone) => set({ timezone })} placeholder="e.g. Asia/Tehran" hint="IANA zone, e.g. Asia/Tehran." disabled={busy} />
+              <TextField id="site-day-start" label="Day start" value={draft.operationalDayStart} onChange={(operationalDayStart) => set({ operationalDayStart })} error={errors.operationalDayStart} placeholder="HH:MM" info="When the production day starts (HH:MM), e.g. 06:00." disabled={busy} maxLength={5} />
             </>
           )}
           <DialogFooter>

@@ -31,7 +31,7 @@ export interface UnitSelectProps {
   asText?: boolean;
 }
 
-/** "code — name" of the chosen unit; one not in the active list (retired) reads "Unknown unit", as elsewhere. */
+/** "code — name" of the chosen unit, active or retired; an id the plant does not know reads "Unknown unit". */
 const unitText = (units: readonly MasterUnitView[], id: string) => {
   if (!id) return '';
   const unit = units.find((entry) => entry.id === id);
@@ -44,7 +44,8 @@ export function UnitSelect(props: UnitSelectProps) {
 }
 
 function UnitText({ label, value }: { label: string; value: string }) {
-  const units = useRecordLookup<MasterUnitView>(UNITS, { status: 'active', sort: 'code' });
+  // retired units too: a retired asset keeps the name of its (since retired) unit
+  const units = useRecordLookup<MasterUnitView>(UNITS, { status: 'all', sort: 'code' });
   return <ReadOnlyField label={label} value={unitText(units.items, value)} />;
 }
 

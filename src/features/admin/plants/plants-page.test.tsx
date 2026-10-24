@@ -91,6 +91,8 @@ describe('Organizations & plants', () => {
     expect(within(dialog).getByRole('button', { name: 'About Add site to Own plant' })).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(within(dialog).getByLabelText(/^Name/)));
     expect(within(dialog).getByRole('form', { name: 'Add site' })).toHaveClass('[&_input]:h-9');
+    expect(within(dialog).getByRole('button', { name: 'About Day start' })).toBeTruthy();
+    expect(within(dialog).getByText('IANA zone, e.g. Asia/Tehran.')).toBeTruthy();
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });

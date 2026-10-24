@@ -94,7 +94,6 @@ describe('equipment setup guide page', () => {
     show();
     expect(screen.queryByText(/Set up a production unit, such as an HDPE extruder/)).toBeNull();
     expect(screen.queryByText(/Choose a unit to open it directly/)).toBeNull();
-    for (const phase of SETUP_PHASES) expect(screen.queryByText(phase.description)).toBeNull();
     expect(screen.queryByText('Select a unit above to open this unit directly.')).toBeNull();
     expect(screen.queryByText(/Opening a page from this guide does not save/)).toBeNull();
     expect(screen.getByRole('button', { name: `About ${setupStepTitle()}` })).toBeInTheDocument();
@@ -107,5 +106,17 @@ describe('equipment setup guide page', () => {
     expect(within(toolbar).getByRole('button', { name: 'Expand all' })).toHaveClass('h-9');
     expect(within(toolbar).getByRole('button', { name: 'Collapse all' })).toHaveClass('h-9');
     expect(toolbar).toHaveClass('items-end');
+  });
+
+  it('keeps each phase description behind an ⓘ after its title; clicking the ⓘ does not toggle the phase', () => {
+    show();
+    for (const phase of SETUP_PHASES) expect(screen.queryByText(phase.description)).toBeNull();
+    const rules = SETUP_PHASES.find((phase) => phase.id === 'rules')!;
+    const info = screen.getByRole('button', { name: `About ${rules.title}` });
+    const details = info.closest('details')!;
+    expect(details.open).toBe(true);
+    fireEvent.click(info);
+    expect(details.open).toBe(true);
+    expect(document.querySelectorAll('details[open]')).toHaveLength(6);
   });
 });
