@@ -26,7 +26,7 @@ function RateLossTrend({ scope }: { scope: AnalyticsScope }) {
     { id: 'performance', header: 'Performance', align: 'right', nowrap: true, cell: (m) => <LocalizedNumber text={kpiText(m.performance, pref.digits)} /> },
   ];
   return (
-    <AnalyticsCard title="Running below rate, by month" testId="rate-loss-trend" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods on these dates." note="Equivalent downtime: the rate lost by slowdowns as time at the reference rate.">
+    <AnalyticsCard title="Running below rate, by month" testId="rate-loss-trend" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods on these dates." info="Equivalent downtime: the rate lost by slowdowns as time at the reference rate.">
       {data && (
         <div className="space-y-2">
           <DataTable caption="Running below rate, by month" columns={columns} rows={data.months} getRowKey={(m) => m.month} density="compact" />

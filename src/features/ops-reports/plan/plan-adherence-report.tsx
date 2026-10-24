@@ -54,7 +54,7 @@ export function PlanAdherenceReport({ scope }: { scope: AnalyticsScope }) {
         approvedOnly={scope.approvedOnly}
         isEmpty={query.data !== undefined && rows.length === 0}
         emptyText="No production periods start on these dates."
-        note="Volume adherence counts each day's output only up to that day's plan."
+        info="Volume adherence counts each day's output only up to that day's plan."
       >
         <DataTable caption="Plan adherence by grade" columns={COLUMNS} rows={rows} getRowKey={(r) => `${r.productId ?? '-'}|${r.uom ?? '-'}`} density="compact" />
       </AnalyticsCard>

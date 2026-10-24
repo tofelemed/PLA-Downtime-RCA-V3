@@ -6,6 +6,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { actAs } from '@/test/acting-user';
 import { jsonResponse, stubV2Fetch, type V2Call } from '@/test/v2-fetch';
 import { parseScope } from '@/features/pla-analytics/model/analytics-scope';
+import { ReportChrome } from '@/features/pla-analytics/components/report-chrome';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null, loading: false }) }));
@@ -35,7 +36,7 @@ function oee(call: V2Call): Response | undefined {
 describe('DailyReport OEE', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('shows the four operational OEE tiles in a titled card with its Provisional chip, and never asks for the reconciled OEE', async () => {
+  it('shows the four operational OEE tiles in a card titled "OEE" (no "Operational", "(ISO 22400)" or Provisional chip), and never asks for the reconciled OEE', async () => {
     actAs('viewer');
     const calls = stubV2Fetch(oee);
     const scope = parseScope(new URLSearchParams('from=2026-10-17T00:00:00.000Z&to=2026-10-18T00:00:00.000Z'), 0);
@@ -43,15 +44,17 @@ describe('DailyReport OEE', () => {
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <TooltipProvider>
           <MemoryRouter>
-            <DailyReport scope={scope} dayStart="06:00" />
+            <ReportChrome>
+              <DailyReport scope={scope} dayStart="06:00" />
+            </ReportChrome>
           </MemoryRouter>
         </TooltipProvider>
       </QueryClientProvider>,
     );
     const card = await screen.findByTestId('dashboard-oee-operational');
     await waitFor(() => expect(within(card).getAllByTestId('oee-tile-value')).toHaveLength(4));
-    expect(within(card).getByText('Operational OEE (ISO 22400)')).toBeInTheDocument();
-    expect(within(card).getByText('Provisional')).toBeInTheDocument();
+    expect(within(card).getAllByText('OEE').length).toBeGreaterThan(0);
+    expect(card).not.toHaveTextContent(/Operational|ISO 22400|Provisional/);
     for (const id of ['operational', 'availability', 'performance', 'quality']) expect(within(card).getByTestId(`dashboard-oee-${id}-tile`)).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard-oee-reconciled-tile')).toBeNull();
     const oeeCalls = calls.filter((call) => call.url.pathname.includes('/reports/oee'));

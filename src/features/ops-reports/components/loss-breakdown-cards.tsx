@@ -7,7 +7,6 @@ import { AnalyticsCard } from '@/features/pla-analytics/components/analytics-car
 import { LossTable } from '@/features/pla-analytics/components/loss-table';
 import { lossTreeQuery, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { LOSS_GROUP_LABELS } from '@/features/pla-analytics/model/display';
-import { lossLinesNote } from '@/features/pla-analytics/model/links';
 
 export interface LossBreakdownProps {
   scope: AnalyticsScope;
@@ -38,7 +37,7 @@ function LossBreakdown({ metric, ...props }: LossBreakdownProps & { metric: 'qty
   const unit = shownUnit(data, metric, currency);
   const testId = `${props.testId}-${metric}`;
   return (
-    <AnalyticsCard title={`${props.title} (${metric === 'qty' ? 'quantity' : 'value'})`} testId={testId} query={query} response={query.data} approvedOnly={props.scope.approvedOnly} isEmpty={data !== undefined && data.groups.length === 0} emptyText="No loss lines on these dates." note={lossLinesNote(props.scope.approvedOnly)}>
+    <AnalyticsCard title={`${props.title} (${metric === 'qty' ? 'quantity' : 'value'})`} testId={testId} query={query} response={query.data} approvedOnly={props.scope.approvedOnly} isEmpty={data !== undefined && data.groups.length === 0} emptyText="No loss lines on these dates.">
       {data && <LossTable groups={data.groups.filter((g) => g.unit === unit)} total={data.totals.find((t) => t.unit === unit)} metric={data.metric} groupTitle={LOSS_GROUP_LABELS[props.groupBy]} testId={`${testId}-table`} />}
     </AnalyticsCard>
   );

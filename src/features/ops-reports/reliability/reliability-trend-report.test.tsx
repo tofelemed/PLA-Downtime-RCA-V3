@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReliabilityTrendView } from '@/api/v2/types/ops-reports';
 import type { KpiAggregateView } from '@/api/v2/types/reports';
 
@@ -28,5 +29,13 @@ describe('ReliabilityTrendReport (R6)', () => {
     render(<ReliabilityTrendReport scope={{ unitIds: [], from: '', to: '', approvedOnly: true } as unknown as Parameters<typeof ReliabilityTrendReport>[0]['scope']} />);
     expect(screen.getByText('MTBF falling')).toBeInTheDocument();
     expect(screen.getAllByTestId('reliability-series')[0]).toHaveTextContent('Reactor 1');
+  });
+
+  it('puts the failure definition behind the ⓘ of the MTBF card, not under its title', async () => {
+    render(<ReliabilityTrendReport scope={{ unitIds: [], from: '', to: '', approvedOnly: true } as unknown as Parameters<typeof ReliabilityTrendReport>[0]['scope']} />);
+    expect(screen.queryByText('A failure is …')).toBeNull();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'About MTBF by month' })).toHaveFocus();
+    expect((await screen.findAllByText('A failure is …')).length).toBeGreaterThan(0);
   });
 });

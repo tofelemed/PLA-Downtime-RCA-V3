@@ -46,7 +46,7 @@ export function CodingComplianceReport({ scope }: { scope: AnalyticsScope }) {
   return (
     <div className="space-y-4" data-testid="coding-compliance">
       <ReportExportBar kind="compliance" query={scopeBase(scope)} timezone={env.timezone} />
-      <AnalyticsCard title="Coding by crew and shift" testId="coding-compliance-tables" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={empty} emptyText="No stops or calculated periods on these dates." note="Coding delay: from the end of a stop to its first coding with a reason.">
+      <AnalyticsCard title="Coding by crew and shift" testId="coding-compliance-tables" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={empty} emptyText="No stops or calculated periods on these dates." info="Coding delay: from the end of a stop to its first coding with a reason.">
         {data && (
           <div className="space-y-4">
             <ComplianceTable rows={data.byCrew} title="Crew" />

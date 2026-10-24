@@ -64,7 +64,7 @@ export function ReliabilityTrendReport({ scope }: { scope: AnalyticsScope }) {
     <div className="space-y-4" data-testid="reliability-trend">
       <ReportExportBar kind="reliability" query={scopeBase(scope)} timezone={env.timezone} />
       {METRICS.map((metric) => (
-        <AnalyticsCard key={metric.key} title={`${metric.label} by month`} testId={`reliability-trend-${metric.key}`} query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.units.length === 0} emptyText="No calculated periods on these dates." note={metric.key === 'mtbf' ? data?.failureDefinition : undefined}>
+        <AnalyticsCard key={metric.key} title={`${metric.label} by month`} testId={`reliability-trend-${metric.key}`} query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.units.length === 0} emptyText="No calculated periods on these dates." info={metric.key === 'mtbf' ? data?.failureDefinition : undefined}>
           {data && (
             <div className="space-y-3">
               <SeriesTable rows={data.units} months={data.months} metric={metric.key} labelOf={unitLabel} caption={`${metric.label} by unit and month`} />
