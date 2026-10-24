@@ -98,6 +98,7 @@ test('plant calendar, digits and reporting week propagate to dates and server we
 });
 
 test('USD and IRR preference changes the report columns and survives navigation and reload', async ({ page }) => {
+  test.skip(true, 'The USD/IRR display switch is hidden while DISPLAY_CURRENCY_SWITCH_ENABLED is false (src/features/display-currency/display-currency-store.ts)');
   await signIn(page, MANAGER);
   const toggle = page.locator('header').getByTestId('display-currency-toggle');
   const original = await toggle.getByTestId('display-currency-IRR').getAttribute('data-state') === 'on' ? 'IRR' : 'USD';

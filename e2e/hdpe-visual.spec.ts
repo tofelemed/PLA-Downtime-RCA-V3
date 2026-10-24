@@ -19,10 +19,8 @@ for (const viewport of [{ name: 'desktop', width: 1440, height: 900 }, { name: '
       await expect(currentPlant).toHaveText('HDPE');
       const labelBox = await currentPlant.boundingBox();
       const labelSize = await currentPlant.evaluate((label) => ({ content: label.scrollWidth, visible: label.clientWidth }));
-      const currencyBox = await page.getByTestId('display-currency-toggle').boundingBox();
       expect(labelBox?.width).toBeGreaterThan(25);
       expect(labelSize.content, 'The short HDPE plant name must be fully readable').toBeLessThanOrEqual(labelSize.visible);
-      expect(labelBox!.x + labelBox!.width).toBeLessThanOrEqual(currencyBox!.x);
       if (viewport.name === 'mobile') await page.screenshot({ path: test.info().outputPath(`mobile-${route.slice(1)}-viewport.png`) });
     });
   }
