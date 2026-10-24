@@ -82,7 +82,7 @@ describe('month-close contracts retained during section restructuring', () => {
     expect(days.querySelectorAll('tbody tr')).toHaveLength(50); expect(days.querySelector('a')).toBeNull();
     expect(screen.getByText(/First 50 of 60 shown/)).toBeVisible();
     await userEvent.click(screen.getByRole('tab', { name: 'Proposals' }));
-    expect(screen.getByText(/56 open change proposals/)).toBeVisible();
+    expect(screen.getByRole('heading', { name: /Proposals.*56 open/ })).toBeVisible();
     expect(screen.getByText(/First 50 of 56 shown/)).toBeVisible();
     expect(screen.getByTestId('open-proposals').querySelectorAll('tbody tr')).toHaveLength(50);
     expect(screen.getByTestId('open-proposals').querySelectorAll('a')).toHaveLength(1);
@@ -170,10 +170,10 @@ describe('month-close contracts retained during section restructuring', () => {
     view = cappedMonthCloseFixture(); view.state = 'locked'; view.policy.blockOnOpenProposals = blockOnOpenProposals;
     mount(); await screen.findByTestId('close-prerequisites');
     expect(screen.getByTestId('close-prerequisites')).toHaveTextContent('Month locked.');
-    expect(screen.getByTestId('close-count-proposals')).toHaveTextContent('after-close correction workflow');
+    expect(screen.getByTestId('close-count-proposals')).not.toHaveTextContent('after-close correction workflow');
     expect(screen.queryByText(/before closing/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Proposals' }));
-    expect(screen.getByTestId('open-proposals')).toHaveTextContent('Review open proposals from their period through the after-close correction workflow.');
+    expect(screen.getByTestId('open-proposals')).not.toHaveTextContent('after-close correction workflow');
     expect(screen.queryByText(/before closing/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open period' })).toHaveAttribute('href', '/plans/plan-a/periods/period-0');
     expect(calls.every((call) => call.method === 'GET')).toBe(true);
@@ -202,7 +202,7 @@ describe('month-close contracts retained during section restructuring', () => {
     mount();
     const notice = await screen.findByTestId('uncovered-days');
     expect(notice).toHaveTextContent('2 production days have no approved plan.');
-    expect(notice).toHaveTextContent('not counted above');
+    expect(within(notice).getByRole('button', { name: /About days without an approved plan/ })).toBeVisible();
     expect(within(notice).getByRole('link', { name: 'Open Plans' })).toHaveAttribute('href', '/planning');
     expect(within(notice).getAllByRole('row')).toHaveLength(3);
     await userEvent.click(screen.getByRole('tab', { name: 'Periods' }));

@@ -13,7 +13,7 @@ function MissingPeriods({ view }: { view: MonthCloseView }) {
   return (
     <div className="text-sm" data-testid="close-missing-periods">
       <p>
-        {count} expected {count === 1 ? 'period does' : 'periods do'} not exist yet: each scheduled shift needs its period approved before the close.
+        {count} expected {count === 1 ? 'period does' : 'periods do'} not exist yet:
       </p>
       <ul className="list-disc pl-5 text-xs text-muted-foreground">
         {shown.map((m) => (
@@ -38,8 +38,7 @@ export function CloseMonthEnd({ view }: { view: MonthCloseView }) {
     <div className="space-y-1" data-testid="close-month-end">
       <p className="text-sm" data-testid="close-month-end-status" data-ended={monthEnded}>
         {monthEnded ? 'Month ended ' : 'Month ends '}
-        <PlantTime iso={monthEndsAt} tz={tz} withDate />
-        {monthEnded ? '.' : ' — not ended yet; the quantities can be closed after that.'}
+        <PlantTime iso={monthEndsAt} tz={tz} withDate withZone={false} />
       </p>
       <MissingPeriods view={view} />
     </div>

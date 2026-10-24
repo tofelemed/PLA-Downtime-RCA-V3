@@ -6,12 +6,14 @@ import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
 import { CloseHistory } from './components/close-history';
 import { ClosePrerequisites } from './components/close-prerequisites';
 import { CloseOverview } from './components/close-overview';
 import { CloseSectionNav } from './components/close-section-nav';
 import { MonthNav } from './components/month-nav';
 import { CloseExceptions } from './exceptions/close-exceptions';
+import { CLOSE_LOOK } from './model/close-look';
 import { closeSearch, closeSection } from './model/close-section';
 
 function MonthCloseScreen() {
@@ -32,10 +34,10 @@ function MonthCloseScreen() {
   };
   return (
     <Page width="wide">
+      <ReportLookContext.Provider value={CLOSE_LOOK}>
       <div className="space-y-6" data-testid="month-close">
         <PageHeader
           title="Month close"
-          description="Close the plant's financial month: every period approved, quantities closed by plant management, finance sign-off, then the lock."
           meta={view ? <MonthNav view={view} onSelect={select} /> : null}
         />
         <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
@@ -52,6 +54,7 @@ function MonthCloseScreen() {
           )}
         </DataState>
       </div>
+      </ReportLookContext.Provider>
     </Page>
   );
 }
