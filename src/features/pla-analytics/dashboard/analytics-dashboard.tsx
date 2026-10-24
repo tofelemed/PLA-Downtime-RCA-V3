@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DashboardHeader } from './dashboard-header';
 import { useDashboardScope } from './use-dashboard-scope';
-import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
+import { DowntimeSection } from './downtime-section';
 import { eventsHref } from './dashboard-links';
 import { OeeSection } from './oee-section';
 import { ProductionPlanSection } from './production-plan-section';
@@ -45,12 +45,7 @@ function DashboardScreen() {
         <ForYouRow scope={scope} />
         <OeeSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <ProductionPlanSection scope={scope} assetSelected={Boolean(node.assetId)} />
-        <Section title="Downtime">
-          <div className="grid gap-4 xl:grid-cols-2">
-            <DashboardDowntime scope={scope} />
-            <DashboardTopAssets scope={scope} />
-          </div>
-        </Section>
+        <DowntimeSection scope={scope} assetId={node.assetId} />
         <Section title="Reconciliation">
           <ReconciliationTiles scope={scope} />
         </Section>
