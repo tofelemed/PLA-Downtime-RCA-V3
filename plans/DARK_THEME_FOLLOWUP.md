@@ -7,9 +7,9 @@ those folders has a hard-coded colour. What is left:
 - [ ] Visual QA of signed-in pages in dark: shell, dashboard, tables, charts, RCA event diagram (React Flow), dialogs,
       toasts. Not done in the dark-theme pass: the dev backend only allows CORS from `:8070`, which another session
       was using.
-- [ ] Sidebar redesign: use `text-sidebar-section-label` for section labels and `border-sidebar-border` /
-      `bg-sidebar`. Light `#94a3b8` labels are 2.6:1 on white, below WCAG AA for text (owner decision needed).
-      `sidebar-group.tsx` still uses `text-muted-foreground`, which is AA.
+- [x] Sidebar redesign (dashboard/shell redesign, 24 Oct 2026): the sidebar uses `border-sidebar-border`,
+      `bg-sidebar-accent` and the `sidebar-active-*` tokens. Section labels keep `text-muted-foreground` (AA); the unused
+      `--sidebar-section-label` token (light `#94a3b8`, 2.6:1 on white) was removed.
 - [ ] Brand primary colour (`use-brand-appearance.ts`) is set inline on `<html>`, so it overrides the dark
       `--primary` too. Decide whether a stored brand colour applies in dark, or whether it should get a dark variant.
 - [ ] `src/components/ui/toast.tsx` (generated) keeps its own `red-*` classes on the destructive toast. They are

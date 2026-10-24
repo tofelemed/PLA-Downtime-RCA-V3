@@ -53,8 +53,6 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    /* #94a3b8 — owner spec; 2.6:1 on white, so section labels must stay uppercase / semibold and never carry meaning alone */
-    --sidebar-section-label: 215 20.2% 65.1%;
     /* #eff6ff / #1d4ed8 (6.2:1) / #1d4ed8 */
     --sidebar-active-bg: 213.8 100% 96.9%;
     --sidebar-active-fg: 224.3 76.3% 48%;
@@ -157,7 +155,6 @@ All colors MUST be HSL.
       --sidebar-accent-foreground: 210 40% 98%;
       --sidebar-border: 217.2 32.6% 17.5%;
       --sidebar-ring: 213.1 93.9% 67.8%;
-      --sidebar-section-label: 215 20.2% 65.1%; /* #94a3b8, 6.9:1 */
       --sidebar-active-bg: 217.2 32.6% 17.5%; /* #1e293b */
       --sidebar-active-fg: 0 0% 100%;
       --sidebar-active-bar: 213.1 93.9% 67.8%; /* #60a5fa */

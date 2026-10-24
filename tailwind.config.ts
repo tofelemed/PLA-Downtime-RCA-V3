@@ -117,7 +117,6 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))',
-					'section-label': 'hsl(var(--sidebar-section-label))',
 					'active-bg': 'hsl(var(--sidebar-active-bg))',
 					'active-fg': 'hsl(var(--sidebar-active-fg))',
 					'active-bar': 'hsl(var(--sidebar-active-bar))'
