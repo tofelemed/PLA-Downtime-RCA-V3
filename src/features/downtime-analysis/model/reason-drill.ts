@@ -85,6 +85,18 @@ export function barLabel(group: DowntimeGroupView): string {
   return group.label ?? (group.key ? 'Unknown reason' : 'Not coded');
 }
 
+const AXIS_LABEL_MAX = 18;
+
+/**
+ * Pareto axis tick: the code of "CODE · Name" (as on the dashboard Pareto; the tooltip and the list keep the
+ * full label), cut to 18 characters so the slanted ticks never overlap.
+ */
+export function paretoAxisLabel(label: string): string {
+  const cut = label.indexOf(' · ');
+  const code = cut > 0 ? label.slice(0, cut) : label;
+  return code.length > AXIS_LABEL_MAX ? `${code.slice(0, AXIS_LABEL_MAX - 1)}…` : code;
+}
+
 export function drillParamOf(selection: Pick<DrillSelection, 'reasonId'>): string {
   return selection.reasonId ?? UNCODED_BAR;
 }

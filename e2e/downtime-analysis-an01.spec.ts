@@ -78,7 +78,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
 
     // The default first-out policy gives the earlier cause 60 min, then the later cause 30 min.
     const actors = page.getByTestId('bad-actors');
-    await expect(page.getByText(/^Allocated: overlapping stops/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'About Asset bad actors' })).toBeVisible();
     await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.pump}"]`)).toHaveAttribute('data-value', '3600');
     await expect(actors.locator(`[data-testid="bad-actor"][data-key="${world.assets.valve}"]`)).toHaveAttribute('data-value', '1800');
 

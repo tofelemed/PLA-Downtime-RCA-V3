@@ -61,7 +61,7 @@ export function BadActors({ bundle, views, filters }: { bundle: DowntimeBundleRe
       response={bundle.data}
       showMeta={false}
       isEmpty={rows.length === 0}
-      note="Allocated: overlapping stops of several assets share each moment, so asset totals add up to the unit downtime. Stops without an asset are listed as “No asset”."
+      info="Allocated: overlapping stops of several assets share each moment, so asset totals add up to the unit downtime. Stops without an asset are listed as “No asset”."
     >
       <DataTable caption="Downtime by asset" columns={columnsFor(digits, filters, windowText)} rows={rows} getRowKey={(row) => row.group.key ?? 'none'} density="compact" />
     </ReportCard>

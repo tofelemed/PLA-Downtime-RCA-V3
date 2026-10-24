@@ -147,3 +147,28 @@ describe('Downtime analysis cleanup: Stops & timeline', () => {
     expect(screen.queryByLabelText('Schedule class')).toBeNull();
   });
 });
+
+describe('Downtime analysis cleanup: Causes & Pareto', () => {
+  it('lost production: card with its ⓘ and one Provisional label; no ledger sentence or coverage line', async () => {
+    openDowntime(`/downtime/causes?${WINDOW}`);
+    await screen.findByTestId('lost-production');
+    expect(screen.getByRole('button', { name: 'About Lost production by stop reason' })).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Availability losses of the plan ledger|Coverage 100/);
+    await waitFor(() => expect(screen.getAllByText('Provisional')).toHaveLength(1));
+    expect(screen.getByTestId('report-meta')).toHaveAttribute('data-run-count', '2');
+    expect(screen.getByLabelText('Rank by')).toHaveValue('lost-production');
+  });
+
+  it('asset bad actors: the allocation note is the ⓘ', async () => {
+    openDowntime(`/downtime/causes?${WINDOW}&analysis=assets`);
+    await screen.findByRole('button', { name: 'About Asset bad actors' });
+    expect(document.body.textContent).not.toMatch(/Allocated: overlapping stops/);
+  });
+
+  it('Pareto axis ticks: the reason code only, cut so slanted labels do not overlap', async () => {
+    const { paretoAxisLabel } = await import('./model/reason-drill');
+    expect(paretoAxisLabel('MECH-GEARBOX · Gearbox failure')).toBe('MECH-GEARBOX');
+    expect(paretoAxisLabel('Not coded')).toBe('Not coded');
+    expect(paretoAxisLabel('QUALITY-DOWNGRADE-LONG-CODE · x')).toBe('QUALITY-DOWNGRADE…');
+  });
+});
