@@ -6,7 +6,7 @@ import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, PHYSICAL_TYPE_LABELS, SCHEDULE_CLASS_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
 import { DurationSortHeader, StartSortHeader, type EventSortControl } from './event-sort-headers';
-import { nameRepeats } from '../model/name-repeats';
+import { sameName } from '../model/name-repeats';
 import { EventStateCell } from './event-state-cell';
 import { StatesHeader } from './states-header';
 import { UnitLabel } from './unit-label';
@@ -156,7 +156,7 @@ function unitCell(event: ProductionEventView, context: EventColumnContext) {
   return (
     <div>
       <UnitLabel unitId={event.unitId} />
-      {asset && !nameRepeats(context.unitName(event.unitId), asset) && (
+      {asset && !sameName(context.unitName(event.unitId), asset) && (
         <div className="text-xs text-muted-foreground" data-testid="event-asset">
           {asset}
         </div>

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -24,7 +24,7 @@ vi.mock('@/api/v2/queries/reports', () => ({
   }),
 }));
 
-const { nameRepeats } = await import('./model/name-repeats');
+const { nameRepeats, sameName } = await import('./model/name-repeats');
 const { UnitLabel } = await import('./components/unit-label');
 const { eventColumns } = await import('./components/event-columns');
 const { EventStateCell } = await import('./components/event-state-cell');
@@ -80,9 +80,22 @@ describe('Event Hub cleanup (daily operations, 24 Oct 2026)', () => {
     expect(nameRepeats('HDPE Extruder 1', 'Extruder1')).toBe(true);
     expect(nameRepeats('Extruder Line 1', 'unit100')).toBe(false);
     expect(nameRepeats('Unit', '')).toBe(false);
-    wrap(<UnitLabel unitId="u1" />);
+    expect(nameRepeats('Extruder 11', 'Extruder1')).toBe(false);
+    expect(nameRepeats('Line 1', '1')).toBe(false);
+    expect(nameRepeats('Line 10', '10')).toBe(false);
+    expect(nameRepeats('Pump 1', 'PUMP-1')).toBe(true);
+    expect(sameName('HDPE Extruder 1', 'Extruder')).toBe(false);
+    expect(sameName('HDPE Extruder 1', 'hdpe extruder-1')).toBe(true);
+    const { unmount } = wrap(<UnitLabel unitId="u1" />);
     expect(screen.getByTestId('unit-label')).toHaveTextContent(/^HDPE Extruder 1$/);
     expect(screen.getByTestId('unit-label')).toHaveAttribute('title', 'Code Extruder1');
+    unmount();
+    render(
+      <EventHubEnvContext.Provider value={{ ...ENV, unitName: () => 'Extruder 11' }}>
+        <UnitLabel unitId="u1" />
+      </EventHubEnvContext.Provider>,
+    );
+    expect(screen.getByTestId('unit-label')).toHaveTextContent('Extruder 11Extruder1');
   });
 
   it('the unit cell drops an asset named like the unit and keeps a different one', () => {
@@ -93,6 +106,11 @@ describe('Event Hub cleanup (daily operations, 24 Oct 2026)', () => {
     unmount();
     wrap(<>{unitCell('Gearbox 2')}</>);
     expect(screen.getByTestId('event-asset')).toHaveTextContent('Gearbox 2');
+    for (const partial of ['Extruder', 'HDPE']) {
+      cleanup();
+      wrap(<>{unitCell(partial)}</>);
+      expect(screen.getByTestId('event-asset')).toHaveTextContent(partial);
+    }
   });
 
   it('the accounting badge is left out while draft (explained by the States header ⓘ) and shown otherwise, on one line', () => {
