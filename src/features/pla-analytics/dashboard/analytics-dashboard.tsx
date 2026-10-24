@@ -47,7 +47,6 @@ function DashboardScreen() {
         <ProductionPlanSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <DowntimeSection scope={scope} assetId={node.assetId} />
         <ReliabilitySection scope={scope} node={node} />
-        <ReliabilitySection scope={scope} node={node} />
         <Section title="Reconciliation">
           <ReconciliationTiles scope={scope} />
         </Section>
