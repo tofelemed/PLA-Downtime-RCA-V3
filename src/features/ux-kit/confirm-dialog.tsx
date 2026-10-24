@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -11,7 +11,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { StatusIcon } from '@/lib/icons';
+import { cn } from '@/lib/utils';
 import { DisabledReason } from './disabled-reason';
+
+/** Dialog widths: sm 420 px for confirms (default), md 560 px when the body holds a short form or a summary. */
+const SIZE_CLASS = { sm: 'sm:max-w-[420px]', md: 'sm:max-w-[560px]' } as const;
 
 export interface ConfirmDialogProps {
   /** controlled usage; omit together with `onOpenChange` and pass `trigger` instead */
@@ -33,6 +37,9 @@ export interface ConfirmDialogProps {
   confirmDisabledReason?: string;
   /** extra content between description and buttons, e.g. a required reason field */
   children?: ReactNode;
+  size?: keyof typeof SIZE_CLASS;
+  /** the element focused on open instead of the default (Cancel / confirm), e.g. a required reason field */
+  initialFocus?: RefObject<HTMLElement>;
 }
 
 const isPromise = (value: unknown): value is Promise<unknown> =>
@@ -69,8 +76,9 @@ function usePendingConfirm(onConfirm: ConfirmDialogProps['onConfirm'], close: ()
 /**
  * Confirmation for destructive or irreversible actions, on ui/alert-dialog. The confirm button names
  * the action; while `onConfirm`'s promise runs it shows a spinner and the dialog cannot be dismissed.
- * Destructive dialogs focus Cancel first (safer default); others focus the confirm button. The body
- * scrolls so the buttons always stay on screen.
+ * Destructive dialogs focus Cancel first (safer default); others focus the confirm button; `initialFocus`
+ * overrides both. 420 px wide by default (`size="md"` 560 px for a form body); the body scrolls so the
+ * buttons always stay on screen.
  *
  * @example
  * <ConfirmDialog trigger={<Button variant="outline">Retire</Button>} title="Retire this profile?"
@@ -89,11 +97,12 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
     <AlertDialog open={isOpen} onOpenChange={(next) => !busy && setOpen(next)}>
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent
-        className="flex max-h-[min(90vh,44rem)] flex-col"
+        className={cn('flex max-h-[min(90vh,44rem)] flex-col', SIZE_CLASS[props.size ?? 'sm'])}
         onOpenAutoFocus={(event) => {
-          if (destructive) return;
+          const target = props.initialFocus?.current ?? (destructive ? null : confirmRef.current);
+          if (!target) return;
           event.preventDefault();
-          confirmRef.current?.focus();
+          target.focus();
         }}
         onEscapeKeyDown={(event) => busy && event.preventDefault()}
         {...(description ? {} : { 'aria-describedby': undefined })}

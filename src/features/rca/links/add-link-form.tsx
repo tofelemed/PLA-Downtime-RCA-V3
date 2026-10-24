@@ -34,7 +34,7 @@ function WorkOrderField({ busy, onLink }: { busy: boolean; onLink: (targetId: st
         <Label htmlFor="link-work-order">Work order number</Label>
         <Input id="link-work-order" className="h-9 w-64" value={number} onChange={(e) => setNumber(e.target.value)} />
       </div>
-      <Button type="button" disabled={number.trim() === '' || busy} onClick={() => void onLink(number.trim()).then((ok) => ok && setNumber(''))}>
+      <Button type="button" className="h-9" disabled={number.trim() === '' || busy} onClick={() => void onLink(number.trim()).then((ok) => ok && setNumber(''))}>
         Link
       </Button>
     </div>

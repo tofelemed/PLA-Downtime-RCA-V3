@@ -50,6 +50,7 @@ export function ApproveRevisionDialog({ view, access, disabled, describedBy, onC
         Approve…
       </ApproveButton>
       <ConfirmDialog
+        size="md"
         open={open}
         onOpenChange={setOpen}
         title={`Approve revision ${number(view.revision.revision)}?`}

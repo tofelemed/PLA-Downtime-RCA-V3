@@ -39,6 +39,7 @@ export function PolicyApprove({ policy, status }: PolicyApproveProps) {
         Approve…
       </ApproveButton>
       <ConfirmDialog
+        size="md"
         open={open}
         onOpenChange={onOpenChange}
         title={`Approve version ${policy.version}?`}

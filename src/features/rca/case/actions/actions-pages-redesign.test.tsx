@@ -173,6 +173,7 @@ describe('actions (RCA detail redesign)', () => {
     fireEvent.change(await screen.findByLabelText('Status of Align the coupling'), { target: { value: 'cancelled' } });
     const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getByRole('heading', { name: 'Cancel "Align the coupling"?' })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('It counts as finished for closure and is left out of the effectiveness verdict; set it back to open to resume it.');
     const reason = within(dialog).getByLabelText(/Reason for cancelling/);
     expect(reason).toHaveAttribute('rows', '3');
     await waitFor(() => expect(reason).toHaveFocus());

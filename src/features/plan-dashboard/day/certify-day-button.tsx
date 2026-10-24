@@ -38,6 +38,7 @@ function RollupSummary({ day }: { day: DayView }) {
 export function CertifyDayButton({ day, disabled, onCertify }: CertifyDayButtonProps) {
   return (
     <ConfirmDialog
+      size="md"
       trigger={
         <Button size="sm" data-testid="day-certify" disabled={disabled}>
           Certify the day
