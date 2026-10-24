@@ -11,8 +11,8 @@ export function RowActions({ item }: { item: ApprovalItem }) {
   const verb = item.canDecide ? 'Review & decide' : 'View';
   const blocked = item.decisionBlockedReason ?? item.actions.find((action) => action.disabledReason)?.disabledReason;
   return (
-    <div className="min-w-48 space-y-2">
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-2">
+      <div className="flex flex-nowrap gap-2">
         <Button size="sm" variant={item.canDecide ? 'default' : 'outline'} asChild>
           <Link to={approvalHref(item)} aria-label={`${verb} ${item.title}`}>{verb}</Link>
         </Button>
