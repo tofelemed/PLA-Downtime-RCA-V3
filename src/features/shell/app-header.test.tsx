@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { BrandingView } from '@/api/v2/types/administration';
 import { AppHeader } from './app-header';
+import { CONTENT_INSET_CLASS, sidebarWidthClass } from './sidebar-width';
 
 vi.mock('@/features/plant-selector/plant-selector', () => ({ PlantSelector: () => <span>Plant</span> }));
 vi.mock('./plant-timezone-readout', () => ({ PlantTimezoneReadout: () => null }));
@@ -39,5 +40,28 @@ describe('AppHeader brand', () => {
     const menu = screen.getByRole('button', { name: 'Open navigation' });
     const brand = screen.getByRole('link', { name: /go to Dashboard/ });
     expect(menu.compareDocumentPosition(brand) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('AppHeader beside the sidebar', () => {
+  const renderRail = (collapsed: boolean) =>
+    render(
+      <MemoryRouter>
+        <AppHeader rail={{ collapsed }} />
+      </MemoryRouter>,
+    );
+
+  it('gives the brand cell the sidebar width and the hierarchy the page inset', () => {
+    renderRail(false);
+    const cell = screen.getByRole('link', { name: /go to Dashboard/ }).parentElement;
+    expect(cell).toHaveClass(sidebarWidthClass(false), 'border-r');
+    expect(screen.getByText('Plant').parentElement).toHaveClass(...CONTENT_INSET_CLASS.split(' '));
+  });
+
+  it('shrinks the brand cell to the rail and shows the mark only when collapsed', () => {
+    renderRail(true);
+    const brand = screen.getByRole('link', { name: /go to Dashboard/ });
+    expect(brand.parentElement).toHaveClass(sidebarWidthClass(true));
+    expect(brand).not.toHaveTextContent('Traverse Forge');
   });
 });

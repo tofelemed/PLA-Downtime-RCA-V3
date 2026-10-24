@@ -12,6 +12,7 @@ import { RouteErrorBoundary } from '@/features/ux-kit/errors/route-error-boundar
 import { HighlightTarget } from '@/features/ux-kit/highlight-target';
 import { useSyncAppName } from '@/features/ux-kit/page-layout/app-name';
 import { useBrandAppearance } from '@/features/shell/use-brand-appearance';
+import { sidebarWidthClass } from '@/features/shell/sidebar-width';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -72,6 +73,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <AppHeader
         branding={branding}
         navigation={mode === 'drawer' ? { open: drawer.open, onOpen: () => drawer.setOpen(true) } : undefined}
+        rail={mode === 'drawer' ? undefined : { collapsed: nav.collapsed }}
       />
       {mode === 'drawer' && <NavigationDrawer open={drawer.open} onOpenChange={drawer.setOpen} nav={nav} />}
       <div className="flex">
@@ -79,7 +81,7 @@ export const Layout = ({ children }: LayoutProps) => {
           <aside
             className={cn(
               'sticky top-14 z-sidebar h-[calc(100vh-3.5rem)] shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-200 print:hidden',
-              nav.collapsed ? 'w-16' : 'w-60',
+              sidebarWidthClass(nav.collapsed),
             )}
           >
             <AppSidebar nav={nav} />
