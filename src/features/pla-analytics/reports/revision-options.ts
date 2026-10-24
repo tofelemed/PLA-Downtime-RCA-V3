@@ -1,8 +1,9 @@
 /**
- * The two choices of the Revisions select, worded as choices (QA Reports re-test): the approved page lists
- * the alternative as "Include open drafts", not as a second description of what is shown.
+ * The two choices of the Revision select (owner-approved Reports redesign, 24 Oct 2026): approved
+ * figures only (the default, `approvedOnly=true`), or the approved revision else the open draft
+ * (`approvedOnly=false`, URL `approved=0`).
  */
 export const REVISION_OPTIONS = {
-  approved: 'Approved revisions only',
-  shown: 'Include open drafts (provisional figures)',
+  approved: 'Approved only',
+  shown: 'Provisional',
 } as const;
