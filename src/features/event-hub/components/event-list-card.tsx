@@ -16,16 +16,20 @@ export interface EventListCardProps {
   empty?: DataTableEmpty;
   /** selection actions, at the right of the title */
   actions?: ReactNode;
+  /** opt-in: the card title (default "Events") */
+  title?: string;
+  /** opt-in: test id of the table (default "event-list") */
+  testId?: string;
 }
 
 /** The Event Hub list in a card with the shared report table look (compact rows, small uppercase headers). */
-export function EventListCard({ actions, ...table }: EventListCardProps) {
+export function EventListCard({ actions, title = 'Events', ...table }: EventListCardProps) {
   return (
     <ReportLookContext.Provider value={EVENT_LIST_LOOK}>
       <section aria-labelledby="event-list-title" className="min-w-0 rounded-lg border bg-card p-4" data-testid="event-list-card">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 id="event-list-title" className="text-base font-semibold text-heading">
-            Events
+            {title}
           </h2>
           {actions}
         </div>

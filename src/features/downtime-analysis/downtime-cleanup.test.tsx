@@ -128,3 +128,22 @@ describe('Downtime analysis cleanup: Overview', () => {
     expect(Object.values(CLASS_COLOURS).every((colour) => colour.chart.startsWith('hsl(var(--'))).toBe(true);
   });
 });
+
+describe('Downtime analysis cleanup: Stops & timeline', () => {
+  it('stop records: the Event Hub list card titled "Stop records", no description', async () => {
+    openDowntime(`/downtime/stops?${WINDOW}`);
+    const card = await screen.findByTestId('event-list-card');
+    expect(within(card).getByRole('heading', { level: 2 })).toHaveTextContent(/^Stop records$/);
+    expect(document.body.textContent).not.toMatch(/Open a stop to inspect its evidence|not restricted to approved period revisions/);
+    expect(screen.getByLabelText('Show')).toHaveValue('list');
+  });
+
+  it('state timeline: a card with the legend; the hatched / outlined explanation is the ⓘ, no dates line', async () => {
+    openDowntime(`/downtime/stops?${WINDOW}&presentation=timeline`);
+    const timeline = await screen.findByTestId('state-timeline');
+    expect(timeline).not.toHaveTextContent(/hatched = schedule class unknown|outlined = still ongoing/);
+    expect(within(timeline).getByLabelText('Legend')).toHaveTextContent('Unplanned');
+    expect(screen.getByRole('button', { name: 'About Stop timeline' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Schedule class')).toBeNull();
+  });
+});
