@@ -39,7 +39,7 @@ function TriggerCell({ item }: { item: BadActorItemView }) {
   const { trigger } = item;
   return (
     <span className="flex flex-col gap-0.5" data-testid="bad-actor-trigger" data-state={trigger.state}>
-      <Badge variant={TRIGGER_VARIANT[trigger.state] ?? 'outline'} className="w-fit">
+      <Badge variant={TRIGGER_VARIANT[trigger.state] ?? 'outline'} className="w-fit whitespace-nowrap">
         {TRIGGER_LABELS[trigger.state]}
       </Badge>
       {trigger.thresholdSeconds !== null && (
@@ -93,7 +93,7 @@ function columnsOf(report: BadActorReportView, number: (value: number) => string
   return [
     ...columns,
     { id: 'quantity', header: 'Approved lost quantity', align: 'right', nowrap: true, cell: (item) => (item.quantity === null ? '—' : <Quantity value={item.quantity} uom={report.uom} />) },
-    { id: 'value', header: `Approved value (${report.currency})`, align: 'right', cell: (item) => <ValueCell item={item} /> },
+    { id: 'value', header: 'Approved value', align: 'right', cell: (item) => <ValueCell item={item} /> },
     { id: 'stops', header: 'Stops', align: 'right', cell: (item) => number(item.stops) },
     { id: 'downtime', header: 'Unplanned downtime', align: 'right', nowrap: true, cell: (item) => <DurationText seconds={item.downtimeSeconds} variant="compact" /> },
     { id: 'trigger', header: 'Bad-actor trigger', cell: (item) => <TriggerCell item={item} /> },

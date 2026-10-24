@@ -51,7 +51,7 @@ function columnsOf(number: (value: number) => string, currency: string, withMone
     { id: 'cases', header: 'Investigations', align: 'right', cell: (item) => number(item.cases) },
     { id: 'causes', header: 'Causes recorded', align: 'right', cell: (item) => number(item.causes) },
   ];
-  if (withMoney) columns.push({ id: 'loss', header: `Approved loss (${currency})`, align: 'right', cell: (item) => <LossCell item={item} currency={currency} /> });
+  if (withMoney) columns.push({ id: 'loss', header: 'Approved loss', align: 'right', cell: (item) => <LossCell item={item} currency={currency} /> });
   columns.push({
     id: 'drill',
     header: 'Investigations list',

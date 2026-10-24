@@ -22,10 +22,10 @@ function columnsOf(number: (value: number) => string, currency: string, withMone
     { id: 'rank', header: '#', align: 'right', cell: (_, index) => number(index + 1) },
     { id: 'cause', header: 'Cause', cell: (row) => <CauseCell row={row} /> },
     { id: 'cases', header: 'Investigations', cell: (row) => <CasesCell row={row} /> },
-    ...money({ id: 'approved', header: `Approved loss (${currency})`, align: 'right', cell: (row) => <ApprovedLossCell row={row} currency={currency} /> }),
+    ...money({ id: 'approved', header: 'Approved loss', align: 'right', cell: (row) => <ApprovedLossCell row={row} currency={currency} /> }),
     { id: 'actions', header: 'Actions', cell: (row) => <ActionsCell row={row} /> },
     { id: 'verdicts', header: 'Effectiveness', cell: (row) => <VerdictsCell row={row} /> },
-    ...money({ id: 'claimed', header: `Claimed avoided (${currency})`, align: 'right', cell: (row) => <ClaimedCell row={row} currency={currency} /> }),
+    ...money({ id: 'claimed', header: 'Claimed avoided', align: 'right', cell: (row) => <ClaimedCell row={row} currency={currency} /> }),
     { id: 'realized', header: 'Realised difference', align: 'right', cell: (row) => <RealizedCell row={row} /> },
     { id: 'drill', header: 'Investigations list', cell: (row) => <DrillCell row={row} /> },
   ];

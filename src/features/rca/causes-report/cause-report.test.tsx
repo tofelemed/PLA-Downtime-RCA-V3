@@ -105,4 +105,28 @@ describe('item 1.1 recurring-cause ranking', () => {
     expect(await screen.findByText(/names a cause code of the library yet/)).toBeInTheDocument();
     expect(screen.queryByTestId('cause-report-cases')).toBeNull();
   });
+
+  it('cleanup: title only, Unit first in one labelled row, the notes behind the card ⓘ, currency only in the cells', async () => {
+    renderAt('/reliability/causes');
+    await screen.findByTestId('cause-report');
+    expect(screen.queryByText(/The cause codes your investigations name most often/)).toBeNull();
+    expect(screen.queryByText(/the top 20 by number of investigations/)).toBeNull();
+    expect(screen.queryByText(/Value basis/)).toBeNull();
+    const card = screen.getByRole('region', { name: 'Top recurring causes' });
+    expect(within(card).getByTestId('cause-report-count')).toHaveTextContent('(3)');
+    fireEvent.focus(within(card).getByRole('button', { name: 'About Top recurring causes' }));
+    expect((await screen.findAllByTestId('cause-report-note'))[0].textContent).toMatch(/top 20 by number of investigations.*Value basis: Contribution margin/);
+    const labels = Array.from(screen.getByTestId('cause-report-controls').querySelectorAll('label')).map((label) => label.textContent);
+    expect(labels).toEqual(['Unit', 'Cause kind', 'Rank by']);
+    expect(screen.getByRole('columnheader', { name: 'Approved loss' })).toBeInTheDocument();
+    expect(screen.queryByText('Approved loss (USD)')).toBeNull();
+  });
+
+  it('the empty ranking keeps its own message inside the card', async () => {
+    report = { items: [], view: null, basis: null, asOf: '2026-10-19T00:00:00Z' };
+    renderAt('/reliability/causes');
+    await screen.findByText(/names a cause code of the library yet/);
+    expect(screen.queryByText('No data for these dates')).toBeNull();
+  });
 });
+
