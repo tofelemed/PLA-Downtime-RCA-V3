@@ -52,6 +52,29 @@ function ReportInfo({ report, withMoney }: { report: RcaPortfolioView; withMoney
   );
 }
 
+type PortfolioQuery = ReturnType<typeof useRcaPortfolio>;
+
+/** The UX03 state of the paged query around the server rows and "Show more causes"; an empty window keeps its own message. */
+function PortfolioBody({ query, withMoney, currency }: { query: PortfolioQuery; withMoney: boolean; currency: string }) {
+  const pages = query.data?.pages ?? [];
+  const rows = pages.flatMap((page) => page.items);
+  const empty = pages.length > 0 && rows.length === 0;
+  return (
+    <DataState state={dataStateOf(query, { isEmpty: empty })} detail={empty ? EMPTY_TEXT : undefined} error={query.error} onRetry={() => void query.refetch()}>
+      {pages.length > 0 && (
+        <div className="space-y-2" data-testid="portfolio">
+          <PortfolioTable rows={rows} currency={currency} withMoney={withMoney} />
+          {query.hasNextPage && (
+            <Button variant="outline" size="sm" disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()} data-testid="portfolio-more">
+              {query.isFetchingNextPage ? 'Loading…' : 'Show more causes'}
+            </Button>
+          )}
+        </div>
+      )}
+    </DataState>
+  );
+}
+
 /**
  * `/reliability/portfolio` (item 2.1): which causes cost most, what is being done about them and whether it
  * worked — the server's rows per coded cause (approved loss, actions, verdicts, claims, realised differences),
@@ -68,9 +91,8 @@ export function PortfolioPage() {
   // the rolling window's bounds are minute-stable, so re-renders reuse the cached pages
   const request = portfolioQuery(filters, currency);
   const query = useRcaPortfolio(request);
-  const pages = query.data?.pages ?? [];
-  const rows = pages.flatMap((page) => page.items);
-  const first = pages[0];
+  const first = query.data?.pages[0];
+  const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
   const change = (patch: Partial<PortfolioFilters>) => setParams(paramsFromPortfolioFilters({ ...filters, ...patch }), { replace: true });
   const count = first && !query.hasNextPage ? <span className="text-sm text-muted-foreground" data-testid="portfolio-count">({number(rows.length)})</span> : undefined;
   return (
@@ -80,23 +102,7 @@ export function PortfolioPage() {
         <Controls filters={filters} onChange={change} />
         <ReportLookContext.Provider value={RELIABILITY_LOOK}>
           <ReportCard title={TITLE} info={first ? <ReportInfo report={first} withMoney={canViewMoney} /> : undefined} badge={count}>
-            <DataState
-              state={dataStateOf(query, { isEmpty: first !== undefined && rows.length === 0 })}
-              detail={first && rows.length === 0 ? EMPTY_TEXT : undefined}
-              error={query.error}
-              onRetry={() => void query.refetch()}
-            >
-              {first && (
-                <div className="space-y-2" data-testid="portfolio">
-                  <PortfolioTable rows={rows} currency={request.currency ?? 'USD'} withMoney={canViewMoney} />
-                  {query.hasNextPage && (
-                    <Button variant="outline" size="sm" disabled={query.isFetchingNextPage} onClick={() => void query.fetchNextPage()} data-testid="portfolio-more">
-                      {query.isFetchingNextPage ? 'Loading…' : 'Show more causes'}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </DataState>
+            <PortfolioBody query={query} withMoney={canViewMoney} currency={request.currency ?? 'USD'} />
           </ReportCard>
         </ReportLookContext.Provider>
       </div>
