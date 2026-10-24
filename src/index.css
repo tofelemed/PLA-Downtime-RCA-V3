@@ -40,21 +40,29 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* page canvas behind the cards (was bg-muted/30 over white); headings one step stronger than body text */
+    --canvas: 210 50% 99.2%;
+    --heading: 222.2 84% 4.9%;
 
+    /* Sidebar (shell): white rail; the active item is a pale-blue row with a 3 px bar (dark-theme spec) */
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
+    --sidebar-accent: 210 40% 96.1%;
     --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
+    --sidebar-border: 214.3 31.8% 91.4%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    /* #94a3b8 — owner spec; 2.6:1 on white, so section labels must stay uppercase / semibold and never carry meaning alone */
+    --sidebar-section-label: 215 20.2% 65.1%;
+    /* #eff6ff / #1d4ed8 (6.2:1) / #1d4ed8 */
+    --sidebar-active-bg: 213.8 100% 96.9%;
+    --sidebar-active-fg: 224.3 76.3% 48%;
+    --sidebar-active-bar: 224.3 76.3% 48%;
+
+    /* Chart chrome (Recharts grid, axes, tick text, hover cursor) */
+    --chart-grid: 213.3 20% 82.4%;
+    --chart-axis: 215.4 16.3% 42%;
 
     /*
      * Semantic status tones (UX_AUDIT C-1, §5.8). Text contrast on white / on the 10 % tint the
@@ -106,43 +114,87 @@ All colors MUST be HSL.
     --state-unknown-stripe: 215 14% 45%;
   }
 
-  /* .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+  /*
+   * Dark theme: slate / navy control room (ISA-101: neutral, low-saturation surfaces; colour only for status).
+   * Screen only: printed pages keep the light tokens. Values verified with the WCAG formula against the card
+   * surface #111a2e and the 10 % status tint: body text 11.7:1, muted text 6.8:1, status text >= 5.5:1 on its
+   * tint, chart and state marks >= 3:1. Filled controls (primary, status fills) carry navy text, because white
+   * on a mid blue / red stays below 4.5:1.
+   */
+  @media screen {
+    .dark {
+      --background: 220 48.8% 8.4%; /* #0b1220 */
+      --foreground: 212.7 26.8% 83.9%; /* #cbd5e1 */
+      --canvas: 220 48.8% 8.4%;
+      --heading: 210 40% 98%; /* #f8fafc */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+      --card: 221.4 46% 12.4%; /* #111a2e */
+      --card-foreground: 212.7 26.8% 83.9%;
+      --popover: 220 39.5% 14.9%; /* #172135 */
+      --popover-foreground: 214.3 31.8% 91.4%; /* #e2e8f0 */
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+      --primary: 217.2 91.2% 59.8%; /* #3b82f6 */
+      --primary-foreground: 220 48.8% 8.4%; /* 5.1:1 */
+      --secondary: 217.2 32.6% 17.5%; /* #1e293b */
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%; /* #94a3b8 */
+      --accent: 217.1 30.4% 22%; /* #273449: hover visible on cards and popovers */
+      --accent-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+      --destructive: 0 90.6% 70.8%; /* #f87171 */
+      --destructive-foreground: 220 48.8% 8.4%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%; /* #1e293b */
+      --input: 215.3 25% 26.7%; /* #334155 */
+      --ring: 213.1 93.9% 67.8%; /* #60a5fa */
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+      --sidebar-background: 222.2 47.4% 11.2%; /* #0f172a */
+      --sidebar-foreground: 212.7 26.8% 83.9%;
+      --sidebar-primary: 217.2 91.2% 59.8%;
+      --sidebar-primary-foreground: 220 48.8% 8.4%;
+      --sidebar-accent: 217.2 32.6% 17.5%;
+      --sidebar-accent-foreground: 210 40% 98%;
+      --sidebar-border: 217.2 32.6% 17.5%;
+      --sidebar-ring: 213.1 93.9% 67.8%;
+      --sidebar-section-label: 215 20.2% 65.1%; /* #94a3b8, 6.9:1 */
+      --sidebar-active-bg: 217.2 32.6% 17.5%; /* #1e293b */
+      --sidebar-active-fg: 0 0% 100%;
+      --sidebar-active-bar: 213.1 93.9% 67.8%; /* #60a5fa */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+      --success: 141.9 69.2% 58%; /* #4ade80 */
+      --success-foreground: 220 48.8% 8.4%;
+      --warning: 43.3 96.4% 56.3%; /* #fbbf24 amber */
+      --warning-foreground: 220 48.8% 8.4%;
+      --info: 213.1 93.9% 67.8%; /* #60a5fa */
+      --info-foreground: 220 48.8% 8.4%;
+      --neutral: 215 20.2% 65.1%; /* #94a3b8 */
+      --neutral-foreground: 220 48.8% 8.4%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+      /* same series order and hues as light, one step lighter */
+      --chart-1: 213.1 93.9% 67.8%; /* #60a5fa */
+      --chart-2: 27 96% 61%; /* #fb923c */
+      --chart-3: 158.1 64.4% 51.6%; /* #34d399 */
+      --chart-4: 255.1 91.7% 76.3%; /* #a78bfa */
+      --chart-5: 351.3 94.5% 71.4%; /* #fb7185 */
+      --chart-6: 187.9 85.7% 53.3%; /* #22d3ee */
+      --chart-7: 47.9 95.8% 53.1%; /* #facc15 */
+      --chart-8: 215 20.2% 65.1%; /* #94a3b8 */
+      --chart-grid: 217.2 32.6% 17.5%;
+      --chart-axis: 215 20.2% 65.1%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  } */
+      --state-running: 142.1 70.6% 45.3%; /* #22c55e */
+      --state-reduced: 83.7 80.5% 44.3%; /* #84cc16 */
+      --state-stopped: 0 84.2% 60.2%; /* #ef4444 */
+      --state-planned: 213.1 93.9% 67.8%;
+      --state-starved: 37.7 92.1% 50.2%; /* #f59e0b */
+      --state-blocked: 24.6 95% 53.1%; /* #f97316 */
+      --state-idle: 255.1 91.7% 76.3%;
+      --state-not-scheduled: 215.4 16.3% 46.9%; /* #64748b, 3.6:1 */
+      --state-unknown: 217.1 30.4% 22%; /* a dark gap, always hatched */
+      --state-unknown-stripe: 215.4 16.3% 46.9%;
+    }
+  }
 }
 
 @layer base {
@@ -152,6 +204,13 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* page and section titles; a text-* utility on the heading still wins (utilities layer) */
+  h1,
+  h2,
+  h3 {
+    color: hsl(var(--heading));
   }
 }
 
@@ -168,14 +227,8 @@ All colors MUST be HSL.
   background: hsl(var(--primary));
 }
 
-.dark ::-webkit-scrollbar {
-  background: hsl(var(--background));
-}
 .dark ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted));
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary));
+  background: hsl(var(--input));
 }
 
 /* For Firefox */
@@ -185,10 +238,58 @@ All colors MUST be HSL.
 }
 
 .dark * {
-  scrollbar-color: hsl(var(--muted)) hsl(var(--background));
+  scrollbar-color: hsl(var(--input)) hsl(var(--background));
 }
 
+/*
+ * Recharts chrome from the tokens in both themes (its defaults are fixed greys and a white tooltip). Only the
+ * library's own grid, axes, tick text, hover cursor and default tooltip; series colours stay with each chart.
+ * The default tooltip sets inline styles, so it needs !important.
+ */
+.recharts-cartesian-grid line,
+.recharts-polar-grid line,
+.recharts-polar-grid path {
+  stroke: hsl(var(--chart-grid));
+}
+.recharts-cartesian-axis-line,
+.recharts-cartesian-axis-tick-line,
+.recharts-polar-angle-axis-line {
+  stroke: hsl(var(--chart-axis));
+}
+.recharts-cartesian-axis-tick-value,
+.recharts-polar-angle-axis-tick-value,
+.recharts-polar-radius-axis-tick-value {
+  fill: hsl(var(--chart-axis));
+}
+.recharts-rectangle.recharts-tooltip-cursor,
+.recharts-sector.recharts-tooltip-cursor {
+  fill: hsl(var(--muted));
+}
+.recharts-curve.recharts-tooltip-cursor {
+  stroke: hsl(var(--chart-axis));
+}
+.recharts-default-tooltip {
+  background-color: hsl(var(--popover)) !important;
+  border-color: hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground));
+}
 
+/* React Flow (RCA event diagram) controls and minimap on the theme surfaces; scoped, as its stylesheet loads later */
+.react-flow .react-flow__controls-button {
+  background: hsl(var(--card));
+  border-bottom-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+  fill: hsl(var(--foreground));
+}
+.react-flow .react-flow__controls-button:hover {
+  background: hsl(var(--accent));
+}
+.react-flow .react-flow__minimap {
+  background: hsl(var(--card));
+}
+.react-flow .react-flow__attribution {
+  background: hsl(var(--card) / 0.5);
+}
 
 /* Unknown / unclassified time on the state timelines (C-7): hatched, so it never relies on colour alone. */
 @layer utilities {
