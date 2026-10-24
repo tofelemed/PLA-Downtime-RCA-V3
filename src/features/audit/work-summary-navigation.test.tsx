@@ -113,7 +113,8 @@ describe('Work summary under Audit Logs', () => {
     expect(screen.queryByRole('heading', { name: 'Period' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Filters' })).toBeNull();
     expect(screen.queryByText(/Activity uses the selected period/)).toBeNull();
-    ['Search', 'Action', 'Record'].forEach((name) => expect(screen.getByText(name, { selector: 'label' })).toBeInTheDocument());
+    ['Search actions, records and details', 'Action', 'Record'].forEach((name) => expect(screen.getByText(name, { selector: 'label' })).toBeInTheDocument());
+    expect(screen.getByRole('searchbox', { name: 'Search actions, records and details' })).not.toHaveAttribute('aria-label');
     expect(within(screen.getByTestId('audit-filters')).getByLabelText('From')).toBeInTheDocument();
     const activity = screen.getByTestId('audit-activity');
     expect(within(activity).getByRole('button', { name: 'About Activity' })).toBeInTheDocument();

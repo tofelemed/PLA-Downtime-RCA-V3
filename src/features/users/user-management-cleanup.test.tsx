@@ -24,13 +24,16 @@ const USER = {
   manageable: true, accessManageable: true,
 };
 const GRANTEE = { ...USER, id: 'u-3', name: 'Grace Whitfield', email: 'grace@demo.test', tenantId: 'tenant-b', tenantName: 'Demo Plant 2', manageable: false };
+/** Users without a home plant: an organization administrator and a super administrator. */
+const ORG_ADMIN = { ...USER, id: 'u-4', name: 'Olga Org', email: 'olga@demo.test', tenantId: null, tenantName: null, organizationName: 'Demo Org' };
+const SUPER = { ...USER, id: 'u-5', name: 'Sam Super', email: 'sam@demo.test', tenantId: null, tenantName: null, organizationId: null, organizationName: null };
 const SCOPE = {
   id: 's1', userId: 'u-2', userName: 'Anna Keller', scopeKind: 'tenant', scopeId: 'tenant-a', scopeName: null, role: 'viewer',
   createdAt: '2026-10-01T08:00:00Z', createdByName: 'Test user', lock: null,
 };
 
 function route(path: string) {
-  if (path === '/api/v2/users') return list([USER, GRANTEE]);
+  if (path === '/api/v2/users') return list([USER, GRANTEE, ORG_ADMIN, SUPER]);
   if (path === '/api/v2/users/u-2') return USER;
   if (path === '/api/v2/users/u-3') return GRANTEE;
   if (path === '/api/v2/user-scopes') return list([SCOPE]);
@@ -70,7 +73,10 @@ describe('User management cleanup (25 Oct 2026)', () => {
     expect(screen.queryByRole('heading', { name: 'Members' })).toBeNull();
     expect(screen.getByRole('heading', { name: 'Users', level: 2 })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'About Users' })).toBeTruthy();
-    ['Search', 'Role', 'Status'].forEach((name) => expect(screen.getByText(name, { selector: 'label' })).toBeTruthy());
+    ['Search users by name or e-mail', 'Role', 'Status'].forEach((name) => expect(screen.getByText(name, { selector: 'label' })).toBeTruthy());
+    // label in name (WCAG 2.5.3): the search is named by its visible label only
+    const search = screen.getByRole('searchbox', { name: 'Search users by name or e-mail' });
+    expect(search).not.toHaveAttribute('aria-label');
     expect(screen.getByRole('button', { name: 'Grant access by e-mail' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Add user/ })).toHaveAttribute('href', '/users/new');
   });
@@ -81,6 +87,14 @@ describe('User management cleanup (25 Oct 2026)', () => {
     expect(screen.queryByRole('columnheader', { name: 'Plant' })).toBeNull();
     expect(screen.getByText('From Demo Plant 2')).toHaveClass('whitespace-nowrap');
     expect(screen.getAllByText('Production engineer').length).toBeGreaterThan(0);
+  });
+
+  it('users without a home plant carry their organization or "All plants" as a badge (no Plant column)', async () => {
+    wrap(<UsersPage embedded />, '/users');
+    const org = await screen.findByRole('row', { name: /Olga Org/ });
+    expect(within(org).getByText('Demo Org')).toHaveClass('whitespace-nowrap');
+    expect(within(screen.getByRole('row', { name: /Sam Super/ })).getByText('All plants')).toBeTruthy();
+    expect(within(screen.getByRole('row', { name: /Anna Keller/ })).queryByText(/^From |All plants|Demo Org/)).toBeNull();
   });
 
   it('Grant access by e-mail: titled dialog, ⓘ instead of a paragraph, e-mail focused, Cancel before Grant access, Esc closes', async () => {
@@ -135,5 +149,13 @@ describe('User management cleanup (25 Oct 2026)', () => {
     expect(within(note).getByRole('button', { name: 'About permission overrides' })).toBeTruthy();
     expect(screen.getByText('What Anna Keller reaches in this plant')).toBeTruthy();
     expect(screen.queryByRole('columnheader', { name: 'Plant' })).toBeNull();
+  });
+
+  it('permissions: the name cell carries the same badges (another plant, organization, all plants); search named by its label', async () => {
+    wrap(<PermissionsPage embedded />, '/users?tab=permissions');
+    expect(within(await screen.findByRole('row', { name: /Grace Whitfield/ })).getByText('From Demo Plant 2')).toBeTruthy();
+    expect(within(screen.getByRole('row', { name: /Olga Org/ })).getByText('Demo Org')).toBeTruthy();
+    expect(within(screen.getByRole('row', { name: /Sam Super/ })).getByText('All plants')).toBeTruthy();
+    expect(screen.getByRole('searchbox', { name: 'Search users' })).not.toHaveAttribute('aria-label');
   });
 });

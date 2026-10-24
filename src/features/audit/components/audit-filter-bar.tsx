@@ -22,8 +22,8 @@ export function AuditFilterBar({ values, timezone, entries, actions, entities, o
       {entries && (
         <>
           <div className={`${FIELD_CLASS} w-full sm:w-72`}>
-            <Label htmlFor="audit-search">Search</Label>
-            <DebouncedSearchInput id="audit-search" label="Search actions, records and details" className="max-w-none [&_input]:h-9" value={values.q} onChange={(q) => onChange({ q })} />
+            <Label htmlFor="audit-search">Search actions, records and details</Label>
+            <DebouncedSearchInput id="audit-search" visibleLabel label="Search actions, records and details" className="max-w-none [&_input]:h-9" value={values.q} onChange={(q) => onChange({ q })} />
           </div>
           <div className={FIELD_CLASS}>
             <Label htmlFor="audit-action">Action</Label>

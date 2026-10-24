@@ -17,6 +17,11 @@ export interface DebouncedSearchInputProps {
   className?: string;
   /** id of the input, so a visible <label htmlFor> names it */
   id?: string;
+  /**
+   * opt-in, with `id`: a visible `<label htmlFor={id}>` reading `label` names the input, so no `aria-label` is
+   * set (one accessible name, the visible one: WCAG 2.5.3) and there is no placeholder
+   */
+  visibleLabel?: boolean;
 }
 
 /** Typed text, debounced emission and the outside `value` kept in step without echoing it back. */
@@ -54,7 +59,7 @@ function useDebouncedText(value: string, onChange: (text: string) => void, delay
  *
  * @example <DebouncedSearchInput label="Search codes" value={filters.q} onChange={(q) => setFilters({ ...filters, q })} />
  */
-export function DebouncedSearchInput({ value, onChange, label, placeholder, delayMs = 300, className, id }: DebouncedSearchInputProps) {
+export function DebouncedSearchInput({ value, onChange, label, placeholder, delayMs = 300, className, id, visibleLabel = false }: DebouncedSearchInputProps) {
   const { text, setText, clear } = useDebouncedText(value, onChange, delayMs);
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Escape' || text === '') return;
@@ -67,8 +72,8 @@ export function DebouncedSearchInput({ value, onChange, label, placeholder, dela
       <Input
         id={id}
         type="search"
-        aria-label={label}
-        placeholder={placeholder ?? label}
+        aria-label={visibleLabel ? undefined : label}
+        placeholder={placeholder ?? (visibleLabel ? undefined : label)}
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={onKeyDown}

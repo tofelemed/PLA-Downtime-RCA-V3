@@ -139,6 +139,43 @@ describe('Approval delegations cleanup (25 Oct 2026)', () => {
   });
 });
 
+describe('New delegation by a role holder (security: delegator is the current user)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin', 'user-1');
+  });
+
+  it('submits a POST whose delegatorId is the signed-in role holder', async () => {
+    const posted: unknown[] = [];
+    const people = [
+      { id: 'manager', name: 'Parisa Manager', isActive: true },
+      { id: 'deputy', name: 'Reza Deputy', isActive: true },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      const path = new URL(url).pathname;
+      if (init?.method === 'POST' && path.endsWith('/role-delegations')) {
+        posted.push(JSON.parse(String(init.body)));
+        return new Response(JSON.stringify(DELEGATION), { status: 201, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (path.endsWith('/users/directory')) return json({ items: people, nextCursor: null, asOf: '2026-10-15T00:00:00.000Z', scope: { tenantId: 'tenant-a' } });
+      return json({ items: [], nextCursor: null, asOf: '2026-10-15T00:00:00.000Z', scope: { tenantId: 'tenant-a' } });
+    }));
+    configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
+    actAs('manager_approver', 'manager');
+    render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><DelegationsPage /></QueryClientProvider>);
+    fireEvent.click(await screen.findByTestId('delegation-new'));
+    const dialog = await screen.findByRole('dialog', { name: 'New delegation' });
+    await waitFor(() => expect(within(dialog).getByRole('option', { name: 'Reza Deputy' })).toBeTruthy());
+    fireEvent.change(within(dialog).getByTestId('delegation-delegate'), { target: { value: 'deputy' } });
+    fireEvent.change(within(dialog).getByLabelText('From date'), { target: { value: '2026-10-20' } });
+    fireEvent.change(within(dialog).getByLabelText('Until (at most 90 days) date'), { target: { value: '2026-10-25' } });
+    fireEvent.change(within(dialog).getByTestId('delegation-reason'), { target: { value: 'annual leave' } });
+    fireEvent.click(within(dialog).getByTestId('delegation-save'));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ delegatorId: 'manager', delegateId: 'deputy', role: 'manager_approver', scopeKind: 'tenant', scopeId: 'tenant-a' });
+  });
+});
+
 describe('Approval delegations wording (QA re-test 2026-10-19)', () => {
   it('tells only SuperAdmin that SuperAdmin may complete every stage', () => {
     expect(delegationsDescription(false)).not.toMatch(/SuperAdmin/);

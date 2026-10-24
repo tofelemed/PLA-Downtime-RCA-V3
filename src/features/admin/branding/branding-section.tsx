@@ -43,7 +43,6 @@ export function BrandingSection() {
   const save = useSaveBranding();
   const reset = useResetBranding();
   const feedback = useCommandFeedback();
-  const ids = { name: useId(), subtitle: useId(), initials: useId(), primary: useId(), secondary: useId() };
   const [draft, setDraft] = useState<BrandingInput | null>(null);
   useEffect(() => setDraft(branding.data ? inputOf(branding.data) : null), [branding.data]);
   if (!branding.data || !draft) return <DataState state={dataStateOf(branding)} error={branding.error} onRetry={() => void branding.refetch()} />;
@@ -65,23 +64,7 @@ export function BrandingSection() {
       }
     >
       <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
-        <FormField htmlFor={ids.name} label="Application name" required error={draft.appName.trim() ? null : 'Enter a name.'}>
-          <Input id={ids.name} className="h-9" value={draft.appName} maxLength={80} onChange={(e) => set({ appName: e.target.value })} />
-        </FormField>
-        <FormField htmlFor={ids.subtitle} label="Subtitle">
-          <Input id={ids.subtitle} className="h-9" value={draft.appSubtitle ?? ''} maxLength={120} onChange={(e) => set({ appSubtitle: e.target.value })} />
-        </FormField>
-        <FormField htmlFor={ids.initials} label="Initials">
-          <Input id={ids.initials} className="h-9" value={draft.logoInitials ?? ''} maxLength={4} onChange={(e) => set({ logoInitials: e.target.value })} />
-        </FormField>
-        <div className="grid grid-cols-2 gap-4">
-          <FormField htmlFor={ids.primary} label="Primary color" hint={contrastWarning(draft.primaryColor)}>
-            <Input id={ids.primary} type="color" className="h-9" value={draft.primaryColor ?? '#2563eb'} onChange={(e) => set({ primaryColor: e.target.value })} />
-          </FormField>
-          <FormField htmlFor={ids.secondary} label="Secondary color">
-            <Input id={ids.secondary} type="color" className="h-9" value={draft.secondaryColor ?? '#ec4899'} onChange={(e) => set({ secondaryColor: e.target.value })} />
-          </FormField>
-        </div>
+        <BrandingTextFields draft={draft} set={set} />
         <ImageField label="Logo" value={draft.logoUrl ?? ''} disabled={false} onChange={(logoUrl) => set({ logoUrl })} />
         <ImageField label="Browser icon" value={draft.faviconUrl ?? ''} disabled={false} onChange={(faviconUrl) => set({ faviconUrl })} />
         {NUMBER_FIELDS.map((field) => (
@@ -89,6 +72,32 @@ export function BrandingSection() {
         ))}
       </div>
     </AdminCard>
+  );
+}
+
+/** Name, subtitle, initials and the two colours (a cleared subtitle or initials stays empty). */
+function BrandingTextFields({ draft, set }: { draft: BrandingInput; set: (patch: Partial<BrandingInput>) => void }) {
+  const ids = { name: useId(), subtitle: useId(), initials: useId(), primary: useId(), secondary: useId() };
+  return (
+    <>
+      <FormField htmlFor={ids.name} label="Application name" required error={draft.appName.trim() ? null : 'Enter a name.'}>
+        <Input id={ids.name} className="h-9" value={draft.appName} maxLength={80} onChange={(e) => set({ appName: e.target.value })} />
+      </FormField>
+      <FormField htmlFor={ids.subtitle} label="Subtitle">
+        <Input id={ids.subtitle} className="h-9" value={draft.appSubtitle ?? ''} maxLength={120} onChange={(e) => set({ appSubtitle: e.target.value })} />
+      </FormField>
+      <FormField htmlFor={ids.initials} label="Initials">
+        <Input id={ids.initials} className="h-9" value={draft.logoInitials ?? ''} maxLength={4} onChange={(e) => set({ logoInitials: e.target.value })} />
+      </FormField>
+      <div className="grid grid-cols-2 gap-4">
+        <FormField htmlFor={ids.primary} label="Primary color" hint={contrastWarning(draft.primaryColor)}>
+          <Input id={ids.primary} type="color" className="h-9" value={draft.primaryColor ?? '#2563eb'} onChange={(e) => set({ primaryColor: e.target.value })} />
+        </FormField>
+        <FormField htmlFor={ids.secondary} label="Secondary color">
+          <Input id={ids.secondary} type="color" className="h-9" value={draft.secondaryColor ?? '#ec4899'} onChange={(e) => set({ secondaryColor: e.target.value })} />
+        </FormField>
+      </div>
+    </>
   );
 }
 

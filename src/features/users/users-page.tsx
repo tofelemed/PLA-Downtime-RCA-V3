@@ -49,8 +49,8 @@ function UsersFilterBar({ values, onChange }: { values: UserUrlFilters; onChange
   return (
     <div className="flex flex-wrap items-end gap-3" data-testid="users-filters">
       <div className={`${FIELD_CLASS} w-full sm:w-72`}>
-        <Label htmlFor="users-search">Search</Label>
-        <DebouncedSearchInput id="users-search" label="Search users by name or e-mail" className="max-w-none [&_input]:h-9" value={values.q} onChange={(q) => onChange({ q })} />
+        <Label htmlFor="users-search">Search users by name or e-mail</Label>
+        <DebouncedSearchInput id="users-search" visibleLabel label="Search users by name or e-mail" className="max-w-none [&_input]:h-9" value={values.q} onChange={(q) => onChange({ q })} />
       </div>
       <div className={FIELD_CLASS}>
         <Label htmlFor="users-role">Role</Label>

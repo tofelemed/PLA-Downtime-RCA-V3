@@ -10,14 +10,27 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
+import { FromPlantBadge } from '@/features/users/components/from-plant-badge';
 import { plantRolesText } from '@/features/users/components/user-columns';
 import { UserActivationButton } from '@/features/users/components/user-activation-button';
 import { UserStatusBadge } from '@/features/users/components/user-status-badge';
 import { ModulePermissionsPanel } from './module-permissions-panel';
 
-/** Name, plant roles, status: no plant column, it repeats the selected plant on every row (cleanup 25 Oct 2026). */
+/**
+ * Name (with the "From <plant>" / organization badge), plant roles, status: no plant column, it repeats the
+ * selected plant on every row (cleanup 25 Oct 2026).
+ */
 const COLUMNS: ReadonlyArray<DataTableColumn<UserView>> = [
-  { id: 'name', header: 'Name', cell: (user) => user.name },
+  {
+    id: 'name',
+    header: 'Name',
+    cell: (user) => (
+      <span className="flex flex-wrap items-center gap-2">
+        {user.name}
+        <FromPlantBadge user={user} />
+      </span>
+    ),
+  },
   // QA re-test 2026-10-19: the plant roles that decide the menu, not the legacy sign-in type
   { id: 'role', header: 'Plant roles', cell: plantRolesText },
   { id: 'status', header: 'Status', cell: (user) => <UserStatusBadge isActive={user.isActive} />, nowrap: true },
@@ -57,8 +70,8 @@ function PermissionsScreen({ embedded }: { embedded: boolean }) {
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <AdminCard title="Users" info="Choose a user to see the pages their plant roles reach, and activate or deactivate them.">
           <div className={`${FIELD_CLASS} w-full sm:w-72`}>
-            <Label htmlFor="permissions-search">Search</Label>
-            <DebouncedSearchInput id="permissions-search" label="Search users" className="max-w-none [&_input]:h-9" value={q} onChange={(text) => update({ q: text || null })} />
+            <Label htmlFor="permissions-search">Search users</Label>
+            <DebouncedSearchInput id="permissions-search" visibleLabel label="Search users" className="max-w-none [&_input]:h-9" value={q} onChange={(text) => update({ q: text || null })} />
           </div>
           <DataTable
             caption="Users"

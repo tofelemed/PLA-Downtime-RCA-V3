@@ -99,13 +99,7 @@ function AttributeEditor({ mode, view, initial, save }: EditorProps) {
   const fieldProps = { values, errors, mode, readOnly, set };
   return (
     <Page>
-      <PageHeader
-        title={view ? view.displayName : 'Add custom attribute'}
-        back={back}
-        description={view ? `Applies to: ${labelOf(ATTRIBUTE_SCOPE_LABELS, view.scope)}` : undefined}
-        actions={view?.editable && canManageMasterData && <DeleteAttribute view={view} />}
-      />
-      {view && !view.editable && <p className="text-sm text-muted-foreground">This attribute is shared with other plants; only a super administrator can change it.</p>}
+      <AttributeHeader view={view} back={back} mayDelete={canManageMasterData} />
       {readOnly ? (
         <AdminCard title="Field">
           <AttributeReadOnly values={values} />
@@ -113,16 +107,38 @@ function AttributeEditor({ mode, view, initial, save }: EditorProps) {
       ) : (
         <form onSubmit={submit} noValidate className="space-y-4">
           <AttributeCards fieldProps={fieldProps} />
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" className="h-9" onClick={() => navigate(back.to)} disabled={busy}>Cancel</Button>
-            <Button type="submit" className="h-9" disabled={busy} aria-busy={busy || undefined}>
-              {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
-              {mode === 'create' ? 'Create attribute' : 'Save changes'}
-            </Button>
-          </div>
+          <FormButtons busy={busy} submitLabel={mode === 'create' ? 'Create attribute' : 'Save changes'} onCancel={() => navigate(back.to)} />
         </form>
       )}
     </Page>
+  );
+}
+
+/** Title (name, or "Add custom attribute"), where it applies, Delete, and why a shared attribute is read-only. */
+function AttributeHeader({ view, back, mayDelete }: { view?: AttributeDefinitionView; back: { to: string; label: string }; mayDelete: boolean }) {
+  if (!view) return <PageHeader title="Add custom attribute" back={back} />;
+  return (
+    <>
+      <PageHeader
+        title={view.displayName}
+        back={back}
+        description={`Applies to: ${labelOf(ATTRIBUTE_SCOPE_LABELS, view.scope)}`}
+        actions={view.editable && mayDelete && <DeleteAttribute view={view} />}
+      />
+      {!view.editable && <p className="text-sm text-muted-foreground">This attribute is shared with other plants; only a super administrator can change it.</p>}
+    </>
+  );
+}
+
+function FormButtons({ busy, submitLabel, onCancel }: { busy: boolean; submitLabel: string; onCancel: () => void }) {
+  return (
+    <div className="flex gap-2">
+      <Button type="button" variant="outline" className="h-9" onClick={onCancel} disabled={busy}>Cancel</Button>
+      <Button type="submit" className="h-9" disabled={busy} aria-busy={busy || undefined}>
+        {busy && <StatusIcon.loading aria-hidden="true" className="animate-spin" />}
+        {submitLabel}
+      </Button>
+    </div>
   );
 }
 
