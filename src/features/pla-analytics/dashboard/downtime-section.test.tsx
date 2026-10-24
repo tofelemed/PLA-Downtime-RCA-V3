@@ -7,6 +7,8 @@ import type { DowntimeBar } from '../charts/downtime-trend-bars';
 import type { ParetoBar } from '../charts/downtime-pareto-bars';
 
 const state = vi.hoisted(() => ({
+  canViewOperations: true,
+  canViewAnalysis: true,
   bundle: undefined as unknown,
   failed: false,
   refetch: vi.fn(),
@@ -15,7 +17,7 @@ const state = vi.hoisted(() => ({
   pareto: [] as ParetoBar[][],
 }));
 
-vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewAnalysis: true }) }));
+vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewOperations: state.canViewOperations, canViewAnalysis: state.canViewAnalysis }) }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
 vi.mock('@/features/downtime-analysis/hooks/use-downtime-bundle', () => ({
   useDowntimeBundle: (query: unknown) => {
@@ -170,5 +172,25 @@ describe('DowntimeSection', () => {
     state.bundle = bundle();
     renderSection();
     expect(screen.getByRole('link', { name: /Downtime analysis/ })).toBeInTheDocument();
+  });
+
+  it('keeps the link for an operations-only user and hides it without operations access', () => {
+    state.bundle = bundle();
+    state.canViewAnalysis = false;
+    const { unmount } = renderSection();
+    expect(screen.getByRole('link', { name: /Downtime analysis/ })).toBeInTheDocument();
+    unmount();
+    state.canViewOperations = false;
+    renderSection();
+    expect(screen.queryByRole('link', { name: /Downtime analysis/ })).not.toBeInTheDocument();
+    state.canViewOperations = true;
+    state.canViewAnalysis = true;
+  });
+
+  it('highlights Total downtime, not Unplanned', () => {
+    state.bundle = bundle();
+    renderSection();
+    expect(tile('downtime_total').className).toContain('border-primary');
+    expect(tile('downtime_unplanned').className).not.toContain('border-primary');
   });
 });

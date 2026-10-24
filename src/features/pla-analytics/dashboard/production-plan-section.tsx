@@ -72,12 +72,12 @@ function PlanBody({ scope, buckets, totals }: { scope: AnalyticsScope; buckets: 
 
 /** Production vs plan: plan, actual, shortfall and how much of it is explained, per unit of measure (units are never added). */
 export function ProductionPlanSection({ scope, assetSelected }: { scope: AnalyticsScope; assetSelected: boolean }) {
-  const { canViewAnalysis } = useCapabilities();
+  const { canViewOperations } = useCapabilities();
   const env = useEventHubEnv();
   const query = useReconciliationTrend(trendQuery(scope), env.timezone);
   const data = query.data?.data;
   const totals = totalsByUom(data?.totals ?? []);
-  const link = canViewAnalysis ? { to: plaHref(scope, '/pla-analytics/losses'), label: 'Production loss analysis', testId: 'dashboard-plan-link' } : undefined;
+  const link = canViewOperations ? { to: plaHref(scope, '/pla-analytics/losses'), label: 'Production loss analysis', testId: 'dashboard-plan-link' } : undefined;
   const state = dataStateOf(query, { isEmpty: totals.length === 0 });
   return (
     <KpiSection title="Production vs plan" link={link}>

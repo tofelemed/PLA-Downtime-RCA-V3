@@ -30,7 +30,7 @@ function assetFigure(spec: TileSpec, asset: AssetFigures): Omit<TileFigure, 'hig
 
 /** One tile's figure: the unit's summary KPI, or — with an asset selected — the asset's own row (or "—" with the reason). */
 export function tileFigure(spec: TileSpec, summary: readonly KpiAggregateView[] | undefined, asset: AssetFigures | null): TileFigure {
-  const highlight = spec.metric === 'downtime_unplanned';
+  const highlight = spec.metric === 'downtime_total';
   if (asset) return { ...assetFigure(spec, asset), highlight };
   const view = findMetric(summary, spec.metric);
   const reason = unavailableReason(view);

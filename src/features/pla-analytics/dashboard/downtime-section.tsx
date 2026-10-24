@@ -15,12 +15,12 @@ import { useDowntimeSeries } from './use-downtime-series';
 
 /** Downtime of the window: totals by class, stops and scheduled availability, the planned/unplanned trend and the unplanned causes. */
 export function DowntimeSection({ scope, assetId }: { scope: AnalyticsScope; assetId?: string }) {
-  const { canViewAnalysis } = useCapabilities();
+  const { canViewOperations } = useCapabilities();
   const [controllable, setControllable] = useState(false);
   const series = useDowntimeSeries(scope, assetId);
   const { query } = series;
   const subtitle = assetId ? DOWNTIME_ASSET_NOTE : undefined;
-  const link = canViewAnalysis ? { to: downtimeHref(scope), label: 'Downtime analysis', testId: 'dashboard-downtime-link' } : undefined;
+  const link = canViewOperations ? { to: downtimeHref(scope), label: 'Downtime analysis', testId: 'dashboard-downtime-link' } : undefined;
   const controls = <ControllableSwitch checked={controllable} onChange={setControllable} testId="dashboard-controllable-switch" />;
   return (
     <KpiSection title="Downtime" link={link} controls={controls}>

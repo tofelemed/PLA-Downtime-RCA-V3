@@ -5,9 +5,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { PlanBar } from '../charts/plan-trend-bars';
 
-const state = vi.hoisted(() => ({ canViewAnalysis: true, totals: [] as unknown[], buckets: [] as unknown[], lossGroups: [] as unknown[], bars: [] as unknown[], lossQueries: [] as unknown[], fail: false, refetch: vi.fn() }));
+const state = vi.hoisted(() => ({ canViewOperations: true, totals: [] as unknown[], buckets: [] as unknown[], lossGroups: [] as unknown[], bars: [] as unknown[], lossQueries: [] as unknown[], fail: false, refetch: vi.fn() }));
 
-vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewAnalysis: state.canViewAnalysis }) }));
+vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewOperations: state.canViewOperations }) }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
 vi.mock('../charts/plan-trend-bars', () => ({
   PlanTrendBars: (props: { rows: PlanBar[]; uom: string }) => {
@@ -121,15 +121,15 @@ describe('ProductionPlanSection', () => {
     expect(screen.getAllByTestId('plan-top-reason').map((li) => li.textContent)).toEqual(['v1.00 m', 'w1.00 m', 'x1.00 m', 'y1.00 m', 'z1.00 m']);
   });
 
-  it('offers the Production loss analysis link only with canViewAnalysis', () => {
+  it('offers the Production loss analysis link only with canViewOperations', () => {
     state.totals = [row('total', 't')];
     const { unmount } = renderSection();
     expect(screen.getByRole('link', { name: /Production loss analysis/ })).toBeInTheDocument();
     unmount();
-    state.canViewAnalysis = false;
+    state.canViewOperations = false;
     renderSection();
     expect(screen.queryByRole('link', { name: /Production loss analysis/ })).not.toBeInTheDocument();
-    state.canViewAnalysis = true;
+    state.canViewOperations = true;
   });
 
   it('says the report is per unit when an asset is selected', () => {
