@@ -8,7 +8,7 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { downtimeHref, RCA_LIST_LINKS, stopsToCodeHref } from './dashboard-links';
 import { ForYouTile } from './for-you-tile';
-import { usePageCount } from './use-page-count';
+import { usePageCount } from '@/features/ux-kit/use-page-count';
 
 const CURRENT_STOPS_REFRESH_MS = 30_000;
 

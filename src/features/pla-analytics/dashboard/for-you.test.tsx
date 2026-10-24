@@ -7,7 +7,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { actAs } from '@/test/acting-user';
 import { jsonResponse, listPage, stubV2Fetch, type V2Call } from '@/test/v2-fetch';
 import { dashboardScope } from '../model/dashboard-scope';
-import { forYouTilesOf, pageCountText } from './for-you-model';
+import { pageCountText } from '@/features/ux-kit/use-page-count';
+import { forYouTilesOf } from './for-you-model';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));

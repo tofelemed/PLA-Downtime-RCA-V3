@@ -37,11 +37,3 @@ export function forYouTilesOf(roles: readonly string[]): ForYouTileKey[] {
   const keys = TILES_BY_ROLE.filter(([wanted]) => roles.some((role) => wanted.includes(role))).flatMap(([, tiles]) => tiles);
   return [...new Set(keys)];
 }
-
-/**
- * A count from one server page of a list without a total: the page's row count, with "+" when the
- * server has a further page (the Event Hub "Current stops (50+)" rule). Nothing is summed in the browser.
- */
-export function pageCountText(rows: number, hasMore: boolean, format: (value: number) => string): string {
-  return hasMore ? `${format(rows)}+` : format(rows);
-}
