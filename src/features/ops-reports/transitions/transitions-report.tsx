@@ -27,7 +27,7 @@ export function TransitionsReport({ scope }: { scope: AnalyticsScope }) {
             <ReportCard title="By product change" testId="transition-pairs">
               <TransitionPairsTable pairs={data.pairs} />
             </ReportCard>
-            <ReportCard title="Transitions" testId="transition-list">
+            <ReportCard title="Transitions" testId="transition-list" provisional>
               <TransitionsTable rows={data.transitions} timeZone={env.timezone} />
               {data.truncated && <p className="text-xs text-muted-foreground">Showing the 500 latest transitions; choose fewer dates for the rest.</p>}
             </ReportCard>
