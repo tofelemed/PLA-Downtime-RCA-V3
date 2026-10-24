@@ -34,7 +34,7 @@ export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onN
           aria-expanded={shown}
           aria-controls={listId}
           onClick={onToggle}
-          className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex-1 text-left">{section.label}</span>
           <Chevron className="h-3.5 w-3.5" aria-hidden />

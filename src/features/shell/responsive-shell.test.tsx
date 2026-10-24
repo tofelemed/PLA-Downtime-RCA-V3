@@ -12,6 +12,8 @@ vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => capa
 vi.mock('@/api/v2/queries/feature-flags', () => ({ useFeatureFlags: () => ({ data: { items: [] } }) }));
 vi.mock('@/app/routes', () => ({ preloadRoute: vi.fn() }));
 vi.mock('@/features/shell/use-branding', () => ({ useBranding: () => undefined }));
+vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
+vi.mock('@/api/v2/queries/approvals', () => ({ useApprovalInbox: () => ({ query: { data: undefined } }) }));
 vi.mock('@/features/plant-selector/plant-selector', () => ({ PlantSelector: () => <span>Plant</span> }));
 vi.mock('@/features/display-currency/display-currency-toggle', () => ({ DisplayCurrencyToggle: () => null }));
 vi.mock('@/features/notifications/notification-bell', () => ({ NotificationBell: () => null }));

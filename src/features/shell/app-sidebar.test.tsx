@@ -12,10 +12,13 @@ vi.mock('@/api/v2/queries/feature-flags', () => ({
   useFeatureFlags: () => ({ data: { items: [{ key: 'v2.downtimeAnalysis', enabled: true }, { key: 'v2.codesAdmin', enabled: true }] } }),
 }));
 vi.mock('@/app/routes', () => ({ preloadRoute: vi.fn() }));
+vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: { tenant: { id: 't1', name: 'Marun Petrochemical' } } }) }));
+const inbox = vi.hoisted(() => ({ items: [] as unknown[], nextCursor: undefined as string | undefined }));
+vi.mock('@/api/v2/queries/approvals', () => ({ useApprovalInbox: () => ({ query: { data: { pages: [inbox] } } }) }));
 
 function Harness() {
   const nav = useNavState('u-test');
-  return <AppSidebar nav={nav} />;
+  return <AppSidebar nav={nav} branding={undefined} />;
 }
 
 const renderAt = (path: string) =>
@@ -151,5 +154,69 @@ describe('AppSidebar', () => {
     await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
     const sections = within(nav).getAllByRole('button').filter((button) => button.hasAttribute('aria-controls')).map((button) => button.textContent);
     expect(sections.slice(0, 5)).toEqual(['Overview', 'Daily operations', 'Production loss analysis (PLA)', 'Downtime analysis', 'Asset reliability']);
+  });
+
+  it('brand block links to the dashboard', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    await userEvent.click(screen.getByRole('button', { name: 'Expand sidebar' }));
+    expect(screen.getByRole('link', { name: 'Traverse Forge — go to Dashboard' })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByText('Marun Petrochemical')).toBeInTheDocument();
+  });
+
+  it('collapse button sits after the menu list', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const lists = nav.querySelectorAll(':scope > ul');
+    const button = within(nav).getByRole('button', { name: 'Collapse sidebar' });
+    expect(lists[lists.length - 1].compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('expanded links show labels without icons', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const link = within(nav).getByRole('link', { name: 'Dashboard' });
+    expect(link).toHaveTextContent('Dashboard');
+    expect(link.querySelector('svg')).toBeNull();
+  });
+
+  it('collapsed rail keeps every link named', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    await userEvent.click(within(nav).getByRole('button', { name: 'Collapse sidebar' }));
+    const links = Array.from(nav.querySelectorAll('ul a'));
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      expect(link.getAttribute('aria-label')).toBeTruthy();
+      expect(link.querySelector('svg')).not.toBeNull();
+    }
+  });
+
+  it('active link uses the sidebar active tokens', async () => {
+    window.localStorage.clear();
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    const active = nav.querySelector('a[aria-current="page"]');
+    expect(active).toHaveClass('bg-sidebar-active-bg', 'text-sidebar-active-fg');
+  });
+
+  it('shows the pending approvals count on the approvals link only, "N+" for a full page, hidden at 0', async () => {
+    window.localStorage.clear();
+    inbox.items = [{}, {}, {}];
+    renderAt('/dashboard');
+    const nav = screen.getByRole('navigation', { name: 'Main menu' });
+    await userEvent.click(within(nav).getByRole('button', { name: 'Expand sidebar' }));
+    expect(within(nav).getByRole('link', { name: 'Pending approvals, 3 pending' })).toHaveTextContent('3');
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).not.toHaveTextContent(/\d/);
+    inbox.items = [];
+    renderAt('/dashboard');
+    expect(screen.getAllByRole('link', { name: 'Pending approvals' })).toHaveLength(1);
   });
 });

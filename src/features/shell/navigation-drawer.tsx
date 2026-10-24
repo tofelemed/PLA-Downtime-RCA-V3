@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import type { BrandingView as BrandingSettings } from '@/api/v2/types/administration';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import type { NavStateApi } from '@/features/auth/use-nav-state';
 import { AppSidebar } from './app-sidebar';
@@ -7,13 +8,14 @@ export interface NavigationDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   nav: NavStateApi;
+  branding: BrandingSettings | undefined;
 }
 
 /**
  * The menu below 1024 px (UX audit H-1): a left `Sheet` (focus trapped, Esc and the overlay close it)
  * holding the expanded sidebar; following a link closes it and leaves focus to the new page.
  */
-export function NavigationDrawer({ open, onOpenChange, nav }: NavigationDrawerProps) {
+export function NavigationDrawer({ open, onOpenChange, nav, branding }: NavigationDrawerProps) {
   // after following a link, focus goes to the new page's content (Layout), not back to the menu button
   const navigated = useRef(false);
   const onCloseAutoFocus = (event: Event) => {
@@ -37,7 +39,7 @@ export function NavigationDrawer({ open, onOpenChange, nav }: NavigationDrawerPr
           <SheetTitle className="text-base">Menu</SheetTitle>
         </SheetHeader>
         <div className="min-h-0 flex-1">
-          <AppSidebar nav={nav} variant="drawer" onNavigate={onNavigate} />
+          <AppSidebar nav={nav} branding={branding} variant="drawer" onNavigate={onNavigate} />
         </div>
       </SheetContent>
     </Sheet>

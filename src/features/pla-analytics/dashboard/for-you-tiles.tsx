@@ -2,21 +2,13 @@ import { useApprovalInbox } from '@/api/v2/queries/approvals';
 import { useReconciliationQueue } from '@/api/v2/queries/period-sla';
 import { useProductionEvents } from '@/api/v2/queries/production-events';
 import { useRcaActionPage } from '@/api/v2/queries/rca-pickers';
-import type { ListResponse } from '@/api/v2/types/envelopes';
 import { currentStopsQuery, defaultFilters, toCodeFilters, toEventQuery } from '@/features/event-hub/model/event-filters';
 import { pendingApprovalsHref } from '@/features/approvals/approval-links';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { downtimeHref, RCA_LIST_LINKS, stopsToCodeHref } from './dashboard-links';
-import { pageCountText } from './for-you-model';
 import { ForYouTile } from './for-you-tile';
-
-/** The count text of the first server page of a list without a total (undefined while it loads). */
-function usePageCount(page: Pick<ListResponse<unknown>, 'items' | 'nextCursor'> | undefined): string | undefined {
-  const { number } = useNumberFormat();
-  return page ? pageCountText(page.items.length, Boolean(page.nextCursor), number) : undefined;
-}
+import { usePageCount } from './use-page-count';
 
 const CURRENT_STOPS_REFRESH_MS = 30_000;
 
