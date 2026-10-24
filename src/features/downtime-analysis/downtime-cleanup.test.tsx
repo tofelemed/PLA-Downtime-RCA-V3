@@ -106,3 +106,25 @@ describe('Downtime analysis cleanup (24 Oct 2026): header and filter bar', () =>
     }
   });
 });
+
+describe('Downtime analysis cleanup: Overview', () => {
+  it('summary tiles: dashboard tiles with an ⓘ each and no caption; no current-stops or trend caption', async () => {
+    openDowntime(`/downtime?${WINDOW}`);
+    const tile = await screen.findByTestId('kpi-downtime_total');
+    expect(within(tile).getByText('Total downtime').className).toContain('uppercase');
+    expect(within(tile).getByRole('button', { name: 'About Total downtime' })).toBeInTheDocument();
+    const text = document.body.textContent ?? '';
+    for (const caption of [/Union of stop time/, /Run time ÷ scheduled time/, /Current stops are live/, /Buckets use the plant/, /Share of stop time with a reason code/]) {
+      expect(text).not.toMatch(caption);
+    }
+    expect(screen.getByRole('button', { name: 'About Trend by day' })).toBeInTheDocument();
+    expect(screen.getByText('More downtime figures')).toBeInTheDocument();
+  });
+
+  it('chart colours: unplanned is the loss red, planned the neutral slate, from tokens', async () => {
+    const { CLASS_COLOURS } = await import('./model/class-colours');
+    expect(CLASS_COLOURS.unplanned.chart).toBe('hsl(var(--danger))');
+    expect(CLASS_COLOURS.planned.chart).toBe('hsl(var(--chart-8))');
+    expect(Object.values(CLASS_COLOURS).every((colour) => colour.chart.startsWith('hsl(var(--'))).toBe(true);
+  });
+});

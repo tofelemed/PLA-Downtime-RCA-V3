@@ -9,7 +9,7 @@ export function DowntimeOverviewPage({ filters, bundle, onClose, onCode }: Downt
     <div className="space-y-5" data-testid="downtime-view-overview">
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <KpiSummary bundle={bundle} compact />
-        <div><CurrentStopsPanel unitIds={filters.unitIds} onClose={onClose} onCode={onCode} /><p className="mt-2 text-xs text-muted-foreground">Current stops are live for the selected units. Summary and trend use the chosen production-period window.</p></div>
+        <div><CurrentStopsPanel unitIds={filters.unitIds} onClose={onClose} onCode={onCode} /></div>
       </div>
       <TrendPanel filters={filters} bundle={bundle} views={pageViews(filters)} />
     </div>

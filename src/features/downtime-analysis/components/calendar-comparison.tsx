@@ -9,7 +9,7 @@ import { useDowntimeBundle, type DowntimeBundleResult } from '../hooks/use-downt
 import { pageBundleQuery } from '../model/bundle-views';
 import { previousWindow, type DowntimeFilters } from '../model/downtime-filters';
 import { findMetric, SUMMARY_TILES } from '../model/kpi-display';
-import { KpiTile } from './kpi-summary';
+import { FigureTile } from './figure-tile';
 
 const COMPARED = ['downtime_total', 'stop_count', 'mean_stop_duration', 'scheduled_availability'];
 const TILES = SUMMARY_TILES.filter((tile) => COMPARED.includes(tile.metric));
@@ -52,7 +52,7 @@ function WindowColumn({ filters, query, summary }: WindowColumnProps): ReactNode
       <DataState state={dataStateOf(query)} error={query.error} onRetry={() => query.refetch()}>
         <dl className="grid grid-cols-2 gap-2">
           {TILES.map((tile) => (
-            <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
+            <FigureTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
           ))}
         </dl>
       </DataState>

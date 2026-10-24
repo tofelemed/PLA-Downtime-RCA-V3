@@ -8,14 +8,9 @@ import { ChartFigure } from '@/features/ux-kit/chart-figure';
 import { CHART_TOOLTIP_STYLE, unbreakable } from '@/features/ux-kit/chart-text';
 import { plural } from '@/features/ux-kit/format/plural';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
+import { legendText } from '@/features/pla-analytics/charts/downtime-trend-bars';
+import { CLASS_COLOURS } from '../../model/class-colours';
 
-/** Same schedule-class colours as the stop timeline (shared unit-state tokens, UX_AUDIT C-7). */
-const COLORS: Record<ScheduleClass, string> = {
-  planned: 'hsl(var(--state-planned))',
-  unplanned: 'hsl(var(--state-stopped))',
-  external: 'hsl(var(--state-starved))',
-  unknown: 'hsl(var(--state-not-scheduled))',
-};
 
 export interface TrendChartProps {
   rows: readonly TrendRow[];
@@ -41,9 +36,9 @@ export function TrendChart({ rows, classes, unit }: TrendChartProps) {
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis tickFormatter={(value: unknown) => unbreakable(format(value))} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} width={unit === 's' ? 80 : 48} />
           <Tooltip formatter={(value: unknown) => format(value)} {...CHART_TOOLTIP_STYLE} />
-          <Legend />
+          <Legend formatter={legendText} />
           {classes.map((scheduleClass) => (
-            <Bar key={scheduleClass} dataKey={scheduleClass} name={labelOf(SCHEDULE_CLASS_LABELS, scheduleClass)} stackId="class" fill={COLORS[scheduleClass]} />
+            <Bar key={scheduleClass} dataKey={scheduleClass} name={labelOf(SCHEDULE_CLASS_LABELS, scheduleClass)} stackId="class" fill={CLASS_COLOURS[scheduleClass].chart} />
           ))}
         </BarChart>
       </ResponsiveContainer>

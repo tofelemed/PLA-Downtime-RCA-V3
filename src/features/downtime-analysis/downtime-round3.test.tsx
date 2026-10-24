@@ -69,7 +69,8 @@ describe('Downtime round-3 QA fixes', () => {
     await waitFor(() => expect(result.current.data).toBeDefined());
     render(<KpiSummary bundle={result.current} compact />, { wrapper });
     expect(screen.getByTestId('data-coverage')).toHaveTextContent('Data covers 43 % of the window');
-    expect(screen.getByTestId('data-coverage')).toHaveTextContent('not counted as scheduled or available time');
+    expect(screen.getByTestId('data-coverage')).not.toHaveTextContent('not counted as scheduled or available time');
+    expect(screen.getByRole('button', { name: 'About Data coverage' })).toBeInTheDocument();
     expect(screen.getByTestId('data-coverage-no-plan')).toHaveTextContent('4 periods in this window: No approved plan covers this period');
     expect(screen.getByTestId('kpi-scheduled_availability')).toHaveTextContent('93.8 %');
     expect(reasonText('no_known_time')).toBe('No state data covers this window');

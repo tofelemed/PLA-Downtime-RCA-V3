@@ -1,8 +1,11 @@
 import type { DataCoverageView } from '@/api/v2/types/reports';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { NO_PLAN_TEXT, NoPlanLink } from '@/features/month-close/components/no-plan-notice';
 import { plural } from '@/features/ux-kit/format/plural';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { formatRatio } from '../model/kpi-display';
+
+const UNKNOWN_TIME_INFO = 'Time without state data is not counted as scheduled or available time, nor in MTBF.';
 
 /** True when the window has time without state data (some scheduled time is unknown). */
 function hasUnknownStateTime(coverage: DataCoverageView | undefined): boolean {
@@ -22,10 +25,11 @@ export function DataCoverageNote({ coverage }: { coverage: DataCoverageView | un
   const noPlan = coverage.periodsWithoutPlan;
   if (!unknown && noPlan === 0) return null;
   return (
-    <div className="mb-2 space-y-1 text-xs text-muted-foreground" role="note" data-testid="data-coverage-note">
+    <div className="space-y-1 text-xs text-muted-foreground" role="note" data-testid="data-coverage-note">
       {unknown && (
-        <p data-testid="data-coverage">
-          Data covers {formatRatio(coverage.ratio, 0, format.digits)} of the window. Time without state data is not counted as scheduled or available time, nor in MTBF.
+        <p className="flex items-center gap-1.5" data-testid="data-coverage">
+          Data covers {formatRatio(coverage.ratio, 0, format.digits)} of the window
+          <KpiInfo label="Data coverage" text={UNKNOWN_TIME_INFO} />
         </p>
       )}
       {noPlan > 0 && (

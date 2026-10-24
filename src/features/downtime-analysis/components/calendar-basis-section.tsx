@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { CalendarBasisUnitView, CalendarBasisView } from '@/api/v2/types/reports';
 import { Badge } from '@/components/ui/badge';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { CALENDAR_BASIS_BADGE } from '../model/kpi-display';
 
@@ -9,6 +10,9 @@ const OMITTED_TEXT: Readonly<Record<NonNullable<CalendarBasisView['omitted']>, s
   period_selection: 'Units/days without a calculation run are not shown: product, shift and crew filters apply to calculated periods only.',
   schedule_class: 'Units/days without a calculation run are not shown while a schedule class is chosen.',
 };
+
+const CALENDAR_BASIS_INFO =
+  'Computed from the stops over 24 h of calendar time per production day. Shown separately: these figures are not part of the calculated figures above.';
 
 function UnitDays({ unit }: { unit: CalendarBasisUnitView }) {
   const pref = useCalendarPreference();
@@ -33,10 +37,10 @@ export function CalendarBasisSection({ calendar, children }: { calendar: Calenda
   if (calendar.units.length === 0) return null;
   return (
     <section className="mt-4 space-y-2 rounded-md border border-dashed p-3" data-testid="calendar-basis" aria-label="Calendar basis">
-      <Badge variant="outline" data-testid="calendar-basis-badge">{calendar.label || CALENDAR_BASIS_BADGE}</Badge>
-      <p className="text-xs text-muted-foreground">
-        Computed from the stops over 24 h of calendar time per production day. Shown separately: these figures are not part of the calculated figures above.
-      </p>
+      <div className="flex items-center gap-1.5">
+        <Badge variant="outline" data-testid="calendar-basis-badge">{calendar.label || CALENDAR_BASIS_BADGE}</Badge>
+        <KpiInfo label="Calendar basis" text={CALENDAR_BASIS_INFO} />
+      </div>
       <ul className="text-xs">{calendar.units.map((unit) => <UnitDays key={unit.unitId} unit={unit} />)}</ul>
       {children}
     </section>

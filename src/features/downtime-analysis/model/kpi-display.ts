@@ -98,6 +98,20 @@ export function reasonText(reason: string | null | undefined): string | null {
     .join('; ');
 }
 
+const QUALITY_TEXT: Readonly<Record<string, string>> = {
+  provisional: 'Provisional',
+  unavailable: 'Not available',
+  exception: 'Above 100 %',
+};
+
+/** The ⓘ text of a summary tile: its definition, then the server's quality and reason when the figure is not plain. */
+export function tileInfo(spec: TileSpec, view: KpiAggregateView | undefined): string {
+  if (!view || view.quality === 'ok') return spec.note;
+  const quality = QUALITY_TEXT[view.quality] ?? view.quality;
+  const reason = reasonText(view.reason);
+  return `${spec.note}. ${reason ? `${quality}: ${reason}` : quality}.`;
+}
+
 /** `"0.875"` → `"87.5 %"`: the decimal point moved on the digits, never through a float; in the plant's `digits`. */
 export function formatRatio(value: string | null | undefined, fractionDigits = 1, digits?: DigitSystem): string {
   if (value === null || value === undefined || value === '') return '—';

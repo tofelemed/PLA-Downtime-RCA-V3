@@ -62,12 +62,13 @@ describe('Downtime QA audit fixes (F1, F2, L15)', () => {
     expect(url.searchParams.has('tenantId')).toBe(false);
   });
 
-  it('F2: the summary says it is for one class; a figure not split by class shows "—" with the reason', async () => {
+  it('F2: a figure not split by class shows "—"; the class is the filter, the reason the tile ⓘ (no note line)', async () => {
     const { result } = renderHook(() => useDowntimeBundle(pageBundleQuery(FILTERS, 'overview', null), 'Asia/Tehran'), { wrapper });
     await waitFor(() => expect(result.current.data).toBeDefined());
     render(<KpiSummary bundle={result.current} compact />, { wrapper });
-    expect(screen.getByTestId('kpi-class-note')).toHaveTextContent('Figures for planned stops only');
-    expect(screen.getByTestId('kpi-scheduled_availability')).toHaveTextContent('Not split by schedule class');
+    expect(screen.queryByTestId('kpi-class-note')).toBeNull();
+    expect(screen.getByTestId('kpi-scheduled_availability')).toHaveTextContent(/—$/);
+    expect(screen.getByRole('button', { name: 'About Scheduled availability' })).toBeInTheDocument();
     expect(reasonText('not_by_schedule_class')).toBe('Not split by schedule class');
   });
 
