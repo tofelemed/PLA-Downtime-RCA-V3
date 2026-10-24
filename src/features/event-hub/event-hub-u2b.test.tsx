@@ -132,12 +132,14 @@ describe('window select (E-2)', () => {
     id: name, unitId: 'u1', localDate: start.slice(0, 10), shiftName: name, utcStart: start, utcEnd: end, durationSeconds: 28_800, localStart: start, localEnd: end, isExcluded: false,
   });
 
-  it('explains why shifts are hidden without exactly one unit', () => {
+  it('explains why shifts are hidden without exactly one unit in the ⓘ of the Window label, not as toolbar text', () => {
     const { unmount } = wrap(<WindowSelect unitIds={['u1', 'u2']} label="Last 24 h" bounds={{ from: null, to: null }} onChange={vi.fn()} />);
-    expect(screen.getByTestId('event-window-shift-hint')).toHaveTextContent('one unit at a time');
+    expect(screen.getByLabelText('Window')).toBe(screen.getByTestId('event-window'));
+    expect(screen.getByRole('button', { name: 'About Window' })).toBeInTheDocument();
+    expect(screen.queryByText(/one unit at a time|Choose one unit to pick a shift/)).toBeNull();
     unmount();
     wrap(<WindowSelect unitIds={['u1']} label="Last 24 h" bounds={{ from: null, to: null }} onChange={vi.fn()} />);
-    expect(screen.queryByTestId('event-window-shift-hint')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'About Window' })).toBeNull();
   });
 
   it('offers the current shift of the one unit and rolling presets kept relative', () => {
