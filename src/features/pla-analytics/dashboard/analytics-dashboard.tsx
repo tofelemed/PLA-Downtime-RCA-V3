@@ -1,14 +1,12 @@
-import { Link } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { DataState } from '@/features/ux-kit/data-state';
-import { Page, Section } from '@/features/ux-kit/page-layout';
+import { Page } from '@/features/ux-kit/page-layout';
 import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DashboardHeader } from './dashboard-header';
 import { useDashboardScope } from './use-dashboard-scope';
 import { DowntimeSection } from './downtime-section';
-import { eventsHref } from './dashboard-links';
 import { OeeSection } from './oee-section';
 import { ProductionPlanSection } from './production-plan-section';
 import { ForYouRow } from './for-you-row';
@@ -47,12 +45,10 @@ function DashboardScreen() {
         <ProductionPlanSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <DowntimeSection scope={scope} assetId={node.assetId} />
         <ReliabilitySection scope={scope} node={node} />
-        <Section title="Reconciliation">
+        <div className="grid gap-4 xl:grid-cols-2">
           <ReconciliationTiles scope={scope} />
-        </Section>
-        <Section title="Latest loss events" actions={<Link className="text-sm underline" to={eventsHref(scope)}>All events</Link>}>
           <LatestEvents scope={scope} />
-        </Section>
+        </div>
       </div>
     </Page>
   );

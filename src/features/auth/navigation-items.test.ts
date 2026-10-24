@@ -238,7 +238,7 @@ describe('navigation sections', () => {
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
-  it('sections in display order (owner 22 Oct 2026): Overview, Production, PLA, Downtime, Reliability, then setup and admin', () => {
+  it('sections in display order (owner 22 Oct 2026): Overview, Daily operations, PLA, Downtime, Asset reliability, then configuration and admin', () => {
     expect(NAV_SECTIONS.map((section) => section.key)).toEqual(['overview', 'production', 'pla', 'downtime', 'reliability', 'setup', 'integration', 'administration']);
     expect(NAVIGATION_ITEMS.filter((item) => item.section === 'overview').map((item) => item.name)).toEqual(['Dashboard', 'Reports', 'Pending approvals']);
   });

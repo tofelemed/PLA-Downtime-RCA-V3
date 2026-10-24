@@ -20,7 +20,7 @@ function isSentenceCase(name: string): boolean {
 
 /** The file that renders the h1 of each menu page (the analysis pages compose "Section · label"). */
 const PAGE_FILES: Readonly<Record<string, string>> = {
-  '/dashboard': 'pla-analytics/dashboard/analytics-dashboard.tsx',
+  '/dashboard': 'pla-analytics/dashboard/dashboard-header.tsx',
   '/approvals': 'approvals/approval-inbox-page.tsx',
   '/reports': 'pla-analytics/reports/reports-header.tsx',
   '/events': 'event-hub/event-hub-page.tsx',

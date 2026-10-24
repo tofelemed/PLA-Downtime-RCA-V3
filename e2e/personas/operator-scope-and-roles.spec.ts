@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { call, command } from '../test-utils/downtime-world';
+import { plantTrigger } from './support/admin-helpers';
 import { expectHidden, expectRefused } from './support/hidden-controls';
 import {
   OPERATORS, LINE_1_CODE, LINE_2_CODE, chooseUnit, loginOperator, openHub, session, tag, unitByCode,
@@ -59,7 +60,7 @@ test.describe('Operator — scope and role limits', () => {
   test('J4 unit-limited operator (ingrid): only DEMO-LINE-1 in the Event Hub; another unit\'s event is 404, never data', async ({ page }) => {
     await loginOperator(page, OPERATORS.ingrid);
     await openHub(page, null);
-    await expect(page.getByTestId('scope-header')).toContainText('All units in your scope');
+    await expect(plantTrigger(page)).toBeVisible();
 
     // the unit picker of the filters and of the create form know one unit only
     expect(await unitOptionsOf(page, 'filter-units')).toEqual([world.line1.name]);

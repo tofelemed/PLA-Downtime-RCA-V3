@@ -147,7 +147,7 @@ describe('AppSidebar', () => {
     expect(section('Downtime analysis')).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('sections are listed Overview, Production, PLA, Downtime, Reliability, ...', async () => {
+  it('sections are listed Overview, Daily operations, PLA, Downtime analysis, Asset reliability, ...', async () => {
     window.localStorage.clear();
     renderAt('/dashboard');
     const nav = screen.getByRole('navigation', { name: 'Main menu' });
