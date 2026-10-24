@@ -11,9 +11,9 @@ import { newItemId } from '../../model/rca-form';
 import { useCaseWorkspace } from '../case-context';
 import { useCasePatch } from '../use-case-patch';
 import { AttachmentsField } from './attachments-field';
-import { CaseCard } from './case-card';
+import { CaseCard } from '../components/case-card';
 import { EvidenceClassificationFields, EvidenceDetailsFields, EvidenceTaskFields } from './evidence-fields';
-import { FormFooter } from './form-controls';
+import { FormFooter } from '../components/form-controls';
 import { SeriesFields } from './series-fields';
 
 function useEvidenceSave(existing: RcaEvidenceItem | undefined) {

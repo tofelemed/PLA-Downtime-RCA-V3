@@ -2,7 +2,7 @@ import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { RCA_SERIES_MODE_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { SERIES_MODES, type SeriesForm } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
-import { ChoiceField, FieldGroup, TextField } from './form-controls';
+import { ChoiceField, FieldGroup, TextField } from '../components/form-controls';
 
 /** The historian query of a "Time Series" item: PI streams, mode and window (stored with the evidence). */
 export function SeriesFields({ value, onChange }: { value: SeriesForm; onChange: (next: SeriesForm) => void }) {

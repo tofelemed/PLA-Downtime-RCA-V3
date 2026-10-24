@@ -6,7 +6,7 @@ import { OwnerSelect } from '../../actions/owner-select';
 import { useAssetOptions } from '../../use-asset-options';
 import { EVIDENCE_TYPES, FIVE_P, SEVERITIES, type EvidenceForm } from '../../model/evidence-form';
 import { useRcaFormat } from '../../use-rca-format';
-import { AreaField, ChoiceField, FieldGroup, optionsOf, TextField, type ChoiceOption } from './form-controls';
+import { AreaField, ChoiceField, FieldGroup, optionsOf, TextField, type ChoiceOption } from '../components/form-controls';
 import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-labels';
 
 export interface EvidenceFieldsProps {

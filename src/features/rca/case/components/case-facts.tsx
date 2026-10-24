@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { isBlank } from './is-blank';
 
 export type CaseFactsLayout = 'columns' | 'stacked';
 
@@ -38,7 +39,7 @@ export interface CaseFactProps {
  * an empty value reads "Not recorded".
  */
 export function CaseFact({ label, children, note, testId }: CaseFactProps) {
-  const empty = children === null || children === undefined || (typeof children === 'string' && children.trim() === '');
+  const empty = isBlank(children);
   return (
     <>
       <dt className="text-muted-foreground">{label}</dt>

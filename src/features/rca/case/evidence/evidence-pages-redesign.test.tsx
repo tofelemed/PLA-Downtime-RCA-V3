@@ -111,6 +111,7 @@ describe('evidence detail (RCA detail redesign)', () => {
     expect(detail.tagName).toBe('DL');
     expect(within(detail).getByText('Source').tagName).toBe('DT');
     expect(within(detail).getByText('P101.VIB').tagName).toBe('DD');
+    expect(within(detail).getByText('Category').nextElementSibling).toHaveTextContent('Not recorded');
     const request = screen.getByTestId('evidence-request-card');
     expect(within(request).getByRole('heading', { level: 2, name: 'Evidence request' })).toBeInTheDocument();
     expect(within(request).getByText('Export the trend')).toBeInTheDocument();
@@ -144,6 +145,28 @@ describe('evidence detail (RCA detail redesign)', () => {
     await screen.findByTestId('evidence-detail');
     expect(within(screen.getByTestId('evidence-detail-card')).queryByRole('button', { name: 'Delete' })).toBeNull();
     expect(screen.queryByRole('link', { name: /Edit/ })).toBeNull();
+  });
+});
+
+describe('closed investigation (evidence pages)', () => {
+  const closed = () => ({ ...structuredClone(CASE), status: 'Closed', actualCloseDate: '2026-10-18T14:41:00Z' } as RcaCaseView);
+
+  it('list: the evidence as rows, with no Add evidence', async () => {
+    query.rca = closed();
+    render(app('/rca/c1/evidence'));
+    const card = await screen.findByTestId('evidence-card');
+    expect(within(card).getByTestId('evidence-list')).toHaveTextContent('Vibration trend');
+    expect(screen.queryByTestId('add-evidence')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Add evidence/ })).toBeNull();
+  });
+
+  it('detail: values as text with no Edit or Delete', async () => {
+    query.rca = closed();
+    render(app('/rca/c1/evidence/ev-1'));
+    expect(await screen.findByTestId('evidence-detail')).toHaveTextContent('P101.VIB');
+    expect(screen.queryByRole('link', { name: /Edit evidence/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 });
 
