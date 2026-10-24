@@ -2,13 +2,11 @@ import { lazy, Suspense } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { ScopeHeader } from '@/features/ux-kit/scope-header';
-import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { DecisionBanners } from './components/decision-banners';
 import { ProfilesAreaTabs } from './components/profiles-area-tabs';
+import { PlansHeaderActions } from './plans/plans-header-actions';
 import { useUnitParam } from './hooks/use-unit-param';
 import type { ProfilesAreaTab } from './model/profiles-area';
 import { pageNameOf } from '@/features/auth/navigation-items';
@@ -34,10 +32,10 @@ type TabValue = (typeof TABS)[number]['value'];
  * set up once and live under Setup.
  */
 const VIEWS = {
-  plans: { path: '/planning', tabs: ['plans'], title: pageNameOf('/planning'), description: 'Versioned production plans and the period accounting they drive.' },
-  profiles: { path: '/setup/profiles', tabs: ['profiles', 'transitions', 'streams'], title: pageNameOf('/setup/profiles'), description: 'Unit and product profiles with their production rates, grade transitions and streams.' },
-  calendars: { path: '/setup/calendars', tabs: ['calendars'], title: pageNameOf('/setup/calendars'), description: 'The shift calendar the plant runs on, its crews and rotations.' },
-} satisfies Record<string, { path: string; tabs: readonly TabValue[]; title: string; description: string }>;
+  plans: { path: '/planning', tabs: ['plans'], title: pageNameOf('/planning') },
+  profiles: { path: '/setup/profiles', tabs: ['profiles', 'transitions', 'streams'], title: pageNameOf('/setup/profiles') },
+  calendars: { path: '/setup/calendars', tabs: ['calendars'], title: pageNameOf('/setup/calendars') },
+} satisfies Record<string, { path: string; tabs: readonly TabValue[]; title: string }>;
 
 export type PlanningView = keyof typeof VIEWS;
 
@@ -55,8 +53,6 @@ function viewOfTab(tab: string | null): PlanningView | null {
  */
 export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
   const tenantId = useV2TenantId();
-  const { selection } = usePlantSelection();
-  const zone = usePlantTimezone();
   const [params] = useSearchParams();
   const [unitId] = useUnitParam();
   const page = VIEWS[view];
@@ -77,8 +73,7 @@ export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
       <div data-testid="planning-page" className="space-y-6">
         <PageHeader
           title={page.title}
-          description={page.description}
-          meta={<ScopeHeader scopeLabel={selection?.tenant?.name ?? 'Plant'} timezone={zone.timezone} timezoneIsFallback={zone.source === 'utc-fallback'} />}
+          actions={view === 'plans' ? <PlansHeaderActions /> : undefined}
         />
         {view === 'profiles' && <ProfilesAreaTabs current={tab as ProfilesAreaTab} unitId={unitId} />}
         <DecisionBanners tab={tab} />

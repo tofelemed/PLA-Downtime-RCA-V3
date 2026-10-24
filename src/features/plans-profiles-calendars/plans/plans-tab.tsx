@@ -1,18 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import type { ApprovalState, PlanView } from '@/api/v2/types/plans';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { BASIS_SHORT_LABELS, labelOf, VERSION_STATE_LABELS } from '@/features/ux-kit/labels';
 import { PlantTimeRange } from '@/features/ux-kit/plant-time-range';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { ActionIcon, EntityIcon } from '@/lib/icons';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
+import { EntityIcon } from '@/lib/icons';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePagedPlans, usePrefetchPlanVersion } from '../hooks/use-plan-reads';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
+
+/** The shared report table look; plans carry no provisional figures. */
+const PLANS_LOOK = { provisional: false } as const;
 
 const STATES: ApprovalState[] = ['draft', 'submitted', 'approved', 'superseded'];
 
@@ -35,10 +36,10 @@ function columnsOf(refs: PlanningRefs, prefetch: (plan: PlanView) => void): Data
       header: 'Window',
       nowrap: true,
       cell: (plan) => (
-        <PlantTimeRange className="text-xs" from={plan.version.validFrom} to={plan.version.validTo} tz={refs.timezone} />
+        <PlantTimeRange className="text-xs" withZone={false} from={plan.version.validFrom} to={plan.version.validTo} tz={refs.timezone} />
       ),
     },
-    { id: 'state', header: 'State', cell: (plan) => <VersionStateBadge state={plan.version.approvalState} /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (plan) => <VersionStateBadge state={plan.version.approvalState} /> },
     {
       id: 'periods',
       header: 'Period accounting',
@@ -58,7 +59,6 @@ function columnsOf(refs: PlanningRefs, prefetch: (plan: PlanView) => void): Data
  * `/planning/plans/:planId`; "Periods" opens its period accounting at `/plans/:planId`.
  */
 export function PlansTab() {
-  const { canWritePlans } = useCapabilities();
   const refs = usePlanningRefs();
   const navigate = useNavigate();
   const prefetch = usePrefetchPlanVersion();
@@ -67,41 +67,37 @@ export function PlansTab() {
   const plans = usePagedPlans({ unitId, state });
   const stateOptions = STATES.map((value) => ({ value, label: labelOf(VERSION_STATE_LABELS, value) }));
   return (
-    <div className="space-y-4" data-testid="plans-tab">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-64">
-          <FormField id="planUnitFilter" label="Unit">
-            <NativeSelect id="planUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
-          </FormField>
+    <ReportLookContext.Provider value={PLANS_LOOK}>
+      <div className="space-y-4" data-testid="plans-tab">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-64">
+            <FormField id="planUnitFilter" label="Unit">
+              <NativeSelect id="planUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
+            </FormField>
+          </div>
+          <div className="w-56">
+            <FormField id="planStateFilter" label="Current version">
+              <NativeSelect id="planStateFilter" value={state} options={stateOptions} placeholder="Any state" onChange={(v) => setState(v as ApprovalState | '')} />
+            </FormField>
+          </div>
         </div>
-        <div className="w-56">
-          <FormField id="planStateFilter" label="Current version">
-            <NativeSelect id="planStateFilter" value={state} options={stateOptions} placeholder="Any state" onChange={(v) => setState(v as ApprovalState | '')} />
-          </FormField>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          <ReadOnlyHint />
-          {canWritePlans && (
-            <Button asChild size="sm" data-testid="plan-new">
-              <Link to="/planning/plans/new">
-                <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
-                New plan
-              </Link>
-            </Button>
-          )}
-        </div>
+        <section aria-labelledby="plans-list-title" className="min-w-0 rounded-lg border bg-card p-4">
+          <h2 id="plans-list-title" className="mb-3 text-base font-semibold text-heading">
+            Production plans
+          </h2>
+          <DataTable
+            caption="Production plans"
+            columns={columnsOf(refs, prefetch)}
+            rows={plans.rows}
+            getRowKey={(plan) => plan.id}
+            pager={plans.pager}
+            status={plans.status}
+            empty={{ title: 'No plans', text: 'No versioned plans match these filters.' }}
+            onRowClick={(plan) => navigate(`/planning/plans/${plan.id}`)}
+            rowLabel={(plan) => `Open plan ${plan.name}`}
+          />
+        </section>
       </div>
-      <DataTable
-        caption="Production plans"
-        columns={columnsOf(refs, prefetch)}
-        rows={plans.rows}
-        getRowKey={(plan) => plan.id}
-        pager={plans.pager}
-        status={plans.status}
-        empty={{ title: 'No plans', text: 'No versioned plans match these filters.' }}
-        onRowClick={(plan) => navigate(`/planning/plans/${plan.id}`)}
-        rowLabel={(plan) => `Open plan ${plan.name}`}
-      />
-    </div>
+    </ReportLookContext.Provider>
   );
 }

@@ -13,7 +13,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { VersionActions } = await import('./profiles/version-actions');
 const { OpenVersionActions } = await import('./plans/open-version-actions');
 const { CrewRotationEditor } = await import('./calendars/crew-rotation-editor');
-const { PlansTab } = await import('./plans/plans-tab');
+const { PlansHeaderActions } = await import('./plans/plans-header-actions');
 
 const VERSION = {
   id: 'v1', planId: 'plan-1', version: 1, unitId: 'u1', validFrom: '2026-11-01T02:30:00.000Z', validTo: '2026-11-02T02:30:00.000Z', basis: 'quantity',
@@ -101,7 +101,7 @@ describe('planning screens show only the controls the role can use (owner decisi
 
   it('a viewer gets the Read-only hint instead of "New plan"', () => {
     actAs('viewer');
-    wrap(<PlansTab />);
+    wrap(<PlansHeaderActions />);
     expect(screen.queryByTestId('plan-new')).toBeNull();
     expect(screen.getByTestId('read-only-hint')).toBeTruthy();
   });
