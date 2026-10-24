@@ -33,6 +33,9 @@ export interface CalendarEditorProps {
 
 type Editor = ReturnType<typeof useCalendarEditor>;
 
+/** The plant-calendar button of the date fields (typed in the plant format too). */
+const PICKER = {};
+
 function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean }) {
   const { draft, errors } = editor;
   const set = <K extends keyof CalendarDraft>(key: K, value: CalendarDraft[K]) => editor.setDraft({ ...draft, [key]: value });
@@ -44,8 +47,8 @@ function BasicsFields({ editor, readOnly }: { editor: Editor; readOnly: boolean 
       <FormField id="calDayStart" label="Operational day starts at" error={errors.operationalDayStart} required={!readOnly}>
         <Input id="calDayStart" value={draft.operationalDayStart} placeholder="06:00" disabled={readOnly} onChange={(e) => set('operationalDayStart', e.target.value)} />
       </FormField>
-      <DateInput id="calFrom" label="Effective from (operational date)" value={draft.effectiveFrom} disabled={readOnly} required={!readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
-      <DateInput id="calTo" label="Effective to (exclusive, optional)" value={draft.effectiveTo} disabled={readOnly} error={errors.effectiveTo} onChange={(v) => set('effectiveTo', v)} />
+      <DateInput id="calFrom" label="Effective from (operational date)" compact textEntry calendarPicker={PICKER} value={draft.effectiveFrom} disabled={readOnly} required={!readOnly} error={errors.effectiveFrom} onChange={(v) => set('effectiveFrom', v)} />
+      <DateInput id="calTo" label="Effective to (exclusive, optional)" compact textEntry calendarPicker={PICKER} value={draft.effectiveTo} disabled={readOnly} error={errors.effectiveTo} onChange={(v) => set('effectiveTo', v)} />
     </div>
   );
 }

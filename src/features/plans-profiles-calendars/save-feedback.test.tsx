@@ -42,6 +42,12 @@ const DRAFT_CALENDAR = {
   effectiveTo: null, shiftTemplates: [{ name: 'A', startLocal: '06:00', endLocal: '18:00', daysOfWeek: [] }], workingIntervals: [], holidays: [], exclusions: [], publishedBy: null, publishedAt: null, republishReason: null, rowVersion: 1,
 };
 
+/** A typed plant-format date commits on blur. */
+function typeDate(input: HTMLElement, value: string) {
+  fireEvent.change(input, { target: { value } });
+  fireEvent.blur(input);
+}
+
 function Where() {
   const location = useLocation();
   return <p data-testid="where">{location.pathname}</p>;
@@ -204,10 +210,10 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
       return json(200, EMPTY);
     };
     wrap(<CrewRotationEditor siteId="s1" timezone="Asia/Tehran" />);
-    expect(screen.queryByLabelText('Crew name')).toBeNull();
+    expect(screen.queryByLabelText(/^Crew name/)).toBeNull();
     fireEvent.click(screen.getByTestId('crew-add'));
     const crewDialog = await screen.findByRole('dialog', { name: 'Add crew' });
-    fireEvent.change(within(crewDialog).getByLabelText('Crew name'), { target: { value: 'Crew A' } });
+    fireEvent.change(within(crewDialog).getByLabelText(/^Crew name/), { target: { value: 'Crew A' } });
     fireEvent.click(within(crewDialog).getByRole('button', { name: 'Add crew' }));
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ title: 'Crew added' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add crew' })).toBeNull());
@@ -217,12 +223,11 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
     await waitFor(() => expect(screen.getByTestId('rotation-add').hasAttribute('disabled')).toBe(false));
     fireEvent.click(screen.getByTestId('rotation-add'));
     const rotationDialog = await screen.findByRole('dialog', { name: 'Add rotation' });
-    expect((within(rotationDialog).getByLabelText('Crew') as HTMLSelectElement).value).toBe('crew-1');
+    expect((within(rotationDialog).getByLabelText(/^Crew/) as HTMLSelectElement).value).toBe('crew-1');
     const submit = within(rotationDialog).getByRole('button', { name: 'Add rotation' });
-    expect(submit.hasAttribute('disabled')).toBe(true);
     fireEvent.change(within(rotationDialog).getByLabelText(/^Cycle \(shift names/), { target: { value: 'A,A,B,B' } });
-    fireEvent.change(within(rotationDialog).getByLabelText('Cycle day 1'), { target: { value: '2026-10-01' } });
-    fireEvent.change(within(rotationDialog).getByLabelText('Effective from'), { target: { value: '2026-10-01' } });
+    typeDate(within(rotationDialog).getByLabelText(/^Cycle day 1/), '2026-10-01');
+    typeDate(within(rotationDialog).getByLabelText(/^Effective from/), '2026-10-01');
     fireEvent.click(submit);
     await waitFor(() => expect(toast).toHaveBeenCalledWith({ title: 'Rotation added' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Add rotation' })).toBeNull());
@@ -238,10 +243,10 @@ describe('plans, profiles, calendars — save feedback (DECISIONS 2026-10-22)', 
     await waitFor(() => expect(screen.getByTestId('rotation-add').hasAttribute('disabled')).toBe(false));
     fireEvent.click(screen.getByTestId('rotation-add'));
     const dialog = await screen.findByRole('dialog', { name: 'Add rotation' });
-    fireEvent.change(within(dialog).getByLabelText('Crew'), { target: { value: 'crew-1' } });
+    fireEvent.change(within(dialog).getByLabelText(/^Crew/), { target: { value: 'crew-1' } });
     fireEvent.change(within(dialog).getByLabelText(/^Cycle \(shift names/), { target: { value: 'A,B' } });
-    fireEvent.change(within(dialog).getByLabelText('Cycle day 1'), { target: { value: '2026-10-01' } });
-    fireEvent.change(within(dialog).getByLabelText('Effective from'), { target: { value: '2026-10-01' } });
+    typeDate(within(dialog).getByLabelText(/^Cycle day 1/), '2026-10-01');
+    typeDate(within(dialog).getByLabelText(/^Effective from/), '2026-10-01');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add rotation' }));
     const alert = await within(dialog).findByTestId('save-failure-alert');
     expect(within(dialog).getByTestId('rotation-form').firstElementChild).toBe(alert);

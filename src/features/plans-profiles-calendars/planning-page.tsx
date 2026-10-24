@@ -4,7 +4,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
-import { DecisionBanners } from './components/decision-banners';
+import { DecisionInfo } from './components/decision-info';
+import { decisionNoteOf } from './model/decision-notes';
+import { CalendarsHeaderActions } from './calendars/calendars-header-actions';
 import { ProfilesAreaTabs } from './components/profiles-area-tabs';
 import { PlansHeaderActions } from './plans/plans-header-actions';
 import { useUnitParam } from './hooks/use-unit-param';
@@ -45,6 +47,13 @@ function viewOfTab(tab: string | null): PlanningView | null {
   return found ?? null;
 }
 
+/** The page's add / import buttons and the Read-only note, at the right of the title. */
+function HeaderActions({ view }: { view: PlanningView }) {
+  if (view === 'plans') return <PlansHeaderActions />;
+  if (view === 'calendars') return <CalendarsHeaderActions />;
+  return null;
+}
+
 /**
  * Production plans, or the profiles / calendars set up for them: capability and schedule as versioned master
  * data, previews from the server before every approval. The tab is in the URL (`?tab=`) and chosen in the area's
@@ -67,16 +76,17 @@ export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
   }
   const active = tabs.find((t) => t.value === wanted) ?? tabs[0];
   const tab = active.value;
+  const note = decisionNoteOf(tab);
   if (!tenantId) return <DataState state="no-permission" detail={`Choose a plant to manage its ${page.title.toLowerCase()}.`} />;
   return (
     <Page width="wide">
       <div data-testid="planning-page" className="space-y-6">
         <PageHeader
           title={page.title}
-          actions={view === 'plans' ? <PlansHeaderActions /> : undefined}
+          titleAside={note ? <DecisionInfo note={note} /> : undefined}
+          actions={<HeaderActions view={view} />}
         />
         {view === 'profiles' && <ProfilesAreaTabs current={tab as ProfilesAreaTab} unitId={unitId} />}
-        <DecisionBanners tab={tab} />
         <div data-testid={`panel-${active.value}`}>
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <active.Component />

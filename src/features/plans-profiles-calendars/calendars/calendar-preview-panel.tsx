@@ -5,6 +5,7 @@ import type { CalendarPreviewView } from '@/api/v2/types/calendars';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { DurationText } from '@/features/ux-kit/duration-text';
+import { EmptyMessage } from '@/features/ux-kit/data-table/data-table-states';
 import { Section } from '@/features/ux-kit/page-layout';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { StatusIcon } from '@/lib/icons';
@@ -76,14 +77,18 @@ export function CalendarPreviewPanel({ candidate, request, unitOptions, defaultU
           <FormField id="previewUnit" label="Unit">
             <NativeSelect id="previewUnit" value={unitId} options={unitOptions} placeholder="Choose a unit" onChange={setUnitId} />
           </FormField>
-          <DateInput id="previewFrom" label="First operational date" value={localFrom} onChange={setLocalFrom} />
-          <DateInput id="previewTo" label="Last operational date" value={localTo} onChange={setLocalTo} />
-          <Button onClick={run} disabled={!ready || preview.isPending} aria-describedby={blocked ? reasonId : undefined} data-testid="calendar-preview-submit">
+          <DateInput id="previewFrom" label="First operational date" compact value={localFrom} onChange={setLocalFrom} />
+          <DateInput id="previewTo" label="Last operational date" compact value={localTo} onChange={setLocalTo} />
+          <Button size="sm" onClick={run} disabled={!ready || preview.isPending} aria-describedby={blocked ? reasonId : undefined} data-testid="calendar-preview-submit">
             Run preview
           </Button>
         </div>
         <DisabledReason id={reasonId} reason={blocked} />
-        {!candidate && <p className="text-sm text-muted-foreground">Choose “Preview” above to check this version or your unsaved edits.</p>}
+        {!candidate && (
+          <div className="py-6" data-testid="preview-empty">
+            <EmptyMessage empty={{ title: 'No preview yet', text: 'Choose “Preview” to check this version or your unsaved edits.' }} />
+          </div>
+        )}
         <RefusalNotice error={preview.error} timezone={timezone} />
         {preview.data && <PreviewResult view={preview.data} />}
       </div>
