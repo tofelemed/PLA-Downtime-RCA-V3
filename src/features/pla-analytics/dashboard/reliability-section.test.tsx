@@ -85,6 +85,17 @@ describe('ReliabilitySection', () => {
     expect(screen.getByRole('link', { name: 'Cause portfolio' })).toBeInTheDocument();
   });
 
+  it('says the investigation counts are plant-wide only when a unit or asset is selected', () => {
+    const { unmount } = renderSection();
+    expect(screen.queryByTestId('dashboard-rca-plant-note')).toBeNull();
+    unmount();
+    const unit = renderSection('7d', { unitId: 'u-1' });
+    expect(screen.getByTestId('dashboard-rca-plant-note')).toHaveTextContent('Investigation counts cover every unit of the plant.');
+    unit.unmount();
+    renderSection('7d', { unitId: 'u-1', assetId: 'a-1' });
+    expect(screen.getByTestId('dashboard-rca-plant-note')).toBeInTheDocument();
+  });
+
   it('draws the server months and, for a 7-day period, says it shows the last 6 months', async () => {
     renderSection('7d');
     expect(screen.getByTestId('mtbf-trend-subtitle')).toHaveTextContent('monthly · last 6 months');
