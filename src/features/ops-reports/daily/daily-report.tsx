@@ -1,9 +1,9 @@
 import { useMonthClose } from '@/api/v2/queries/month-close';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { OeeTiles } from '@/features/pla-analytics/dashboard/oee-section';
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { ReportExportBar } from '../components/report-export-bar';
 import { monthToDateWindow } from '../model/month-to-date';
+import { DailyOeeCard } from './daily-oee-card';
 import { EventStatusCard } from './event-status-card';
 import { ProductionTable } from './production-table';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
@@ -12,7 +12,7 @@ function Section({ scope, title, testId }: { scope: AnalyticsScope; title: strin
   return (
     <section className="space-y-3" data-testid={testId} aria-label={title}>
       <h2 className="text-lg font-semibold">{title}</h2>
-      <OeeTiles scope={scope} />
+      <DailyOeeCard scope={scope} />
       <ProductionTable scope={scope} title={`Production by product · ${title.toLowerCase()}`} testId={`${testId}-production`} />
     </section>
   );

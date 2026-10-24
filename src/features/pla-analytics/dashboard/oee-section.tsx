@@ -18,22 +18,28 @@ const OeeLossChart = lazy(() => import('../charts/oee-loss-chart').then((m) => (
 
 export const ASSET_UNIT_NOTE = "OEE is calculated per unit — showing the selected asset's unit.";
 
-function useOeeFigures(scope: AnalyticsScope, policy: OeePolicy) {
+function useOeeFigures(scope: AnalyticsScope, policy: OeePolicy, enabled = true) {
   const env = useEventHubEnv();
-  const query = useOeeReport(oeeQuery(scope, 'unit', policy), env.timezone);
+  const query = useOeeReport(enabled ? oeeQuery(scope, 'unit', policy) : null, env.timezone);
   return { query, isLoading: query.isLoading, label: query.data?.data.label, total: query.data?.data.total };
 }
 
-export function OeeTiles({ scope }: { scope: AnalyticsScope }) {
+/**
+ * The OEE tiles of the scope: operational OEE with its components and the reconciled PLA OEE; with
+ * `operationalOnly` (the daily report) the four operational tiles only, and the reconciled OEE is not asked.
+ */
+export function OeeTiles({ scope, operationalOnly = false }: { scope: AnalyticsScope; operationalOnly?: boolean }) {
   const { digits } = useCalendarPreference();
   const operational = useOeeFigures(scope, 'operational');
-  const reconciled = useOeeFigures(scope, 'reconciled');
-  const failed = [operational, reconciled].find((figures) => figures.query.isError);
-  if (failed) return <DataState state={dataStateOf(failed.query)} error={failed.query.error} onRetry={() => { operational.query.refetch(); reconciled.query.refetch(); }} />;
+  const reconciled = useOeeFigures(scope, 'reconciled', !operationalOnly);
+  const asked = operationalOnly ? [operational] : [operational, reconciled];
+  const failed = asked.find((figures) => figures.query.isError);
+  if (failed) return <DataState state={dataStateOf(failed.query)} error={failed.query.error} onRetry={() => asked.forEach((figures) => figures.query.refetch())} />;
   const labels = { operational: operational.label ?? OPERATIONAL_LABEL, reconciled: reconciled.label ?? RECONCILED_LABEL };
+  const tiles = operationalOnly ? OEE_TILES.filter((def) => def.id !== 'reconciled') : OEE_TILES;
   return (
     <KpiTileRow>
-      {OEE_TILES.map((def) => {
+      {tiles.map((def) => {
         const figures = def.id === 'reconciled' ? reconciled : operational;
         const view = findKpi(figures.total, def.metric);
         const value = figures.isLoading ? <Skeleton className="h-8 w-20" /> : <span data-testid="oee-tile-value">{oeeTileValue(view, digits) ?? '—'}</span>;
