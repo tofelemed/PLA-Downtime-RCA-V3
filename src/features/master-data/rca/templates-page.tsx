@@ -8,6 +8,7 @@ import { RCA_TEMPLATES } from '../api/record-resource';
 import { usePrefetchRecord, useRecordPage } from '../api/use-record-queries';
 import { BulkRetireButton } from '../components/bulk-retire-button';
 import { ImportExportButtons } from '../components/import-export-buttons';
+import { ListToolbar } from '../components/list-toolbar';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { RecordLink } from '../components/record-link';
 import { RecordStatusBadge } from '../components/record-status-badge';
@@ -16,7 +17,6 @@ import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { useRefreshRcaSettings } from '../hooks/use-refresh-rca-settings';
 import { useRowSelection } from '../hooks/use-row-selection';
 import { exportTemplates, importTemplates } from './rca-transfer';
-import { RcaListToolbar } from './rca-list-toolbar';
 
 const SORTS = { name: 'Name (A–Z)', '-createdAt': 'Newest first' } as const;
 
@@ -72,7 +72,7 @@ export function RcaTemplatesPage() {
   ) : undefined;
   return (
     <MasterDataLayout title="RCA templates" actions={actions}>
-      <RcaListToolbar filters={filters} onChange={update} searchLabel="Search templates" sortLabels={SORTS} />
+      <ListToolbar compact filters={filters} onChange={update} searchLabel="Search templates" sortLabels={SORTS} />
       <RcaCard title="Templates" info="Logic trees and verification checklists an RCA can start from." actions={bulk} testId="rca-templates">
         <DataTable
           caption="RCA templates"

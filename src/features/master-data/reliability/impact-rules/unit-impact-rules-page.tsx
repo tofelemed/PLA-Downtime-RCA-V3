@@ -13,7 +13,6 @@ import { usePlanningRefs, type PlanningRefs } from '@/features/plans-profiles-ca
 import { VersionActions } from '@/features/plans-profiles-calendars/profiles/version-actions';
 import { useUnitParam } from '@/features/plans-profiles-calendars/hooks/use-unit-param';
 import { MasterDataLayout } from '../../components/master-data-layout';
-import { COMPACT_FIELDS } from '../../components/compact-fields';
 import { UnitSelect } from '../../components/unit-select';
 import { useAssetLookup } from '../shared/use-asset-lookup';
 import { ImpactRuleForm } from './impact-rule-form';
@@ -92,8 +91,8 @@ export function UnitImpactRulesPage() {
         )
       }
     >
-      <div className={`w-72 ${COMPACT_FIELDS}`} data-testid="impact-rules-filters">
-        <UnitSelect id="impact-rules-unit" label="Unit" value={unitId} onChange={setUnitId} allowAll />
+      <div className="w-72" data-testid="impact-rules-filters">
+        <UnitSelect compact id="impact-rules-unit" label="Unit" value={unitId} onChange={setUnitId} allowAll />
       </div>
       <RcaCard title="Rules" info={RULES_INFO} testId="impact-rules-card">
         <FocusedListNotice anchor={anchor} what="rules" />

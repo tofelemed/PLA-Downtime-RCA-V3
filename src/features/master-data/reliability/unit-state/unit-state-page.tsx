@@ -10,7 +10,6 @@ import { OwnEmptyMessage } from '@/features/ux-kit/data-table/data-table-states'
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { ActionIcon } from '@/lib/icons';
 import { MasterDataLayout } from '../../components/master-data-layout';
-import { COMPACT_FIELDS } from '../../components/compact-fields';
 import { UnitSelect } from '../../components/unit-select';
 import { EditorSheet } from '@/features/ux-kit/editor-sheet';
 import { useReliabilityFormat, type ReliabilityFormat } from '../shared/use-reliability-format';
@@ -77,8 +76,8 @@ export function UnitStatePage() {
   const choose = (next: string) => setParams(next ? { unitId: next } : {}, { replace: true });
   return (
     <MasterDataLayout title="Unit state" alsoAllowed={canWriteStateMappings}>
-      <div className={`w-72 ${COMPACT_FIELDS}`}>
-        <UnitSelect id="unit-state-unit" label="Unit" value={unitId} onChange={choose} />
+      <div className="w-72">
+        <UnitSelect compact id="unit-state-unit" label="Unit" value={unitId} onChange={choose} />
       </div>
       {unitId ? (
         <UnitStateSections key={unitId} unitId={unitId} canWrite={canWriteStateMappings} format={format} />

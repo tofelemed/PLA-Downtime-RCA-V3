@@ -11,6 +11,7 @@ import { RCA_CAUSES } from '../api/record-resource';
 import { useRecordLifecycle } from '../api/use-record-commands';
 import { useRecordPage } from '../api/use-record-queries';
 import { ImportExportButtons } from '../components/import-export-buttons';
+import { ListToolbar } from '../components/list-toolbar';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { RecordStatusBadge } from '../components/record-status-badge';
 import { listQueryOf, useListFilters, type ListFilters } from '../hooks/use-list-filters';
@@ -20,7 +21,6 @@ import { CauseActions, type CauseAction } from './cause-actions';
 import { CauseDialogs, type PendingCause } from './cause-dialogs';
 import { CauseNode } from './cause-node';
 import { exportCauses, importCauses } from './rca-transfer';
-import { RcaListToolbar } from './rca-list-toolbar';
 
 const SORTS = { code: 'Code (A–Z)', name: 'Name (A–Z)' } as const;
 
@@ -96,7 +96,7 @@ export function RcaCausesPage() {
   const view = { filters, canWrite, onAction };
   return (
     <MasterDataLayout title="Cause library" actions={actions}>
-      <RcaListToolbar filters={filters} onChange={update} searchLabel="Search causes" sortLabels={SORTS} />
+      <ListToolbar compact filters={filters} onChange={update} searchLabel="Search causes" sortLabels={SORTS} />
       <RcaCard title="Causes" info="Causes RCAs pick from, by category and as a tree." testId="rca-causes">
         {filters.q.trim() ? <CauseSearch {...view} /> : <CauseTree {...view} />}
       </RcaCard>

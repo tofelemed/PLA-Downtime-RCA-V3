@@ -272,3 +272,30 @@ describe('Stop and plan policy cleanup', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: `${section}: new version` })).toBeNull());
   });
 });
+
+describe('State engine preview panel', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
+
+  it('opens for a chosen unit with its ⓘ and typed dates, and closes on Esc', async () => {
+    stubV2Fetch(reply);
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/master-data/stop-policy?unitId=u1']}>
+          <StopPolicyPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const open = screen.getByRole('button', { name: 'Preview derived stops' });
+    expect(open).toBeEnabled();
+    fireEvent.click(open);
+    const panel = await screen.findByRole('dialog', { name: 'State engine preview' });
+    expect(within(panel).getByRole('button', { name: 'About the state engine preview' })).toBeInTheDocument();
+    expect(panel.querySelector('input[type=date]')).toBeNull();
+    expect(within(panel).getByRole('button', { name: 'Preview derived stops and slowdowns' })).toBeInTheDocument();
+    fireEvent.keyDown(panel, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'State engine preview' })).toBeNull());
+  });
+});

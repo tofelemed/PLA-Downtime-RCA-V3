@@ -10,3 +10,9 @@ export function focusFirstField(container: HTMLElement | null, event: Event) {
   event.preventDefault();
   field.focus();
 }
+
+/** `onOpenAutoFocus={focusFirstFieldOf}`: the same, inside the dialog or panel that fired the event (no ref needed). */
+export function focusFirstFieldOf(event: Event) {
+  const container = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  focusFirstField(container, event);
+}

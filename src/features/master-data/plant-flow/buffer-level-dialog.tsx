@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useRecordBufferLevel } from '@/api/v2/queries/plant-model';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
-import { focusFirstField } from '../components/focus-first-field';
+import { focusFirstFieldOf } from '@/features/ux-kit/focus-first-field';
 import { FormField } from '@/features/plans-profiles-calendars/components/form-field';
 import { NativeSelect, type Option } from '@/features/plans-profiles-calendars/components/native-select';
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
@@ -46,7 +46,7 @@ export function BufferLevelDialog({ bufferOptions, timezone, onClose }: BufferLe
   const { values, set, fieldError, save, failure, busy } = useBufferLevelSave(timezone, onClose);
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className="sm:max-w-[560px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('levelRoute')}>
+      <DialogContent className="sm:max-w-[560px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstFieldOf}>
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             <DialogTitle>Record buffer level</DialogTitle>

@@ -1,56 +1,54 @@
-import { Fragment } from 'react';
-import { useCodeList } from '@/api/v2/queries/codes-admin';
+import { useCode } from '@/api/v2/queries/codes-admin';
 import type { CodeDetailView, CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { FactsList, type Fact } from '@/features/master-data/rca/facts-list';
 import { OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels/codes-finance-labels';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { LIBRARIES } from '../model/code-fields';
 
-interface Fact {
-  label: string;
-  value: string;
-}
-
 const orDash = (value: string | null | undefined) => (value && value.trim() !== '' ? value : '—');
+const labelOr = (labels: Readonly<Record<string, string>>, value: string | null | undefined) => (value ? (labels[value] ?? value) : '—');
 
-/** The impact code a reason code defaults to, by code and name (its id never shows). */
+/** The impact code a reason code defaults to, fetched by its id, shown by code and name (never the id). */
 function useImpactLabel(id: string | null | undefined): string {
-  const impacts = useCodeList('impact-codes', {});
+  const impact = useCode('impact-codes', id ?? null);
   if (!id) return '—';
-  const impact = impacts.items.find((entry) => entry.id === id);
-  return impact ? `${impact.code} — ${impact.name}` : '—';
+  return impact.data ? `${impact.data.code} — ${impact.data.name}` : '…';
 }
 
-function factsOf(library: CodeLibraryPath, code: CodeDetailView, money: boolean, impact: string): Fact[] {
+function defaultFacts(code: CodeDetailView, impact: string): Fact[] {
+  return [
+    { label: 'Default OEE component', value: labelOr(OEE_COMPONENT_LABELS, code.defaults?.oeeComponent) },
+    { label: 'Default schedule class', value: labelOr(SCHEDULE_CLASS_LABELS, code.defaults?.scheduleClass) },
+    { label: 'Default impact code', value: impact },
+  ];
+}
+
+interface FactInput {
+  library: CodeLibraryPath;
+  code: CodeDetailView;
+  money: boolean;
+  impact: string;
+  number: (value: number, fractionDigits?: number) => string;
+}
+
+function factsOf({ library, code, money, impact, number }: FactInput): Fact[] {
   const fields = LIBRARIES[library].fields;
-  const defaults = code.defaults;
+  const cost = code.costPerHour ? number(Number(code.costPerHour), 2) : '—';
   return [
     { label: 'Name', value: code.name },
     { label: 'Description', value: orDash(code.description) },
     ...(fields.includes('category') ? [{ label: 'Category', value: orDash(code.category) }] : []),
-    ...(fields.includes('defaults')
-      ? [
-          { label: 'Default OEE component', value: defaults?.oeeComponent ? (OEE_COMPONENT_LABELS[defaults.oeeComponent] ?? defaults.oeeComponent) : '—' },
-          { label: 'Default schedule class', value: defaults?.scheduleClass ? (SCHEDULE_CLASS_LABELS[defaults.scheduleClass] ?? defaults.scheduleClass) : '—' },
-          { label: 'Default impact code', value: impact },
-        ]
-      : []),
-    ...(fields.includes('costPerHour') && money ? [{ label: 'Cost per hour (plant currency)', value: orDash(code.costPerHour) }] : []),
-    ...(fields.includes('reportOrder') ? [{ label: 'Order in reports', value: String(code.reportOrder ?? 0) }] : []),
+    ...(fields.includes('defaults') ? defaultFacts(code, impact) : []),
+    ...(fields.includes('costPerHour') && money ? [{ label: 'Cost per hour (plant currency)', value: cost }] : []),
+    ...(fields.includes('reportOrder') ? [{ label: 'Order in reports', value: number(code.reportOrder ?? 0) }] : []),
   ];
 }
 
 /** A code's fields as text for users who cannot change it (a reader, or a retired code). */
 export function CodeFacts({ library, code }: { library: CodeLibraryPath; code: CodeDetailView }) {
   const { canViewMoney } = useCapabilities();
+  const { number } = useNumberFormat();
   const impact = useImpactLabel(code.defaults?.impactCodeId);
-  return (
-    <dl className="grid max-w-3xl gap-x-4 gap-y-1 rounded-lg border bg-card p-4 text-sm sm:grid-cols-[14rem_1fr]" data-testid="code-facts">
-      {factsOf(library, code, canViewMoney, impact).map((fact) => (
-        <Fragment key={fact.label}>
-          <dt className="text-muted-foreground">{fact.label}</dt>
-          <dd className="mb-1 sm:mb-0">{fact.value}</dd>
-        </Fragment>
-      ))}
-    </dl>
-  );
+  return <FactsList testId="code-facts" facts={factsOf({ library, code, money: canViewMoney, impact, number })} />;
 }

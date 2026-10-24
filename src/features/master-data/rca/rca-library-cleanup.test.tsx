@@ -27,6 +27,8 @@ const CAUSE: RcaCauseView = { id: 'k1', code: 'SEAL', name: 'Seal failure', cate
 function reply(call: V2Call) {
   const path = call.url.pathname;
   if (path.endsWith('/rca-templates/t1')) return jsonResponse(200, { ...TEMPLATE, isActive: false });
+  if (path.endsWith('/rca-templates/t2')) return jsonResponse(200, { ...TEMPLATE, id: 't2' });
+  if (path.endsWith('/rca-templates')) return jsonResponse(200, listPage([{ ...TEMPLATE, id: 't2' }]));
   if (path.endsWith('/verification-checklists/c1')) return jsonResponse(200, { ...CHECKLIST, isActive: false });
   if (path.endsWith('/verification-checklists')) return jsonResponse(200, listPage([CHECKLIST]));
   return undefined;
@@ -54,12 +56,13 @@ describe('RCA library lists', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('RCA templates: no description, a labelled h-9 filter row, the Templates card with ⓘ and its own empty text', async () => {
+    stubV2Fetch(() => undefined);
     show(<RcaTemplatesPage />, '/master-data/rca/templates');
     expect(screen.queryByText('Logic trees and verification checklists an RCA can start from.')).toBeNull();
-    const filters = screen.getByTestId('rca-list-filters');
-    expect(within(filters).getByText('Search')).toBeInTheDocument();
-    expect(within(filters).getByLabelText('Status')).toHaveClass('h-9');
-    expect(within(filters).getByLabelText('Sort')).toHaveClass('h-9');
+    expect(screen.getByText('Search')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search templates' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Status')).toHaveClass('h-9');
+    expect(screen.getByLabelText('Sort')).toHaveClass('h-9');
     const card = screen.getByTestId('rca-templates');
     expect(within(card).getByRole('heading', { level: 2, name: 'Templates' })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'About Templates' })).toBeInTheDocument();
@@ -163,5 +166,51 @@ describe('RCA library dialogs', () => {
     expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Move'));
     fireEvent.keyDown(dialog, { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('RCA library confirmations', () => {
+  beforeEach(() => {
+    actAs('SuperAdmin');
+    stubV2Fetch(reply);
+    vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const escCloses = async (dialog: HTMLElement) => {
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  };
+
+  it('Retire selected (n): opens after a row is chosen, Cancel before the verb, Esc closes', async () => {
+    show(<RcaTemplatesPage />, '/master-data/rca/templates');
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Select Pump failure' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retire selected (1)' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Retire 1 templates?' });
+    const names = buttonNames(dialog);
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Retire templates'));
+    await escCloses(dialog);
+  });
+
+  it('Retire template (lifecycle) asks first and closes on Esc; a retired template offers Restore without a confirm', async () => {
+    const active = show(<RcaTemplateDetailPage />, '/master-data/rca/templates/t2', '/master-data/rca/templates/:templateId');
+    fireEvent.click(await within(screen.getByRole('banner')).findByRole('button', { name: 'Retire template' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Retire Pump failure?' });
+    expect(dialog).toHaveTextContent('new investigations can no longer start from it');
+    await escCloses(dialog);
+    active.unmount();
+    show(<RcaTemplateDetailPage />, '/master-data/rca/templates/t1', '/master-data/rca/templates/:templateId');
+    expect(await within(screen.getByRole('banner')).findByRole('button', { name: 'Restore template' })).toBeInTheDocument();
+  });
+
+  it('Delete node: from the node menu, Cancel before Delete node, Esc closes', async () => {
+    const tree = [{ id: 'n1', name: 'Seal leak', code: 'N1', category: 'Equipment' as const, children: [] }];
+    show(<LogicTreeEditor tree={tree} onChange={() => undefined} editable />);
+    fireEvent.keyDown(screen.getByRole('button', { name: 'More actions for Seal leak' }), { key: 'Enter' });
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Delete…' }));
+    const dialog = await screen.findByRole('alertdialog', { name: 'Delete Seal leak?' });
+    const names = buttonNames(dialog);
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Delete node'));
+    await escCloses(dialog);
   });
 });

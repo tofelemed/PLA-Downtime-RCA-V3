@@ -7,6 +7,7 @@ import type { VerificationChecklistView } from '../api/master-data-types';
 import { VERIFICATION_CHECKLISTS } from '../api/record-resource';
 import { usePrefetchRecord, useRecordPage } from '../api/use-record-queries';
 import { BulkRetireButton } from '../components/bulk-retire-button';
+import { ListToolbar } from '../components/list-toolbar';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { RecordLink } from '../components/record-link';
 import { RecordStatusBadge } from '../components/record-status-badge';
@@ -15,7 +16,6 @@ import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { useRefreshRcaSettings } from '../hooks/use-refresh-rca-settings';
 import { useRowSelection } from '../hooks/use-row-selection';
 import { ColorSwatch } from './color-swatch';
-import { RcaListToolbar } from './rca-list-toolbar';
 
 function useColumns(selectColumn: DataTableColumn<VerificationChecklistView> | null): DataTableColumn<VerificationChecklistView>[] {
   const prefetch = usePrefetchRecord(VERIFICATION_CHECKLISTS);
@@ -61,7 +61,7 @@ export function ChecklistsPage() {
   ) : undefined;
   return (
     <MasterDataLayout title="Verification checklists" actions={add}>
-      <RcaListToolbar filters={filters} onChange={update} searchLabel="Search checklists" />
+      <ListToolbar compact filters={filters} onChange={update} searchLabel="Search checklists" />
       <RcaCard title="Checklists" info="Checks that confirm an RCA's fix worked; templates name the ones they need." actions={bulk} testId="rca-checklists">
         <DataTable
           caption="Verification checklists"

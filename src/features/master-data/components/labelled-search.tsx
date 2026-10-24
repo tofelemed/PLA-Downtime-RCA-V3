@@ -16,7 +16,7 @@ export function LabelledSearch({ label, value, onChange, placeholder }: Labelled
       <p className="text-sm font-medium leading-none" aria-hidden="true">
         Search
       </p>
-      <DebouncedSearchInput label={label} placeholder={placeholder ?? label} value={value} onChange={onChange} className="sm:w-72 [&_input]:h-9" />
+      <DebouncedSearchInput label={label} placeholder={placeholder ?? label} value={value} onChange={onChange} className="w-full sm:w-72 [&_input]:h-9" />
     </div>
   );
 }

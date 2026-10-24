@@ -25,24 +25,23 @@ const SCHEDULE_OPTIONS = SCHEDULE_CLASSES.map((value) => ({ value, label: SCHEDU
 
 interface DefaultsProps {
   form: CodeForm;
-  readOnly: boolean;
   set: (key: keyof CodeForm) => (value: string | null) => void;
 }
 
 /** Classification defaults of a reason code: OEE component, schedule class and impact code. */
-function DefaultsFields({ form, readOnly, set }: DefaultsProps) {
+function DefaultsFields({ form, set }: DefaultsProps) {
   const impacts = useCodeList('impact-codes', {});
   const impactOptions = impacts.items.filter((entry) => entry.active).map((entry) => ({ value: entry.id, label: `${entry.code} — ${entry.name}` }));
   return (
     <>
       <Field id="code-oee" label="Default OEE component">
-        <NativeSelect id="code-oee" testId="code-oee" value={form.oeeComponent} onChange={set('oeeComponent')} placeholder="(none)" options={OEE_OPTIONS} disabled={readOnly} />
+        <NativeSelect id="code-oee" testId="code-oee" value={form.oeeComponent} onChange={set('oeeComponent')} placeholder="(none)" options={OEE_OPTIONS} />
       </Field>
       <Field id="code-schedule" label="Default schedule class">
-        <NativeSelect id="code-schedule" testId="code-schedule" value={form.scheduleClass} onChange={set('scheduleClass')} placeholder="(none)" options={SCHEDULE_OPTIONS} disabled={readOnly} />
+        <NativeSelect id="code-schedule" testId="code-schedule" value={form.scheduleClass} onChange={set('scheduleClass')} placeholder="(none)" options={SCHEDULE_OPTIONS} />
       </Field>
       <Field id="code-impact" label="Default impact code">
-        <NativeSelect id="code-impact" value={form.impactCodeId} onChange={set('impactCodeId')} placeholder="(none)" options={impactOptions} disabled={readOnly || impacts.isLoading} />
+        <NativeSelect id="code-impact" value={form.impactCodeId} onChange={set('impactCodeId')} placeholder="(none)" options={impactOptions} disabled={impacts.isLoading} />
       </Field>
     </>
   );
@@ -76,25 +75,25 @@ export function CodeEditor({ library, code }: CodeEditorProps) {
       {feedback.alert}
       <div className="grid gap-3 md:grid-cols-2">
         <Field id="code-name" label="Name">
-          <Input id="code-name" value={form.name} disabled={readOnly} onChange={(event) => set('name')(event.target.value)} />
+          <Input id="code-name" value={form.name} onChange={(event) => set('name')(event.target.value)} />
         </Field>
         <Field id="code-description" label="Description">
-          <Input id="code-description" value={form.description} disabled={readOnly} onChange={(event) => set('description')(event.target.value)} />
+          <Input id="code-description" value={form.description} onChange={(event) => set('description')(event.target.value)} />
         </Field>
         {spec.fields.includes('category') && (
           <Field id="code-category" label="Category">
-            <Input id="code-category" value={form.category} disabled={readOnly} onChange={(event) => set('category')(event.target.value)} />
+            <Input id="code-category" value={form.category} onChange={(event) => set('category')(event.target.value)} />
           </Field>
         )}
-        {spec.fields.includes('defaults') && <DefaultsFields form={form} readOnly={readOnly} set={set} />}
+        {spec.fields.includes('defaults') && <DefaultsFields form={form} set={set} />}
         {spec.fields.includes('costPerHour') && canViewMoney && (
           <Field id="code-cost" label="Cost per hour (plant currency)" hint="Used only where no approved valuation rate exists">
-            <DecimalInput id="code-cost" value={form.costPerHour} onChange={(value) => setForm((current) => ({ ...current, costPerHour: value }))} scale={4} disabled={readOnly} />
+            <DecimalInput id="code-cost" value={form.costPerHour} onChange={(value) => setForm((current) => ({ ...current, costPerHour: value }))} scale={4} />
           </Field>
         )}
         {spec.fields.includes('reportOrder') && (
           <Field id="code-order" label="Order in reports">
-            <Input id="code-order" type="number" min={0} value={form.reportOrder} disabled={readOnly} onChange={(event) => set('reportOrder')(event.target.value)} />
+            <Input id="code-order" type="number" min={0} value={form.reportOrder} onChange={(event) => set('reportOrder')(event.target.value)} />
           </Field>
         )}
       </div>
