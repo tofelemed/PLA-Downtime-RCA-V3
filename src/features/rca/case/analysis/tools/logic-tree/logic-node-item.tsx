@@ -29,15 +29,15 @@ function NodeCard({ node, actions, childCount }: { node: RcaLogicNode; actions: 
   const isCause = node.kind === 'Cause' || node.kind === 'root_cause';
   const verifyId = `verify-${node.id}`;
   return (
-    <div className="space-y-2 rounded border p-3" data-testid="logic-node">
+    <div className="space-y-2 rounded-md border bg-card p-3" data-testid="logic-node">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
           <p className="font-medium">{node.label}</p>
           <div className="flex flex-wrap gap-1">
-            {node.kind && <Badge variant="secondary">{node.kind}</Badge>}
-            {node.code && <Badge variant="outline">{node.code}</Badge>}
-            {isCause && <Badge variant="destructive">Root cause</Badge>}
-            {node.verified && <Badge>Verified</Badge>}
+            {node.kind && <Badge variant="secondary" className="whitespace-nowrap">{node.kind}</Badge>}
+            {node.code && <Badge variant="outline" className="whitespace-nowrap">{node.code}</Badge>}
+            {isCause && <Badge variant="destructive" className="whitespace-nowrap">Root cause</Badge>}
+            {node.verified && <Badge className="whitespace-nowrap">Verified</Badge>}
           </div>
         </div>
         {!actions.readOnly && (
@@ -56,12 +56,14 @@ function NodeCard({ node, actions, childCount }: { node: RcaLogicNode; actions: 
           </div>
         )}
       </div>
-      {node.description && <p className="text-sm">{node.description}</p>}
+      {node.description && <p className="max-w-[75ch] text-sm">{node.description}</p>}
       {node.notes && <p className="text-sm text-muted-foreground">Note: {node.notes}</p>}
-      <div className="flex items-center gap-2">
-        <Checkbox id={verifyId} checked={node.verified === true} disabled={actions.readOnly || actions.busy} onCheckedChange={(value) => actions.onVerify(node, value === true)} />
-        <Label htmlFor={verifyId}>{isCause ? 'Confirmed root cause' : 'Verified'}</Label>
-      </div>
+      {!actions.readOnly && (
+        <div className="flex items-center gap-2">
+          <Checkbox id={verifyId} checked={node.verified === true} disabled={actions.busy} onCheckedChange={(value) => actions.onVerify(node, value === true)} />
+          <Label htmlFor={verifyId}>{isCause ? 'Confirmed root cause' : 'Verified'}</Label>
+        </div>
+      )}
     </div>
   );
 }
