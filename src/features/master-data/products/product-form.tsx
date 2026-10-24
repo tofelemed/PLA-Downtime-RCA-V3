@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { PRODUCT_AVAILABILITY_LABELS } from '@/features/ux-kit/labels';
 import type { ProductAvailability } from '../api/master-data-types';
 import { ActingPlantField } from '../components/acting-plant-field';
@@ -30,10 +31,10 @@ const AVAILABILITY_HINT: Record<ProductAvailability, string> = {
 function AvailabilityField({ value, onChange, isNew }: { value: ProductAvailability; onChange: (v: ProductAvailability) => void; isNew: boolean }) {
   if (!isNew) {
     return (
-      <p className="text-sm">
+      <p className="flex items-center gap-1.5 text-sm">
         <span className="text-muted-foreground">Available to: </span>
         {PRODUCT_AVAILABILITY_LABELS[value]}
-        <span className="block text-xs text-muted-foreground">{AVAILABILITY_HINT[value]}</span>
+        <KpiInfo label="Available to" text={AVAILABILITY_HINT[value]} />
       </p>
     );
   }
@@ -65,11 +66,11 @@ export function ProductForm({ draft, errors, onChange, onSave, saving, dirty, is
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={isNew ? 'Create product' : 'Edit product'}>
       <ActingPlantField editable={isNew && !readOnly} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required disabled={readOnly} />
-        <TextField id="code" label="Code" value={draft.code} onChange={(code) => onChange({ code })} error={errors.code} hint="Unique across the organization's products." required disabled={readOnly} />
+        <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required asText={readOnly} />
+        <TextField id="code" label="Code" value={draft.code} onChange={(code) => onChange({ code })} error={errors.code} hint="Unique across the organization's products." required asText={readOnly} />
       </div>
-      <TextField id="uom" label="Unit of measure" value={draft.uom} onChange={(uom) => onChange({ uom })} placeholder="e.g. t" disabled={readOnly} />
-      <TextField id="description" label="Description" value={draft.description} onChange={(description) => onChange({ description })} multiline disabled={readOnly} />
+      <TextField id="uom" label="Unit of measure" value={draft.uom} onChange={(uom) => onChange({ uom })} placeholder="e.g. t" asText={readOnly} />
+      <TextField id="description" label="Description" value={draft.description} onChange={(description) => onChange({ description })} multiline asText={readOnly} />
       <AvailabilityField value={draft.availability} onChange={(availability) => onChange({ availability })} isNew={isNew} />
       <LegacyValues>
         <TextField
@@ -79,7 +80,7 @@ export function ProductForm({ draft, errors, onChange, onSave, saving, dirty, is
           onChange={(legacyStandardCost) => onChange({ legacyStandardCost })}
           error={errors.legacyStandardCost}
           inputMode="decimal"
-          disabled={readOnly}
+          asText={readOnly}
         />
       </LegacyValues>
       {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo="/master-data/products" />}

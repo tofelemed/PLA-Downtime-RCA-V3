@@ -33,7 +33,7 @@ export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew
       {/* sites belong to the plant: a switch clears the chosen one */}
       <ActingPlantField editable={isNew && !readOnly} onSwitched={() => onChange({ siteId: '' })} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required disabled={readOnly} maxLength={255} />
+        <TextField id="name" label="Name" value={draft.name} onChange={(name) => onChange({ name })} error={errors.name} required asText={readOnly} maxLength={255} />
         <TextField
           id="code"
           label="Code"
@@ -42,23 +42,23 @@ export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew
           error={errors.code}
           hint="Unique in this plant, e.g. EXT-LINE-3."
           required
-          disabled={readOnly}
+          asText={readOnly}
           maxLength={50}
         />
       </div>
-      <SiteSelect value={draft.siteId} onChange={(siteId) => onChange({ siteId })} disabled={readOnly} />
-      <TextField id="description" label="Description" value={draft.description} onChange={(description) => onChange({ description })} multiline disabled={readOnly} />
+      <SiteSelect value={draft.siteId} onChange={(siteId) => onChange({ siteId })} asText={readOnly} />
+      <TextField id="description" label="Description" value={draft.description} onChange={(description) => onChange({ description })} multiline asText={readOnly} />
       <TextField
         id="unitOfMeasure"
         label="Unit of measure"
         value={draft.unitOfMeasure}
         onChange={(unitOfMeasure) => onChange({ unitOfMeasure })}
         placeholder="e.g. t"
-        disabled={readOnly}
+        asText={readOnly}
         maxLength={50}
       />
       <LegacyValues>
-        <TextField id="capacity" label="Capacity" value={draft.capacity} onChange={(capacity) => onChange({ capacity })} error={errors.capacity} inputMode="decimal" disabled={readOnly} />
+        <TextField id="capacity" label="Capacity" value={draft.capacity} onChange={(capacity) => onChange({ capacity })} error={errors.capacity} inputMode="decimal" asText={readOnly} />
         <TextField
           id="idealCycleTime"
           label="Ideal cycle time (seconds per unit)"
@@ -66,7 +66,7 @@ export function UnitForm({ draft, errors, onChange, onSave, saving, dirty, isNew
           onChange={(idealCycleTimeSeconds) => onChange({ idealCycleTimeSeconds })}
           error={errors.idealCycleTimeSeconds}
           inputMode="decimal"
-          disabled={readOnly}
+          asText={readOnly}
         />
       </LegacyValues>
       {!readOnly && <FormActions isNew={isNew} saving={saving} dirty={dirty} cancelTo={cancelTo} />}

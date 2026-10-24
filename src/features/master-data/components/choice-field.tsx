@@ -1,5 +1,6 @@
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ReadOnlyField } from './read-only-field';
 
 export interface ChoiceFieldProps {
   id: string;
@@ -9,13 +10,16 @@ export interface ChoiceFieldProps {
   /** value → label */
   options: ReadonlyArray<{ value: string; label: string }>;
   disabled?: boolean;
+  /** opt-in: read-only users see the chosen label as text */
+  asText?: boolean;
 }
 
 /**
  * A labelled select of fixed choices. A stored value that is not among the choices (legacy data such as
  * "Operational") stays selectable, so opening and saving a record never changes it silently.
  */
-export function ChoiceField({ id, label, value, onChange, options, disabled }: ChoiceFieldProps) {
+export function ChoiceField({ id, label, value, onChange, options, disabled, asText }: ChoiceFieldProps) {
+  if (asText) return <ReadOnlyField label={label} value={options.find((option) => option.value === value)?.label ?? value} />;
   const all = value && !options.some((option) => option.value === value) ? [{ value, label: value }, ...options] : options;
   return (
     <div className="space-y-1.5">

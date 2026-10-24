@@ -89,7 +89,7 @@ export function UnitDetailPage() {
     />
   ) : undefined;
   return (
-    <MasterDataLayout title={unit.name} description={<RecordStatusBadge retired={unit.retiredAt !== null} />} back={back} actions={actions}>
+    <MasterDataLayout title={unit.name} titleAside={<RecordStatusBadge retired={unit.retiredAt !== null} />} back={back} actions={actions}>
       <Section title="Details">
         <UnitEditor unit={unit} back={back} />
       </Section>

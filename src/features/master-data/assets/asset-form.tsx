@@ -33,7 +33,7 @@ export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNe
     onSave();
   };
   const text = (id: keyof AssetDraft, label: string, extra: { hint?: string; required?: boolean; multiline?: boolean } = {}) => (
-    <TextField id={id} label={label} value={draft[id]} onChange={(value) => onChange({ [id]: value })} error={errors[id]} disabled={readOnly} {...extra} />
+    <TextField id={id} label={label} value={draft[id]} onChange={(value) => onChange({ [id]: value })} error={errors[id]} asText={readOnly} {...extra} />
   );
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={isNew ? 'Create asset' : 'Edit asset'}>
@@ -43,12 +43,12 @@ export function AssetForm({ draft, errors, onChange, onSave, saving, dirty, isNe
         {text('name', 'Name', { required: true })}
         {text('code', 'Code', { required: true, hint: 'Unique in this plant.' })}
       </div>
-      <UnitSelect id="unitId" label="Production unit" value={draft.unitId} onChange={(unitId) => onChange({ unitId })} error={errors.unitId} required disabled={readOnly} />
+      <UnitSelect id="unitId" label="Production unit" value={draft.unitId} onChange={(unitId) => onChange({ unitId })} error={errors.unitId} required asText={readOnly} />
       {text('description', 'Description', { multiline: true })}
       <div className="grid gap-4 sm:grid-cols-3">
-        <ChoiceField id="assetType" label="Asset type" value={draft.assetType} onChange={(assetType) => onChange({ assetType })} options={TYPE_OPTIONS} disabled={readOnly} />
-        <ChoiceField id="criticality" label="Criticality" value={draft.criticality} onChange={(criticality) => onChange({ criticality })} options={CRITICALITY_OPTIONS} disabled={readOnly} />
-        <ChoiceField id="status" label="Operating status" value={draft.status} onChange={(status) => onChange({ status })} options={STATUS_OPTIONS} disabled={readOnly} />
+        <ChoiceField id="assetType" label="Asset type" value={draft.assetType} onChange={(assetType) => onChange({ assetType })} options={TYPE_OPTIONS} asText={readOnly} />
+        <ChoiceField id="criticality" label="Criticality" value={draft.criticality} onChange={(criticality) => onChange({ criticality })} options={CRITICALITY_OPTIONS} asText={readOnly} />
+        <ChoiceField id="status" label="Operating status" value={draft.status} onChange={(status) => onChange({ status })} options={STATUS_OPTIONS} asText={readOnly} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {text('manufacturer', 'Manufacturer')}

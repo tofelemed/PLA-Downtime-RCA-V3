@@ -2,6 +2,7 @@ import { Label } from '@/components/ui/label';
 import { RequiredMarker } from '@/features/ux-kit/form-field';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ReadOnlyField } from './read-only-field';
 import type { MasterUnitView } from '../api/master-data-types';
 import { UNITS } from '../api/record-resource';
 import { useRecordLookup } from '../api/use-record-queries';
@@ -26,10 +27,28 @@ export interface UnitSelectProps {
   compact?: boolean;
   /** opt-in: the width of the trigger, e.g. "w-64" */
   triggerClassName?: string;
+  /** opt-in: read-only users see the unit as text */
+  asText?: boolean;
 }
 
+/** "code — name" of the chosen unit; one not in the active list (retired) reads "Unknown unit", as elsewhere. */
+const unitText = (units: readonly MasterUnitView[], id: string) => {
+  if (!id) return '';
+  const unit = units.find((entry) => entry.id === id);
+  return unit ? `${unit.code} — ${unit.name}` : 'Unknown unit';
+};
+
 /** The plant's active units by code (every page followed, nothing cut off), as a labelled select. */
-export function UnitSelect({ id, label, value, onChange, allowAll, allLabel = 'All units', error, required, disabled, compact, triggerClassName }: UnitSelectProps) {
+export function UnitSelect(props: UnitSelectProps) {
+  return props.asText ? <UnitText label={props.label} value={props.value} /> : <UnitPicker {...props} />;
+}
+
+function UnitText({ label, value }: { label: string; value: string }) {
+  const units = useRecordLookup<MasterUnitView>(UNITS, { status: 'active', sort: 'code' });
+  return <ReadOnlyField label={label} value={unitText(units.items, value)} />;
+}
+
+function UnitPicker({ id, label, value, onChange, allowAll, allLabel = 'All units', error, required, disabled, compact, triggerClassName }: UnitSelectProps) {
   const units = useRecordLookup<MasterUnitView>(UNITS, { status: 'active', sort: 'code' });
   const current = value || (allowAll ? ALL : undefined);
   return (
