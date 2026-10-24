@@ -60,6 +60,7 @@ test.describe('Operator — scope and role limits', () => {
   test('J4 unit-limited operator (ingrid): only DEMO-LINE-1 in the Event Hub; another unit\'s event is 404, never data', async ({ page }) => {
     await loginOperator(page, OPERATORS.ingrid);
     await openHub(page, null);
+    await expect(page.getByTestId('scope-header')).toContainText('All units in your scope');
     await expect(plantTrigger(page)).toBeVisible();
 
     // the unit picker of the filters and of the create form know one unit only
