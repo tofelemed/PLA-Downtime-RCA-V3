@@ -124,6 +124,7 @@ export class OpsReportsV2Service {
     return reliabilityTrend(
       manager,
       await resolveReportScope(manager, context, query),
+      query.assetIds,
     );
   }
 

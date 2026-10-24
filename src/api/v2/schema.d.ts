@@ -4166,7 +4166,7 @@ export interface paths {
         };
         /**
          * MTBF, mean time to restore and MTTR per plant month for each unit and its most-failing assets
-         * @description The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed while its unit runs). Assets: at most 30, those with the most eligible failures. fallingMtbf: MTBF fell in each of the last three months that have a value. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         * @description The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed while its unit runs). Assets: at most 30, those with the most eligible failures, plus every assetIds asset. total: the selected scope as one series — the terms of every unit summed per month, or with assetIds those assets (a unit’s exposure counted once however many of its assets are listed). fallingMtbf: MTBF fell in each of the last three months that have a value. assetIds must be assets of the tenant on those units (422 INVALID_REFERENCE). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
          */
         get: operations["OpsReportsV2Controller_reliabilityTrend_v2"];
         put?: never;
@@ -17520,6 +17520,8 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
+                /** @description Repeat for several assets; assets of the tenant on units of the caller’s scope (422 INVALID_REFERENCE) */
+                assetIds?: string[];
             };
             header?: never;
             path?: never;

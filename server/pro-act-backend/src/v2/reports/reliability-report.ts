@@ -8,6 +8,7 @@ import {
   aggregateView,
   ReliabilityReportView,
   ReliabilityRowView,
+  ReliabilityTermsView,
   reportEnvelope,
 } from './kpi-reports-v2.view';
 import {
@@ -35,9 +36,15 @@ export function reliabilityRow(
   ids: { unitId: string; assetId: string | null; label: string | null },
   terms: Terms | undefined,
 ): ReliabilityRowView {
+  return { ...ids, ...reliabilityTerms(terms) };
+}
+
+/** MTBF (with its exposure and failures), mean time to restore and MTTR of summed terms. */
+export function reliabilityTerms(
+  terms: Terms | undefined,
+): ReliabilityTermsView {
   const mtbf = terms?.get('mtbf');
   return {
-    ...ids,
     exposureSeconds: mtbf?.numerator ? formatDec(mtbf.numerator) : null,
     failures: mtbf?.denominator ? formatDec(mtbf.denominator) : null,
     mtbf: aggregateView('mtbf', mtbf),

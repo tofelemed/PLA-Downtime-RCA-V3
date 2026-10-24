@@ -12,7 +12,10 @@ import {
 } from 'class-validator';
 import { toArrayParam } from '../../common/dto/query-param.transformers';
 import { SHIFT_NOTE_MAX } from '../../shift-notes/shift-note.entity';
-import { ReportWindowQueryDto } from '../reports/kpi-reports-v2.dto';
+import {
+  ReliabilityReportQueryDto,
+  ReportWindowQueryDto,
+} from '../reports/kpi-reports-v2.dto';
 
 export const PRODUCTION_GROUPS = [
   'total',
@@ -102,8 +105,11 @@ export class QualityDispositionsQueryDto extends ReportWindowQueryDto {}
 /** `GET /reports/transition-performance` (R5): grade transitions starting in the window. */
 export class TransitionPerformanceQueryDto extends ReportWindowQueryDto {}
 
-/** `GET /reports/reliability-trend` (R6): MTBF, restore and repair means per plant month. */
-export class ReliabilityTrendQueryDto extends ReportWindowQueryDto {}
+/**
+ * `GET /reports/reliability-trend` (R6): MTBF, restore and repair means per plant month; `assetIds` (the
+ * reliability report's filter) narrows the total series to those assets.
+ */
+export class ReliabilityTrendQueryDto extends ReliabilityReportQueryDto {}
 
 export const CHRONIC_GROUPS = ['reason', 'asset'] as const;
 export type ChronicGroup = (typeof CHRONIC_GROUPS)[number];
