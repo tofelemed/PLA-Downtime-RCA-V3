@@ -101,10 +101,10 @@ describe('Reports top bar: dates and revision', () => {
     expect(params().get('approved')).toBeNull();
   });
 
-  it('keeps the order type, report, dates, units, revision', () => {
+  it('keeps the order units, type, report, dates, revision', () => {
     open();
     const bar = screen.getByTestId('reports-top-bar');
-    const order = ['report-type', 'report-view', 'From', 'report-units', 'report-revision'].map((key) =>
+    const order = ['report-units', 'report-type', 'report-view', 'From', 'report-revision'].map((key) =>
       key === 'From' ? screen.getByLabelText('From') : within(bar).getByTestId(key),
     );
     for (let index = 1; index < order.length; index += 1) {
