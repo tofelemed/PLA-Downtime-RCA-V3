@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRcaLinks } from '@/api/v2/queries/rca-cases';
 import { useDeleteRcaCase } from '@/api/v2/queries/rca-commands';
@@ -38,7 +39,7 @@ function DeleteCase() {
         </Button>
       }
       title="Delete this investigation?"
-      description="Only an open investigation without links, actions or recommendations from triggers can be deleted. Its analysis records go with it."
+      description="Its analysis records are deleted with it. Investigations with actions or trigger recommendations cannot be deleted."
       confirmLabel="Delete investigation"
       destructive
       onConfirm={async () => {
@@ -51,21 +52,29 @@ function DeleteCase() {
   );
 }
 
+/** One meta-row item after a middle dot. */
+function MetaItem({ children }: { children: ReactNode }) {
+  return (
+    <span className="whitespace-nowrap">
+      <span aria-hidden="true">· </span>
+      {children}
+    </span>
+  );
+}
+
 /** Title, status, priority, unit and dates of the case, its trigger event and approved loss, with exports (PDF, files) and delete. */
 export function CaseHeader() {
   const { rca, readOnly } = useCaseWorkspace();
   const { unitName } = useUnitNames();
   const { date, day } = useRcaFormat();
   const meta = (
-    <span className="flex flex-col gap-1">
-      <span className="flex flex-wrap items-center gap-2">
-        <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, rca.status ?? 'Draft')} data-testid="case-status">{statusLabel(rca.status)}</StatusBadge>
-        <StatusBadge tone={toneOf(PRIORITY_TONES, rca.priority ?? 'Medium')}>{rca.priority ?? 'Medium'}</StatusBadge>
-        <span>{unitName(rca.unitId)}</span>
-        <span>· opened {date(rca.createdAt)}</span>
-        {rca.targetCloseDate && <span>· target {day(rca.targetCloseDate)}</span>}
-        {rca.actualCloseDate && <span>· closed {date(rca.actualCloseDate)}</span>}
-      </span>
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="case-meta">
+      <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, rca.status ?? 'Draft')} className="whitespace-nowrap" data-testid="case-status">{statusLabel(rca.status)}</StatusBadge>
+      <StatusBadge tone={toneOf(PRIORITY_TONES, rca.priority ?? 'Medium')} className="whitespace-nowrap">{rca.priority ?? 'Medium'}</StatusBadge>
+      <span>{unitName(rca.unitId)}</span>
+      <MetaItem>opened {date(rca.createdAt)}</MetaItem>
+      {rca.targetCloseDate && <MetaItem>target {day(rca.targetCloseDate)}</MetaItem>}
+      {rca.actualCloseDate && <MetaItem>closed {date(rca.actualCloseDate)}</MetaItem>}
       <CaseTrace />
     </span>
   );
