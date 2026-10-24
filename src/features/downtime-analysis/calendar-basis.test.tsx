@@ -14,7 +14,7 @@ const { KpiSummary } = await import('./components/kpi-summary');
 const { CalendarBasisSection } = await import('./components/calendar-basis-section');
 const { pageBundleQuery } = await import('./model/bundle-views');
 const { parseFilters } = await import('./model/downtime-filters');
-const { CALENDAR_BASIS_BADGE, INCOMPLETE_TEXT, reasonText } = await import('./model/kpi-display');
+const { CALENDAR_BASIS_BADGE, CALENDAR_TILES, INCOMPLETE_TEXT, reasonText, tileInfo } = await import('./model/kpi-display');
 
 const SEARCH = 'window=7d&units=u1&units=u2';
 const FILTERS = parseFilters(new URLSearchParams(SEARCH), Date.parse('2026-10-19T09:00:00.000Z'));
@@ -86,9 +86,12 @@ describe('Downtime KPIs on calendar basis (plan 2.3)', () => {
     expect(within(section).getByTestId('calendar-basis-unit')).toHaveTextContent('default OEE policy');
     const tiles = within(section).getByTestId('calendar-basis-tiles');
     expect(within(tiles).getByTestId('kpi-calendar_availability')).toHaveTextContent('91.7 %');
-    expect(within(tiles).getByTestId('kpi-calendar_availability')).toHaveTextContent('not ISO 22400 availability');
+    expect(within(tiles).getByTestId('kpi-calendar_availability')).not.toHaveTextContent('not ISO 22400 availability');
+    expect(within(tiles).getByRole('button', { name: 'About Calendar availability' })).toBeInTheDocument();
+    expect(section).not.toHaveTextContent('Computed from the stops over 24 h');
     expect(within(tiles).getByTestId('kpi-stop_count')).toHaveAttribute('data-value', '2');
-    expect(within(tiles).getByTestId('kpi-mtbf')).toHaveTextContent(reasonText('no_failures') ?? '');
+    expect(within(tiles).getByTestId('kpi-mtbf')).toHaveTextContent(/MTBF—$/);
+    expect(tileInfo(CALENDAR_TILES[4], { quality: 'unavailable', reason: 'no_failures' } as KpiAggregateView)).toContain(reasonText('no_failures') ?? '-');
     // the calculated tiles keep the run-based values: nothing is added up in the browser
     const calculated = screen.getAllByTestId('kpi-downtime_total').find((tile) => !section.contains(tile));
     expect(calculated).toHaveAttribute('data-value', '3600');

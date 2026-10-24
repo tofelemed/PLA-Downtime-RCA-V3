@@ -41,8 +41,9 @@ export function TrendPanel({ filters, bundle, views }: TrendPanelProps) {
       query={bundle}
       response={bundle.data}
       showMeta={false}
+      emptyText="No downtime in this window."
       isEmpty={rows.length === 0}
-      note="Buckets use the plant's operational date and shift; stop time is clipped to each bucket."
+      info="Buckets use the plant's operational date and shift; stop time is clipped to each bucket."
     >
       <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <TrendChart rows={rows} classes={classes} unit={unit} />

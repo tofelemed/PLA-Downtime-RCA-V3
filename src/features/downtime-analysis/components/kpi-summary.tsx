@@ -1,36 +1,26 @@
-import type { KpiAggregateView } from '@/api/v2/types/reports';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { useCalendarPreference } from '@/lib/dates';
-import { DurationText } from '@/features/ux-kit/duration-text';
-import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
+import { KpiTileRow } from '@/features/pla-analytics/dashboard/kpi-tile';
+import { StatusIcon } from '@/lib/icons';
 import { useControllableView } from '../hooks/use-controllable-view';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
-import { CALENDAR_TILES, CONTROLLABLE_TILE, findMetric, formatCount, formatRatio, hasUnknownTime, reasonText, SUMMARY_TILES, type TileSpec } from '../model/kpi-display';
+import { CALENDAR_TILES, CONTROLLABLE_TILE, findMetric, hasUnknownTime, SUMMARY_TILES } from '../model/kpi-display';
 import { CalendarBasisSection } from './calendar-basis-section';
 import { ControllableSwitch } from './controllable-switch';
 import { DataCoverageNote } from './data-coverage-note';
+import { FigureTile } from './figure-tile';
 import { ReportCard } from './report-card';
 
-const QUALITY_LABELS: Readonly<Record<string, string>> = {
-  ok: 'OK',
-  provisional: 'Provisional',
-  unavailable: 'Not available',
-  exception: 'Above 100 %',
-};
+const HEADLINE = new Set(['downtime_total', 'stop_count', 'scheduled_availability', 'coded_downtime_ratio']);
 
 /**
  * KPI summary (KPI05 / KPI06, DT04): the period KPIs of the scope from `GET /reports/downtime-bundle` — the
- * server's summed terms (of the filtered schedule class, when one is chosen), shown with their labels, cohorts
- * and null reasons; nothing is added up here. The
- * switch adds the server's controllable availability (SME D15) beside the headline figures. Units/days without a
- * calculation run follow under their own "Calendar basis" badge (plan 2.3), never mixed into these tiles.
+ * server's summed terms (of the filtered schedule class, when one is chosen) in dashboard tiles, definitions and
+ * null reasons behind each ⓘ; nothing is added up here. The switch adds the server's controllable availability
+ * (SME D15). Units/days without a calculation run follow under their own "Calendar basis" badge (plan 2.3).
  */
 export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundleResult; compact?: boolean }) {
   const summary = bundle.data?.data.summary;
   const [controllable, setControllable] = useControllableView();
-  const headline = new Set(['downtime_total', 'stop_count', 'scheduled_availability', 'coded_downtime_ratio']);
-  const shown = compact ? SUMMARY_TILES.filter((tile) => headline.has(tile.metric)) : SUMMARY_TILES;
+  const shown = compact ? SUMMARY_TILES.filter((tile) => HEADLINE.has(tile.metric)) : SUMMARY_TILES;
   const tiles = controllable ? [...shown, CONTROLLABLE_TILE] : shown;
   return (
     <ReportCard
@@ -41,75 +31,37 @@ export function KpiSummary({ bundle, compact = false }: { bundle: DowntimeBundle
       showMeta={false}
       actions={<ControllableSwitch checked={controllable} onChange={setControllable} />}
     >
-      <SummaryNotes bundle={bundle} />
-      <dl className={compact ? 'grid grid-cols-2 gap-3 lg:grid-cols-4' : 'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5'}>
-        {tiles.map((tile) => (
-          <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />
-        ))}
-      </dl>
-      {compact && <details className="mt-3"><summary className="cursor-pointer text-sm text-primary">More downtime figures</summary>
-        <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">{SUMMARY_TILES.filter((tile) => !headline.has(tile.metric)).map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}</dl>
-      </details>}
+      <DataCoverageNote coverage={bundle.data?.data.dataCoverage} />
+      <UnknownTimeNote show={hasUnknownTime(summary)} />
+      <KpiTileRow className={compact ? 'sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4' : undefined}>
+        {tiles.map((tile) => <FigureTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}
+      </KpiTileRow>
+      {compact && (
+        <details>
+          <summary className="cursor-pointer text-sm text-primary">More downtime figures</summary>
+          <KpiTileRow className="mt-3 lg:grid-cols-4 xl:grid-cols-4">
+            {SUMMARY_TILES.filter((tile) => !HEADLINE.has(tile.metric)).map((tile) => <FigureTile key={tile.metric} spec={tile} view={findMetric(summary, tile.metric)} />)}
+          </KpiTileRow>
+        </details>
+      )}
       <CalendarBasisSection calendar={bundle.data?.data.calendarBasis}>
-        <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5" data-testid="calendar-basis-tiles">
-          {CALENDAR_TILES.map((tile) => <KpiTile key={tile.metric} spec={tile} view={findMetric(bundle.data?.data.calendarBasis?.total, tile.metric)} />)}
-        </dl>
+        <div data-testid="calendar-basis-tiles">
+          <KpiTileRow>
+            {CALENDAR_TILES.map((tile) => <FigureTile key={tile.metric} spec={tile} view={findMetric(bundle.data?.data.calendarBasis?.total, tile.metric)} />)}
+          </KpiTileRow>
+        </div>
       </CalendarBasisSection>
     </ReportCard>
   );
 }
 
-/** What the figures stand on: class filter, state data coverage and no-plan periods, unclassed stop time. */
-function SummaryNotes({ bundle }: { bundle: DowntimeBundleResult }) {
-  const data = bundle.data?.data;
+/** DT-02: some stop time has no planned / unplanned class yet, so that split is incomplete. */
+function UnknownTimeNote({ show }: { show: boolean }) {
+  if (!show) return null;
   return (
-    <>
-      <ClassNote scheduleClass={data?.scheduleClass ?? null} />
-      <DataCoverageNote coverage={data?.dataCoverage} />
-      {hasUnknownTime(data?.summary) && (
-        <Alert className="mb-2" data-testid="unknown-lower-bound">
-          <AlertDescription>Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.</AlertDescription>
-        </Alert>
-      )}
-    </>
-  );
-}
-
-/** Owner decision 2026-10-19: the summary follows the schedule class filter; the server leaves figures it cannot split empty. */
-function ClassNote({ scheduleClass }: { scheduleClass: string | null }) {
-  if (!scheduleClass) return null;
-  return (
-    <p className="mb-2 text-xs text-muted-foreground" data-testid="kpi-class-note">
-      Figures for {labelOf(SCHEDULE_CLASS_LABELS, scheduleClass).toLowerCase()} stops only. Figures that are not split by schedule class show “—”.
+    <p className="flex items-center gap-1.5 text-xs text-warning" role="note" data-testid="unknown-lower-bound">
+      <StatusIcon.warning aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+      Some stop time is not classed planned or unplanned yet: the planned / unplanned split is incomplete.
     </p>
-  );
-}
-
-function TileValue({ spec, view }: { spec: TileSpec; view: KpiAggregateView }) {
-  const { digits } = useCalendarPreference();
-  if (spec.kind === 'duration') return <DurationText seconds={view.value} />;
-  if (spec.kind === 'ratio') return <>{formatRatio(view.value, 1, digits)}</>;
-  return <>{formatCount(view.value, digits)}</>;
-}
-
-/** One server KPI: value, or "—" with the server's reason; provisional / exception flagged in text. */
-export function KpiTile({ spec, view }: { spec: TileSpec; view: KpiAggregateView | undefined }) {
-  const reason = reasonText(view?.reason);
-  return (
-    <div className="rounded-md border p-3" data-testid={`kpi-${spec.metric}`} data-value={view?.value ?? ''}>
-      <dt className="text-xs text-muted-foreground" title={spec.note}>
-        {spec.title}
-      </dt>
-      <dd className="text-xl font-semibold" data-testid="kpi-value">
-        {view && view.value !== null ? <TileValue spec={spec} view={view} /> : '—'}
-      </dd>
-      <dd className="text-xs text-muted-foreground">{spec.note}</dd>
-      {view && view.quality !== 'ok' && (
-        <dd className="mt-1 flex flex-wrap items-center gap-1 text-xs">
-          <Badge variant={view.quality === 'exception' ? 'destructive' : 'secondary'}>{labelOf(QUALITY_LABELS, view.quality)}</Badge>
-          {reason && <span>{reason}</span>}
-        </dd>
-      )}
-    </div>
   );
 }

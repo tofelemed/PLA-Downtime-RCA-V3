@@ -6,6 +6,7 @@ import { formatCount, formatRatio } from '../../model/kpi-display';
 import { ChartFigure } from '@/features/ux-kit/chart-figure';
 import { plural } from '@/features/ux-kit/format/plural';
 import { CHART_TOOLTIP_STYLE, unbreakable } from '@/features/ux-kit/chart-text';
+import { paretoAxisLabel } from '../../model/reason-drill';
 
 export interface ParetoChartProps {
   groups: readonly DowntimeGroupView[];
@@ -42,9 +43,9 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
   return (
     <ChartFigure caption={caption} chartClassName="h-72 w-full" testId="pareto-chart">
       <ResponsiveContainer>
-        <ComposedChart data={points} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
+        <ComposedChart data={points} margin={{ top: 16, right: 16, bottom: 16, left: 8 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} />
+          <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-35} textAnchor="end" height={72} tickMargin={4} tickFormatter={paretoAxisLabel} />
           <YAxis yAxisId="value" tickFormatter={(value: unknown) => unbreakable(format(value))} allowDecimals={unit === 's'} tick={{ fontSize: 11 }} width={unit === 's' ? 80 : 48} />
           <YAxis yAxisId="share" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => localizeNumber(`${v} %`, digits)} tick={{ fontSize: 11 }} />
           <Tooltip
@@ -53,10 +54,10 @@ export function ParetoChart({ groups, unit, labelOf, onBar }: ParetoChartProps) 
               name === 'cumulative' ? formatRatio(item.payload?.group.cumulativeShare, 1, digits) : format(value)
             }
           />
-          <Bar yAxisId="value" dataKey="value" fill="hsl(var(--chart-1))" onClick={(point: { payload?: Point }) => point.payload && onBar(point.payload.group)} cursor="pointer">
+          <Bar yAxisId="value" dataKey="value" fill="hsl(var(--danger))" onClick={(point: { payload?: Point }) => point.payload && onBar(point.payload.group)} cursor="pointer">
             <LabelList dataKey="value" position="top" formatter={format} fontSize={11} />
           </Bar>
-          <Line yAxisId="share" dataKey="cumulative" stroke="hsl(var(--destructive))" dot />
+          <Line yAxisId="share" dataKey="cumulative" stroke="hsl(var(--heading))" dot />
         </ComposedChart>
       </ResponsiveContainer>
     </ChartFigure>

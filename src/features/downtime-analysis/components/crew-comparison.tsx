@@ -32,8 +32,9 @@ export function CrewComparison({ bundle, views }: { bundle: DowntimeBundleResult
       query={bundle}
       response={bundle.data}
       showMeta={false}
+      emptyText="No downtime in this window."
       isEmpty={groups.length === 0}
-      note="Crew of the shift each period belongs to; periods without a crew rotation are “No crew”."
+      info="Crew of the shift each period belongs to; periods without a crew rotation are “No crew”."
     >
       <DataTable caption="Downtime by crew" columns={columns} rows={groups} getRowKey={(group) => group.key ?? 'none'} density="compact" />
     </ReportCard>

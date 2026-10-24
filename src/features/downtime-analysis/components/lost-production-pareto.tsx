@@ -33,7 +33,7 @@ export function LostProductionPareto({ filters }: { filters: DowntimeFilters }) 
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No availability losses in this scope."
-      note="Availability losses of the plan ledger: approved lines where the period is approved, else its current calculation."
+      info="Availability losses of the plan ledger: approved lines where the period is approved, else its current calculation."
       actions={canViewMoney &&
         <ToggleGroup type="single" size="sm" value={metric} onValueChange={(value) => value && setMetric(value as LostProductionMetric)} aria-label="Measure">
           {LOST_PRODUCTION_METRICS.map((m) => (

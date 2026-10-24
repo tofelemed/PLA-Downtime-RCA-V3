@@ -7,40 +7,44 @@ import { useToast } from '@/hooks/use-toast';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { PageHeader } from '@/features/ux-kit/page-layout';
-import { ScopeHeader } from '@/features/ux-kit/scope-header';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { useWindowRangeText } from '@/features/event-hub/hooks/use-window-range-text';
-import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { usePlantFormat } from '@/features/event-hub/hooks/use-plant-format';
 import { ActionIcon } from '@/lib/icons';
-import { useActiveFiltersText } from '../hooks/use-active-filters-text';
 import type { DowntimeBundleResult } from '../hooks/use-downtime-bundle';
 import { hasPeriodSelection, reportBase, type DowntimeFilters } from '../model/downtime-filters';
+import { FigureStatus } from './figure-status';
 
-interface DowntimeHeaderProps { filters: DowntimeFilters; bundle: DowntimeBundleResult; title?: string; description?: string; }
+export interface DowntimeHeaderProps {
+  filters: DowntimeFilters;
+  /** the page snapshot; null on pages whose cards read their own figures (each card then carries its label) */
+  bundle: DowntimeBundleResult | null;
+  title: string;
+  /** false where each figure set states its own approval (the previous-period comparison) */
+  showStatus?: boolean;
+}
 type Snapshot = ReturnType<typeof reportSnapshot> | null;
 
-/** Calculated metadata/export stay tied to the same historical scope as the visible figures. */
-export function DowntimeHeader({ filters, bundle, title = 'Downtime analysis', description = 'What is down, why, how often and where' }: DowntimeHeaderProps) {
-  const snapshot = bundle.data ? reportSnapshot(bundle.data, reportBase(filters)) : null;
-  return <PageHeader title={title} description={description}
-    meta={<DowntimeMetadata filters={filters} bundle={bundle} snapshot={snapshot} />}
-    actions={<DowntimeExport filters={filters} snapshot={snapshot} />} />;
+/**
+ * Title, and for snapshot pages the one Provisional / Approved label of the figures (runs and as-of in its ⓘ)
+ * and the period-summary export tied to the same snapshot. No scope line or timezone: the app header has them.
+ */
+export function DowntimeHeader({ filters, bundle, title, showStatus = true }: DowntimeHeaderProps) {
+  const snapshot = bundle?.data ? reportSnapshot(bundle.data, reportBase(filters)) : null;
+  return (
+    <PageHeader
+      title={title}
+      meta={showStatus && snapshot && bundle?.data ? <SnapshotStatus snapshot={snapshot} provisional={bundle.data.isProvisional} asOf={bundle.data.asOf} /> : undefined}
+      actions={bundle ? <DowntimeExport filters={filters} snapshot={snapshot} /> : undefined}
+    />
+  );
 }
 
-function DowntimeMetadata({ filters, bundle, snapshot }: DowntimeHeaderProps & { snapshot: Snapshot }) {
-  const env = useEventHubEnv();
+function SnapshotStatus({ snapshot, provisional, asOf }: { snapshot: NonNullable<Snapshot>; provisional: boolean; asOf: string | null }) {
   const { number } = useNumberFormat();
-  const rangeText = useWindowRangeText();
-  const activeFilters = useActiveFiltersText(filters);
-  const scope = filters.unitIds.length === 0 ? 'All units in your scope' : filters.unitIds.map(env.unitName).join(', ');
-  const windowText = rangeText({ label: filters.windowLabel, from: filters.from, to: filters.to, relative: filters.relativeWindow !== null });
-  return <div className="space-y-1">
-    <ScopeHeader scopeLabel={[scope, windowText, activeFilters].filter(Boolean).join(' · ')} timezone={env.timezone} timezoneIsFallback={env.timezoneIsFallback}
-      uom="hours and minutes" isProvisional={bundle.data?.isProvisional} asOf={bundle.data?.asOf ?? null} />
-    {snapshot && <p className="text-xs" data-testid="snapshot-runs" data-run-ids={snapshot.calculationRunIds.join(',')}>
-      Historical downtime summary and breakdowns use {snapshot.calculationRunIds.length === 1 ? 'the same calculation run' : `the same ${number(snapshot.calculationRunIds.length)} calculation runs`}.
-    </p>}
-  </div>;
+  const { dateTime } = usePlantFormat();
+  const runs = snapshot.calculationRunIds.length;
+  const info = `Summary, trend and breakdowns use ${runs === 1 ? 'the same calculation run' : `the same ${number(runs)} calculation runs`}${asOf ? ` · as of ${dateTime(asOf)}` : ''}.`;
+  return <FigureStatus provisional={provisional} info={info} testId="snapshot-runs" data={{ 'data-run-ids': snapshot.calculationRunIds.join(',') }} />;
 }
 
 function DowntimeExport({ filters, snapshot }: { filters: DowntimeFilters; snapshot: Snapshot }) {

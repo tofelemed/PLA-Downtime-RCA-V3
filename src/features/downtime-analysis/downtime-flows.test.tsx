@@ -14,7 +14,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { downtimeQuery, parseFilters, reportBase } = await import('./model/downtime-filters');
 const { paretoQuery } = await import('./model/reason-drill');
 const { lostProductionQuery } = await import('./model/lost-production');
-const { KpiTile } = await import('./components/kpi-summary');
+const { FigureTile } = await import('./components/figure-tile');
 const { SUMMARY_TILES } = await import('./model/kpi-display');
 
 const FILTERS = parseFilters(new URLSearchParams('from=2026-10-01T00:00:00.000Z&to=2026-10-08T00:00:00.000Z&window=W&units=u1&reasons=r1&approved=1'), 0);
@@ -77,15 +77,17 @@ describe('Downtime Analysis data flows (plan 3.3)', () => {
     expect(url.searchParams.has('tenantId')).toBe(false);
   });
 
-  it('a null KPI shows "—" with the server reason, never a default', () => {
+  it('a null KPI shows "—" with the server reason behind its ⓘ, never a default', async () => {
     const tile = SUMMARY_TILES.find((entry) => entry.metric === 'mean_stop_duration')!;
     render(
-      <dl>
-        <KpiTile spec={tile} view={{ metric: tile.metric, numerator: '0', denominator: '0', value: null, unit: 's', quality: 'unavailable', reason: 'no_completed_stops', rows: 3, missing: 0 }} />
-      </dl>,
+      <div>
+        <FigureTile spec={tile} view={{ metric: tile.metric, numerator: '0', denominator: '0', value: null, unit: 's', quality: 'unavailable', reason: 'no_completed_stops', rows: 3, missing: 0 }} />
+      </div>,
     );
-    expect(screen.getByTestId('kpi-value').textContent).toBe('—');
-    expect(screen.getByText('No completed stops in the window')).toBeTruthy();
+    expect(screen.getByTestId('kpi-mean_stop_duration')).toHaveTextContent(/—$/);
+    expect(screen.queryByText(/No completed stops in the window/)).toBeNull();
+    screen.getByRole('button', { name: 'About Mean completed stop' }).focus();
+    expect((await screen.findAllByText(/Not available: No completed stops in the window/)).length).toBeGreaterThan(0);
     expect(screen.getByText('Mean completed stop')).toBeTruthy();
   });
 });

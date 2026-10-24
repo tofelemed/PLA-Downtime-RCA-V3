@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useProductionEvents } from '@/api/v2/queries/production-events';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
@@ -6,27 +7,20 @@ import { Button } from '@/components/ui/button';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { VirtualList } from '@/features/ux-kit/virtual-list';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { usePlantFormat } from '@/features/event-hub/hooks/use-plant-format';
 import type { DowntimeFilters } from '../model/downtime-filters';
+import { CLASS_COLOURS } from '../model/class-colours';
+import type { ScheduleClass } from '../model/downtime-filters';
 import { timelineRows, type TimelineRow } from '../model/timeline';
 
 const ROW_HEIGHT = 36;
 const PAGE = 500;
-/**
- * Stops coloured by schedule class with the shared unit-state tokens (UX_AUDIT C-7: the same colours as the
- * master-data state timeline); an unclassified stop is the hatched unknown gap. External causes (starved /
- * blocked) share the amber family.
- */
-const CLASS_FILL: Readonly<Record<string, string>> = {
-  planned: 'bg-state-planned',
-  unplanned: 'bg-state-stopped',
-  external: 'bg-state-starved',
-  unknown: 'bg-state-unknown bg-hatch-unknown',
-};
-const LEGEND = ['unplanned', 'planned', 'external', 'unknown'] as const;
+const LEGEND: readonly ScheduleClass[] = ['unplanned', 'planned', 'external', 'unknown'];
+const fillOf = (scheduleClass: string) => (CLASS_COLOURS[scheduleClass as ScheduleClass] ?? CLASS_COLOURS.unknown).fill;
+const TIMELINE_INFO = 'Hatched: schedule class not set yet. Outlined: still ongoing. A bar opens its stop.';
 
 /**
  * State timeline (lazy chunk): downtime intervals per unit across the window, unknown schedule class
@@ -36,6 +30,7 @@ const LEGEND = ['unplanned', 'planned', 'external', 'unknown'] as const;
 export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
   const env = useEventHubEnv();
   const { dateTime, duration } = usePlantFormat();
+  const headingId = useId();
   const navigate = useNavigate();
   const location = useLocation();
   const onOpen = (event: ProductionEventView) => navigate(`/events/${event.id}`, { state: { listSearch: `${location.pathname}${location.search}` } });
@@ -54,21 +49,19 @@ export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
   const events = flattenPages(query.data?.pages);
   const rows = timelineRows(events, filters);
   return (
-    <Section
-      title="Stop timeline"
-      className="rounded-md border p-4"
-      actions={
-        query.hasNextPage && (
+    <section aria-labelledby={headingId} className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex items-center gap-2">
+          <h2 id={headingId} className="text-base font-semibold text-heading">Stop timeline</h2>
+          <KpiInfo label="Stop timeline" text={TIMELINE_INFO} />
+        </div>
+        {query.hasNextPage && (
           <Button size="sm" variant="outline" disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>
             Load more stops
           </Button>
-        )
-      }
-    >
+        )}
+      </div>
       <div className="space-y-2" data-testid="state-timeline">
-        <p className="text-xs text-muted-foreground">
-          {dateTime(filters.from)} – {dateTime(filters.to)} · hatched = schedule class unknown · outlined = still ongoing
-        </p>
         <ClassLegend />
         <DataState state={dataStateOf(query, { isEmpty: rows.length === 0 })} error={query.error} onRetry={() => query.refetch()}>
           <VirtualList
@@ -80,7 +73,7 @@ export function StateTimeline({ filters }: { filters: DowntimeFilters }) {
           />
         </DataState>
       </div>
-    </Section>
+    </section>
   );
 }
 
@@ -89,7 +82,7 @@ function ClassLegend() {
     <ul className="flex flex-wrap gap-3 text-xs text-muted-foreground" aria-label="Legend">
       {LEGEND.map((scheduleClass) => (
         <li key={scheduleClass} className="flex items-center gap-1">
-          <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-sm ${CLASS_FILL[scheduleClass]}`} />
+          <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-sm ${fillOf(scheduleClass)}`} />
           {labelOf(SCHEDULE_CLASS_LABELS, scheduleClass)}
         </li>
       ))}
@@ -120,7 +113,7 @@ function TimelineLane({ row, unitName, dateTime, duration, onOpen }: LaneProps) 
               title={label}
               aria-label={`Stop ${label}`}
               data-testid="timeline-segment"
-              className={`absolute top-0 h-5 rounded-sm ${CLASS_FILL[event.classification.scheduleClass] ?? CLASS_FILL.unknown} ${segment.open ? 'border-2 border-foreground' : ''}`}
+              className={`absolute top-0 h-5 rounded-sm ${fillOf(event.classification.scheduleClass)} ${segment.open ? 'border-2 border-foreground' : ''}`}
               style={{ left: `${segment.left}%`, width: `${segment.width}%` }}
               onClick={() => onOpen(event)}
             />

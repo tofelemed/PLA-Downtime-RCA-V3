@@ -2,20 +2,20 @@ import { lazy, Suspense, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import type { ProductionEventView } from '@/api/v2/types/events';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AnalysisModeSelect } from '@/features/analysis-navigation/analysis-mode-select';
 import { AnalysisPageNav } from '@/features/analysis-navigation/analysis-page-nav';
 import { DOWNTIME_PAGES, type DowntimeView } from '@/features/analysis-navigation/analysis-pages';
 import { CloseStopDialog } from '@/features/event-hub/components/close-stop-dialog';
 import { CodeEventDialog } from '@/features/event-hub/components/code-event-dialog';
 import { EventHubFrame } from '@/features/event-hub/event-hub-frame';
-import { useWindowRangeText } from '@/features/event-hub/hooks/use-window-range-text';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { unitsLabel } from '@/features/pla-analytics/model/links';
-import { Page, PageHeader } from '@/features/ux-kit/page-layout';
+import { Page } from '@/features/ux-kit/page-layout';
 import { DowntimeFiltersBar } from './components/downtime-filters-bar';
 import { DowntimeHeader } from './components/downtime-header';
 import { useDowntimeBundle } from './hooks/use-downtime-bundle';
 import { useDowntimeFilters } from './hooks/use-downtime-filters';
-import { DOWNTIME_SCOPE_NOTES, downtimePageSettings } from './model/page-settings';
+import { downtimePageSettings } from './model/page-settings';
+import { DOWNTIME_MODES } from './model/page-modes';
 import { pageBundleQuery } from './model/bundle-views';
 
 const PAGES = {
@@ -32,6 +32,11 @@ export function DowntimeAnalysisPage() {
   return <EventHubFrame noTenantText="Choose a plant to analyse its downtime."><DowntimeScreen view={view} /></EventHubFrame>;
 }
 
+function ModeSelect({ view }: { view: DowntimeView }) {
+  const spec = DOWNTIME_MODES[view];
+  return spec ? <AnalysisModeSelect param={spec.param} label={spec.label} options={spec.options} stacked /> : null;
+}
+
 function DowntimeScreen({ view }: { view: DowntimeView }) {
   const env = useEventHubEnv();
   const { filters, change } = useDowntimeFilters();
@@ -41,15 +46,13 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
   const { mode, bundled, scope, page, showTrend } = downtimePageSettings(view, params);
   const bundle = useDowntimeBundle(pageBundleQuery(filters, view, mode), env.timezone, bundled);
   const Content = PAGES[view];
-  const windowText = useWindowRangeText()({ label: filters.windowLabel, from: filters.from, to: filters.to, relative: filters.relativeWindow !== null });
+  const showSchedule = params.get('presentation') !== 'timeline' || view !== 'stops';
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="downtime-analysis">
-        {bundled ? <DowntimeHeader filters={filters} bundle={bundle} title={`Downtime analysis · ${page.label}`} description={page.description} />
-          : <PageHeader title={`Downtime analysis · ${page.label}`} description={page.description} meta={<p className="text-xs text-muted-foreground">{unitsLabel(filters.unitIds, env.unitName)} · {windowText} · {env.timezone}</p>} />}
+        <DowntimeHeader filters={filters} bundle={bundled ? bundle : null} title={`Downtime analysis · ${page.label}`} showStatus={!(view === 'trends' && mode === 'calendar')} />
         <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
-        <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={params.get('presentation') !== 'timeline' || view !== 'stops'} />
-        <p className="text-xs text-muted-foreground" data-testid="period-selection-note">{DOWNTIME_SCOPE_NOTES[scope]}</p>
+        <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={showSchedule} mode={<ModeSelect view={view} />} />
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <Content filters={filters} bundle={bundle} onChange={change} onClose={setClosing} onCode={setCoding} />
         </Suspense>
