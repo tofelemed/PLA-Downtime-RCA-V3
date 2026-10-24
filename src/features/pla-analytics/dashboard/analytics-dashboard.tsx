@@ -10,6 +10,7 @@ import { useDashboardScope } from './use-dashboard-scope';
 import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
 import { eventsHref } from './dashboard-links';
 import { OeeSection } from './oee-section';
+import { ProductionPlanSection } from './production-plan-section';
 import { ForYouRow } from './for-you-row';
 import { LatestEvents } from './latest-events';
 import { RcaTiles } from './rca-tiles';
@@ -43,6 +44,7 @@ function DashboardScreen() {
         <DashboardHeader scope={scope} keyValue={key} onKey={setKey} orgOnly={orgOnly} plantName={plantName} />
         <ForYouRow scope={scope} />
         <OeeSection scope={scope} assetSelected={Boolean(node.assetId)} />
+        <ProductionPlanSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <Section title="Downtime">
           <div className="grid gap-4 xl:grid-cols-2">
             <DashboardDowntime scope={scope} />
