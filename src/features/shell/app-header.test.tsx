@@ -9,6 +9,7 @@ vi.mock('./plant-timezone-readout', () => ({ PlantTimezoneReadout: () => null })
 vi.mock('@/features/notifications/notification-bell', () => ({ NotificationBell: () => null }));
 vi.mock('./user-badge', () => ({ UserBadge: () => null }));
 vi.mock('./theme-toggle', () => ({ ThemeToggle: () => null }));
+vi.mock('./header-approvals', () => ({ HeaderApprovals: () => null }));
 
 const renderHeader = (branding?: BrandingView, navigation?: { open: boolean; onOpen: () => void }) =>
   render(

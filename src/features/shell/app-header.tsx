@@ -2,6 +2,7 @@ import type { BrandingView } from '@/api/v2/types/administration';
 import { PlantSelector } from '@/features/plant-selector/plant-selector';
 import { NotificationBell } from '@/features/notifications/notification-bell';
 import { UiIcon } from '@/lib/icons';
+import { HeaderApprovals } from './header-approvals';
 import { HeaderBrand } from './header-brand';
 import { PlantTimezoneReadout } from './plant-timezone-readout';
 import { ThemeToggle } from './theme-toggle';
@@ -9,7 +10,7 @@ import { UserBadge } from './user-badge';
 
 /**
  * The one-row app header (h-14, sticky): brand, plant scope, plant timezone,
- * in-app notifications (SLA escalations) and the user. No dead controls: search and settings return only when they work.
+ * pending approvals, in-app notifications (SLA escalations) and the user. No dead controls: search and settings return only when they work.
  * The app name is not a heading — every page owns its single `<h1>` (PageHeader).
  */
 export interface AppHeaderProps {
@@ -49,6 +50,7 @@ export function AppHeader({ navigation, branding }: AppHeaderProps) {
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         <PlantTimezoneReadout />
         <ThemeToggle />
+        <HeaderApprovals />
         <NotificationBell />
         <UserBadge />
       </div>
