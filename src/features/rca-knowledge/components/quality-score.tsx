@@ -2,12 +2,15 @@ import type { KnowledgeQualityPart } from '@/api/v2/types/rca-knowledge';
 import { Badge } from '@/components/ui/badge';
 import { QUALITY_FACTOR_LABELS } from '../model/knowledge-filters';
 
-/** The server's record quality score (0–100); the browser never computes it. QA L11: "Record quality 80 / 100", never a bare "Quality 80" that reads as product quality. */
-export function QualityBadge({ score }: { score: number }) {
+/**
+ * The server's record quality score (0–100); the browser never computes it. QA L11: "Record quality 80 / 100", never a bare
+ * "Quality 80" that reads as product quality; `scoreOnly` ("80 / 100") under a "Record quality" column header.
+ */
+export function QualityBadge({ score, scoreOnly = false }: { score: number; scoreOnly?: boolean }) {
   const variant = score >= 70 ? 'default' : score >= 40 ? 'secondary' : 'outline';
   return (
     <Badge variant={variant} title="How complete the investigation record is, scored by the server" data-testid="quality-score">
-      Record quality {score} / 100
+      {scoreOnly ? `${score} / 100` : `Record quality ${score} / 100`}
     </Badge>
   );
 }

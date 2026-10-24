@@ -11,6 +11,7 @@ import { CAUSES_ANCHOR, causesLocked, groupCauses } from '../../model/cause-form
 import { useCaseWorkspace } from '../case-context';
 import { CauseEditor } from './cause-editor';
 import { CauseItem } from './cause-item';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 /** `new` = the add form is open; a cause id = that cause is edited; null = none. */
 type Editing = 'new' | string | null;
@@ -50,7 +51,7 @@ export function CausesPanel() {
     </Button>
   ) : null;
   return (
-    <Section id={CAUSES_ANCHOR} title="Causes" description="Root, direct and contributing causes, each with a code from the cause library when one fits." actions={add}>
+    <Section id={CAUSES_ANCHOR} title="Causes" titleAside={<KpiInfo label="Causes" text="Root, direct and contributing causes, each with a code from the cause library when one fits." />} actions={add}>
       <div className="space-y-3" data-testid="causes-panel">
         <LockedNote locked={locked} />
         {canWrite && editing === 'new' && <CauseEditor onDone={() => setEditing(null)} />}

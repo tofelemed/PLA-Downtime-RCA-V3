@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 export interface SectionProps {
   title: string;
   description?: ReactNode;
+  /** opt-in: a small element on the title's line, after the heading (e.g. an ⓘ with what the section means) */
+  titleAside?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   id?: string;
@@ -55,7 +57,7 @@ function SectionTitle({ id, title, level, collapsible, open }: SectionTitleProps
  * @example <Section title="Shift templates" actions={<Button size="sm">Add</Button>}>…</Section>
  */
 export function Section(props: SectionProps) {
-  const { title, description, actions, children, headingLevel = 2, collapsible = false } = props;
+  const { title, description, titleAside, actions, children, headingLevel = 2, collapsible = false } = props;
   const [open, setOpen] = useState(props.defaultOpen ?? true);
   const headingId = useId();
   const isOpen = !collapsible || open;
@@ -64,7 +66,14 @@ export function Section(props: SectionProps) {
       <section id={props.id} aria-labelledby={headingId} className={cn('space-y-3', props.className)}>
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0 space-y-1">
-            <SectionTitle id={headingId} title={title} level={headingLevel} collapsible={collapsible} open={isOpen} />
+            {titleAside ? (
+              <div className="flex items-center gap-1.5">
+                <SectionTitle id={headingId} title={title} level={headingLevel} collapsible={collapsible} open={isOpen} />
+                {titleAside}
+              </div>
+            ) : (
+              <SectionTitle id={headingId} title={title} level={headingLevel} collapsible={collapsible} open={isOpen} />
+            )}
             {description && <div className="text-sm text-muted-foreground">{description}</div>}
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

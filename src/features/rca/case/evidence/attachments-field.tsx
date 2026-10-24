@@ -6,6 +6,7 @@ import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
 import { uploadRcaFile } from '../../api/rca-files';
 import { AttachmentList } from './attachment-list';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 export interface AttachmentsFieldProps {
   rcaId: string;
@@ -39,7 +40,7 @@ export function AttachmentsField({ rcaId, value, onChange, onBusy }: Attachments
     }
   };
   return (
-    <Section title="Files" headingLevel={3} description="Photos, documents, spreadsheets or videos (up to 25 MB each).">
+    <Section title="Files" headingLevel={3} titleAside={<KpiInfo label="Files" text="Photos, documents, spreadsheets or videos (up to 25 MB each)." />}>
       <div className="space-y-2">
         <Label htmlFor={inputId}>Add files</Label>
         <Input id={inputId} type="file" multiple disabled={uploading} onChange={(e) => void upload(e.target.files)} />

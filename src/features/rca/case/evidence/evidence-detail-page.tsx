@@ -130,7 +130,7 @@ export function EvidenceDetailPage() {
         <AttachmentList rcaId={rca.id} attachments={item.attachments} />
       </Section>
       {item.type === 'Time Series' && (
-        <Section title="Time series" description="The historian query recorded with this evidence.">
+        <Section title="Time series">
           <SeriesFacts item={item} />
         </Section>
       )}

@@ -5,11 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { ActionIcon } from '@/lib/icons';
 import { ActionQueueTab } from '../actions/action-queue-tab';
 import { OwnerActionsScreen } from '../actions/owner-actions-screen';
+import { RcaCard } from '../components/rca-card';
 import { actionFiltersFromParams, DEFAULT_ACTION_FILTERS, paramsFromActionFilters, type ActionQueueFilters } from '../model/action-queue-filters';
 import { filtersFromParams, filtersOfChip, legacyRedirect, paramsFromFilters, type CaseListFilters } from '../model/case-filters';
 import { RecommendedTab } from '../recommendations/recommended-tab';
@@ -25,7 +26,7 @@ const tabOf = (value: string | null) => (value === RECOMMENDED || value === ACTI
 
 function CasesSection({ filters, onChange, onClear }: { filters: CaseListFilters; onChange: (next: CaseListFilters) => void; onClear: () => void }) {
   return (
-    <Section title="Investigations">
+    <RcaCard title="Investigations" info="Triggers only recommend an investigation; a person opens and closes it.">
       <div className="space-y-3">
         <CaseFiltersBar value={filters} onChange={onChange} />
         {filters.causeCodeId && <CauseCodeFilterChip causeCodeId={filters.causeCodeId} onRemove={() => onChange({ ...filters, causeCodeId: undefined })} />}
@@ -33,7 +34,7 @@ function CasesSection({ filters, onChange, onClear }: { filters: CaseListFilters
           filters={filters}
           empty={{
             title: 'No investigations',
-            text: 'No investigation matches these filters. Open one from an event in the Event Hub, or start a new investigation.',
+            text: 'No investigation matches these filters.',
             action: (
               <Button variant="outline" size="sm" onClick={onClear}>
                 Clear filters
@@ -42,7 +43,7 @@ function CasesSection({ filters, onChange, onClear }: { filters: CaseListFilters
           }}
         />
       </div>
-    </Section>
+    </RcaCard>
   );
 }
 
@@ -75,7 +76,6 @@ function ListScreen() {
       <Page width="wide">
         <PageHeader
           title={pageNameOf('/rca')}
-          description="Investigations of this plant. Triggers only recommend an investigation; a person opens and closes it."
           actions={actions}
           meta={<CaseSummary filters={filters} onPick={(chip) => setFilters(filtersOfChip(chip))} />}
         />
@@ -95,14 +95,14 @@ function ListScreen() {
             <CasesSection filters={filters} onChange={setFilters} onClear={clear} />
           </TabsContent>
           <TabsContent value={ACTIONS}>
-            <Section title="Actions" description="Actions of the investigations you can see, earliest due date first; actions without a due date come last.">
+            <RcaCard title="Actions" info="Actions of the investigations you can see, earliest due date first; actions without a due date come last.">
               <ActionQueueTab filters={actionFiltersFromParams(params)} onChange={setActionFilters} />
-            </Section>
+            </RcaCard>
           </TabsContent>
           <TabsContent value={RECOMMENDED}>
-            <Section title="Recommended investigations" description="Stops where an RCA trigger fired and no investigation is linked yet. Triggers only recommend; a person decides.">
+            <RcaCard title="Recommended investigations" info="Stops where an RCA trigger fired and no investigation is linked yet. Triggers only recommend; a person decides.">
               <RecommendedTab />
-            </Section>
+            </RcaCard>
           </TabsContent>
         </Tabs>
       </Page>

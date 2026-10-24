@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FormField } from '@/features/ux-kit/form-field';
+import { Label } from '@/components/ui/label';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { useUnitNames } from '../use-unit-names';
 import { RecommendationQueue } from './recommendation-queue';
 
@@ -9,16 +10,19 @@ export function RecommendedTab() {
   const [unitId, setUnitId] = useState('');
   return (
     <div className="space-y-3">
-      <FormField id="recommendation-unit" label="Unit" className="sm:w-64">
-        <select id="recommendation-unit" className="h-10 w-full rounded border bg-background px-2 text-sm" value={unitId} onChange={(e) => setUnitId(e.target.value)}>
-          <option value="">All units</option>
-          {units.map((unit) => (
-            <option key={unit.id} value={unit.id}>
-              {unit.name}
-            </option>
-          ))}
-        </select>
-      </FormField>
+      <div className="flex flex-wrap items-end gap-3" data-testid="recommendation-filters">
+        <div className={FIELD_CLASS}>
+          <Label htmlFor="recommendation-unit">Unit</Label>
+          <select id="recommendation-unit" className={`${SELECT_CLASS} w-full sm:w-64`} value={unitId} onChange={(e) => setUnitId(e.target.value)}>
+            <option value="">All units</option>
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <RecommendationQueue unitId={unitId || undefined} />
     </div>
   );

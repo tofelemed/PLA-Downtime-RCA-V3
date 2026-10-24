@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { downloadText } from '@/features/rca/model/case-export';
 import { DataState } from '@/features/ux-kit/data-state';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { RcaCard } from '@/features/rca/components/rca-card';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { KnowledgeFiltersBar } from './components/knowledge-filters-bar';
 import { KnowledgeTable } from './components/knowledge-table';
@@ -47,19 +48,18 @@ function KnowledgeScreen() {
   const setFilters = (next: KnowledgeFilterState) => setParams(paramsFromFilters(next), { replace: true });
   return (
     <Page width="wide">
-      <PageHeader
-        title="Knowledge base"
-        description="Learning from closed investigations of this plant. Entries are written when an investigation closes; a reliability engineer or manager publishes them."
-        actions={<ExportButton filters={filters} />}
-      />
-      <Section title="Entries">
+      <PageHeader title="Knowledge base" actions={<ExportButton filters={filters} />} />
+      <RcaCard
+        title="Entries"
+        info="Learning from closed investigations of this plant. Entries are written when an investigation closes; a reliability engineer or manager publishes them."
+      >
         <div className="space-y-3" data-testid="rca-knowledge-v2">
           <KnowledgeFiltersBar value={filters} onChange={setFilters} />
           <KnowledgeTable
             filters={toKnowledgeQuery(filters, filters.text)}
             empty={{
               title: 'No entries',
-              text: 'No entry matches these filters. Entries appear when investigations close.',
+              text: 'No entry matches these filters.',
               action: (
                 <Button variant="outline" size="sm" onClick={() => setParams({}, { replace: true })}>
                   Clear filters
@@ -68,15 +68,14 @@ function KnowledgeScreen() {
             }}
           />
         </div>
-      </Section>
-      <Section
+      </RcaCard>
+      <RcaCard
         title="From other plants"
-        description="Lessons other plants of your organization shared. Check the fit (process, operating envelope, design) and use your own change control before copying a change."
+        info="Lessons other plants of your organization shared. Check the fit (process, operating envelope, design) and use your own change control before copying a change."
         collapsible
-        defaultOpen={false}
       >
         <SharedLessons />
-      </Section>
+      </RcaCard>
     </Page>
   );
 }

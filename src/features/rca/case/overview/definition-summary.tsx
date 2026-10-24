@@ -5,6 +5,7 @@ import { RCA_CONSEQUENCE_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { TEAM_LOCKED_STATUSES } from '../../model/case-workflow';
 import { useCaseWorkspace } from '../case-context';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 function Fact({ label, value }: { label: string; value: string | null }) {
   return <div className="min-w-0"><dt className="text-sm text-muted-foreground">{label}</dt><dd className="mt-1 whitespace-pre-wrap break-words text-sm">{value?.trim() || 'Not recorded'}</dd></div>;
@@ -17,7 +18,7 @@ export function DefinitionSummary() {
   const users = useUserNames();
   const locked = TEAM_LOCKED_STATUSES.includes(rca.status ?? '');
   return <>
-    <Section title="Definition" description="Saved investigation facts; changes are made in the definition editor.">
+    <Section title="Definition" titleAside={<KpiInfo label="Definition" text="Saved investigation facts; changes are made in the definition editor." />}>
       <dl className="grid gap-4 md:grid-cols-2">
         <Fact label="Consequence class" value={rca.consequenceClass ? labelOf(RCA_CONSEQUENCE_LABELS, rca.consequenceClass) : null} />
         <Fact label="Root cause" value={rca.rootCause} />

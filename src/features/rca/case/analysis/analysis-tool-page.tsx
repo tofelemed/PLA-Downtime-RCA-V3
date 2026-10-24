@@ -3,6 +3,7 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 import { Section } from '@/features/ux-kit/page-layout';
 import { toolOf, type AnalysisToolSlug } from '../../model/analysis-tools';
 import { useCaseWorkspace } from '../case-context';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 const named = <T,>(load: () => Promise<T>, name: keyof T) =>
   lazy(async () => ({ default: (await load())[name] as unknown as ComponentType }));
@@ -30,7 +31,7 @@ export function AnalysisToolPage() {
   return (
     <Section
       title={tool.name}
-      description={tool.description}
+      titleAside={<KpiInfo label={tool.name} text={tool.description} />}
       actions={
         <Link className="text-sm underline" to={`${basePath}/analysis`}>
           All methods

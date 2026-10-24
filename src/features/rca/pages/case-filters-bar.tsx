@@ -1,6 +1,7 @@
 import { RCA_PRIORITIES } from '@/api/v2/types/rca';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { ALL, type CaseListFilters } from '../model/case-filters';
 import { FILTER_STATUSES, statusLabel } from '../model/rca-labels';
@@ -12,10 +13,10 @@ interface Option {
 
 function FilterSelect(props: { id: string; label: string; value: string; options: Option[]; onChange: (value: string) => void }) {
   return (
-    <div className="space-y-1">
+    <div className={FIELD_CLASS}>
       <Label htmlFor={props.id}>{props.label}</Label>
       <Select value={props.value} onValueChange={props.onChange}>
-        <SelectTrigger id={props.id} className="w-full sm:w-44">
+        <SelectTrigger id={props.id} className="h-9 w-full sm:w-44">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -46,9 +47,9 @@ const OPEN_OPTIONS: Option[] = [
 /** Search (debounced) and the status / priority / due / open filters; every filter is applied by the server. */
 export function CaseFiltersBar({ value, onChange }: { value: CaseListFilters; onChange: (next: CaseListFilters) => void }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end" data-testid="case-filters">
-      <div className="space-y-1">
-        <p className="text-sm font-medium" aria-hidden="true">
+    <div className="flex flex-wrap items-end gap-3" data-testid="case-filters">
+      <div className={FIELD_CLASS}>
+        <p className="text-sm font-medium leading-none" aria-hidden="true">
           Search
         </p>
         <DebouncedSearchInput
@@ -56,7 +57,7 @@ export function CaseFiltersBar({ value, onChange }: { value: CaseListFilters; on
           placeholder="Search titles"
           value={value.q}
           onChange={(q) => onChange({ ...value, q })}
-          className="sm:w-72"
+          className="sm:w-72 [&_input]:h-9"
         />
       </div>
       <FilterSelect id="case-status" label="Status" value={value.status} options={STATUS_OPTIONS} onChange={(status) => onChange({ ...value, status })} />

@@ -3,6 +3,7 @@ import { LinksTab } from '../../links/links-tab';
 import { OutcomePanel } from '../../outcome-panel';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 /** `/rca/:caseId/links`: what the case is linked to (with evidence packages) and its outcome figures. */
 export function LinksPage() {
@@ -10,10 +11,10 @@ export function LinksPage() {
   const { timezone } = useRcaFormat();
   return (
     <>
-      <Section title="Links" description="Events, approved loss lines, work orders and occurrences this investigation covers.">
+      <Section title="Links" titleAside={<KpiInfo label="Links" text="Events, approved loss lines, work orders and occurrences this investigation covers." />}>
         <LinksTab rcaId={rca.id} timezone={timezone} closed={rca.status === 'Closed'} />
       </Section>
-      <Section title="Outcome" description="Approved historical loss, claimed avoided loss and realized difference — three separate figures, never added up.">
+      <Section title="Outcome" titleAside={<KpiInfo label="Outcome" text="Approved historical loss, claimed avoided loss and realized difference — three separate figures, never added up." />}>
         <OutcomePanel rcaId={rca.id} />
       </Section>
     </>

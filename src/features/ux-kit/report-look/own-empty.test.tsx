@@ -23,4 +23,11 @@ describe('report look: own empty messages (opt-in `ownEmpty`)', () => {
     expect(screen.getAllByText('No data for these dates')).toHaveLength(1);
     expect(screen.getAllByTestId('own-empty')).toHaveLength(2);
   });
+
+  it('`ownEmpty`: a table keeps the action of its empty state (e.g. "Clear filters")', () => {
+    const withAction = <DataTable caption="Cases" columns={[{ id: 'a', header: 'A', cell: () => 'x' }]} rows={[]} getRowKey={() => 'k'} empty={{ text: 'No case matches.', action: <button type="button">Clear filters</button> }} />;
+    wrap({ provisional: false, ownEmpty: true }, withAction);
+    expect(screen.getByText('No case matches.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+  });
 });

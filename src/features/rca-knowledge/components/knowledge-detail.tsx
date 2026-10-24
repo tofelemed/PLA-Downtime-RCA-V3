@@ -4,6 +4,7 @@ import type { RcaKnowledgeView } from '@/api/v2/types/rca-knowledge';
 import { Badge } from '@/components/ui/badge';
 import { useRcaFormat } from '@/features/rca/use-rca-format';
 import { useFailureModeLabel } from '@/features/rca/use-failure-mode-label';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { PageHeader, Section } from '@/features/ux-kit/page-layout';
@@ -83,7 +84,7 @@ function EntryBody({ entry }: { entry: RcaKnowledgeView }) {
             </ul>
           )}
         </Section>
-        <Section title="Quality" description="How the server scored this entry." collapsible defaultOpen={false}>
+        <Section title="Quality" titleAside={<KpiInfo label="Quality" text="How the server scored the completeness of this investigation record." />} collapsible defaultOpen={false}>
           <QualityBreakdown parts={entry.quality} />
         </Section>
         {canVote && (
