@@ -1,12 +1,10 @@
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { zonedParts } from '@/lib/dates/zoned-parts';
 import { StatusIcon } from '@/lib/icons';
 
-/** "UTC+03:30" for the zone at `at` (DST-safe: the offset is read from Intl at that instant). */
+/** "UTC+03:30" for the zone at `at` (DST-safe: the offset is the zone's at that instant). */
 function formatUtcOffset(timeZone: string, at: Date): string {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'longOffset' }).formatToParts(at);
-  const raw = parts.find((part) => part.type === 'timeZoneName')?.value ?? 'GMT';
-  const offset = raw.replace('GMT', '');
-  return offset === '' ? 'UTC+00:00' : `UTC${offset}`;
+  return `UTC${zonedParts(at, timeZone).offset}`;
 }
 
 /**
