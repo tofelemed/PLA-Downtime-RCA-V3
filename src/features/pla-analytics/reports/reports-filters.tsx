@@ -3,7 +3,7 @@ import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-se
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { CHOSEN_DATES, type AnalyticsScope } from '../model/analytics-scope';
 import { PlantDaysInput } from '../components/plant-days-input';
-import { SELECT_CLASS } from '../components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '../components/analytics-filters';
 import { REVISION_OPTIONS } from './revision-options';
 
 export interface ReportsFiltersProps {
@@ -34,11 +34,8 @@ export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProp
         calendarPicker
         toolbar
       />
-      <div className="space-y-1">
-        {/* the button names itself ("Units: All"); the blank line keeps it level with the labelled controls */}
-        <span aria-hidden="true" className="invisible block text-sm font-medium leading-none">
-          Units
-        </span>
+      {/* the button names itself ("Units: All"); the bar aligns every control on its bottom edge */}
+      <div>
         <MultiCheckSelect
           label="Units"
           testId="report-units"
@@ -48,7 +45,7 @@ export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProp
           commitOnClose
         />
       </div>
-      <div className="space-y-1">
+      <div className={FIELD_CLASS}>
         <Label htmlFor="report-revision">Revision</Label>
         <select
           id="report-revision"

@@ -1,5 +1,5 @@
 import { Label } from '@/components/ui/label';
-import { SELECT_CLASS } from '../components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '../components/analytics-filters';
 import { REPORT_TYPES, firstViewOf, reportsOfType, typeOfView } from './report-catalog';
 
 export interface ReportViewPickerProps {
@@ -13,7 +13,7 @@ export function ReportViewPicker({ view, onViewChange }: ReportViewPickerProps) 
   const type = typeOfView(view);
   return (
     <>
-      <div className="space-y-1">
+      <div className={FIELD_CLASS}>
         <Label htmlFor="report-type">Report type</Label>
         <select id="report-type" data-testid="report-type" className={SELECT_CLASS} value={type.key} onChange={(e) => onViewChange(firstViewOf(e.target.value))}>
           {REPORT_TYPES.map((entry) => (
@@ -23,7 +23,7 @@ export function ReportViewPicker({ view, onViewChange }: ReportViewPickerProps) 
           ))}
         </select>
       </div>
-      <div className="space-y-1">
+      <div className={FIELD_CLASS}>
         <Label htmlFor="report-view">Report</Label>
         <select id="report-view" data-testid="report-view" className={SELECT_CLASS} value={view} onChange={(e) => onViewChange(e.target.value)}>
           {reportsOfType(type).map((entry) => (

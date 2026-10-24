@@ -67,7 +67,7 @@ function ReportsBody({ dayStart }: { dayStart: string }) {
     <Page width="wide">
       <div className="space-y-4" data-testid="reports-v2">
         <ReportsHeader />
-        <div className="flex flex-wrap items-start gap-x-4 gap-y-3 print:hidden" role="group" aria-label="Report filters" data-testid="reports-top-bar">
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-3 print:hidden" role="group" aria-label="Report filters" data-testid="reports-top-bar">
           <ReportViewPicker view={view} onViewChange={chooseView} />
           <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} />
         </div>
