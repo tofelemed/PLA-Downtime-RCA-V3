@@ -1,7 +1,7 @@
 import { displayCount } from '@/features/ux-kit/format/plural';
 import { Link } from 'react-router-dom';
 import type { MonthCloseView } from '@/api/v2/types/month-close';
-import { Section } from '@/features/ux-kit/page-layout';
+import { CloseCard } from './close-card';
 import { closeHeadline } from '../model/close-blockers';
 import { closeSearch, type CloseSection } from '../model/close-section';
 import { CloseDeadlines } from './close-deadlines';
@@ -15,12 +15,11 @@ function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: UR
     { section: 'days', label: 'Days not certified', count: p.days - p.certifiedDays,
       detail: policy.requireCertifiedDays ? `${displayCount(p.certifiedDays)} of ${displayCount(p.days)} certified` : 'Certification does not block close under this policy' },
     { section: 'proposals', label: 'Open proposals', count: p.openProposalCount,
-      detail: view.state === 'locked' ? 'Review through the after-close correction workflow'
-        : policy.blockOnOpenProposals ? 'Settle open proposals before closing' : 'Open proposals do not block close under this policy' },
+      detail: view.state !== 'locked' && !policy.blockOnOpenProposals ? 'Open proposals do not block close under this policy' : '' },
   ];
   return (
     <div className="space-y-2" data-testid="close-prerequisites" data-met={p.met}>
-      <p className="text-sm text-muted-foreground"><span data-testid="close-headline">{closeHeadline(view)}</span> Select a count to inspect its records.</p>
+      <p className="text-sm text-muted-foreground"><span data-testid="close-headline">{closeHeadline(view)}</span></p>
       <div className="grid gap-3 sm:grid-cols-3">
         {counts.map(({ section, label, count, detail }) => (
           <Link key={section} to={{ search: `?${closeSearch(params, 'section', section)}` }}
@@ -28,7 +27,7 @@ function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: UR
             data-testid={`close-count-${section}`}>
             <span className="block text-sm font-medium">{label}</span>
             <span className="block text-2xl font-semibold tabular-nums" data-testid={`close-count-${section}-value`}>{count}</span>
-            <span className="block text-xs text-muted-foreground">{detail}</span>
+            {detail && <span className="block text-xs text-muted-foreground">{detail}</span>}
           </Link>
         ))}
       </div>
@@ -42,11 +41,12 @@ function Materiality({ view }: { view: MonthCloseView }) {
   const status = signOffs.materialityRequired
     ? (signOffs.materialityReviewedBy ? 'Required review completed.' : 'An extra review is needed before finance signs off.')
     : (policy.materialityEnabled ? 'No extra review required for this month.' : 'Materiality review is not enabled by this policy.');
-  return <Section title="Materiality" headingLevel={3} description={status}>
-    {materiality.findings.length > 0 && <p className="text-sm break-words" data-testid="materiality-findings">
+  return <CloseCard title="Materiality">
+    <p className="text-sm text-muted-foreground">{status}</p>
+    {materiality.findings.length > 0 && <p className="mt-2 text-sm break-words" data-testid="materiality-findings">
       Above the materiality threshold: {materiality.findings.map((f) => `${f.quantity} ${f.uom} adjusted (threshold ${f.threshold} ${f.uom})`).join('; ')}.
     </p>}
-  </Section>;
+  </CloseCard>;
 }
 
 /** The decision view keeps authoritative counts and the sole command owner ahead of sampled lists. */

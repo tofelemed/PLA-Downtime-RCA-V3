@@ -1,10 +1,10 @@
 import type { MonthCloseState, MonthCloseView } from '@/api/v2/types/month-close';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { Section } from '@/features/ux-kit/page-layout';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import type { StatusTone } from '@/features/ux-kit/status-tone';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { CLOSE_STATE_LABELS, weekendText } from '../model/close-labels';
+import { CloseCard } from './close-card';
 
 const CLOSE_STATE_TONES: Readonly<Record<MonthCloseState, StatusTone>> = {
   open: 'neutral',
@@ -22,7 +22,7 @@ function Deadline({ label, date, at, overdue, timezone, testId }: { label: strin
         {formatOperationalDate(date, pref)} {overdue && <StatusBadge tone="danger">Overdue</StatusBadge>}
       </p>
       <p className="text-xs text-muted-foreground">
-        until <PlantTime iso={at} tz={timezone} withDate />
+        until <PlantTime iso={at} tz={timezone} withDate withZone={false} />
       </p>
     </div>
   );
@@ -33,9 +33,9 @@ export function CloseDeadlines({ view }: { view: MonthCloseView }) {
   const { deadlines, policy } = view;
   const pref = useCalendarPreference();
   return (
-    <Section
+    <CloseCard
       title="Status and deadlines"
-      description={`Working days skip ${weekendText(policy.weekendDays)} and the plant's holidays (policy version ${policy.version}).`}
+      info={`Working days skip ${weekendText(policy.weekendDays)} and the plant's holidays (policy version ${policy.version}).`}
     >
       <div className="space-y-3">
         <p>
@@ -65,6 +65,6 @@ export function CloseDeadlines({ view }: { view: MonthCloseView }) {
           <p className="text-xs text-muted-foreground">Holidays counted: {deadlines.holidays.map((d) => formatOperationalDate(d, pref)).join(', ')}</p>
         )}
       </div>
-    </Section>
+    </CloseCard>
   );
 }
