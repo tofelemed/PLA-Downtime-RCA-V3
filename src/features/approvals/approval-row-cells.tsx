@@ -26,12 +26,12 @@ export function RowActions({ item }: { item: ApprovalItem }) {
   );
 }
 
+/** What needs approval: the record and its one-line change; the summary and version are on its approval page. */
 export function RecordCell({ item }: { item: ApprovalItem }) {
   return (
     <div className="max-w-md space-y-1">
       <Link className="font-medium underline-offset-4 hover:underline" to={approvalHref(item)}>{item.title}</Link>
-      {item.headline ? <ChangeHeadline field={item.headline} /> : <p className="line-clamp-2 break-words text-xs text-muted-foreground">{item.summary}</p>}
-      {item.version != null && <p className="text-xs text-muted-foreground">Version {item.version}</p>}
+      {item.headline && <ChangeHeadline field={item.headline} />}
     </div>
   );
 }

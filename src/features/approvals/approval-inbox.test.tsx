@@ -77,6 +77,12 @@ describe('pending approvals UI', () => {
     expect(screen.getByRole('link', { name: 'Review & decide Extruder HDPE' }).getAttribute('href')).toBe('/approvals/period-review/rev-1');
     expect(screen.getByRole('link', { name: 'Open workspace' }).getAttribute('href')).toBe('/plans/plan-1/periods/period-1/review#period-review');
   });
+  it('rows show the record and its change only, no summary sentence or version line', async () => {
+    rows = [item({ headline: null, summary: 'Set the posting date and treatment after reviewing the approved restatement delta', version: 2 })];
+    mount(); await screen.findByText('Extruder HDPE');
+    expect(screen.queryByText(/Set the posting date/)).toBeNull();
+    expect(screen.queryByText('Version 2')).toBeNull();
+  });
   it('each pending record opens its approval page', async () => { mount(); await screen.findByText('Extruder HDPE'); expect(screen.getByRole('link', { name: 'Review & decide Extruder HDPE' }).getAttribute('href')).toBe('/approvals/profile/profile-1'); expect(screen.getByRole('link', { name: 'Extruder HDPE' }).getAttribute('href')).toBe('/approvals/profile/profile-1'); });
   it('groups rows by workflow and shows the one-line change of each row', async () => {
     rows = [item(), item({ id: 'rate-2', kind: 'rate', kindLabel: 'Production rate', commandId: 'rate-2', title: 'planning rate', resource: 'rates', headline: { key: 'rate', label: 'Rate', before: '28', after: '29', unit: 't/h', currency: null, format: 'quantity', group: null, changed: true } })];
