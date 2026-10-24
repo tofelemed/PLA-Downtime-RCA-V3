@@ -4,7 +4,6 @@ import type { useFlowRoutes } from '@/api/v2/queries/plant-model';
 import type { FlowRouteView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
-import { Section } from '@/features/ux-kit/page-layout';
 import type { AnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
@@ -12,6 +11,7 @@ import { ActionIcon } from '@/lib/icons';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import type { PlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { VersionActions } from '@/features/plans-profiles-calendars/profiles/version-actions';
+import { RecordListCard } from '../components/record-list-card';
 import { FlowRouteDialog } from './flow-route-dialog';
 
 export interface FlowRoutesSectionProps {
@@ -21,6 +21,9 @@ export interface FlowRoutesSectionProps {
   anchor: AnchorFocus;
   canWrite: boolean;
 }
+
+/** the page's former description: what a route does to the losses */
+const ROUTES_INFO = "Which unit feeds which and the buffers between them: a stop upstream uses the buffer's cover before it costs the unit downstream. Another user approves a draft route.";
 
 function columnsOf(refs: PlanningRefs): DataTableColumn<FlowRouteView>[] {
   const uom = (r: FlowRouteView) => r.inventoryUom ?? '';
@@ -44,12 +47,12 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<FlowRouteView>[] {
       nowrap: true,
       cell: (r) => (
         <span className="text-xs">
-          <PlantTime iso={r.effectiveFrom} tz={refs.timezone} withDate /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={refs.timezone} withDate /> : 'open-ended'}
+          <PlantTime iso={r.effectiveFrom} tz={refs.timezone} withDate withZone={false} /> → {r.effectiveTo ? <PlantTime iso={r.effectiveTo} tz={refs.timezone} withDate withZone={false} /> : 'open-ended'}
         </span>
       ),
     },
-    { id: 'state', header: 'State', cell: (r) => <VersionStateBadge state={r.state} /> },
-    { id: 'actions', header: 'Actions', cell: (r) => <VersionActions resource="flow-routes" id={r.id} state={r.state} timezone={refs.timezone} authorId={r.createdBy} /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (r) => <VersionStateBadge state={r.state} /> },
+    { id: 'actions', header: 'Actions', nowrap: true, cell: (r) => <VersionActions resource="flow-routes" id={r.id} state={r.state} timezone={refs.timezone} authorId={r.createdBy} /> },
   ];
 }
 
@@ -57,13 +60,13 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<FlowRouteView>[] {
 export function FlowRoutesSection({ refs, routes, anchor, canWrite }: FlowRoutesSectionProps) {
   const [adding, setAdding] = useState(false);
   const action = canWrite ? (
-    <Button type="button" size="sm" onClick={() => setAdding(true)} data-testid="flow-route-new">
+    <Button type="button" size="sm" className="h-9" onClick={() => setAdding(true)} data-testid="flow-route-new">
       <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
       Add route
     </Button>
   ) : null;
   return (
-    <Section title="Routes" actions={action}>
+    <RecordListCard title="Routes" info={ROUTES_INFO} actions={action} testId="flow-routes-card">
       <div className="space-y-2" data-testid="flow-routes-section">
         <FocusedListNotice anchor={anchor} what="routes" />
         <DataTable
@@ -78,6 +81,6 @@ export function FlowRoutesSection({ refs, routes, anchor, canWrite }: FlowRoutes
         />
       </div>
       {adding && <FlowRouteDialog unitOptions={refs.unitOptions} timezone={refs.timezone} onDone={() => setAdding(false)} />}
-    </Section>
+    </RecordListCard>
   );
 }

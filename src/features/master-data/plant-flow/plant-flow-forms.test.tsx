@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -14,6 +14,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 const { FlowRouteDialog } = await import('./flow-route-dialog');
 const { BufferLevelDialog } = await import('./buffer-level-dialog');
 const { BufferLevelsSection } = await import('./buffer-levels-section');
+const { PlantFlowPage } = await import('./plant-flow-page');
 
 const TZ = 'Asia/Tehran';
 const UNITS = [{ value: 'u1', label: 'Reactor' }, { value: 'u2', label: 'Extruder' }];
@@ -122,5 +123,52 @@ describe('plant flow save feedback (DECISIONS 2026-10-22)', () => {
     unmount();
     wrap(<BufferLevelsSection refs={refs} bufferOptions={BUFFERS} canWrite={false} />);
     expect(screen.queryByRole('button', { name: 'Record buffer level' })).toBeNull();
+  });
+
+  // Plant & equipment cleanup (25 Oct 2026): ⓘ instead of description paragraphs, h-9, focus the first field, Esc closes
+  it('Add route dialog: purpose behind the title ⓘ, focus in "From unit", h-9 fields, Cancel then primary, Esc closes', async () => {
+    const onDone = vi.fn();
+    wrap(<FlowRouteDialog unitOptions={UNITS} timezone={TZ} onDone={onDone} />);
+    const dialog = screen.getByRole('dialog', { name: 'Add route' });
+    expect(within(dialog).queryByText(/another user approves it/)).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'About Add route' })).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('From unit (supplies)')));
+    expect(screen.getByTestId('flow-route-form')).toHaveClass('[&_input]:h-9');
+    expect(within(dialog).getAllByRole('button').filter((b) => /^(Cancel|Add draft route)$/.test(b.textContent ?? '')).map((b) => b.textContent)).toEqual(['Cancel', 'Add draft route']);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
+  it('Record buffer level dialog: purpose behind ⓘ, 560 px, focus in "Buffer", Esc closes', async () => {
+    const onClose = vi.fn();
+    wrap(<BufferLevelDialog bufferOptions={BUFFERS} timezone={TZ} onClose={onClose} />);
+    const dialog = screen.getByRole('dialog', { name: 'Record buffer level' });
+    expect(dialog).toHaveClass('sm:max-w-[560px]');
+    expect(within(dialog).queryByText(/within 24 h/)).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'About Record buffer level' })).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText('Buffer')));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('Buffer levels: a report-look card with the rule behind ⓘ, read time without the zone', async () => {
+    reply = (call) => (call.method === 'GET' ? jsonResponse(200, { items: [LEVEL], nextCursor: null }) : undefined);
+    const refs = { timezone: TZ, unitName: (id: string) => (id === 'u1' ? 'Reactor' : 'Extruder') } as unknown as Parameters<typeof BufferLevelsSection>[0]['refs'];
+    wrap(<BufferLevelsSection refs={refs} bufferOptions={BUFFERS} canWrite />);
+    const table = await screen.findByRole('table', { name: 'Buffer levels' });
+    expect(screen.getByTestId('buffer-levels-card')).toHaveClass('rounded-lg', 'border', 'bg-card', 'p-4');
+    expect(screen.queryByText(/replaces the configured usable inventory/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Buffer levels' })).toBeTruthy();
+    await waitFor(() => expect(within(table).getByText(/06:00/)).toBeTruthy());
+    expect(table.textContent).not.toMatch(/Asia\/Tehran|\+03:30/);
+  });
+
+  it('Plant flow page: no header description; Routes card with its ⓘ, own empty message and Add route', async () => {
+    wrap(<PlantFlowPage />);
+    expect(await screen.findByText('Without routes no stop propagates between units: each unit counts its own losses only.')).toBeTruthy();
+    expect(screen.queryByText(/a stop upstream uses the buffer's cover/)).toBeNull();
+    const routes = screen.getByTestId('flow-routes-card');
+    expect(within(routes).getByRole('button', { name: 'About Routes' })).toBeTruthy();
+    expect(within(routes).getByTestId('flow-route-new')).toHaveClass('h-9');
   });
 });

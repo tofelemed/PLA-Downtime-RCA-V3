@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { Input } from '@/components/ui/input';
 import { useRecordBufferLevel } from '@/api/v2/queries/plant-model';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { focusFirstField } from './focus-first-field';
 import { FormField } from '@/features/plans-profiles-calendars/components/form-field';
 import { NativeSelect, type Option } from '@/features/plans-profiles-calendars/components/native-select';
-import { PlantDateTimeField } from '@/features/plans-profiles-calendars/components/plant-date-time-field';
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
 import { refusalOf } from '@/features/plans-profiles-calendars/model/refusal';
+import { FlowDateTimeField } from './flow-date-time-field';
 import { PlantFlowSaveAlert } from './plant-flow-save-alert';
 import { bufferLevelCreateBody, type BufferLevelFormValues, emptyBufferLevelForm, validateBufferLevelForm } from './plant-flow-form-model';
 
@@ -44,17 +46,19 @@ export function BufferLevelDialog({ bufferOptions, timezone, onClose }: BufferLe
   const { values, set, fieldError, save, failure, busy } = useBufferLevelSave(timezone, onClose);
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[560px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('levelRoute')}>
         <DialogHeader>
-          <DialogTitle>Record buffer level</DialogTitle>
-          <DialogDescription>A level read within 24 h before an upstream stop replaces the configured usable inventory.</DialogDescription>
+          <div className="flex items-center gap-1.5">
+            <DialogTitle>Record buffer level</DialogTitle>
+            <KpiInfo label="Record buffer level" text="A level read within 24 h before an upstream stop replaces the configured usable inventory." />
+          </div>
         </DialogHeader>
-        <form noValidate className="space-y-3" data-testid="buffer-level-form" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <form noValidate className="space-y-3 [&_input]:h-9" data-testid="buffer-level-form" onSubmit={(e) => { e.preventDefault(); void save(); }}>
           <PlantFlowSaveAlert error={failure} timezone={timezone} />
           <FormField id="levelRoute" label="Buffer" error={fieldError('fromUnitId')}>
             <NativeSelect id="levelRoute" value={values.routeKey} options={bufferOptions} placeholder="Choose…" onChange={(v) => set('routeKey', v)} />
           </FormField>
-          <PlantDateTimeField id="levelAt" label="Read at" value={values.observedAt} timezone={timezone} error={fieldError('observedAt')} onChange={(v) => set('observedAt', v)} />
+          <FlowDateTimeField id="levelAt" label="Read at" value={values.observedAt} timezone={timezone} error={fieldError('observedAt')} onChange={(v) => set('observedAt', v)} />
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField id="levelValue" label="Level" error={fieldError('level')}>
               <DecimalInput id="levelValue" value={values.level} onChange={(v) => set('level', v)} aria-label="Buffer level" />
@@ -64,8 +68,8 @@ export function BufferLevelDialog({ bufferOptions, timezone, onClose }: BufferLe
             </FormField>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
-            <Button type="submit" disabled={busy}>Record level</Button>
+            <Button type="button" variant="outline" className="h-9" onClick={onClose} disabled={busy}>Cancel</Button>
+            <Button type="submit" className="h-9" disabled={busy}>Record level</Button>
           </DialogFooter>
         </form>
       </DialogContent>
