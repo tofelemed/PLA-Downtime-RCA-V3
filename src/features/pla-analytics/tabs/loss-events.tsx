@@ -95,7 +95,7 @@ export function LossEvents({ scope, onChange }: LossEventsProps) {
   });
   return (
     <div className="space-y-4" data-testid="loss-events">
-      <ReportCard title="Loss events" testId="loss-events-card" info={EVENTS_INFO} actions={<OeeFilterChip scope={scope} onChange={onChange} />}>
+      <ReportCard title="Loss events" testId="loss-events-card" info={EVENTS_INFO} provisional={losses.data?.isProvisional === true} actions={<OeeFilterChip scope={scope} onChange={onChange} />}>
         <DataTable
           caption="Loss events of this scope"
           columns={columnsOf(env, eventLossesOf(losses.data?.data))}

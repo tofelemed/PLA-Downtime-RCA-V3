@@ -17,6 +17,7 @@ vi.mock('@/features/pla-analytics/charts/series-chart', () => ({
 }));
 vi.mock('@/features/pla-analytics/hooks/use-production-day-start', () => ({ useProductionDayStart: () => ({ dayStart: '06:00', loading: false }) }));
 
+const fixture = vi.hoisted(() => ({ overdue: true }));
 const { PlaAnalyticsPage } = await import('./pla-analytics-page');
 const FROM = '2026-10-01T00:00:00.000Z';
 const TO = '2026-10-08T00:00:00.000Z';
@@ -31,7 +32,7 @@ function reportData(url: URL): object {
   if (url.pathname.endsWith('/loss-value')) return { ...base, total: { currencies: [] }, components: [] };
   if (url.pathname.endsWith('/reconciliation-status')) {
     const overdue = [{ periodId: 'p1', unitId: 'u1', unitName: 'Extruder 1', planId: null, localDate: '2026-10-02', shiftName: 'A', utcStart: FROM, workflowState: 'draft', revision: 1, residualState: null, ageSeconds: 7200 }];
-    return { ...base, periods: 3, waitingForData: 2, rejectionEscalated: 0, overdueCount: 1, overdue, workflow: [{ state: 'draft', periods: 3 }], residual: [], ages: [], sla: { submitWithinHours: 12, approveWithinHours: 24 } };
+    return { ...base, periods: 3, waitingForData: 2, rejectionEscalated: 0, overdueCount: fixture.overdue ? 1 : 0, overdue: fixture.overdue ? overdue : [], workflow: [{ state: 'draft', periods: 3 }], residual: [], ages: [], sla: { submitWithinHours: 12, approveWithinHours: 24 } };
   }
   if (url.pathname.endsWith('/oee')) {
     const total = ['availability', 'performance', 'quality', 'oee'].map((metric) => ({ metric, value: '0.9', numerator: '9', denominator: '10', unit: 'ratio', quality: 'provisional', reason: null, rows: 1, missing: 0 }));
@@ -57,6 +58,7 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
       </QueryClientProvider>,
     );
   beforeEach(() => {
+    fixture.overdue = true;
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
     vi.stubGlobal('fetch', vi.fn(async (input: string) => {
@@ -180,6 +182,26 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
     expect(card).not.toHaveTextContent(/overdue = not submitted|revision 1/);
     expect(within(card).getByRole('button', { name: 'About Reconciliation status and age (3 periods)' })).toBeInTheDocument();
     expect(within(screen.getByTestId('analytics-filters')).getByLabelText('Inspect')).toHaveValue('status');
+  });
+
+  it('a real empty result keeps its own message, centred, without the generic "No data for these dates"', async () => {
+    fixture.overdue = false;
+    open(`/pla-analytics/reconciliation?${WINDOW}`);
+    expect(await screen.findByText('Nothing overdue.')).toBeInTheDocument();
+    expect(screen.queryByText(/No data for these dates|Try other dates/)).toBeNull();
+  });
+
+  it('an empty loss tree says "No loss lines in this scope.", not the generic report text', async () => {
+    open(`/pla-analytics/losses?${WINDOW}`);
+    expect(await screen.findByText('No loss lines in this scope.')).toBeInTheDocument();
+    expect(screen.queryByText(/No data for these dates|Try other dates/)).toBeNull();
+  });
+
+  it('Loss events: the attributed quantities can include drafts, so the card carries the Provisional marker', async () => {
+    open(`/pla-analytics/losses?${WINDOW}&breakdown=loss-events`);
+    const card = await screen.findByTestId('loss-events-card');
+    expect(await within(card).findByTestId('provisional-mark')).toBeInTheDocument();
+    expect(await within(card).findByText('No loss events in this window.')).toBeInTheDocument();
   });
 
   it('Loss valuation: the basis is in the filter bar; no explanatory paragraph or caption, the ledger is not repeated in the title', async () => {
