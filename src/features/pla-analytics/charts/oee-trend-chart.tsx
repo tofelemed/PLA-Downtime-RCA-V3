@@ -11,9 +11,10 @@ import { bucketLabel } from '../model/buckets';
 import { OEE_METRIC_LABELS } from '../model/display';
 import { oeeRows } from '../model/series';
 
-const OEE_SERIES = { key: 'oee', label: OEE_METRIC_LABELS.oee, colour: 'hsl(var(--primary))' };
+/** Chart palette only (charts ignore the plant branding); Availability is a neutral slate, never the alarm red. */
+const OEE_SERIES = { key: 'oee', label: OEE_METRIC_LABELS.oee, colour: 'hsl(var(--chart-1))' };
 const COMPONENT_SERIES = [
-  { key: 'availability', label: OEE_METRIC_LABELS.availability, colour: 'hsl(var(--danger))' },
+  { key: 'availability', label: OEE_METRIC_LABELS.availability, colour: 'hsl(var(--chart-8))' },
   { key: 'performance', label: OEE_METRIC_LABELS.performance, colour: 'hsl(var(--chart-2))' },
   { key: 'quality', label: OEE_METRIC_LABELS.quality, colour: 'hsl(var(--warning))' },
 ] as const;

@@ -16,7 +16,8 @@ function chartFiles(dir: string): string[] {
     const path = join(dir, name);
     if (statSync(path).isDirectory()) return name === 'ui' ? [] : chartFiles(path);
     if (!/\.tsx?$/.test(name) || /\.(test|spec)\.tsx?$/.test(name)) return [];
-    return /from ['"]recharts['"]/.test(readFileSync(path, 'utf8')) ? [path] : [];
+    // a chart drawn through the shared series chart passes its colours in, so it is checked too
+    return /from ['"](?:recharts|\.\/series-chart)['"]/.test(readFileSync(path, 'utf8')) ? [path] : [];
   });
 }
 

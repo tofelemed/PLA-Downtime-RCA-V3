@@ -11,12 +11,12 @@ export interface ReliabilityBar {
   mttr: string | null;
 }
 
-const MTBF_COLOUR = 'hsl(var(--primary))';
+const MTBF_COLOUR = 'hsl(var(--chart-1))';
 const MTTR_COLOUR = 'hsl(var(--chart-2))';
 
 const toNumber = (value: string | null) => (value === null ? null : Number(value));
 
-/** MTBF (solid, left axis) and MTTR (dashed, right axis) per month as the server states them; each has its own scale. */
+/** MTBF (solid, left axis) and MTTR (dashed, right axis) per month as the server states them; each has its own scale, and a month without a value is a gap. */
 export function MtbfTrendLines({ rows }: { rows: readonly ReliabilityBar[] }) {
   const { digits } = useCalendarPreference();
   const points = rows.map((row) => ({ label: row.label, mtbf: toNumber(row.mtbf), mttr: toNumber(row.mttr) }));
@@ -31,8 +31,8 @@ export function MtbfTrendLines({ rows }: { rows: readonly ReliabilityBar[] }) {
           <YAxis yAxisId="mttr" orientation="right" tick={{ fontSize: 11 }} width={80} tickFormatter={(value: unknown) => unbreakable(seconds(value))} />
           <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(value: unknown) => seconds(value)} />
           <Legend />
-          <Line yAxisId="mtbf" dataKey="mtbf" name="MTBF" stroke={MTBF_COLOUR} strokeWidth={2} dot={{ r: 2 }} connectNulls isAnimationActive={false} />
-          <Line yAxisId="mttr" dataKey="mttr" name="MTTR" stroke={MTTR_COLOUR} strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2 }} connectNulls isAnimationActive={false} />
+          <Line yAxisId="mtbf" dataKey="mtbf" name="MTBF" stroke={MTBF_COLOUR} strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} />
+          <Line yAxisId="mttr" dataKey="mttr" name="MTTR" stroke={MTTR_COLOUR} strokeWidth={2} strokeDasharray="5 4" dot={{ r: 2 }} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
     </ChartFigure>
