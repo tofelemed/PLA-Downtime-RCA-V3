@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
-import type { LossTreeGroupBy, LossTreeMetricParam, LossTreeView } from '@/api/v2/types/pla-analytics';
+import type { LossTreeView } from '@/api/v2/types/pla-analytics';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
