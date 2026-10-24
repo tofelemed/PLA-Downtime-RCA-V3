@@ -5,7 +5,7 @@ import { AnchorPageSync } from './anchor-page-sync';
 import { DataTableGrid } from './data-table-grid';
 import { ListPager } from './data-table-pager';
 import { REPORT_EMPTY, useReportLook } from '../report-look/use-report-look';
-import { EmptyMessage, RefreshBar } from './data-table-states';
+import { EmptyMessage, OwnEmptyMessage, RefreshBar } from './data-table-states';
 import type { DataTableProps } from './data-table-types';
 import type { PagerModel } from './pager-model';
 import { useClientPager } from './use-client-pager';
@@ -62,7 +62,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   if (look && props.rows.length === 0 && !status?.isLoading) {
     return (
       <div className={cn('rounded-md border px-4 py-10', className)}>
-        <EmptyMessage empty={REPORT_EMPTY} />
+        {look.ownEmpty && props.empty?.text ? <OwnEmptyMessage text={props.empty.text} /> : <EmptyMessage empty={REPORT_EMPTY} />}
       </div>
     );
   }

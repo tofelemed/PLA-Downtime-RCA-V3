@@ -45,6 +45,16 @@ export function EmptyMessage({ empty }: { empty?: DataTableEmpty }) {
   );
 }
 
+/** A list's or card's own empty result (a real result, e.g. "Nothing overdue."), centred, without a hint. */
+export function OwnEmptyMessage({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 text-center" data-state="empty" data-testid="own-empty">
+      <StatusIcon.empty aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
+      <p className="font-medium">{text}</p>
+    </div>
+  );
+}
+
 /** Thin indeterminate bar on top of the table while new rows load behind the visible ones. */
 export function RefreshBar() {
   return (

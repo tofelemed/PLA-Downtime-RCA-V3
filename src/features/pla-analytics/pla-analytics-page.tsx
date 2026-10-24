@@ -67,7 +67,7 @@ function PlaAnalyticsScreen({ view }: { view: PlaView }) {
         {/* capacity gap: no window or ledger, it has its own unit / product / as-of filters */}
         {view !== 'capacity' && <AnalyticsFilters scope={scope} onChange={change} picker={<ViewPicker view={view} scope={scope} onChange={change} />} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />}
         <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>
-          <ReportChrome approvedOnly={scope.approvedOnly}>
+          <ReportChrome approvedOnly={scope.approvedOnly} ownEmpty>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>
           </ReportChrome>
         </AnalysisSnapshotContext.Provider>

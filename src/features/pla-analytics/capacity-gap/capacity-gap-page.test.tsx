@@ -59,6 +59,8 @@ const ROW: CapacityGapRowView = {
 
 const REPORT: CapacityGapReportView = { at: '2026-10-19T08:00:00.000Z', items: [ROW], limit: 200, truncated: true, asOf: '2026-10-19T08:00:01.000Z' };
 
+const report = vi.hoisted(() => ({ empty: false }));
+
 describe('Capacity gap page (plan 1.2)', () => {
   let urls: URL[];
   beforeEach(() => {
@@ -68,7 +70,7 @@ describe('Capacity gap page (plan 1.2)', () => {
       vi.fn(async (input: string) => {
         const url = new URL(input);
         urls.push(url);
-        const body = url.pathname.endsWith('/reports/capacity-gap') ? REPORT : { items: [], nextCursor: null, asOf: REPORT.asOf, scope: { tenantId: 'tenant-a' } };
+        const body = url.pathname.endsWith('/reports/capacity-gap') ? (report.empty ? { ...REPORT, items: [], truncated: false } : REPORT) : { items: [], nextCursor: null, asOf: REPORT.asOf, scope: { tenantId: 'tenant-a' } };
         return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }),
     );
@@ -82,7 +84,7 @@ describe('Capacity gap page (plan 1.2)', () => {
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[`/pla-analytics/capacity-gap${search}`]}>
-          <ReportChrome approvedOnly={false}>
+          <ReportChrome approvedOnly={false} ownEmpty>
             <CapacityGapPage scope={scope} onChange={() => undefined} />
           </ReportChrome>
         </MemoryRouter>
@@ -122,6 +124,14 @@ describe('Capacity gap page (plan 1.2)', () => {
     expect(request?.searchParams.getAll('productIds')).toEqual(['pr1']);
     // 00:00 Tehran (UTC+03:30) on the chosen plant date
     expect(request?.searchParams.get('at')).toBe('2026-10-18T20:30:00.000Z');
+  });
+
+  it('no profile in force: the card says so itself, not "No data for these dates" / "Try other dates or units"', async () => {
+    report.empty = true;
+    renderPage();
+    expect(await screen.findByText('No approved production profile is in force for these units and products at this date.')).toBeInTheDocument();
+    expect(screen.queryByText(/No data for these dates|Try other dates/)).toBeNull();
+    report.empty = false;
   });
 
   it('the filters are one bottom-aligned row: Units, Products, then "As of" labelled above (no hint in the label)', async () => {
