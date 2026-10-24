@@ -100,10 +100,10 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
 }
 
 const OPENING: Readonly<Record<'plan' | 'capacity', KpiTileSpec>> = {
-  plan: { title: 'Plan target', info: 'The approved plan quantity of the shown periods (plan ledger): where the waterfall starts.' },
-  capacity: { title: 'Sustained capacity', info: 'Output at the approved sustained rate over the scheduled time of the shown periods (capacity ledger): where the waterfall starts.' },
+  plan: { title: 'Plan target', info: 'The approved plan quantity of the calculated periods (plan ledger): where the waterfall starts.' },
+  capacity: { title: 'Sustained capacity', info: 'Output at the approved sustained rate over the whole period time of the calculated periods (capacity ledger), before planned exclusions — where the waterfall starts.' },
 };
-const CLOSING: KpiTileSpec = { title: 'Actual good output', info: 'The good output of the shown periods: where the waterfall ends.' };
+const CLOSING: KpiTileSpec = { title: 'Actual good output', info: 'The good output of the calculated periods: where the waterfall ends.' };
 
 /** Where the waterfall starts and ends, as the dashboard's KPI tiles (uppercase label, ⓘ definition). */
 function WaterfallTotals({ data, plan }: { data: ScopeWaterfallView; plan: boolean }) {
