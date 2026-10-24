@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { PlanBar } from '../charts/plan-trend-bars';
 
-const state = vi.hoisted(() => ({ canViewAnalysis: true, totals: [] as unknown[], buckets: [] as unknown[], lossGroups: [] as unknown[], bars: [] as unknown[], fail: false, refetch: vi.fn() }));
+const state = vi.hoisted(() => ({ canViewAnalysis: true, totals: [] as unknown[], buckets: [] as unknown[], lossGroups: [] as unknown[], bars: [] as unknown[], lossQueries: [] as unknown[], fail: false, refetch: vi.fn() }));
 
 vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewAnalysis: state.canViewAnalysis }) }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
@@ -23,7 +23,10 @@ vi.mock('@/api/v2/queries/pla-analytics', async (original) => ({
     if (state.fail) return { data: undefined, isLoading: false, isError: true, error: new Error('boom'), refetch: state.refetch };
     return result({ groupBy: 'day', buckets: state.buckets, totals: state.totals });
   },
-  useLossTree: () => result({ groups: state.lossGroups }),
+  useLossTree: (query: unknown) => {
+    state.lossQueries.push(query);
+    return result({ groups: state.lossGroups });
+  },
 }));
 
 const { parseScope } = await import('../model/analytics-scope');
@@ -105,6 +108,17 @@ describe('ProductionPlanSection', () => {
     await userEvent.click(screen.getByRole('button', { name: 'm' }));
     expect(lastBars().rows).toEqual([expect.objectContaining({ actual: '15', explained: '2', unexplained: '1' })]);
     expect(screen.getAllByTestId('plan-top-reason').map((li) => li.textContent)).toEqual(['Wear3.00 m']);
+  });
+
+  it('asks for five reasons (the server limits per unit of measure) and lists all five of the selected unit', async () => {
+    state.totals = [row('total', 't', { plan: '1000' }), row('total', 'm', { plan: '50' })];
+    state.lossGroups = [...['a', 'b', 'c', 'd', 'e'].map((k) => loss(k, 't', '9')), ...['v', 'w', 'x', 'y', 'z'].map((k) => loss(k, 'm', '1'))];
+    state.lossQueries = [];
+    renderSection();
+    expect(state.lossQueries.at(-1)).toMatchObject({ groupBy: 'reason', metric: 'qty', limit: 5 });
+    expect(screen.getAllByTestId('plan-top-reason')).toHaveLength(5);
+    await userEvent.click(screen.getByRole('button', { name: 'm' }));
+    expect(screen.getAllByTestId('plan-top-reason').map((li) => li.textContent)).toEqual(['v1.00 m', 'w1.00 m', 'x1.00 m', 'y1.00 m', 'z1.00 m']);
   });
 
   it('offers the Production loss analysis link only with canViewAnalysis', () => {
