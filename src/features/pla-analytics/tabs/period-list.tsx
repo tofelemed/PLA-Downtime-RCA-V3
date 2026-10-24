@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels';
 import { useCalendarPreference } from '@/lib/dates';
 import { periodLabel } from '../model/period-label';
+import { ReportCard } from '../components/report-card';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { periodListQuery, periodListTitle, periodRowHref, withPeriodList, type PeriodListFilter } from '../model/period-list';
 
@@ -52,18 +53,14 @@ export function PeriodList({ scope, filter }: { scope: AnalyticsScope; filter: P
   const list = usePeriodSummaryList(periodListQuery(scope, filter), 'pla-period-list');
   const columns = useColumns(filter);
   const title = periodListTitle(filter);
+  const info = `Current revision of each period in the ${scope.windowLabel.toLowerCase()}, all plans of ${scope.unitIds.length > 0 ? 'the selected units' : 'the whole plant'}.${filter.kind === 'quality' ? ' Quality losses are recorded as lot dispositions on each period’s Actuals & quality, not as events.' : ''}`;
+  const back = (
+    <Link className="text-sm font-medium text-primary hover:underline" to={withPeriodList(search, '')} data-testid="period-list-back">
+      Back to the counts
+    </Link>
+  );
   return (
-    <section className="space-y-3 rounded-md border p-4" data-testid="pla-period-list" data-filter={filter.state} aria-label={title}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold">{title}</h3>
-        <Link className="text-sm underline" to={withPeriodList(search, '')} data-testid="period-list-back">
-          Back to the counts
-        </Link>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Current revision of each period in the {scope.windowLabel.toLowerCase()}, all plans of {scope.unitIds.length > 0 ? 'the selected units' : 'the whole plant'}.
-        {filter.kind === 'quality' && ' Quality losses are recorded as lot dispositions on each period’s Actuals & quality, not as events.'}
-      </p>
+    <ReportCard title={title} testId="pla-period-list" info={info} actions={back} attributes={{ 'data-filter': filter.state }}>
       <DataTable
         caption={title}
         columns={columns}
@@ -74,6 +71,6 @@ export function PeriodList({ scope, filter }: { scope: AnalyticsScope; filter: P
         density="compact"
         empty={{ text: 'No production periods in this state.' }}
       />
-    </section>
+    </ReportCard>
   );
 }
