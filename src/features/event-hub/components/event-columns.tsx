@@ -6,7 +6,9 @@ import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, PHYSICAL_TYPE_LABELS, SCHEDULE_CLASS_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
 import { DurationSortHeader, StartSortHeader, type EventSortControl } from './event-sort-headers';
+import { nameRepeats } from '../model/name-repeats';
 import { EventStateCell } from './event-state-cell';
+import { StatesHeader } from './states-header';
 import { UnitLabel } from './unit-label';
 
 export interface EventColumnContext {
@@ -148,14 +150,15 @@ function originCell(event: ProductionEventView) {
   );
 }
 
-/** Unit name with the asset under it when the event names one (one column: most stops carry no asset). */
+/** Unit name with the asset under it when the event names one that is not the unit's own name (most stops carry no asset). */
 function unitCell(event: ProductionEventView, context: EventColumnContext) {
+  const asset = event.assetId && context.assetName ? context.assetName(event.assetId) : null;
   return (
     <div>
       <UnitLabel unitId={event.unitId} />
-      {event.assetId && context.assetName && (
+      {asset && !nameRepeats(context.unitName(event.unitId), asset) && (
         <div className="text-xs text-muted-foreground" data-testid="event-asset">
-          {context.assetName(event.assetId)}
+          {asset}
         </div>
       )}
     </div>
@@ -171,7 +174,7 @@ export function eventColumns(context: EventColumnContext): DataTableColumn<Produ
     { id: 'unit', header: 'Unit · asset', nowrap: true, cell: (event) => unitCell(event, context) },
     { id: 'type', header: 'Type', cell: typeCell },
     { id: 'reason', header: 'Reason', cell: (event) => reasonCell(event, context) },
-    { id: 'states', header: 'States', cell: (event) => <EventStateCell event={event} /> },
+    { id: 'states', header: <StatesHeader />, headerLabel: 'States', cell: (event) => <EventStateCell event={event} /> },
     { id: 'origin', header: 'Source', nowrap: true, cell: originCell },
   ];
 }
