@@ -1,4 +1,3 @@
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Link } from 'react-router-dom';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -9,8 +8,8 @@ import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { DashboardHeader } from './dashboard-header';
 import { useDashboardScope } from './use-dashboard-scope';
 import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
-import { eventsHref, reportsHref } from './dashboard-links';
-import { DashboardOee } from './dashboard-oee';
+import { eventsHref } from './dashboard-links';
+import { OeeSection } from './oee-section';
 import { ForYouRow } from './for-you-row';
 import { LatestEvents } from './latest-events';
 import { RcaTiles } from './rca-tiles';
@@ -34,23 +33,16 @@ export function AnalyticsDashboard() {
 }
 
 function DashboardScreen() {
-  const { key, setKey, scope, orgOnly } = useDashboardScope();
+  const { key, setKey, scope, node, orgOnly } = useDashboardScope();
   const { session } = useAuth();
   const { selection } = usePlantSelection();
   const plantName = selection?.tenant?.name ?? session?.tenant?.name ?? 'your plant';
-  // QA re-test N2: the Reports page is closed to operators (menu gate `canViewAnalysis`), so is its link
-  const { canViewAnalysis } = useCapabilities();
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="analytics-dashboard">
         <DashboardHeader scope={scope} keyValue={key} onKey={setKey} orgOnly={orgOnly} plantName={plantName} />
         <ForYouRow scope={scope} />
-        <Section title="OEE" actions={canViewAnalysis ? <Link className="text-sm underline" to={reportsHref(scope, 'production')} data-testid="dashboard-oee-report-link">OEE and downtime report</Link> : undefined}>
-          <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
-            <DashboardOee scope={scope} policy="operational" />
-            <DashboardOee scope={scope} policy="reconciled" />
-          </div>
-        </Section>
+        <OeeSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <Section title="Downtime">
           <div className="grid gap-4 xl:grid-cols-2">
             <DashboardDowntime scope={scope} />

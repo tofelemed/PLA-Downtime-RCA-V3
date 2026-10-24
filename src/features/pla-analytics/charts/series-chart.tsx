@@ -12,12 +12,15 @@ export interface SeriesRow {
 
 export interface SeriesChartProps {
   rows: readonly SeriesRow[];
-  series: ReadonlyArray<{ key: string; label: string }>;
+  /** `colour` (a theme-token colour) overrides the palette position */
+  series: ReadonlyArray<{ key: string; label: string; colour?: string }>;
   kind: 'line' | 'bar';
   /** values are ratios 0..1 shown as percentages on the axis */
   ratio?: boolean;
   /** offer the drawn values as a table ("View values") under the chart */
   valuesTable?: boolean;
+  /** the chart's own legend (default on); off when the caller draws its own */
+  legend?: boolean;
 }
 
 const COLOURS = ['hsl(var(--chart-1))', 'hsl(var(--chart-5))', 'hsl(var(--chart-3))', 'hsl(var(--chart-2))'];
@@ -33,7 +36,7 @@ const TOOLTIP_STYLE = {
  * Time series of server values (lazy chunk, plan 3.6): each point is a server figure converted to a number
  * for drawing only; nothing is summed or averaged here.
  */
-export function SeriesChart({ rows, series, kind, ratio, valuesTable = false }: SeriesChartProps) {
+export function SeriesChart({ rows, series, kind, ratio, valuesTable = false, legend = true }: SeriesChartProps) {
   const points = rows.map((row) => ({
     label: row.label,
     ...Object.fromEntries(series.map((s) => [s.key, row.values[s.key] === null || row.values[s.key] === undefined ? null : Number(row.values[s.key])])),
@@ -57,12 +60,12 @@ export function SeriesChart({ rows, series, kind, ratio, valuesTable = false }: 
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} tickFormatter={axis} />
           <Tooltip {...TOOLTIP_STYLE} formatter={(value: unknown) => (typeof value === 'number' ? (ratio ? percent(value * 100, 1) : number(value, 2)) : String(value))} />
-          <Legend />
+          {legend && <Legend />}
           {series.map((s, index) =>
             kind === 'line' ? (
-              <Line key={s.key} dataKey={s.key} name={s.label} stroke={COLOURS[index % COLOURS.length]} connectNulls={false} isAnimationActive={false} />
+              <Line key={s.key} dataKey={s.key} name={s.label} stroke={s.colour ?? COLOURS[index % COLOURS.length]} connectNulls={false} isAnimationActive={false} />
             ) : (
-              <Bar key={s.key} dataKey={s.key} name={s.label} fill={COLOURS[index % COLOURS.length]} isAnimationActive={false} />
+              <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.colour ?? COLOURS[index % COLOURS.length]} isAnimationActive={false} />
             ),
           )}
         </Chart>

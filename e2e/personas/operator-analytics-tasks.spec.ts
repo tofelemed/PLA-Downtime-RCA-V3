@@ -77,8 +77,8 @@ test.describe('Operator — analytics, tasks and plant selection', () => {
     await page.goto('/dashboard');
     await expect(page.getByTestId('analytics-dashboard')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByRole('radiogroup', { name: 'Time period' })).toBeVisible();
-    await expect(page.getByTestId('dashboard-oee-operational')).toBeVisible();
-    await expect(page.getByTestId('dashboard-oee-reconciled')).toBeVisible();
+    await expect(page.getByTestId('dashboard-oee-operational-tile')).toBeVisible();
+    await expect(page.getByTestId('dashboard-oee-reconciled-tile')).toBeVisible();
     await expect(page.locator('[role="status"][aria-label="Loading"]')).toHaveCount(0, { timeout: 30_000 });
     await expect(writeControls(page)).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('operator-dashboard-j6.png'), fullPage: true });
