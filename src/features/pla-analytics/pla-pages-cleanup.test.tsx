@@ -182,10 +182,14 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
     expect(within(screen.getByTestId('analytics-filters')).getByLabelText('Inspect')).toHaveValue('status');
   });
 
-  it('Reconciliation and Loss valuation: their picker is in the filter bar; no explanatory paragraph', async () => {
+  it('Loss valuation: the basis is in the filter bar; no explanatory paragraph or caption, the ledger is not repeated in the title', async () => {
     open(`/pla-analytics/valuation?${WINDOW}`);
     const bar = await screen.findByTestId('analytics-filters');
     expect(within(bar).getByLabelText('Valuation basis')).toHaveValue('margin');
     expect(document.body.textContent).not.toMatch(/Values use the approved policy/);
+    const card = await screen.findByTestId('report-loss-value');
+    expect(within(card).getByRole('heading', { level: 2 })).not.toHaveTextContent(/ledger/);
+    expect(within(card).getByRole('button', { name: /^About Loss value/ })).toBeInTheDocument();
+    expect(card).not.toHaveTextContent(/Valued from each period/);
   });
 });

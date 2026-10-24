@@ -15,14 +15,15 @@ const NOT_BROKEN_DOWN = 'Values from before the breakdown are listed as not brok
  * disposal, downgrade difference, rework cost, yield loss, displaced output) as the server summed it, in the
  * display currency (USD by default, IRR with the header's currency choice — one toggle per screen).
  */
-export function EconomicBreakdownCard({ scope }: { scope: AnalyticsScope }) {
+/** `ledgerInTitle` (default true): false where a Ledger filter already says it (PLA Loss valuation). */
+export function EconomicBreakdownCard({ scope, ledgerInTitle = true }: { scope: AnalyticsScope; ledgerInTitle?: boolean }) {
   const env = useEventHubEnv();
   const query = useReport<LossValueReportView>('loss-value', lossValueComponentsQuery(scope), env.timezone);
   const components = query.data?.data.components ?? [];
   const report = useReportChrome();
   return (
     <AnalyticsCard
-      title={`Economic impact by component · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
+      title={`Economic impact by component${ledgerInTitle ? ` · ${LEDGER_LABELS[scope.ledger].toLowerCase()}` : ''}`}
       testId="report-economic-breakdown"
       query={query}
       response={query.data}

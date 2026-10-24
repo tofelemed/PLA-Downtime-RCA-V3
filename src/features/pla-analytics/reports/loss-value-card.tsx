@@ -47,7 +47,16 @@ function columnsOf(currencies: readonly string[], unitName: (id: string) => stri
  * display currency first (the server reports both IRR and USD, D08); a missing amount says why (policy not
  * approved, FX rate missing), never 0. Units 20 per page; the total below.
  */
-export function LossValueCard({ scope, metric = 'margin' }: { scope: AnalyticsScope; metric?: 'margin' | 'standard_cost' | 'operational_cost' }) {
+export interface LossValueCardProps {
+  scope: AnalyticsScope;
+  metric?: 'margin' | 'standard_cost' | 'operational_cost';
+  /** default true; false where a Ledger filter already says it (PLA Loss valuation) */
+  ledgerInTitle?: boolean;
+  /** what an operator needs to read the values, behind an ⓘ (default none) */
+  info?: string;
+}
+
+export function LossValueCard({ scope, metric = 'margin', ledgerInTitle = true, info }: LossValueCardProps) {
   const env = useEventHubEnv();
   const reportQuery = { ...lossValueQuery(scope), metric };
   const query = useReport<LossValueReportView>('loss-value', reportQuery, env.timezone);
@@ -60,13 +69,14 @@ export function LossValueCard({ scope, metric = 'margin' }: { scope: AnalyticsSc
   const approved = data?.valuationStatus === 'approved';
   return (
     <AnalyticsCard
-      title={`Loss value · ${data?.label ?? label} · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
+      title={`Loss value · ${data?.label ?? label}${ledgerInTitle ? ` · ${LEDGER_LABELS[scope.ledger].toLowerCase()}` : ''}`}
       testId="report-loss-value"
       query={query}
       response={query.data && unvalued && approved ? { ...query.data, isProvisional: false } : query.data}
       approvedOnly={scope.approvedOnly}
       isEmpty={data?.groups.length === 0}
       emptyText="Nothing valued in these periods."
+      info={info}
       note={`Valued from each period's calculation · ${revisionSelectionLabel(scope.approvedOnly).toLowerCase()}.`}
       actions={unvalued ? <Badge variant="outline" data-testid="report-value-not-valued">Not valued</Badge> : undefined}
     >
