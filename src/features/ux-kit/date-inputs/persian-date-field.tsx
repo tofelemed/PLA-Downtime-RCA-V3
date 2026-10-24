@@ -1,9 +1,10 @@
-import { type KeyboardEvent, useEffect, useId, useState } from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { useCalendarPreference, type CalendarSystem } from '@/lib/dates';
 import { boundsError, dateToText, parseDateText } from './date-input-model';
 import { describedBy } from './described-by';
 import { FieldMessages } from './field-messages';
+import { WithTrailing } from './with-trailing';
 
 /** Props of {@link PersianDateField}: an ISO date in, an ISO date (or `''`) out. */
 export interface PersianDateFieldProps {
@@ -19,6 +20,8 @@ export interface PersianDateFieldProps {
   error?: string | null;
   /** `persian` (default) or `gregorian`: typed in the plant date format instead of the browser's picker */
   calendar?: CalendarSystem;
+  /** shown after the input on the same line (e.g. a calendar button) */
+  trailing?: ReactNode;
 }
 
 /**
@@ -26,7 +29,7 @@ export interface PersianDateFieldProps {
  * Gregorian equivalent as a hint, or Gregorian `YYYY-MM-DD`. Parses on blur and Enter and keeps unreadable
  * text visible with an inline error.
  */
-export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error, calendar = 'persian' }: PersianDateFieldProps) {
+export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error, calendar = 'persian', trailing }: PersianDateFieldProps) {
   const { digits } = useCalendarPreference();
   const [text, setText] = useState(() => dateToText(value, calendar, digits));
   const [ownError, setOwnError] = useState<string | null>(null);
@@ -59,23 +62,25 @@ export function PersianDateField({ id, value, onChange, ariaLabel, min, max, dis
   const messages = { hintId, hint, errorId, error: shownError };
   return (
     <div>
-      <Input
-        id={id}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        placeholder={calendar === 'persian' ? 'YYYY/MM/DD' : 'YYYY-MM-DD'}
-        dir="ltr"
-        value={text}
-        aria-label={ariaLabel}
-        aria-invalid={shownError !== null}
-        aria-describedby={describedBy(messages)}
-        aria-required={required || undefined}
-        disabled={disabled}
-        onChange={(event) => setText(event.target.value)}
-        onBlur={commit}
-        onKeyDown={onKeyDown}
-      />
+      <WithTrailing trailing={trailing}>
+        <Input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder={calendar === 'persian' ? 'YYYY/MM/DD' : 'YYYY-MM-DD'}
+          dir="ltr"
+          value={text}
+          aria-label={ariaLabel}
+          aria-invalid={shownError !== null}
+          aria-describedby={describedBy(messages)}
+          aria-required={required || undefined}
+          disabled={disabled}
+          onChange={(event) => setText(event.target.value)}
+          onBlur={commit}
+          onKeyDown={onKeyDown}
+        />
+      </WithTrailing>
       <FieldMessages {...messages} />
     </div>
   );

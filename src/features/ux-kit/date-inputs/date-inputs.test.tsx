@@ -110,6 +110,24 @@ describe('DateRangeInput', () => {
     expect(screen.getByLabelText('To (inclusive)')).toHaveAttribute('aria-invalid', 'true');
   });
 
+  it('keeps "To (inclusive)" and no calendar button unless the page opts in', () => {
+    render(<DateRangeInput label="Period" value={{ from: null, to: null }} timeZone="UTC" onChange={vi.fn()} />);
+    expect(screen.getByLabelText('To (inclusive)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Open calendar/ })).toBeNull();
+  });
+
+  it('opt-in: plain "To" label and a calendar button per field that writes the date', () => {
+    const onChange = vi.fn();
+    const value: InstantRange = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-13T00:00:00.000Z' };
+    render(<DateRangeInput label="Period" value={value} timeZone="UTC" toLabel="To" calendarPicker weekStart="saturday" textEntry onChange={onChange} />);
+    expect(screen.getByLabelText('To')).toHaveValue('2026-10-12');
+    expect(screen.queryByLabelText('To (inclusive)')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Open calendar for To' }));
+    fireEvent.click(document.querySelector('[data-date="2026-10-20"]') as HTMLElement);
+    expect(onChange).toHaveBeenLastCalledWith({ from: value.from, to: '2026-10-21T00:00:00.000Z' });
+    expect(screen.getByRole('button', { name: 'Open calendar for From' })).toBeInTheDocument();
+  });
+
   it('works with Jalali entry', async () => {
     const onChange = vi.fn();
     render(

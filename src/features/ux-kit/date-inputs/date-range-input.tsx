@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { CalendarSystem } from '@/lib/dates';
+import { type CalendarSystem, utcToPlantLocal } from '@/lib/dates';
 import {
   type InstantRange,
   type LocalDateRange,
@@ -25,6 +25,14 @@ export interface DateRangeInputProps {
   disabled?: boolean;
   /** `date` mode: days typed in the plant date format (see `DateInput.textEntry`) */
   textEntry?: boolean;
+  /** `date` mode: label of the end field (default "To (inclusive)") */
+  toLabel?: string;
+  /** `date` mode: a calendar button beside each field (opt-in) */
+  calendarPicker?: boolean;
+  /** with `calendarPicker`: first day of the week; defaults to the acting plant's week start */
+  weekStart?: string | null;
+  /** `date` mode: the legend is read by assistive technology only (the fields keep "From" / "To") */
+  hideLegend?: boolean;
 }
 
 /**
@@ -38,7 +46,9 @@ export function DateRangeInput({ mode = 'date', ...props }: DateRangeInputProps)
 
 type FieldsProps = Omit<DateRangeInputProps, 'mode'>;
 
-function DateRangeFields({ label, value, timeZone, onChange, calendar, disabled, textEntry }: FieldsProps) {
+const plantToday = (timeZone: string) => utcToPlantLocal(new Date().toISOString(), timeZone).slice(0, 10);
+
+function DateRangeFields({ label, value, timeZone, onChange, calendar, disabled, textEntry, toLabel = 'To (inclusive)', hideLegend, ...picker }: FieldsProps) {
   const [dates, setDates] = useState<LocalDateRange>(() => datesFromRange(value, timeZone));
   useEffect(() => {
     setDates((current) => {
@@ -54,18 +64,21 @@ function DateRangeFields({ label, value, timeZone, onChange, calendar, disabled,
   };
   const error = dateRangeError(dates);
   const common = { calendar, disabled, textEntry };
+  const pickerOn = (other: string) =>
+    picker.calendarPicker ? { calendarPicker: { weekStart: picker.weekStart, fallbackDate: other || plantToday(timeZone) } } : {};
   return (
     <fieldset className="space-y-1" disabled={disabled}>
-      <legend className="text-sm font-medium leading-none">{label}</legend>
+      <legend className={hideLegend ? 'sr-only' : 'text-sm font-medium leading-none'}>{label}</legend>
       <div className="flex flex-wrap items-start gap-2">
-        <DateInput label="From" value={dates.start} onChange={(start) => update({ ...dates, start })} {...common} />
+        <DateInput label="From" value={dates.start} onChange={(start) => update({ ...dates, start })} {...common} {...pickerOn(dates.end)} />
         <DateInput
-          label="To (inclusive)"
+          label={toLabel}
           value={dates.end}
           min={dates.start || undefined}
           error={error}
           onChange={(end) => update({ ...dates, end })}
           {...common}
+          {...pickerOn(dates.start)}
         />
       </div>
     </fieldset>

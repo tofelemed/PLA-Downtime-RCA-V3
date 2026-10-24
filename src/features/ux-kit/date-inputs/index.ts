@@ -1,5 +1,6 @@
 /** Date inputs that show the tenant calendar and always emit ISO values. */
-export { DateInput, type DateInputProps } from './date-input';
+export { CalendarPopover, type CalendarPopoverProps } from './calendar-popover';
+export { DateInput, type CalendarPickerOptions, type DateInputProps } from './date-input';
 export { DateTimeInput, type DateTimeInputProps } from './date-time-input';
 export { DateRangeInput, type DateRangeInputProps } from './date-range-input';
 export {
