@@ -2,15 +2,14 @@ import { lazy, Suspense, type ReactNode } from 'react';
 import { useActivitySummary } from '@/api/v2/queries/activity-summary';
 import type { ActivityCountView, ActivityDayView, AuditActivitySummaryView, WorkItemSummaryView } from '@/api/v2/types/activity-summary';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { AdminCard } from '@/features/admin/shared/admin-card';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { humanize } from '@/features/ux-kit/labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
-import { plural } from '@/features/ux-kit/format/plural';
 import { actionLabel, entityLabel } from './components/audit-columns';
 import { labelledCounts, type LabelledCount } from './model/audit-counts';
 
@@ -32,19 +31,19 @@ function Counts({ title, items }: { title: string; items: readonly ActivityCount
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
       <span className="w-24 text-muted-foreground">{title}</span>
-      {items.length === 0 ? '—' : items.map((item) => <Badge key={item.key} variant="outline">{humanize(item.key)}: {number(item.count)}</Badge>)}
+      {items.length === 0 ? '—' : items.map((item) => <Badge key={item.key} variant="outline" className="whitespace-nowrap">{humanize(item.key)}: {number(item.count)}</Badge>)}
     </div>
   );
 }
 
-function SummaryCard({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
+/** Records created on the chosen dates, counted on the server for the units the reader can see. */
+const SCOPE_INFO = 'Records created on the chosen dates, for every unit you can see. Counts follow your access in the selected plant.';
+
+function SummaryCard({ title, count, testId, children }: { title: string; count?: number; testId: string; children: ReactNode }) {
   return (
-    <Card data-testid={testId}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
-    </Card>
+    <AdminCard title={title} info={SCOPE_INFO} count={count} testId={testId}>
+      {children}
+    </AdminCard>
   );
 }
 
@@ -62,19 +61,20 @@ function WorkItems({ title, testId, summary, overdueLabel }: { title: string; te
   );
 }
 
-const COUNT_COLUMNS = (title: string): Array<DataTableColumn<LabelledCount>> => [
+const COUNT_COLUMNS = (title: string, number: (value: number) => string): Array<DataTableColumn<LabelledCount>> => [
   { id: 'key', header: title, cell: (row) => row.label },
-  { id: 'count', header: 'Entries', align: 'right', cell: (row) => row.count },
+  { id: 'count', header: 'Entries', align: 'right', width: '6rem', cell: (row) => number(row.count) },
 ];
+const NO_ENTRIES = { text: 'Nothing was recorded in this period.' };
 
 function AuditActivity({ audit }: { audit: AuditActivitySummaryView }) {
   const { number } = useNumberFormat();
   return (
-    <SummaryCard title={`Audit activity (${plural(audit.total, 'entry', 'entries', number)})`} testId="report-audit-activity">
+    <SummaryCard title="Audit activity" count={audit.total} testId="report-audit-activity">
       <DayChart days={audit.byDay} label="Entries" />
       <div className="grid gap-4 lg:grid-cols-2">
-        <DataTable caption="Audit entries by action" columns={COUNT_COLUMNS('Action')} rows={labelledCounts(audit.byAction, actionLabel)} getRowKey={(row) => row.label} density="compact" />
-        <DataTable caption="Audit entries by record type" columns={COUNT_COLUMNS('Record type')} rows={labelledCounts(audit.byEntityType, entityLabel)} getRowKey={(row) => row.label} density="compact" />
+        <DataTable caption="Audit entries by action" columns={COUNT_COLUMNS('Action', number)} rows={labelledCounts(audit.byAction, actionLabel)} getRowKey={(row) => row.label} density="compact" empty={NO_ENTRIES} />
+        <DataTable caption="Audit entries by record type" columns={COUNT_COLUMNS('Record type', number)} rows={labelledCounts(audit.byEntityType, entityLabel)} getRowKey={(row) => row.label} density="compact" empty={NO_ENTRIES} />
       </div>
     </SummaryCard>
   );
@@ -90,7 +90,6 @@ export function WorkSummary({ window }: { window: { from: string; to: string } }
   const data = query.data?.data;
   return (
     <div className="space-y-4" data-testid="report-work-summary">
-      <p className="text-sm text-muted-foreground">Records created on the chosen dates, for every unit you can see. Counts follow your access in the selected plant.</p>
       <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
         {data && (
           <>
