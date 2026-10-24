@@ -207,6 +207,14 @@ describe('analysis dialogs: title, labelled fields, Cancel / primary, Esc', () =
     expect(screen.getByRole('dialog', { name: 'Add event' })).toBeInTheDocument();
   });
 
+  it('5-Why: "Use the last answer" is an h-9 button that copies the last answer to the root cause', async () => {
+    renderInCase(<FiveWhyTool />, false, { ...KIT_CASE, status: 'Analysis' });
+    const use = await screen.findByRole('button', { name: 'Use the last answer' });
+    expect(use.className).toMatch(/(^| )h-9( |$)/);
+    fireEvent.click(use);
+    expect(screen.getByLabelText('Root cause')).toHaveValue('Gear teeth worn');
+  });
+
   it('5-Why: removing a filled step asks first in a destructive confirm', async () => {
     renderInCase(<FiveWhyTool />, false);
     fireEvent.click(await screen.findByRole('button', { name: 'Ask another why' }));
