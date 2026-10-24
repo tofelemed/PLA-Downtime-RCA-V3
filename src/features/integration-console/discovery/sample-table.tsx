@@ -43,9 +43,9 @@ export function SampleTable({ sample, timezone, selectedId, onMap, onBind }: Sam
                   {record.element?.path ?? record.element?.webId ?? '—'}
                 </TableCell>
                 <TableCell>
-                  <PlantTime iso={record.startTime} tz={timezone} withDate />
+                  <PlantTime iso={record.startTime} tz={timezone} withDate withZone={false} />
                 </TableCell>
-                <TableCell>{record.endTime ? <PlantTime iso={record.endTime} tz={timezone} withDate /> : 'open'}</TableCell>
+                <TableCell>{record.endTime ? <PlantTime iso={record.endTime} tz={timezone} withDate withZone={false} /> : 'open'}</TableCell>
                 <TableCell className="text-xs">{Object.keys(record.attributes).join(', ') || '—'}</TableCell>
                 <TableCell className="space-x-1 whitespace-nowrap">
                   <Button size="sm" variant="outline" onClick={() => onMap(record)} data-testid="sample-map">

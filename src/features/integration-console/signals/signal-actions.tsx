@@ -7,12 +7,15 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateRangeInput, type InstantRange } from '@/features/ux-kit/date-inputs';
 import { humanize, labelOf, REPLAY_STATE_LABELS, SIGNAL_ENGINE_LABELS } from '@/features/ux-kit/labels';
 import { NumberText } from '@/features/ux-kit/number-text';
-import { PlantTime } from '@/features/ux-kit/plant-time';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { PlantInstant } from '../components/plant-instant';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ConsoleRefusal } from '../components/console-refusal';
 import { ToneBadge } from '../components/tone-badge';
 import { formatValue } from '../model/mapping-draft';
 import { plural } from '@/features/ux-kit/format/plural';
+
+const NO_BACKFILL_INFO = 'MQTT has no source backfill. Correct configuration, then use Quarantine replay for retained raw observations, or publish source data again.';
 
 const lastDay = (): InstantRange => rollingWindow(DAY_MS);
 
@@ -40,7 +43,7 @@ function StoredSamples({ view, timezone }: { view: SignalPreviewView; timezone: 
   return <div className="overflow-x-auto">
     <table className="w-full text-left text-xs"><caption className="text-left">Stored samples (first <NumberText value={50} /> of <NumberText value={view.samples.length} />; boundary neighbours marked)</caption>
       <thead><tr>{['Observed at', 'Value / state', 'Quality', 'Revision', 'In period'].map((label) => <th key={label} className="p-1">{label}</th>)}</tr></thead>
-      <tbody>{view.samples.slice(0, 50).map((sample) => <tr key={sample.observedAt} className="border-t"><td className="p-1"><PlantTime iso={sample.observedAt} tz={timezone} withDate /></td><td className="p-1">{sample.stateName ?? sample.value ?? 'No value'}</td><td className="p-1">{sample.quality}</td><td className="p-1">{sample.sourceRevision}</td><td className="p-1">{sample.inWindow ? 'Yes' : 'Boundary neighbour'}</td></tr>)}</tbody>
+      <tbody>{view.samples.slice(0, 50).map((sample) => <tr key={sample.observedAt} className="border-t"><td className="p-1"><PlantInstant iso={sample.observedAt} tz={timezone} /></td><td className="p-1">{sample.stateName ?? sample.value ?? 'No value'}</td><td className="p-1">{sample.quality}</td><td className="p-1">{sample.sourceRevision}</td><td className="p-1">{sample.inWindow ? 'Yes' : 'Boundary neighbour'}</td></tr>)}</tbody>
     </table>
   </div>;
 }
@@ -62,10 +65,14 @@ export function SignalActions({ signal, timezone, allowBackfill = true }: { sign
     if (accepted) setRunId(accepted.jobId);
   };
   return (
-    <Section title={`${signal.name}: ${allowBackfill ? 'quantity and backfill' : 'stored samples and quantity'}`} headingLevel={3}>
+    <Section
+      title={`${signal.name}: ${allowBackfill ? 'quantity and backfill' : 'stored samples and quantity'}`}
+      headingLevel={3}
+      titleAside={allowBackfill ? undefined : <KpiInfo label="MQTT backfill" text={NO_BACKFILL_INFO} />}
+    >
       <div className="space-y-3 text-sm" data-testid="signal-actions">
         <div className="flex flex-wrap items-end gap-3">
-          <DateRangeInput label="Period" value={range} timeZone={timezone} onChange={setRange} />
+          <DateRangeInput label="Period" value={range} timeZone={timezone} onChange={setRange} textEntry toLabel="To" calendarPicker toolbar />
           <Button size="sm" variant="outline" onClick={() => window && void preview.submit(window).catch(() => null)} disabled={!window || preview.isPending}>
             {signal.semanticType === 'state' ? 'Preview stored state samples' : 'Preview quantity'}
           </Button>
@@ -75,7 +82,6 @@ export function SignalActions({ signal, timezone, allowBackfill = true }: { sign
             </Button>
           )}
         </div>
-        {!allowBackfill && <p className="text-xs text-muted-foreground">MQTT has no source backfill. Correct configuration, then use Quarantine replay for retained raw observations, or publish source data again.</p>}
         <ConsoleRefusal error={preview.error ?? backfill.error} />
         {preview.data && <PreviewResult engine={preview.data.engine} samples={preview.data.samples.length} result={preview.data.result} />}
         {preview.data && <StoredSamples view={preview.data} timezone={timezone} />}

@@ -6,15 +6,19 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DateRangeInput } from '@/features/ux-kit/date-inputs';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { ActionIcon } from '@/lib/icons';
-import { MAX_TREND_DAYS, samplesCsv, tooLong, trendPoints } from './historian-model';
+import { IntegrationCard } from '../components/integration-card';
+import { ChosenSignals } from './chosen-signals';
+import { MAX_TREND_DAYS, MAX_TREND_SIGNALS, samplesCsv, tooLong, trendPoints } from './historian-model';
 import { SamplesTable } from './samples-table';
 import { SignalPicker } from './signal-picker';
 import { useHistorianParams } from './use-historian-params';
 
 const TrendChart = lazy(() => import('./trend-chart').then((module) => ({ default: module.TrendChart })));
+
+const TREND_INFO = `Stored samples of up to ${MAX_TREND_SIGNALS} signals your connections deliver, over at most ${MAX_TREND_DAYS} days, on the plant clock. Signals are defined on a connection under Connectivity.`;
 
 function download(csv: string) {
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -68,19 +72,19 @@ function HistorianContent() {
     <Page width="wide">
       <PageHeader
         title="Enhanced historian"
-        description="Trends of the signals your connections deliver, in plant time."
         actions={loaded.length > 0 ? <Button size="sm" variant="outline" onClick={() => download(samplesCsv(loaded))} data-testid="trend-export"><ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" /> Export CSV</Button> : undefined}
       />
       {!tenantId ? (
         <DataState state="no-permission" detail="Choose a plant to see its signals." />
       ) : (
         <>
-          <Section title="Trend">
+          <IntegrationCard title="Trend" info={TREND_INFO}>
             <div className="space-y-4" data-testid="historian">
-              <div className="flex flex-wrap items-end gap-4">
+              <div className="flex flex-wrap items-end gap-3" data-testid="historian-filters">
                 <SignalPicker catalog={catalog.items} chosenIds={signalIds} isLoading={catalog.isLoading} onChange={setSignalIds} />
-                <DateRangeInput label="Period" value={range} timeZone={timezone} onChange={setRange} />
+                <DateRangeInput label="Period" value={range} timeZone={timezone} onChange={setRange} textEntry toLabel="To" calendarPicker toolbar />
               </div>
+              <ChosenSignals catalog={catalog.items} chosenIds={signalIds} onChange={setSignalIds} />
               {invalid && <p role="alert" className="text-sm text-destructive">Choose a period of at most {MAX_TREND_DAYS} days.</p>}
               {failed ? <FriendlyErrorAlert error={failed} /> : null}
               {signalIds.length === 0 ? (
@@ -93,11 +97,11 @@ function HistorianContent() {
                 </Suspense>
               )}
             </div>
-          </Section>
+          </IntegrationCard>
           {loaded.length > 0 && (
-            <Section title="Samples">
+            <IntegrationCard title="Samples" info="Stored samples in the period (newest revision of each), 20 per page. Export CSV carries every sample with UTC times.">
               <SamplesTable series={loaded} timezone={timezone} />
-            </Section>
+            </IntegrationCard>
           )}
         </>
       )}

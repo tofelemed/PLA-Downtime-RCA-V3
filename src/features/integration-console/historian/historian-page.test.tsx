@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
@@ -44,5 +44,24 @@ describe('Enhanced Historian page gate (matches the menu: canViewAnalysis)', () 
     expect(screen.getByText('No access')).toBeTruthy();
     expect(screen.queryByTestId('historian')).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('cleanup: no header description; Trend card with ⓘ; Signal, Add and the compact From / To on one h-9 row; own empty message', async () => {
+    actAs('SuperAdmin');
+    page();
+    await screen.findByTestId('historian');
+    expect(screen.queryByText(/Trends of the signals your connections deliver/)).toBeNull();
+    const card = screen.getByRole('region', { name: 'Trend' });
+    expect(card.className).toContain('bg-card');
+    expect(within(card).getByRole('button', { name: 'About Trend' })).toBeInTheDocument();
+    const row = screen.getByTestId('historian-filters');
+    expect(row.className).toContain('items-end');
+    expect(within(row).getByLabelText('Signal').className).toContain('h-9');
+    expect(within(row).getByTestId('trend-add').className).toContain('h-9');
+    expect(within(row).getByLabelText('From')).toBeInTheDocument();
+    expect(within(row).getByLabelText('To')).toBeInTheDocument();
+    expect(within(row).queryByText('To (inclusive)')).toBeNull();
+    expect(row.querySelector('input[type="date"]')).toBeNull();
+    expect(await within(card).findByText(/No signals are defined yet|Choose one or more signals to trend/)).toBeInTheDocument();
   });
 });

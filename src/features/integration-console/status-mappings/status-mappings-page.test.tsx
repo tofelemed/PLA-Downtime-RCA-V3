@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
@@ -100,9 +100,46 @@ describe('source status rules screen (SME R13)', () => {
     actAs('integration_admin', 'admin-1');
     renderPage();
     fireEvent.click(await screen.findByTestId('mapping-new-version-lims'));
-    expect((screen.getByTestId('mapping-source') as HTMLInputElement).value).toBe('lims');
+    // the source of a new version is fixed: shown as text, not a disabled input
+    expect(screen.getByTestId('mapping-source').tagName).toBe('P');
+    expect(screen.getByTestId('mapping-source').textContent).toBe('lims');
     fireEvent.click(screen.getByTestId('mapping-save'));
     expect(await screen.findByText('Choose when the version applies from')).toBeTruthy();
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+
+  it('cleanup: no header description (behind ⓘ); each source is a card; plant times without the zone suffix', async () => {
+    actAs('viewer', 'viewer-1');
+    renderPage();
+    await screen.findAllByTestId('mapping-version');
+    expect(screen.queryByText(/marks its released \(authorised final\) record/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Source status rules' })).toBeInTheDocument();
+    const card = screen.getByRole('region', { name: 'lims' });
+    expect(card.className).toContain('bg-card');
+    expect(screen.queryByText(/Asia\/Tehran/)).toBeNull();
+    expect(screen.getAllByTestId('mapping-version')[1].querySelector('time')?.getAttribute('datetime')).toBeTruthy();
+  });
+
+  it('cleanup: no source yet is a centred empty state', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(200, { items: [] })));
+    renderPage();
+    const empty = await screen.findByTestId('mapping-empty');
+    expect(empty).toHaveTextContent('No source status rules yet');
+    expect(empty).toHaveTextContent('Without an approved version a source releases nothing.');
+  });
+
+  it('New source opens a dialog: Source system first and focused, labels above fields, Cancel then Save draft, Esc closes', async () => {
+    actAs('integration_admin', 'admin-1');
+    renderPage();
+    fireEvent.click(await screen.findByTestId('mapping-new-source'));
+    const dialog = await screen.findByTestId('mapping-draft-dialog');
+    expect(within(dialog).getByRole('heading', { name: 'New source' })).toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(within(dialog).getByLabelText('Source system')));
+    expect(within(dialog).getByLabelText('Source system').className).toContain('h-9');
+    expect(within(dialog).getByLabelText('Effective from date')).toBeInTheDocument();
+    const buttons = within(dialog).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(buttons.indexOf('Cancel')).toBe(buttons.indexOf('Save draft') - 1);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('mapping-draft-dialog')).toBeNull());
   });
 });

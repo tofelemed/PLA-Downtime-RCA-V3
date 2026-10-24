@@ -35,13 +35,12 @@ function NewConnectionAction() {
  */
 export function ConsolePage() {
   const tenantId = useV2TenantId();
-  const { timezone, source } = usePlantTimezone();
+  const { timezone } = usePlantTimezone();
   const [tab, setTab] = useUrlParam('tab', TABS, 'connections');
-  const zone = `Times in ${timezone}${source === 'utc-fallback' ? ' (no plant timezone configured)' : ''}.`;
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="integration-console">
-        <PageHeader title="Connectivity" description={`Connections to plant sources, ingestion jobs, quarantine and mapping rules. ${zone}`} actions={tenantId ? <NewConnectionAction /> : undefined} />
+        <PageHeader title="Connectivity" actions={tenantId ? <NewConnectionAction /> : undefined} />
         {!tenantId ? (
           <DataState state="no-permission" detail="Choose a plant (tenant) to manage its integrations." />
         ) : (

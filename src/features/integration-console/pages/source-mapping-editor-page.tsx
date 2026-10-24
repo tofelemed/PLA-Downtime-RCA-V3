@@ -4,6 +4,7 @@ import { useConnections } from '@/api/v2/queries/integration-connections';
 import { useCreateSourceMapping, useReplaceSourceMapping, useSourceMapping } from '@/api/v2/queries/integration-mappings';
 import type { SourceMappingView } from '@/api/v2/types/integration-mappings';
 import { Button } from '@/components/ui/button';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -56,7 +57,7 @@ function MappingEditor({ rule }: { rule: SourceMappingView | null }) {
           </Button>
         </div>
       )}
-      <Section title="Test resolution" description="Resolve a source value against the rules as saved now." collapsible defaultOpen={false}>
+      <Section title="Test resolution" titleAside={<KpiInfo label="Test resolution" text="Resolve a source value against the rules as saved now." />} collapsible defaultOpen={false}>
         <MappingTest connectionId={form.connectionId} initial={form.matchKind === 'pattern' ? '' : form.matchValue} />
       </Section>
     </div>
@@ -70,7 +71,7 @@ export function SourceMappingEditorPage() {
   const title = mappingId ? 'Edit mapping rule' : 'New mapping rule';
   return (
     <Page>
-      <PageHeader title={title} description="Which unit or asset records from a source belong to." back={{ to: LIST, label: 'Source mappings' }} />
+      <PageHeader title={title} back={{ to: LIST, label: 'Source mappings' }} />
       {mappingId ? (
         <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
           {query.data && <MappingEditor key={`${query.data.id}-${query.data.rowVersion}`} rule={query.data} />}

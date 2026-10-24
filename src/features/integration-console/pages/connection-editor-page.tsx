@@ -9,8 +9,6 @@ import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { ConnectionWizard } from '../connections/connection-wizard';
 import { connectionPath, consolePath } from '../paths';
 
-const DESCRIPTION = 'Endpoint settings are stored with the connection; credentials are stored encrypted and never shown again.';
-
 /**
  * `/connectivity/connections/new` and `/connectivity/connections/:connectionId/edit`: the connection
  * form or wizard as a page (Back leaves it; the typed password is discarded).
@@ -36,7 +34,7 @@ export function ConnectionEditorPage() {
   };
   return (
     <Page>
-      <PageHeader title={title} description={DESCRIPTION} back={{ to: cancelTo, label: connectionId ? 'Connection' : 'Connections' }} />
+      <PageHeader title={title} back={{ to: cancelTo, label: connectionId ? 'Connection' : 'Connections' }} />
       {body()}
     </Page>
   );

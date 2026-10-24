@@ -72,9 +72,9 @@ export function ExceptionDetail({ exception, connectionName, timezone }: Excepti
             <dt className="text-muted-foreground">Occurrences</dt>
             <dd>{exception.occurrences}</dd>
             <dt className="text-muted-foreground">First seen</dt>
-            <dd><PlantTime iso={exception.firstSeen} tz={timezone} withDate /></dd>
+            <dd><PlantTime iso={exception.firstSeen} tz={timezone} withDate withZone={false} /></dd>
             <dt className="text-muted-foreground">Last seen</dt>
-            <dd><PlantTime iso={exception.lastSeen} tz={timezone} withDate /></dd>
+            <dd><PlantTime iso={exception.lastSeen} tz={timezone} withDate withZone={false} /></dd>
           </dl>
         </div>
       </Section>

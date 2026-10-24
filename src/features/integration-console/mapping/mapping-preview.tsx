@@ -40,8 +40,8 @@ export function MappingPreview({ preview, timezone }: { preview: AttributeMappin
   return (
     <section aria-label="Mapping preview" className="space-y-3 rounded-md border p-3" data-testid="mapping-preview" data-diagnostics={preview.diagnostics.length}>
       <p className="text-sm">
-        {preview.eventType} event · <PlantTime iso={preview.startTime} tz={timezone} withDate /> →{' '}
-        {preview.endTime ? <PlantTime iso={preview.endTime} tz={timezone} withDate /> : 'open'} · duration from timestamps:{' '}
+        {preview.eventType} event · <PlantTime iso={preview.startTime} tz={timezone} withDate withZone={false} /> →{' '}
+        {preview.endTime ? <PlantTime iso={preview.endTime} tz={timezone} withDate withZone={false} /> : 'open'} · duration from timestamps:{' '}
         {preview.durationSeconds === null ? 'open' : <DurationText seconds={preview.durationSeconds} />}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">

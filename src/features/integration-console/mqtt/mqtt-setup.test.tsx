@@ -33,6 +33,8 @@ describe('MQTT setup navigation and sample validation', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].url.pathname).toBe('/api/v2/connections/c1/mqtt-preview');
     expect(calls[0].body).toEqual({ topic: 'source/topic', payload: '{"signal":"EXT1-Total"}', receivedAt: '2026-10-17T02:01:00Z', retained: false });
-    expect(screen.getByText(/does not prove live delivery/)).toBeInTheDocument();
+    // cleanup 25 Oct 2026: the "does not prove live delivery" caution is behind the card's ⓘ
+    expect(screen.queryByText(/does not prove live delivery/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Validate MQTT sample' })).toBeInTheDocument();
   });
 });

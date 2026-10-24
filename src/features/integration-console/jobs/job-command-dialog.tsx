@@ -34,7 +34,7 @@ export function JobCommandDialog({ job, action, texts = ACTION_TEXT, onClose }: 
   const text = action ? texts[action] : null;
   return (
     <Dialog open={action !== null} onOpenChange={(next) => !next && close()}>
-      <DialogContent data-testid="job-command-dialog">
+      <DialogContent className="sm:max-w-[560px]" data-testid="job-command-dialog">
         <DialogHeader>
           <DialogTitle>{text?.label} job</DialogTitle>
           <DialogDescription>{text?.confirm}</DialogDescription>
