@@ -120,9 +120,11 @@ describe('Downtime round-3 QA fixes', () => {
     expect(document.body.textContent).not.toContain('hours and minutes');
     const button = screen.getByTestId('downtime-export');
     expect(button).toBeDisabled();
-    const reason = screen.getByTestId('disabled-reason');
+    expect(screen.queryByTestId('disabled-reason')).toBeNull();
+    expect(button).toHaveAttribute('title', expect.stringContaining('set Revision to “Approved only”'));
+    const reason = document.getElementById(button.getAttribute('aria-describedby') ?? '');
+    expect(reason).toHaveClass('sr-only');
     expect(reason).toHaveTextContent('approved figures only');
-    expect(button).toHaveAttribute('aria-describedby', reason.id);
     expect(screen.queryByText('Compare downtime over time')).toBeNull();
   });
 

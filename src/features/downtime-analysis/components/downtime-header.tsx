@@ -4,7 +4,6 @@ import { useCreateExport } from '@/api/v2/queries/exports';
 import { reportSnapshot } from '@/api/v2/queries/reports';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
 import { PageHeader } from '@/features/ux-kit/page-layout';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -33,7 +32,7 @@ export function DowntimeHeader({ filters, bundle, title, showStatus = true }: Do
   return (
     <PageHeader
       title={title}
-      meta={showStatus && snapshot && bundle?.data ? <SnapshotStatus snapshot={snapshot} provisional={bundle.data.isProvisional} asOf={bundle.data.asOf} /> : undefined}
+      titleAside={showStatus && snapshot && bundle?.data ? <SnapshotStatus snapshot={snapshot} provisional={bundle.data.isProvisional} asOf={bundle.data.asOf} /> : undefined}
       actions={bundle ? <DowntimeExport filters={filters} snapshot={snapshot} /> : undefined}
     />
   );
@@ -45,6 +44,13 @@ function SnapshotStatus({ snapshot, provisional, asOf }: { snapshot: NonNullable
   const runs = snapshot.calculationRunIds.length;
   const info = `Summary, trend and breakdowns use ${runs === 1 ? 'the same calculation run' : `the same ${number(runs)} calculation runs`}${asOf ? ` · as of ${dateTime(asOf)}` : ''}.`;
   return <FigureStatus provisional={provisional} info={info} testId="snapshot-runs" data={{ 'data-run-ids': snapshot.calculationRunIds.join(',') }} />;
+}
+
+/** Why the period-summary export is not offered for these filters. */
+function exportReason(filters: DowntimeFilters): string {
+  return hasPeriodSelection(filters)
+    ? 'This export supports units and dates. Clear product, shift and crew filters to export matching figures.'
+    : 'Exports contain approved figures only: set Revision to “Approved only” and wait for approved periods';
 }
 
 function DowntimeExport({ filters, snapshot }: { filters: DowntimeFilters; snapshot: Snapshot }) {
@@ -64,13 +70,11 @@ function DowntimeExport({ filters, snapshot }: { filters: DowntimeFilters; snaps
       toast({ ...friendlyToastContent(error), variant: 'destructive' });
     }
   };
-  const hint = hasPeriodSelection(filters) ? 'This export supports units and dates. Clear product, shift and crew filters to export matching figures.'
-    : 'Exports contain approved figures only: tick “Approved only” and wait for approved periods';
-  // QA L23: the reason is on screen next to the button, not only in a tooltip
-  const reason = exportRequest ? null : hint;
-  return <div className="flex max-w-xs flex-col items-end gap-1 text-right">
+  // owner check 24 Oct 2026: the reason is the button's tooltip (and its accessible description), not a line under it
+  const reason = exportRequest ? null : exportReason(filters);
+  return <span title={reason ?? undefined} data-testid="downtime-export-reason">
     <Button variant="outline" disabled={!exportRequest || exporter.isPending} title={reason ?? undefined} aria-describedby={reason ? reasonId : undefined}
       onClick={startExport} data-testid="downtime-export"><ActionIcon.export aria-hidden className="mr-1 h-4 w-4" />Export period summary</Button>
-    <DisabledReason id={reasonId} reason={reason} />
-  </div>;
+    {reason && <span id={reasonId} className="sr-only">{reason}</span>}
+  </span>;
 }
