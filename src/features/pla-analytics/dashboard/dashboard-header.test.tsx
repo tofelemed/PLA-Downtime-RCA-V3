@@ -81,12 +81,21 @@ describe('DashboardHeader', () => {
     expect(screen.getByText(/2 calculation runs/)).toBeInTheDocument();
   });
 
-  it('says so when only an organisation is chosen', () => {
+  it('says which plant is shown when only an organisation is chosen, and keeps the status', async () => {
     actAs('viewer');
     stubV2Fetch(oee);
     renderHeader(true);
-    expect(screen.getByText('Showing Marun — organisation-wide figures are not available yet')).toBeInTheDocument();
-    expect(screen.queryByText(/^As of /)).toBeNull();
+    expect(screen.getByTestId('dashboard-org-note')).toHaveTextContent('Showing Marun — organisation-wide figures are not available yet');
+    expect(await screen.findByText(/^As of /)).toBeInTheDocument();
+    expect(await screen.findAllByText(/^Provisional$/)).toHaveLength(1);
+  });
+
+  it('shows no organisation note when a plant is chosen', async () => {
+    actAs('viewer');
+    stubV2Fetch(oee);
+    renderHeader();
+    expect(await screen.findByText(/^As of /)).toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-org-note')).toBeNull();
   });
 
   it('puts the For you row directly after the header', () => {

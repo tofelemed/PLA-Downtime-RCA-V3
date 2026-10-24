@@ -13,8 +13,17 @@ export interface DashboardHeaderProps {
   plantName: string;
 }
 
-/** Page header of the dashboard: the title, the time period, and the one status (or why there is none). */
+/** Page header of the dashboard: the title, the time period, the one status and, for an organisation, which plant is shown. */
 export function DashboardHeader({ scope, keyValue, onKey, orgOnly, plantName }: DashboardHeaderProps) {
-  const status = orgOnly ? `Showing ${plantName} — organisation-wide figures are not available yet` : <DashboardStatus scope={scope} />;
-  return <PageHeader title="Dashboard" actions={<TimePeriodControl value={keyValue} onChange={onKey} />} meta={status} />;
+  const meta = (
+    <div className="space-y-1">
+      {orgOnly && (
+        <p data-testid="dashboard-org-note">
+          Showing {plantName} — organisation-wide figures are not available yet
+        </p>
+      )}
+      <DashboardStatus scope={scope} />
+    </div>
+  );
+  return <PageHeader title="Dashboard" actions={<TimePeriodControl value={keyValue} onChange={onKey} />} meta={meta} />;
 }
