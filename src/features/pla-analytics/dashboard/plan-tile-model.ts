@@ -30,5 +30,9 @@ export const PLAN_TILES: readonly PlanTileDef[] = [
   { id: 'actual', title: 'Actual', info: 'Output actually recorded over the same periods.' },
   { id: 'shortfall', title: 'Shortfall', info: 'Planned output that was not produced.', highlight: true },
   { id: 'explained', title: 'Explained loss', info: 'Part of the shortfall attributed to coded causes (stops, slow running, quality).' },
-  { id: 'unexplained', title: 'Unexplained', info: 'Part of the shortfall no cause has been given for yet.' },
+  {
+    id: 'unexplained',
+    title: 'Unexplained',
+    info: 'Part of the shortfall no cause has been given for yet. Can exceed the shortfall when periods that met their plan still carry unexplained quantities.',
+  },
 ];

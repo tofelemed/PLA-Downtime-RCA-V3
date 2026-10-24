@@ -74,6 +74,14 @@ describe('ProductionPlanSection', () => {
     });
   });
 
+  it('explains in the Unexplained tooltip that it can exceed the shortfall', async () => {
+    state.totals = [row('total', 't')];
+    renderSection();
+    await userEvent.hover(screen.getByRole('button', { name: 'About Unexplained' }));
+    const tips = await screen.findAllByText(/Can exceed the shortfall when periods that met their plan still carry unexplained quantities\./);
+    expect(tips.length).toBeGreaterThan(0);
+  });
+
   it('flags "above target" when the server says so', () => {
     state.totals = [row('total', 't', { unexplainedAboveTarget: true })];
     renderSection();
