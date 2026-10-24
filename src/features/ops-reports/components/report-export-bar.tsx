@@ -42,7 +42,8 @@ function ExportJobStatus({ jobId, format, onDownload }: { jobId: string; format:
 /**
  * PDF and Excel export of an operating report (owner 2026-10-20): the server renders the same figures as the
  * page — a designed PDF with the Marun logo, or a workbook with a sheet per table — in the background;
- * the server stamps provisional figures in the file. Money is printed in the user's display currency.
+ * the server stamps provisional figures in the file. Money is printed in the user's display currency. The
+ * buttons sit on the right, like a card's actions.
  */
 export function ReportExportBar({ kind, query, formats = ['pdf', 'xlsx'], timezone }: ReportExportBarProps) {
   const { currency } = useDisplayCurrency();
@@ -69,7 +70,7 @@ export function ReportExportBar({ kind, query, formats = ['pdf', 'xlsx'], timezo
   };
   return (
     <div className="space-y-2 print:hidden" data-testid={`report-export-${kind}`}>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {formats.map((format) => (
           <Button key={format} size="sm" variant="outline" disabled={!query || exporter.isPending} onClick={() => void start(format)} data-testid={`report-export-${format}`}>
             <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />

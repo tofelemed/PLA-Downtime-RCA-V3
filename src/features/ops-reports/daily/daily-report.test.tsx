@@ -19,12 +19,13 @@ vi.mock('./event-status-card', () => ({ EventStatusCard: () => null }));
 
 const { DailyReport } = await import('./daily-report');
 
-const kpi = (metric: string, value: string) => ({ metric, value, reason: null, numerator: null, denominator: null });
+const kpi = (metric: string, value: string, quality = 'ok') => ({ metric, value, quality, reason: null, numerator: null, denominator: null });
+let oeeQuality = 'ok';
 
 function oee(call: V2Call): Response | undefined {
   if (!call.url.pathname.includes('/reports/oee')) return undefined;
   return jsonResponse(200, {
-    data: { label: 'Operational OEE (ISO 22400)', total: [kpi('oee', '0.8'), kpi('availability', '0.9'), kpi('performance', '0.95'), kpi('quality', '0.94')], calculationRunIds: ['r1'] },
+    data: { label: 'Operational OEE (ISO 22400)', total: [kpi('availability', '0.9'), kpi('performance', '0.95'), kpi('quality', '0.94'), kpi('oee', '0.8', oeeQuality)], calculationRunIds: ['r1'] },
     asOf: '2026-10-18T07:30:00Z',
     isProvisional: true,
     coverage: { ratio: 1 },
@@ -33,8 +34,51 @@ function oee(call: V2Call): Response | undefined {
   });
 }
 
+function renderDaily(approvedOnly = true) {
+  const scope = { ...parseScope(new URLSearchParams('from=2026-10-17T00:00:00.000Z&to=2026-10-18T00:00:00.000Z'), 0), approvedOnly };
+  return render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <TooltipProvider>
+        <MemoryRouter>
+          <ReportChrome approvedOnly={approvedOnly}>
+            <DailyReport scope={scope} dayStart="06:00" />
+          </ReportChrome>
+        </MemoryRouter>
+      </TooltipProvider>
+    </QueryClientProvider>,
+  );
+}
+
 describe('DailyReport OEE', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    oeeQuality = 'ok';
+  });
+
+  it('shows the figures in the order OEE, Availability, Performance, Quality', async () => {
+    actAs('viewer');
+    stubV2Fetch(oee);
+    renderDaily();
+    const card = await screen.findByTestId('dashboard-oee-operational');
+    await waitFor(() => expect(within(card).getAllByTestId('oee-tile-value')).toHaveLength(4));
+    const order = [...card.querySelectorAll('[data-testid$="-tile"]')].map((tile) => tile.getAttribute('data-testid'));
+    expect(order).toEqual(['dashboard-oee-operational-tile', 'dashboard-oee-availability-tile', 'dashboard-oee-performance-tile', 'dashboard-oee-quality-tile']);
+  });
+
+  it('Provisional: a marker on the figure the server marks provisional only; Approved only: none', async () => {
+    actAs('viewer');
+    oeeQuality = 'provisional';
+    stubV2Fetch(oee);
+    const view = renderDaily(false);
+    const card = await screen.findByTestId('dashboard-oee-operational');
+    await waitFor(() => expect(within(card).getAllByTestId('provisional-mark')).toHaveLength(1));
+    expect(within(card).getByTestId('dashboard-oee-operational-tile')).toContainElement(within(card).getByTestId('provisional-mark'));
+    view.unmount();
+    renderDaily(true);
+    const approved = await screen.findByTestId('dashboard-oee-operational');
+    await waitFor(() => expect(within(approved).getAllByTestId('oee-tile-value')).toHaveLength(4));
+    expect(approved).not.toHaveTextContent(/Provisional/);
+  });
 
   it('shows the four operational OEE tiles in a card titled "OEE" (no "Operational", "(ISO 22400)" or Provisional chip), and never asks for the reconciled OEE', async () => {
     actAs('viewer');

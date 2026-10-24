@@ -7,6 +7,7 @@ import { AnalyticsCard } from '@/features/pla-analytics/components/analytics-car
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
+import { ProvisionalMark } from '@/features/ux-kit/report-look';
 import { monthLabelOf } from '@/features/month-close/model/month-label';
 import { useCalendarPreference } from '@/lib/dates';
 import { ReportExportBar } from '../components/report-export-bar';
@@ -19,7 +20,15 @@ const METRICS: ReadonlyArray<{ key: Metric; label: string }> = [
   { key: 'mttr', label: 'MTTR (repair evidence)' },
 ];
 
-const value = (view: KpiAggregateView | undefined) => (view?.value != null ? <DurationText seconds={view.value} /> : <span className="text-muted-foreground">—</span>);
+function Figure({ view }: { view: KpiAggregateView | undefined }) {
+  if (view?.value == null) return <span className="text-muted-foreground">—</span>;
+  return (
+    <>
+      <DurationText seconds={view.value} />
+      <ProvisionalMark when={view.quality === 'provisional'} />
+    </>
+  );
+}
 
 function useColumns(months: readonly string[], metric: Metric, labelOf: (s: ReliabilitySeriesView) => string): Array<DataTableColumn<ReliabilitySeriesView>> {
   const pref = useCalendarPreference();
@@ -39,7 +48,7 @@ function useColumns(months: readonly string[], metric: Metric, labelOf: (s: Reli
       header: monthLabelOf(month, pref.calendar, pref.digits),
       align: 'right',
       nowrap: true,
-      cell: (s) => value(s.months.find((m) => m.month === month)?.row[metric]),
+      cell: (s) => <Figure view={s.months.find((m) => m.month === month)?.row[metric]} />,
     })),
   ];
 }
@@ -64,7 +73,7 @@ export function ReliabilityTrendReport({ scope }: { scope: AnalyticsScope }) {
     <div className="space-y-4" data-testid="reliability-trend">
       <ReportExportBar kind="reliability" query={scopeBase(scope)} timezone={env.timezone} />
       {METRICS.map((metric) => (
-        <AnalyticsCard key={metric.key} title={`${metric.label} by month`} testId={`reliability-trend-${metric.key}`} query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.units.length === 0} emptyText="No calculated periods on these dates." info={metric.key === 'mtbf' ? data?.failureDefinition : undefined}>
+        <AnalyticsCard key={metric.key} title={`${metric.label} by month`} testId={`reliability-trend-${metric.key}`} query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.units.length === 0} emptyText="No calculated periods on these dates." info={metric.key === 'mtbf' ? data?.failureDefinition : undefined} provisionalRows>
           {data && (
             <div className="space-y-3">
               <SeriesTable rows={data.units} months={data.months} metric={metric.key} labelOf={unitLabel} caption={`${metric.label} by unit and month`} />

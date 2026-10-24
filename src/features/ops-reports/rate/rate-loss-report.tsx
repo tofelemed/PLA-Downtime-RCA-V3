@@ -9,6 +9,7 @@ import { kpiText } from '@/features/pla-analytics/model/display';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
+import { anyProvisional, ProvisionalMark } from '@/features/ux-kit/report-look';
 import { useCalendarPreference } from '@/lib/dates';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
 import { ReportExportBar } from '../components/report-export-bar';
@@ -21,17 +22,18 @@ function RateLossTrend({ scope }: { scope: AnalyticsScope }) {
   const query = useRateLoss(scopeBase(scope), env.timezone);
   const data = query.data?.data;
   const columns: Array<DataTableColumn<RateLossMonthView>> = [
-    { id: 'month', header: 'Month', cell: (m) => <span data-testid="rate-loss-month">{monthLabelOf(m.month, pref.calendar, pref.digits)}</span> },
+    { id: 'month', header: 'Month', cell: (m) => <span data-testid="rate-loss-month">{monthLabelOf(m.month, pref.calendar, pref.digits)}<ProvisionalMark when={anyProvisional([m.equivalentDowntime, m.performance])} /></span> },
     { id: 'equivalent', header: 'Equivalent downtime', align: 'right', nowrap: true, cell: (m) => seconds(m.equivalentDowntime) },
     { id: 'performance', header: 'Performance', align: 'right', nowrap: true, cell: (m) => <LocalizedNumber text={kpiText(m.performance, pref.digits)} /> },
   ];
   return (
-    <AnalyticsCard title="Running below rate, by month" testId="rate-loss-trend" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods on these dates." info="Equivalent downtime: the rate lost by slowdowns as time at the reference rate.">
+    <AnalyticsCard title="Running below rate, by month" testId="rate-loss-trend" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods on these dates." info="Equivalent downtime: the rate lost by slowdowns as time at the reference rate." provisionalRows>
       {data && (
         <div className="space-y-2">
           <DataTable caption="Running below rate, by month" columns={columns} rows={data.months} getRowKey={(m) => m.month} density="compact" />
           <p className="text-sm font-medium" data-testid="rate-loss-total">
             Total: {seconds(data.total.equivalentDowntime)} equivalent downtime · performance <LocalizedNumber text={kpiText(data.total.performance, pref.digits)} />
+            <ProvisionalMark when={anyProvisional([data.total.equivalentDowntime, data.total.performance])} />
           </p>
         </div>
       )}

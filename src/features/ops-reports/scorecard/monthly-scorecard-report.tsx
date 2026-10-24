@@ -10,6 +10,7 @@ import { findKpi, kpiText, shareText } from '@/features/pla-analytics/model/disp
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { formatCurrencyAmount } from '@/features/display-currency/money-format';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
+import { anyProvisional, ProvisionalMark } from '@/features/ux-kit/report-look';
 import { useCalendarPreference, type DigitSystem } from '@/lib/dates';
 import { LossBreakdownCards } from '../components/loss-breakdown-cards';
 import { twelveMonthWindow } from '../model/month-to-date';
@@ -29,7 +30,7 @@ function useColumns(): Array<DataTableColumn<ScorecardMonthView>> {
   const kpi = (metric: string) => (m: ScorecardMonthView) => <LocalizedNumber text={kpiText(findKpi(m.oee, metric), digits)} />;
   const output = (field: 'utilisation' | 'lossShare' | 'planAttainment') => (m: ScorecardMonthView) => <LocalizedNumber text={m.output.length === 1 ? shareText(m.output[0][field], digits) : m.output.length ? 'Several units of measure' : '—'} />;
   return [
-    { id: 'month', header: 'Month', nowrap: true, cell: (m) => <span data-testid="scorecard-month">{monthLabelOf(m.month, calendar, digits)}</span> },
+    { id: 'month', header: 'Month', nowrap: true, cell: (m) => <span data-testid="scorecard-month">{monthLabelOf(m.month, calendar, digits)}<ProvisionalMark when={anyProvisional(m.oee)} /></span> },
     { id: 'oee', header: 'OEE', align: 'right', cell: kpi('oee') },
     { id: 'availability', header: 'Availability', align: 'right', cell: kpi('availability') },
     { id: 'performance', header: 'Performance', align: 'right', cell: kpi('performance') },
@@ -57,7 +58,7 @@ export function MonthlyScorecardReport({ scope, dayStart }: { scope: AnalyticsSc
   return (
     <div className="space-y-4" data-testid="monthly-scorecard">
       <ReportExportBar kind="scorecard" query={months ? scopeBase(months) : null} timezone={env.timezone} />
-      <AnalyticsCard title="Twelve-month scorecard" testId="scorecard-table" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods in these twelve months.">
+      <AnalyticsCard title="Twelve-month scorecard" testId="scorecard-table" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.months.length === 0} emptyText="No calculated periods in these twelve months." provisionalRows>
         {data && <DataTable caption="Twelve-month scorecard" columns={columns} rows={data.months} getRowKey={(m) => m.month} density="compact" />}
       </AnalyticsCard>
       {months && <LossBreakdownCards scope={months} groupBy="reason" limit={3} title="Top 3 loss themes, twelve months" testId="scorecard-themes" />}

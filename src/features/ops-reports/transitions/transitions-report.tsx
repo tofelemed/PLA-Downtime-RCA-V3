@@ -1,6 +1,6 @@
 import { useTransitionPerformance } from '@/api/v2/queries/ops-reports';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -24,23 +24,13 @@ export function TransitionsReport({ scope }: { scope: AnalyticsScope }) {
       <DataState state={state} error={query.error} detail={state === 'empty' ? 'No grade transitions start on these dates.' : undefined} onRetry={() => void query.refetch()}>
         {data && (
           <>
-            <Card data-testid="transition-pairs">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">By product change</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TransitionPairsTable pairs={data.pairs} />
-              </CardContent>
-            </Card>
-            <Card data-testid="transition-list">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Transitions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <TransitionsTable rows={data.transitions} timeZone={env.timezone} />
-                {data.truncated && <p className="text-xs text-muted-foreground">Showing the 500 latest transitions; choose fewer dates for the rest.</p>}
-              </CardContent>
-            </Card>
+            <ReportCard title="By product change" testId="transition-pairs">
+              <TransitionPairsTable pairs={data.pairs} />
+            </ReportCard>
+            <ReportCard title="Transitions" testId="transition-list">
+              <TransitionsTable rows={data.transitions} timeZone={env.timezone} />
+              {data.truncated && <p className="text-xs text-muted-foreground">Showing the 500 latest transitions; choose fewer dates for the rest.</p>}
+            </ReportCard>
           </>
         )}
       </DataState>

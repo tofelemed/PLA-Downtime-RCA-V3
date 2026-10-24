@@ -1,11 +1,12 @@
 import { useState, type ReactNode } from 'react';
 import { useShiftHandover } from '@/api/v2/queries/shift-handover';
+import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import type { ShiftHandoverView } from '@/api/v2/types/ops-reports';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useShiftOptions } from '@/features/downtime-analysis/model/use-shift-options';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import type { AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataState } from '@/features/ux-kit/data-state';
 import { DateInput } from '@/features/ux-kit/date-inputs/date-input';
@@ -18,19 +19,18 @@ import { HandoverEventsTable } from './handover-events-table';
 import { ShiftNotesCard } from './shift-notes-card';
 import { ReportExportBar } from '../components/report-export-bar';
 
-function Section({ title, testId, children }: { title: string; testId: string; children: ReactNode }) {
+function Section({ title, testId, provisional, children }: { title: string; testId: string; provisional?: boolean; children: ReactNode }) {
   return (
-    <Card data-testid={testId}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
-    </Card>
+    <ReportCard title={title} testId={testId} provisional={provisional}>
+      {children}
+    </ReportCard>
   );
 }
 
-function HandoverBody({ data, timeZone }: { data: ShiftHandoverView; timeZone: string }) {
+/** The shift's output, events and notes; the output is the shown runs' (one marker when they are provisional). */
+function HandoverBody({ response, timeZone }: { response: AnalyticsResponse<ShiftHandoverView>; timeZone: string }) {
   const pref = useCalendarPreference();
+  const data = response.data;
   if (!data.from || !data.to) return <DataState state="empty" detail="None of these units has this shift on this date." />;
   const crews = [...new Set(data.instances.flatMap((i) => (i.crewName ? [i.crewName] : [])))];
   return (
@@ -39,8 +39,8 @@ function HandoverBody({ data, timeZone }: { data: ShiftHandoverView; timeZone: s
         {formatTime(data.from, { timeZone, ...pref })} – {formatTime(data.to, { timeZone, ...pref })}
         {crews.length > 0 && ` · crew ${crews.join(', ')}`}
       </p>
-      <Section title="Production by product" testId="handover-production">
-        {data.production.length > 0 ? <ProductionRows rows={data.production} caption="Production by product" /> : <p className="text-sm text-muted-foreground">No calculated periods for this shift yet.</p>}
+      <Section title="Production by product" testId="handover-production" provisional={response.isProvisional}>
+        <ProductionRows rows={data.production} caption="Production by product" />
       </Section>
       <Section title="Events of the shift" testId="handover-events">
         <EventStatusRows rows={data.eventStatus} />
@@ -92,7 +92,7 @@ export function ShiftHandoverReport({ scope, dayStart }: { scope: AnalyticsScope
       <ShiftPicker localDate={localDate} shiftName={shiftName} shifts={shifts} onDate={setLocalDate} onShift={setShift} />
       {ready ? (
         <DataState state={dataStateOf(query)} error={query.error} onRetry={() => void query.refetch()}>
-          {query.data && <HandoverBody data={query.data.data} timeZone={env.timezone} />}
+          {query.data && <HandoverBody response={query.data} timeZone={env.timezone} />}
         </DataState>
       ) : (
         <DataState state="empty" detail="Choose a plant date and a shift." />

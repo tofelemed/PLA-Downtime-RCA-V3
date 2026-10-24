@@ -9,12 +9,13 @@ import { reportText } from '@/features/pla-analytics/model/report-text';
 /**
  * The operational OEE of the report's days with its availability, performance and quality, in a card
  * titled with the server's policy label as the Reports page says it, "OEE" (the reconciled OEE is not part of R1).
+ * The figures carry their own "Provisional" markers (Revision = Provisional).
  */
 export function DailyOeeCard({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useOeeReport(oeeQuery(scope, 'unit', 'operational'), env.timezone);
   return (
-    <AnalyticsCard title={reportText(query.data?.data.label ?? OPERATIONAL_LABEL)} testId="dashboard-oee-operational" query={query} response={query.data}>
+    <AnalyticsCard title={reportText(query.data?.data.label ?? OPERATIONAL_LABEL)} testId="dashboard-oee-operational" query={query} response={query.data} provisionalRows>
       <OeeTiles scope={scope} operationalOnly />
     </AnalyticsCard>
   );
