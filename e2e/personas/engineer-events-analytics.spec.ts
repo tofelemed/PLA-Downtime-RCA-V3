@@ -163,8 +163,8 @@ test.describe('Engineer — event coding and analytics (journeys 4 and 6)', () =
     await loginViaUI(page, SAMUEL.email, SAMUEL.password);
     await page.goto(scopeUrl('/reports', [world.unitId], shiftC, '&approved=1'));
     await expect(page.getByTestId('reports-v2')).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-unit-ids', world.unitId);
-    await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}$/);
+    await expect(page.getByTestId('report-oee')).toHaveAttribute('data-unit-ids', world.unitId);
+    await expect(page.getByTestId('report-oee')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}$/);
     await page.getByTestId('report-type').selectOption('management');
     await page.getByTestId('report-view').selectOption('exports');
     await expect(page.getByTestId('export-period-summary-start')).toBeEnabled({ timeout: 30_000 });

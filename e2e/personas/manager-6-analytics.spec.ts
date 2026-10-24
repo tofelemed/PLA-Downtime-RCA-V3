@@ -158,8 +158,8 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await page.goto(scopeUrl('/reports', [unit], shiftA, '&approved=1'));
     await expect(page.getByTestId('reports-v2')).toBeVisible({ timeout: 60_000 });
     await scoped;
-    await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-unit-ids', unit);
-    await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}$/);
+    await expect(page.getByTestId('report-oee')).toHaveAttribute('data-unit-ids', unit);
+    await expect(page.getByTestId('report-oee')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}$/);
     await page.getByTestId('report-type').selectOption('management');
     await page.getByTestId('report-view').selectOption('exports');
     await page.getByTestId('export-period-summary-start').click();

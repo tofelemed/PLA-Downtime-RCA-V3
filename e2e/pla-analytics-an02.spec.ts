@@ -162,8 +162,8 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     const scoped = reportRequest(page, 'oee', (url) => url.searchParams.getAll('unitIds').join() === unit && url.searchParams.get('approvedOnly') === 'true');
     await page.goto(scopeUrl('/reports', [unit], world.shiftA, '&approved=1'));
     await scoped;
-    await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-unit-ids', unit);
-    await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}$/);
+    await expect(page.getByTestId('report-oee')).toHaveAttribute('data-unit-ids', unit);
+    await expect(page.getByTestId('report-oee')).toHaveAttribute('data-run-ids', /^[0-9a-f-]{36}$/);
     await expect(page.getByTestId('report-oee-days').getByTestId('oee-group')).toHaveCount(1);
     await page.getByTestId('report-type').selectOption('management');
     await page.getByTestId('report-view').selectOption('exports');
