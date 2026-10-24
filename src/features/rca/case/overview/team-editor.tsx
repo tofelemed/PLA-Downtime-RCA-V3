@@ -7,6 +7,7 @@ import { IconButton } from '@/features/ux-kit/icon-button';
 import { useUserNames } from '@/features/ux-kit/labels';
 import { ActionIcon } from '@/lib/icons';
 import { useAssignableUsers } from '../../use-assignable-users';
+import { CaseFact, CaseFacts } from '../components/case-facts';
 
 export interface TeamValue {
   teamLeadId: string | null;
@@ -15,35 +16,78 @@ export interface TeamValue {
 
 const NONE = 'none';
 
+interface PersonOption {
+  id: string;
+  name: string;
+}
+
+/** The team as text (closed, a reader, or a team fixed since the investigation was accepted). */
+function TeamText({ value, nameOf }: { value: TeamValue; nameOf: (id: string) => string }) {
+  return (
+    <div data-testid="team-editor" data-mode="read">
+      <CaseFacts>
+        <CaseFact label="Team lead">{value.teamLeadId ? nameOf(value.teamLeadId) : 'No team lead'}</CaseFact>
+        <CaseFact label="Team members">{value.teamMemberIds.length ? value.teamMemberIds.map(nameOf).join(', ') : 'No team members yet.'}</CaseFact>
+      </CaseFacts>
+    </div>
+  );
+}
+
+function PersonSelect({ id, value, options, noneLabel, onChange }: { id: string; value: string; options: readonly PersonOption[]; noneLabel: string; onChange: (id: string) => void }) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id} className="h-9 sm:w-72">
+        <SelectValue placeholder={noneLabel} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE}>{noneLabel}</SelectItem>
+        {options.map((user) => (
+          <SelectItem key={user.id} value={user.id}>
+            {user.name}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function AddMember({ addable, onAdd }: { addable: readonly PersonOption[]; onAdd: (id: string) => void }) {
+  const [candidate, setCandidate] = useState(NONE);
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="space-y-1.5">
+        <Label htmlFor="team-add">Add a team member</Label>
+        <PersonSelect id="team-add" value={candidate} options={addable} noneLabel="Choose a person" onChange={setCandidate} />
+      </div>
+      <Button type="button" variant="outline" disabled={candidate === NONE} onClick={() => { onAdd(candidate); setCandidate(NONE); }}>
+        Add member
+      </Button>
+    </div>
+  );
+}
+
+export interface TeamEditorProps {
+  value: TeamValue;
+  onChange: (next: TeamValue) => void;
+  /** names as text, no controls */
+  readOnly: boolean;
+  /** controls kept but disabled (a save is running) */
+  disabled?: boolean;
+}
+
 /** Team lead and members, picked from the plant's active users (names only, never ids). */
-export function TeamEditor({ value, onChange, readOnly }: { value: TeamValue; onChange: (next: TeamValue) => void; readOnly: boolean }) {
+export function TeamEditor({ value, onChange, readOnly, disabled = false }: TeamEditorProps) {
   const { users } = useAssignableUsers();
   const names = useUserNames();
-  const [candidate, setCandidate] = useState(NONE);
   const nameOf = (id: string) => users.find((user) => user.id === id)?.name ?? names.nameOf(id);
-  const addable = users.filter((user) => !value.teamMemberIds.includes(user.id));
-  const add = () => {
-    if (candidate === NONE) return;
-    onChange({ ...value, teamMemberIds: [...value.teamMemberIds, candidate] });
-    setCandidate(NONE);
-  };
+  if (readOnly) return <TeamText value={value} nameOf={nameOf} />;
   const remove = (id: string) =>
     onChange({ teamLeadId: value.teamLeadId === id ? null : value.teamLeadId, teamMemberIds: value.teamMemberIds.filter((member) => member !== id) });
   return (
-    <div className="space-y-3" data-testid="team-editor">
-      <div className="space-y-1">
+    <fieldset disabled={disabled} className="min-w-0 space-y-3" data-testid="team-editor" data-mode="edit">
+      <div className="space-y-1.5">
         <Label htmlFor="team-lead">Team lead</Label>
-        <Select value={value.teamLeadId ?? NONE} disabled={readOnly} onValueChange={(lead) => onChange({ ...value, teamLeadId: lead === NONE ? null : lead })}>
-          <SelectTrigger id="team-lead" className="sm:w-72">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NONE}>No team lead</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <PersonSelect id="team-lead" value={value.teamLeadId ?? NONE} options={users} noneLabel="No team lead" onChange={(lead) => onChange({ ...value, teamLeadId: lead === NONE ? null : lead })} />
       </div>
       <ul className="flex flex-wrap gap-2" aria-label="Team members">
         {value.teamMemberIds.length === 0 && <li className="text-sm text-muted-foreground">No team members yet.</li>}
@@ -52,32 +96,12 @@ export function TeamEditor({ value, onChange, readOnly }: { value: TeamValue; on
             <Badge variant="secondary" className="gap-1">
               {nameOf(id)}
               {id === value.teamLeadId && <span className="text-xs">(lead)</span>}
-              {!readOnly && <IconButton icon={ActionIcon.remove} label={`Remove ${nameOf(id)}`} className="h-5 w-5" onClick={() => remove(id)} />}
+              <IconButton icon={ActionIcon.remove} label={`Remove ${nameOf(id)}`} className="h-5 w-5" onClick={() => remove(id)} />
             </Badge>
           </li>
         ))}
       </ul>
-      {!readOnly && (
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="space-y-1">
-            <Label htmlFor="team-add">Add a team member</Label>
-            <Select value={candidate} onValueChange={setCandidate}>
-              <SelectTrigger id="team-add" className="sm:w-72">
-                <SelectValue placeholder="Choose a person" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE}>Choose a person</SelectItem>
-                {addable.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="button" variant="outline" size="sm" disabled={candidate === NONE} onClick={add}>
-            Add member
-          </Button>
-        </div>
-      )}
-    </div>
+      <AddMember addable={users.filter((user) => !value.teamMemberIds.includes(user.id))} onAdd={(id) => onChange({ ...value, teamMemberIds: [...value.teamMemberIds, id] })} />
+    </fieldset>
   );
 }

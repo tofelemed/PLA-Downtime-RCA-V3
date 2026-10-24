@@ -3,7 +3,6 @@ import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { RCA_CASE_STATUS_TONES } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { toneOf } from '@/features/ux-kit/status-tone';
 import { statusLabel } from '../../model/rca-labels';
@@ -13,7 +12,8 @@ import type { GateLinks } from '../../model/gate-messages';
 import { GateList } from './gate-list';
 import { MoveControls } from './move-controls';
 import { WorkflowFacts } from './workflow-facts';
-import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { CaseCard } from '../components/case-card';
+import { WORKFLOW_ANCHOR } from './workflow-anchor';
 
 const gateLinks = (basePath: string): GateLinks => ({
   analysis: `${basePath}/analysis`,
@@ -52,13 +52,13 @@ export function WorkflowPanel() {
   const { rca, canWrite, basePath } = useCaseWorkspace();
   const readiness = useRcaReadiness(rca.id);
   return (
-    <Section id="rca-workflow" title="Workflow" titleAside={<KpiInfo label="Workflow" text="Investigation → monitoring of the actions → closure approval. SuperAdmin may approve their own investigation; other approvers must be independent." />}>
+    <CaseCard id={WORKFLOW_ANCHOR} title="Workflow" info="Investigation → monitoring of the actions → closure approval. SuperAdmin may approve their own investigation; other approvers must be independent.">
       <DataState state={dataStateOf(readiness)} error={readiness.error} onRetry={() => readiness.refetch()}>
         {readiness.data && (
           <div className="space-y-4" data-testid="workflow-panel">
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              Status{' '}
-              <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, readiness.data.status)} data-testid="workflow-status">
+              <span className="text-muted-foreground">Status</span>
+              <StatusBadge tone={toneOf(RCA_CASE_STATUS_TONES, readiness.data.status)} className="whitespace-nowrap" data-testid="workflow-status">
                 {statusLabel(readiness.data.status)}
               </StatusBadge>
             </div>
@@ -69,6 +69,6 @@ export function WorkflowPanel() {
           </div>
         )}
       </DataState>
-    </Section>
+    </CaseCard>
   );
 }
