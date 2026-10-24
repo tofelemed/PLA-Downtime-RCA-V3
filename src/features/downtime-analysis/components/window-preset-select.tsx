@@ -1,5 +1,5 @@
 import { Label } from '@/components/ui/label';
-import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { presetWindow, WINDOW_PRESETS, type DowntimeFilters } from '../model/downtime-filters';
 
 /** The rolling window presets of the downtime pages; a chosen preset is the selected option, never repeated as a placeholder (QA L1). */

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { labelOf, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
-import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { REVISION_OPTIONS } from '@/features/pla-analytics/reports/revision-options';
 import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-select';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
