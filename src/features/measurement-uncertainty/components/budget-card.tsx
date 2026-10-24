@@ -23,11 +23,11 @@ export function BudgetCard({ budget, timezone }: { budget: UncertaintyBudgetView
         <Badge variant={budget.inForce ? 'default' : 'outline'}>{budget.inForce ? 'In force' : (STATE_LABELS[budget.state] ?? budget.state)}</Badge>
         {budget.reviewOverdue && budget.state === 'approved' && <Badge variant="destructive">Review overdue</Badge>}
         <span className="text-xs text-muted-foreground">
-          From <PlantTime iso={budget.effectiveFrom} tz={timezone} withDate />
+          From <PlantTime iso={budget.effectiveFrom} tz={timezone} withDate withZone={false} />
           {budget.effectiveTo && (
             <>
               {' '}
-              until <PlantTime iso={budget.effectiveTo} tz={timezone} withDate />
+              until <PlantTime iso={budget.effectiveTo} tz={timezone} withDate withZone={false} />
             </>
           )}
         </span>
@@ -42,7 +42,7 @@ export function BudgetCard({ budget, timezone }: { budget: UncertaintyBudgetView
       />
       <p className="text-xs text-muted-foreground">
         Calibration: {budget.calibrationRef}
-        {budget.evidenceRef ? ` · ${budget.evidenceRef}` : ''} · review due <PlantTime iso={budget.reviewDueAt} tz={timezone} withDate />
+        {budget.evidenceRef ? ` · ${budget.evidenceRef}` : ''} · review due <PlantTime iso={budget.reviewDueAt} tz={timezone} withDate withZone={false} />
       </p>
       <p className="text-xs text-muted-foreground">
         Proposed by {users.nameOf(budget.authorId)}
