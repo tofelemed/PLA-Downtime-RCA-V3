@@ -3,7 +3,12 @@ import { useFxRates } from '@/api/v2/queries/valuation';
 import type { VersionState } from '@/api/v2/types/profiles';
 import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
+import { TableCard } from '@/features/plans-profiles-calendars/components/table-card';
 import { FxRateTable } from './fx-rate-table';
+
+const FX_INFO =
+  'Versions per currency pair: 1 from = rate to, valid up to (not including) the end. A loss whose date no approved rate covers keeps no amount in the other currency; nothing is estimated.';
 
 const PAIRS = ['', 'USD-IRR', 'IRR-USD'] as const;
 const STATES = ['', 'draft', 'approved', 'retired'] as const;
@@ -31,21 +36,18 @@ export function FxRatesTab() {
   return (
     <div className="space-y-4" data-testid="fx-rates-tab">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-40 space-y-1">
+        <div className={`${FIELD_CLASS} w-40`}>
           <Label htmlFor="fxPairFilter">Currencies</Label>
           <NativeSelect id="fxPairFilter" value={pair} options={PAIR_OPTIONS} placeholder="All" onChange={(value) => setPair(value as (typeof PAIRS)[number])} />
         </div>
-        <div className="w-40 space-y-1">
+        <div className={`${FIELD_CLASS} w-40`}>
           <Label htmlFor="fxStateFilter">State</Label>
           <NativeSelect id="fxStateFilter" value={state} options={STATE_OPTIONS} placeholder="All states" onChange={(value) => setState(value as (typeof STATES)[number])} />
         </div>
       </div>
-      <FxRateTable
-        rates={rates.rows}
-        pager={rates.pager}
-        status={rates.status}
-        empty={{ title: 'No exchange rates', text: 'Without an approved rate, amounts are reported only in the currency they were entered in.' }}
-      />
+      <TableCard title="Exchange rates" info={FX_INFO}>
+        <FxRateTable rates={rates.rows} pager={rates.pager} status={rates.status} empty={{ title: 'No exchange rates', text: 'No exchange rates match these filters.' }} />
+      </TableCard>
     </div>
   );
 }

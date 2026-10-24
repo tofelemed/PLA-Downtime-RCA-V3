@@ -4,7 +4,11 @@ import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DEMAND_STATUS_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
+import { TableCard } from '@/features/plans-profiles-calendars/components/table-card';
 import { DemandActions } from './demand-actions';
+
+const DEMAND_INFO =
+  'Lost output counts as a lost sale only where an approved status says the product was sold out; elsewhere the economic view shows the tonnes with no lost-sales value.';
 import { useProductName } from './use-product-name';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
@@ -26,22 +30,24 @@ export function DemandStatusesTab() {
     { id: 'status', header: 'Demand', cell: (s) => labelOf(DEMAND_STATUS_LABELS, s.status) },
     { id: 'valid', header: 'Valid', nowrap: true, cell: (s) => dates.validity(s.effectiveFrom, s.effectiveTo) },
     { id: 'evidence', header: 'Evidence', cell: (s) => s.evidence },
-    { id: 'state', header: 'State', cell: (s) => <VersionStateBadge state={s.state} /> },
-    { id: 'actions', header: 'Actions', cell: (s) => <DemandActions status={s} /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (s) => <VersionStateBadge state={s.state} /> },
+    { id: 'actions', header: 'Actions', nowrap: true, cell: (s) => <DemandActions status={s} /> },
   ];
   return (
     <div className="space-y-4" data-testid="demand-statuses-tab">
       <FocusedListNotice anchor={anchor} what="demand statuses" />
-      <DataTable
-        caption="Demand statuses"
-        columns={columns}
-        rows={statuses.rows}
-        getRowKey={(s) => s.id}
-        getRowAnchor={(s) => `demand-status-${s.id}`}
-        pager={statuses.pager}
-        status={statuses.status}
-        empty={{ title: 'No demand statuses', text: 'Without an approved status, the economic view of lost output stays unvalued.' }}
-      />
+      <TableCard title="Demand statuses" info={DEMAND_INFO}>
+        <DataTable
+          caption="Demand statuses"
+          columns={columns}
+          rows={statuses.rows}
+          getRowKey={(s) => s.id}
+          getRowAnchor={(s) => `demand-status-${s.id}`}
+          pager={statuses.pager}
+          status={statuses.status}
+          empty={{ title: 'No demand statuses', text: 'No demand statuses: the economic view of lost output stays unvalued.' }}
+        />
+      </TableCard>
     </div>
   );
 }

@@ -19,12 +19,18 @@ import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { ActionIcon } from '@/lib/icons';
 import { currenciesLabel, policyStatus } from '../model/policy-status';
 import { PolicyPerson } from '../components/policy-person';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { RevaluationQueued } from '../components/revaluation-queued';
 import { FinanceAreaTabs } from '../components/finance-area-tabs';
 import { PolicyApprove } from './policy-approve';
 
 const BACK = { to: '/finance?tab=policies', label: 'Valuation policy' };
 const trailOf = (version: number) => [{ label: pageNameOf('/finance'), to: '/finance' }, { label: 'Valuation policy', to: BACK.to }, { label: `Version ${version}` }];
+/** Why a version cannot be changed, behind the ⓘ beside its status. */
+const STATUS_NOTES: Partial<Record<ReturnType<typeof policyStatus>, string>> = {
+  approved: 'Approved versions cannot be changed; create a new version instead.',
+  placeholder: 'Kept as history from the earlier setup; it has no reporting currency and cannot be approved.',
+};
 const bodyText = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 /** Names of the impact codes counted as independent cost components (never their ids). */
@@ -87,16 +93,16 @@ function PolicyView({ policy }: { policy: ValuationPolicyView & WithRevaluation 
       )}
     </>
   );
-  const description = (
-    <span className="flex flex-wrap items-center gap-2">
-      <Badge variant={policy.approved ? 'default' : 'outline'} data-testid="policy-status">{POLICY_STATUS_LABELS[status]}</Badge>
-      {status === 'approved' && <span>Approved versions cannot be changed; create a new version instead.</span>}
-      {status === 'placeholder' && <span>Kept as history from the earlier setup; it has no reporting currency and cannot be approved.</span>}
+  const note = STATUS_NOTES[status];
+  const aside = (
+    <span className="flex items-center gap-1.5">
+      <Badge variant={policy.approved ? 'default' : 'outline'} className="whitespace-nowrap" data-testid="policy-status">{POLICY_STATUS_LABELS[status]}</Badge>
+      {note && <KpiInfo label="this version" text={note} />}
     </span>
   );
   return (
     <div className="space-y-6" data-testid="policy-detail" data-version={policy.version} data-status={status}>
-      <PageHeader title={`Valuation policy version ${policy.version}`} back={BACK} breadcrumbs={trailOf(policy.version)} description={description} actions={actions} />
+      <PageHeader title={`Valuation policy version ${policy.version}`} back={BACK} breadcrumbs={trailOf(policy.version)} titleAside={aside} actions={actions} />
       <FinanceAreaTabs current="policies" />
       <RevaluationQueued revaluation={policy.revaluation} />
       <Section title="Settings">
