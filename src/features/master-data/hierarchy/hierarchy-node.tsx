@@ -45,11 +45,11 @@ export function HierarchyNode({ level, icon: Icon, label, kind, expandable, expa
           {label}
         </span>
         {badge && (
-          <Badge variant="outline" className="ml-1 text-xs">
+          <Badge variant="outline" className="ml-1 whitespace-nowrap text-xs">
             {badge}
           </Badge>
         )}
-        {actions && <span className="ml-auto flex shrink-0 items-center gap-1 pr-1">{actions}</span>}
+        {actions && <span className="ml-auto flex shrink-0 items-center gap-1 whitespace-nowrap pr-1">{actions}</span>}
       </div>
       {expanded && children ? <ul>{children}</ul> : null}
     </li>
