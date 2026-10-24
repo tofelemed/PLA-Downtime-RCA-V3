@@ -29,7 +29,7 @@ export function MappingVersionsTable({ page, format }: { page: PagedQueryResult<
       pager={page.pager}
       getRowKey={(m) => m.id}
       status={page.status}
-      empty={{ title: 'No state mapping yet', text: 'Without a mapping the unit has no state timeline and no availability bounds.' }}
+      empty={{ title: 'No state mapping yet', text: 'No state mapping yet; without one the unit has no state timeline or availability bounds.' }}
     />
   );
 }

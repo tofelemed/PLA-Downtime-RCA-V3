@@ -26,9 +26,9 @@ function rowsOf(view: MicroStopPolicyView, unitId: string, format: ReliabilityFo
 export function MicroStopSection({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const policy = useMicroStopPolicy(unitId);
   const editor = usePolicyEditor('Micro-stop settings', unitId, format);
-  const form = canWrite && policy.data ? <MicroStopForm key={`${unitId}-${policy.data.id}`} unitId={unitId} current={policy.data} saving={editor.saving} /> : null;
+  const form = canWrite && policy.data ? <MicroStopForm key={`${unitId}-${policy.data.id}`} unitId={unitId} current={policy.data} saving={editor.saving} onCancel={() => editor.setOpen(false)} /> : null;
   return (
-    <PolicySection title="Micro-stops and trips" editor={editor} form={form}>
+    <PolicySection title="Micro-stops and trips" info="Stops shorter than the threshold stay in running time and reduce performance; a process trip is always an availability event." editor={editor} form={form}>
       <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>
         {policy.data && <PolicySummary rows={rowsOf(policy.data, unitId, format)} testId="micro-stop-current" />}
       </DataState>

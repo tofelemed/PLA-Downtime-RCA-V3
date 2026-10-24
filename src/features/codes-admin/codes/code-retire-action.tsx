@@ -61,6 +61,7 @@ export function CodeRetireAction({ library, code }: CodeRetireActionProps) {
         description="Retiring ends the code's validity now. Its versions, past events and mapping history are kept."
         confirmLabel="Retire code"
         destructive
+        size="md"
         onConfirm={() => feedback.run(() => retire.submit({ id: code.id }), `${code.code} retired`)}
       >
         {feedback.alert}

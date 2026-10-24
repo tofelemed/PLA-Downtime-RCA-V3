@@ -26,13 +26,15 @@ export interface MappingRuleFormProps {
   reasonId: string;
   /** the version was saved (the "+ Add mapping" dialog closes) */
   onSaved?: () => void;
+  /** in the dialog: Cancel left of the primary button */
+  onCancel?: () => void;
 }
 
 /**
  * A new version of one default mapping of the reason code (older versions stay unchanged). A small edit
  * whose new version appears in the table, so it ends in a toast; a refusal is the red alert on top.
  */
-export function MappingRuleForm({ reasonId, onSaved }: MappingRuleFormProps) {
+export function MappingRuleForm({ reasonId, onSaved, onCancel }: MappingRuleFormProps) {
   const create = useCreateCodeMappingRule();
   const feedback = useCodesSaveFeedback();
   const [kind, setKind] = useState<ReasonMappingKind>('reason_to_schedule_class');
@@ -50,20 +52,21 @@ export function MappingRuleForm({ reasonId, onSaved }: MappingRuleFormProps) {
       })
       .catch(() => undefined);
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {feedback.alert}
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="w-64">
-          <Field id="mr-kind" label="Mapping">
-            <NativeSelect id="mr-kind" testId="mr-kind" value={kind} onChange={(value) => { setKind(value as ReasonMappingKind); setTarget(''); }} options={KIND_OPTIONS} />
-          </Field>
-        </div>
-        <div className="w-64">
-          <Field id="mr-target" label="Default">
-            <NativeSelect id="mr-target" testId="mr-target" value={target} onChange={setTarget} placeholder="Choose…" options={targets} />
-          </Field>
-        </div>
-        <Button onClick={save} disabled={!target || create.isPending} data-testid="mr-save">
+      <Field id="mr-kind" label="Mapping">
+        <NativeSelect id="mr-kind" testId="mr-kind" value={kind} onChange={(value) => { setKind(value as ReasonMappingKind); setTarget(''); }} options={KIND_OPTIONS} />
+      </Field>
+      <Field id="mr-target" label="Default">
+        <NativeSelect id="mr-target" testId="mr-target" value={target} onChange={setTarget} placeholder="Choose…" options={targets} />
+      </Field>
+      <div className="flex justify-end gap-2">
+        {onCancel && (
+          <Button type="button" variant="outline" className="h-9" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button className="h-9" onClick={save} disabled={!target || create.isPending} data-testid="mr-save">
           Save as next version
         </Button>
       </div>

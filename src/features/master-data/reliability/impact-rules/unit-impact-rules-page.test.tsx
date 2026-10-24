@@ -140,3 +140,37 @@ describe('Unit impact rules page (plan 1.10, SME Q5 + D9)', () => {
     expect(impactRuleCreateBody(values, 'Asia/Tehran')).toMatchObject({ mode: 'fractional', fraction: '0.5', standbyAssetId: null, takeoverSeconds: 60 });
   });
 });
+
+// Configuration cleanup (24 Oct 2026): no header description, the Rules card with ⓘ, no zone under the dates
+describe('Unit impact rules cleanup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
+
+  it('has no description; the table sits in the Rules card; effective dates carry no zone line', async () => {
+    stubV2Fetch(reply);
+    renderPage();
+    const card = await screen.findByTestId('impact-rules-card');
+    expect(screen.queryByText(/How a stop of one piece of equipment affects its unit/)).toBeNull();
+    expect(within(card).getByRole('heading', { level: 2, name: 'Rules' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'About Rules' })).toBeInTheDocument();
+    await within(card).findByText('Partial: 50 % of the rate');
+    expect(card).not.toHaveTextContent(/Asia\/|\+0\d:\d\d|UTC/);
+  });
+
+  it('Add unit impact rule: ⓘ instead of a description, Unit focused, Cancel before Add draft rule, Esc closes', async () => {
+    stubV2Fetch(reply);
+    actAs('reliability_engineer');
+    renderPage();
+    fireEvent.click(await screen.findByTestId('impact-rule-new'));
+    const dialog = await screen.findByTestId('impact-rule-dialog');
+    expect(within(dialog).queryByText('A draft applies after another manager approves it.')).toBeNull();
+    expect(within(dialog).getByRole('button', { name: 'About new impact rules' })).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByLabelText('Unit')).toHaveFocus());
+    const names = within(dialog).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Add draft rule'));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('impact-rule-dialog')).toBeNull());
+  });
+});

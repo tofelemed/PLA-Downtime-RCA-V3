@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { SaveFailureAlert, type SaveFeedback, type SaveResult } from '@/features/ux-kit/save-result';
+import { COMPACT_FIELDS } from '../../components/compact-fields';
 import { TextField } from '../../components/text-field';
 import { SELECT_CLASS } from '../shared/use-asset-lookup';
 import { bodyOf, draftErrors, draftOf, withoutRule, withRule, withRuleChange, type MappingDraft, type MappingErrors } from './mapping-editor-model';
@@ -55,13 +56,15 @@ export interface MappingEditorProps {
   resultOf: (saved: UnitStateMappingView) => SaveResult;
   /** a version was recorded (the page closes the editor's side panel) */
   onSaved?: () => void;
+  /** closes the side panel (the draft is dropped) */
+  onCancel?: () => void;
 }
 
 /**
  * A new version of the unit's mapping, starting from the version in force; the previous one ends at "from".
  * After a save the editor starts again from the saved version (also when it takes effect later).
  */
-export function MappingEditor({ unitId, current, timezone, feedback, resultOf, onSaved }: MappingEditorProps) {
+export function MappingEditor({ unitId, current, timezone, feedback, resultOf, onSaved, onCancel }: MappingEditorProps) {
   const [draft, setDraft] = useState<MappingDraft>(() => draftOf(current));
   const [shown, setShown] = useState<MappingErrors>({});
   const record = useRecordUnitStateMapping();
@@ -79,15 +82,18 @@ export function MappingEditor({ unitId, current, timezone, feedback, resultOf, o
   };
   const fields = { draft, errors: shown, set };
   return (
-    <form noValidate className="max-w-3xl space-y-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+    <form noValidate className={`max-w-3xl space-y-4 ${COMPACT_FIELDS}`} onSubmit={(e) => { e.preventDefault(); void save(); }}>
       <SaveFailureAlert error={feedback.failure} title="The server refused the mapping" />
       <SignalField unitId={unitId} {...fields} />
       <StateRulesEditor rules={draft.rules} error={shown.rules} onAdd={() => setDraft(withRule)} onRemove={(i) => setDraft((d) => withoutRule(d, i))} onChange={(i, c) => setDraft((d) => withRuleChange(d, i, c))} />
       <AnalogFields analog={draft.analog} errors={shown.analog} onChange={(analog) => set({ analog })} />
       <StalenessFields {...fields} />
-      <DateTimeInput label="Effective from (empty = now)" value={draft.effectiveFrom} timeZone={timezone} onChange={(v) => set({ effectiveFrom: v })} />
+      <DateTimeInput label="Effective from (empty = now)" value={draft.effectiveFrom} timeZone={timezone} onChange={(v) => set({ effectiveFrom: v })} compact />
       <TextField id="map-notes" label="Notes" value={draft.notes} onChange={(v) => set({ notes: v })} multiline maxLength={1000} />
-      <Button type="submit" disabled={record.isPending}>Record new version</Button>
+      <div className="flex justify-end gap-2">
+        {onCancel && <Button type="button" variant="outline" className="h-9" onClick={onCancel}>Cancel</Button>}
+        <Button type="submit" className="h-9" disabled={record.isPending}>Record new version</Button>
+      </div>
     </form>
   );
 }

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { Section } from '@/features/ux-kit/page-layout';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { ActionIcon } from '@/lib/icons';
 import type { VerificationChecklistView } from '../api/master-data-types';
 import { VERIFICATION_CHECKLISTS } from '../api/record-resource';
@@ -60,9 +60,9 @@ export function ChecklistsPage() {
     <BulkRetireButton source={VERIFICATION_CHECKLISTS} ids={selection.selected} what="checklists" onDone={async () => (selection.clear(), refresh())} />
   ) : undefined;
   return (
-    <MasterDataLayout title="Verification checklists" description="Checks that confirm an RCA's fix worked; templates name the ones they need." actions={add}>
-      <Section title="Checklists" actions={bulk}>
-        <ListToolbar filters={filters} onChange={update} searchLabel="Search checklists" />
+    <MasterDataLayout title="Verification checklists" actions={add}>
+      <ListToolbar compact filters={filters} onChange={update} searchLabel="Search checklists" />
+      <RcaCard title="Checklists" info="Checks that confirm an RCA's fix worked; templates name the ones they need." actions={bulk} testId="rca-checklists">
         <DataTable
           caption="Verification checklists"
           columns={columns}
@@ -74,7 +74,7 @@ export function ChecklistsPage() {
           status={checklists.status}
           empty={{ title: 'No checklists', text: filters.q ? 'No checklist matches the search.' : 'No verification checklist with this status yet.' }}
         />
-      </Section>
+      </RcaCard>
     </MasterDataLayout>
   );
 }

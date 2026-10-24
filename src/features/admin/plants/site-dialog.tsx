@@ -5,7 +5,7 @@ import type { SiteV2View } from '@/api/v2/types/sites';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
-import { focusFirstField } from '@/features/master-data/components/focus-first-field';
+import { focusFirstFieldOf } from '@/features/ux-kit/focus-first-field';
 import { TextField } from '@/features/master-data/components/text-field';
 import { StatusIcon } from '@/lib/icons';
 import { useCommandFeedback } from '../shared/use-command-feedback';
@@ -52,7 +52,7 @@ export function SiteDialog({ site, plantName, onClose }: SiteDialogProps) {
   const title = site ? `Rename ${site.name}` : `Add site to ${plantName}`;
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('site-name')}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstFieldOf}>
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             <DialogTitle>{title}</DialogTitle>

@@ -3,6 +3,7 @@ import { useRecordTransitionAllowance, useTransitionAllowance } from '@/api/v2/q
 import type { TransitionAllowanceOption, TransitionAllowanceView } from '@/api/v2/types/reliability';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -33,11 +34,13 @@ interface ChoiceFormProps {
   view: TransitionAllowanceView;
   /** the section's save feedback: its result dialog outlives this form's side panel */
   saving: PolicySaveFeedback;
+  /** closes the side panel (the choice is dropped) */
+  onCancel: () => void;
 }
 
 const choiceOf = (value: TransitionAllowanceOption) => TRANSITION_CHOICES.find((c) => c.value === value) ?? TRANSITION_CHOICES[0];
 
-function ChoiceForm({ unitId, view, saving }: ChoiceFormProps) {
+function ChoiceForm({ unitId, view, saving, onCancel }: ChoiceFormProps) {
   const [choice, setChoice] = useState<TransitionAllowanceOption>(view.transitionAllowanceInPlan);
   const record = useRecordTransitionAllowance();
   const body = { ...(unitId ? { unitId } : {}), transitionAllowanceInPlan: choice };
@@ -57,10 +60,14 @@ function ChoiceForm({ unitId, view, saving }: ChoiceFormProps) {
           </div>
         ))}
       </RadioGroup>
-      <p className="text-xs text-muted-foreground">A change applies from now on. Periods already calculated keep the version they were calculated with.</p>
-      <Button type="button" disabled={record.isPending || choice === view.transitionAllowanceInPlan} onClick={() => void save()}>
-        Record (effective from now)
-      </Button>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" className="h-9" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="button" className="h-9" disabled={record.isPending || choice === view.transitionAllowanceInPlan} onClick={() => void save()}>
+          Record (effective from now)
+        </Button>
+      </div>
     </div>
   );
 }
@@ -68,10 +75,10 @@ function ChoiceForm({ unitId, view, saving }: ChoiceFormProps) {
 function AllowanceSummary({ view, unitId, format }: { view: TransitionAllowanceView; unitId: string; format: ReliabilityFormat }) {
   const choice = choiceOf(view.transitionAllowanceInPlan);
   const chosen = (
-    <>
-      <span className="block font-medium">{choice.title}</span>
-      <span className="block text-muted-foreground">{choice.text}</span>
-    </>
+    <span className="inline-flex items-center gap-1.5">
+      {choice.title}
+      <KpiInfo label="this choice" text={choice.text} />
+    </span>
   );
   return <PolicySummary rows={[{ label: 'In force', value: policyVersionLine(view, unitId, format) }, { label: 'Grade changes', value: chosen }]} testId="transition-allowance" />;
 }
@@ -80,7 +87,7 @@ function AllowanceSummary({ view, unitId, format }: { view: TransitionAllowanceV
 export function TransitionAllowanceControl({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
   const policy = useTransitionAllowance(unitId);
   const editor = usePolicyEditor('Grade-change allowance', unitId, format);
-  const form = canWrite && policy.data ? <ChoiceForm key={`${unitId}-${policy.data.id}`} unitId={unitId} view={policy.data} saving={editor.saving} /> : null;
+  const form = canWrite && policy.data ? <ChoiceForm key={`${unitId}-${policy.data.id}`} unitId={unitId} view={policy.data} saving={editor.saving} onCancel={() => editor.setOpen(false)} /> : null;
   return (
     <PolicySection title="Grade-change allowance" editor={editor} form={form}>
       <DataState state={dataStateOf(policy)} error={policy.error} onRetry={() => void policy.refetch()}>

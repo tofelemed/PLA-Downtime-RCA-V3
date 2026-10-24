@@ -7,6 +7,7 @@ import { MASTER_DATA_SORT_LABELS, RECORD_STATUS_FILTER_LABELS } from '@/features
 import { cn } from '@/lib/utils';
 import type { MasterDataSort, RecordStatusFilter } from '../api/master-data-types';
 import type { ListFilters } from '../hooks/use-list-filters';
+import { LabelledSearch } from './labelled-search';
 
 export interface ListToolbarProps {
   filters: ListFilters;
@@ -57,24 +58,8 @@ function Choice({ id, label, value, labels, width, compact, onChange }: ChoicePr
 type SearchProps = Pick<ListToolbarProps, 'filters' | 'onChange' | 'searchLabel'> & { compact: boolean };
 
 function Search({ filters, onChange, searchLabel, compact }: SearchProps) {
-  const input = (
-    <DebouncedSearchInput
-      value={filters.q}
-      onChange={(q) => onChange({ q })}
-      label={searchLabel}
-      placeholder={`${searchLabel}...`}
-      className={compact ? 'w-full sm:w-72 [&_input]:h-9' : 'w-full max-w-xs'}
-    />
-  );
-  if (!compact) return input;
-  return (
-    <div className={FIELD_CLASS}>
-      <p className="text-sm font-medium leading-none" aria-hidden="true">
-        Search
-      </p>
-      {input}
-    </div>
-  );
+  if (compact) return <LabelledSearch label={searchLabel} placeholder={`${searchLabel}...`} value={filters.q} onChange={(q) => onChange({ q })} />;
+  return <DebouncedSearchInput value={filters.q} onChange={(q) => onChange({ q })} label={searchLabel} placeholder={`${searchLabel}...`} className="w-full max-w-xs" />;
 }
 
 /** Search (debounced), status and sort of a master-data list; every choice lives in the URL. */

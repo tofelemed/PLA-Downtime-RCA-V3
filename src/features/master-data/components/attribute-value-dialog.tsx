@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { focusFirstField } from './focus-first-field';
+import { focusFirstFieldOf } from '@/features/ux-kit/focus-first-field';
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import type { AttributeDefinitionView as CustomAttributeDefinition } from '@/api/v2/types/administration';
@@ -69,7 +69,7 @@ export function AttributeValueDialog({ definition, value, saving, onSave, onClos
   const missing = definition.isRequired && draft.trim() === '';
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('attribute-value')}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstFieldOf}>
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             <DialogTitle>Edit {definition.displayName}</DialogTitle>

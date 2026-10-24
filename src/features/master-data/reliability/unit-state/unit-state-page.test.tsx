@@ -148,3 +148,50 @@ describe('Unit state page (SME D1 / D2)', () => {
     expect(screen.queryByRole('button', { name: 'Record new version' })).toBeNull();
   });
 });
+
+// Configuration cleanup (24 Oct 2026): no header description; Mapping versions and Coverage cards; the editor panel with ⓘ and Cancel
+describe('Unit state cleanup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin');
+  });
+
+  it('without a unit: no description, a centred "choose a unit" message', () => {
+    stubV2Fetch(reply);
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/master-data/unit-state']}><UnitStatePage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByText(/state signal becomes running, stopped or unknown time\.$/)).toBeNull();
+    expect(within(screen.getByTestId('unit-state-choose')).getByText('Choose a unit to see its state mapping and coverage.')).toBeInTheDocument();
+  });
+
+  it('with a unit: the versions and coverage are cards with ⓘ; the window is typed dates', async () => {
+    stubV2Fetch(reply);
+    renderPage();
+    await screen.findByRole('table', { name: 'State mapping versions' });
+    for (const title of ['Mapping versions', 'Coverage']) {
+      expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `About ${title}` })).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('coverage-window').querySelector('input[type=date]')).toBeNull();
+  });
+
+  it('New mapping version: ⓘ instead of a description, Cancel before Record new version, Cancel and Esc close it', async () => {
+    stubV2Fetch(reply);
+    renderPage();
+    await openEditor();
+    const panel = screen.getByRole('dialog', { name: 'New mapping version' });
+    expect(within(panel).queryByText(/Physical state only/)).toBeNull();
+    expect(within(panel).getByRole('button', { name: 'About new mapping versions' })).toBeInTheDocument();
+    expect(within(panel).queryByText(/A value not listed here counts as unknown time/)).toBeNull();
+    const names = within(panel).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Record new version'));
+    fireEvent.click(within(panel).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New mapping version' })).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'New mapping version' }));
+    fireEvent.keyDown(await screen.findByRole('dialog', { name: 'New mapping version' }), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New mapping version' })).toBeNull());
+  });
+});

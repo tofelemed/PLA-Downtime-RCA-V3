@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DateTimeInput } from '@/features/ux-kit/date-inputs';
 import { nextSetupLink, useSaveFeedback, type SaveResult } from '@/features/ux-kit/save-result';
+import { COMPACT_FIELDS } from '../../components/compact-fields';
 import { sectionNameOf } from '../../components/master-data-sections';
 import { AssetSelect } from '../shared/asset-select';
 import { SELECT_CLASS, useAssetLookup } from '../shared/use-asset-lookup';
@@ -28,13 +29,15 @@ export interface StandbyRegisterFormProps {
   format: ReliabilityFormat;
   /** in the header's dialog: the registration is saved, the caller shows the result dialog (`useAddDialog().saved`) */
   onSaved?: (result: SaveResult) => void;
+  /** in the dialog: Cancel left of Register */
+  onCancel?: () => void;
 }
 
 /**
  * Register an asset as standby equipment (SME D9): how maintenance judges it and from when (default now).
  * A registration ends in the result dialog (its own, or the caller's through `onSaved`).
  */
-export function StandbyRegisterForm({ format, onSaved }: StandbyRegisterFormProps) {
+export function StandbyRegisterForm({ format, onSaved, onCancel }: StandbyRegisterFormProps) {
   const [draft, setDraft] = useState<StandbyDraft>(EMPTY);
   const register = useRegisterStandby();
   const feedback = useSaveFeedback();
@@ -59,7 +62,7 @@ export function StandbyRegisterForm({ format, onSaved }: StandbyRegisterFormProp
   };
   return (
     <>
-      <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
+      <form className={`grid gap-3 ${COMPACT_FIELDS}`} onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         {feedback.alert}
         <AssetSelect id="standby-asset" label="Asset" value={draft.assetId} onChange={(assetId) => set({ assetId })} />
         <div className="space-y-1.5">
@@ -68,8 +71,11 @@ export function StandbyRegisterForm({ format, onSaved }: StandbyRegisterFormProp
             {EVALUATIONS.map((e) => <option key={e} value={e}>{EVALUATION_LABELS[e]}</option>)}
           </select>
         </div>
-        <DateTimeInput label="Standby from (empty = now)" value={draft.from} timeZone={format.timezone} onChange={(from) => set({ from })} />
-        <div className="flex justify-end"><Button type="submit" disabled={!draft.assetId || register.isPending}>Register</Button></div>
+        <DateTimeInput label="Standby from (empty = now)" value={draft.from} timeZone={format.timezone} onChange={(from) => set({ from })} compact />
+        <div className="flex justify-end gap-2">
+          {onCancel && <Button type="button" variant="outline" className="h-9" onClick={onCancel}>Cancel</Button>}
+          <Button type="submit" className="h-9" disabled={!draft.assetId || register.isPending}>Register</Button>
+        </div>
       </form>
       {feedback.dialog}
     </>

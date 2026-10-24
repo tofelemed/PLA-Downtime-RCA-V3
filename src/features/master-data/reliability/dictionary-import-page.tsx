@@ -42,7 +42,6 @@ export function DictionaryImportPage() {
       title="Import failure dictionary"
       alsoAllowed={canValidateFailures}
       back={{ to: DICTIONARY_PAGE, label: sectionNameOf(DICTIONARY_PAGE) }}
-      description="Equipment classes, maintainable items, failure modes and the mechanism, cause and detection lists from a CSV file."
     >
       {canWrite ? <DictionaryImportForm /> : <DataState state="no-permission" detail="Only master-data administrators import the failure dictionary." />}
     </MasterDataLayout>

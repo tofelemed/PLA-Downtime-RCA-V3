@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, ListPager, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { friendlyToastContent } from '@/features/ux-kit/errors';
-import { Section } from '@/features/ux-kit/page-layout';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { useToast } from '@/hooks/use-toast';
 import { ActionIcon } from '@/lib/icons';
 import type { RcaCauseView } from '../api/master-data-types';
@@ -58,7 +58,7 @@ function CauseSearch({ filters, canWrite, onAction }: ViewProps) {
     { id: 'status', header: 'Status', cell: (cause) => <RecordStatusBadge retired={!cause.isActive} /> },
     ...(canWrite ? [{ id: 'actions', header: '', headerLabel: 'Actions', align: 'right' as const, cell: (cause: RcaCauseView) => <CauseActions cause={cause} onAction={onAction} /> }] : []),
   ];
-  return <DataTable caption="Matching causes" columns={columns} rows={found.rows} getRowKey={(cause) => cause.id} pager={found.pager} status={found.status} empty={{ title: 'No cause matches the search' }} />;
+  return <DataTable caption="Matching causes" columns={columns} rows={found.rows} getRowKey={(cause) => cause.id} pager={found.pager} status={found.status} empty={{ title: 'No cause matches the search', text: 'No cause matches the search.' }} />;
 }
 
 /** `/master-data/rca/causes`: the RCA cause library as a lazily loaded tree; search lists matches flat. */
@@ -95,11 +95,11 @@ export function RcaCausesPage() {
   );
   const view = { filters, canWrite, onAction };
   return (
-    <MasterDataLayout title="Cause library" description="Causes RCAs pick from, by category and as a tree." actions={actions}>
-      <Section title="Causes">
-        <ListToolbar filters={filters} onChange={update} searchLabel="Search causes" sortLabels={SORTS} />
+    <MasterDataLayout title="Cause library" actions={actions}>
+      <ListToolbar compact filters={filters} onChange={update} searchLabel="Search causes" sortLabels={SORTS} />
+      <RcaCard title="Causes" info="Causes RCAs pick from, by category and as a tree." testId="rca-causes">
         {filters.q.trim() ? <CauseSearch {...view} /> : <CauseTree {...view} />}
-      </Section>
+      </RcaCard>
       <CauseDialogs pending={pending} onClose={() => setPending(null)} />
     </MasterDataLayout>
   );

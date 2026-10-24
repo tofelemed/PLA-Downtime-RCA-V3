@@ -26,10 +26,9 @@ export function StopPolicyPage() {
     <MasterDataLayout
       title="Stop and plan policy"
       alsoAllowed={canWriteOeePolicy}
-      description="Settings that decide how short stops and grade changes count. Each change is a new version from now on."
     >
-      <div className="max-w-sm">
-        <UnitSelect id="policy-scope" label="Applies to" value={unitId} onChange={choose} allowAll allLabel="The whole plant" />
+      <div className="w-72">
+        <UnitSelect compact id="policy-scope" label="Applies to" value={unitId} onChange={choose} allowAll allLabel="The whole plant" />
       </div>
       {!canWriteOeePolicy && <p className="text-sm text-muted-foreground">Only manager approvers record new versions.</p>}
       <StopEngineSection key={unitId} unitId={unitId} canWrite={canWriteOeePolicy} format={format} />

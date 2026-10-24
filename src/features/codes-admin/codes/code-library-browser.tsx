@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
 import type { CodeLibraryPath } from '@/api/v2/types/codes-admin';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/features/integration-console/components/native-select';
-import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
+import { RcaCard } from '@/features/rca/components/rca-card';
+import { LabelledSearch } from '@/features/master-data/components/labelled-search';
 import { useUrlParam } from '../hooks/use-url-param';
 import { useUrlText } from '../hooks/use-url-text';
 import { LIBRARIES, LIBRARY_PATHS } from '../model/code-fields';
@@ -21,12 +22,12 @@ function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary
   const [shown, setShown] = useUrlParam('show', SHOWN, 'active');
   const [query, setQuery] = useUrlText('q');
   return (
-    <div className="flex flex-wrap items-end gap-3">
-      <div className="w-56 space-y-1">
+    <div className="flex flex-wrap items-end gap-3" data-testid="code-library-filters">
+      <div className={`${FIELD_CLASS} w-56`}>
         <Label htmlFor="code-library">Library</Label>
         <NativeSelect id="code-library" testId="code-library-select" value={library} onChange={(value) => setLibrary(value as CodeLibraryPath)} options={LIBRARY_OPTIONS} />
       </div>
-      <DebouncedSearchInput label="Search codes" placeholder="Search by code or name" value={query} onChange={setQuery} />
+      <LabelledSearch label="Search codes" placeholder="Search by code or name" value={query} onChange={setQuery} />
       <div className="flex h-9 items-center gap-2">
         <Checkbox id="codes-retired" checked={shown === 'all'} onCheckedChange={(value) => setShown(value === true ? 'all' : 'active')} />
         <Label htmlFor="codes-retired">Show retired</Label>
@@ -35,9 +36,12 @@ function Toolbar({ library, setLibrary }: { library: CodeLibraryPath; setLibrary
   );
 }
 
+/** Where root causes live, behind the codes card's ⓘ (the RCA cause library is master data, not a code library). */
+const CAUSES_INFO = `Root causes for investigations are kept in ${pageNameOf('/master-data/rca/templates')} › ${sectionNameOf('/master-data/rca/causes')}.`;
+
 /**
- * The "Code libraries" tab: one library at a time (chosen in the URL), its tree or table, a search that
- * finds codes at any depth. The RCA cause library is master data (RCA library › Cause library).
+ * The "Code libraries" tab: one library at a time (chosen in the URL), its tree or table in a report card,
+ * a search that finds codes at any depth.
  */
 export function CodeLibraryBrowser() {
   const [library, setLibrary] = useUrlParam<CodeLibraryPath>('library', LIBRARY_PATHS, 'reason-codes');
@@ -52,14 +56,9 @@ export function CodeLibraryBrowser() {
   return (
     <div className="space-y-4" data-testid="code-library" data-library={library}>
       <Toolbar library={library} setLibrary={setLibrary} />
-      {body}
-      <p className="text-sm text-muted-foreground">
-        Root causes for investigations are kept in {pageNameOf('/master-data/rca/templates')} ›{' '}
-        <Link className="underline" to="/master-data/rca/causes">
-          {sectionNameOf('/master-data/rca/causes')}
-        </Link>
-        .
-      </p>
+      <RcaCard title={LIBRARIES[library].label} info={CAUSES_INFO} testId="code-library-card">
+        {body}
+      </RcaCard>
     </div>
   );
 }

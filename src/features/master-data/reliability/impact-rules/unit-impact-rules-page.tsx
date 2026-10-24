@@ -3,7 +3,8 @@ import { useUnitImpactRules } from '@/api/v2/queries/unit-impact-rules';
 import type { UnitImpactRuleView } from '@/api/v2/types/unit-impact';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { Section } from '@/features/ux-kit/page-layout';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { PlantTimeRange } from '@/features/ux-kit/plant-time-range';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ActionIcon } from '@/lib/icons';
@@ -21,6 +22,10 @@ import { AddDialog, useAddDialog } from '@/features/ux-kit/add-dialog';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
+
+/** What the rules mean, behind the ⓘ of the Rules card. */
+const RULES_INFO =
+  'How a stop of one piece of equipment affects its unit: without a rule the unit stops; a standby that starts in time holds the output. Drafts apply after another manager approves them.';
 
 /** 50 → "50 %", 12.5 → "12.5 %" in the plant's digits. */
 const shareText = (value: number, percent: (v: number, digits?: number) => string) =>
@@ -45,11 +50,11 @@ function columnsOf({ refs, assetLabel, percent, seconds }: ColumnInput): DataTab
       header: 'Effective',
       nowrap: true,
       cell: (r) => (
-        <PlantTimeRange className="text-xs" from={r.effectiveFrom} to={r.effectiveTo} tz={refs.timezone} />
+        <PlantTimeRange className="text-xs" from={r.effectiveFrom} to={r.effectiveTo} tz={refs.timezone} withZone={false} />
       ),
     },
-    { id: 'state', header: 'State', cell: (r) => <VersionStateBadge state={r.state} /> },
-    { id: 'actions', header: 'Actions', cell: (r) => <VersionActions resource="unit-impact-rules" id={r.id} state={r.state} timezone={refs.timezone} authorId={r.createdBy} /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (r) => <VersionStateBadge state={r.state} /> },
+    { id: 'actions', header: 'Actions', nowrap: true, cell: (r) => <VersionActions resource="unit-impact-rules" id={r.id} state={r.state} timezone={refs.timezone} authorId={r.createdBy} /> },
   ];
 }
 
@@ -77,7 +82,6 @@ export function UnitImpactRulesPage() {
     <MasterDataLayout
       title="Unit impact rules"
       alsoAllowed={canWriteUnitImpactRules || canApproveProfiles}
-      description="How a stop of one piece of equipment affects its unit: without a rule the unit stops; a standby that starts in time holds the output."
       actions={
         canWriteUnitImpactRules && (
           <Button onClick={add.open} data-testid="impact-rule-new">
@@ -87,10 +91,10 @@ export function UnitImpactRulesPage() {
         )
       }
     >
-      <Section title="Rules">
-        <div className="max-w-sm">
-          <UnitSelect id="impact-rules-unit" label="Unit" value={unitId} onChange={setUnitId} allowAll />
-        </div>
+      <div className="w-72" data-testid="impact-rules-filters">
+        <UnitSelect compact id="impact-rules-unit" label="Unit" value={unitId} onChange={setUnitId} allowAll />
+      </div>
+      <RcaCard title="Rules" info={RULES_INFO} testId="impact-rules-card">
         <FocusedListNotice anchor={anchor} what="rules" />
         <DataTable
           caption="Unit impact rules"
@@ -108,8 +112,15 @@ export function UnitImpactRulesPage() {
               : 'Every equipment stop stops its unit unless a person records another impact on the stop.',
           }}
         />
-      </Section>
-      <AddDialog open={add.isOpen} onOpenChange={add.setOpen} title="Add unit impact rule" description="A draft applies after another manager approves it." wide testId="impact-rule-dialog">
+      </RcaCard>
+      <AddDialog
+        open={add.isOpen}
+        onOpenChange={add.setOpen}
+        title="Add unit impact rule"
+        titleAside={<KpiInfo label="new impact rules" text="A draft applies after another manager approves it." />}
+        wide
+        testId="impact-rule-dialog"
+      >
         <ImpactRuleForm initialUnitId={unitId} unitOptions={refs.unitOptions} timezone={refs.timezone} resultOf={resultOf} onSaved={add.saved} onCancel={add.close} />
       </AddDialog>
       {add.resultElement}

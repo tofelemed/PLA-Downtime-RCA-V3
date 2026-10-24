@@ -4,7 +4,9 @@ import { useUnitStateMappingsPage } from '@/api/v2/queries/reliability-unit-stat
 import type { UnitStateMappingView } from '@/api/v2/types/reliability';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { Section } from '@/features/ux-kit/page-layout';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { RcaCard } from '@/features/rca/components/rca-card';
+import { OwnEmptyMessage } from '@/features/ux-kit/data-table/data-table-states';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { ActionIcon } from '@/lib/icons';
 import { MasterDataLayout } from '../../components/master-data-layout';
@@ -16,6 +18,7 @@ import { MappingEditor } from './mapping-editor';
 import { mappingSaveResult } from './mapping-save-result';
 import { MappingVersionsTable } from './mapping-versions-table';
 
+const MAPPING_INFO = "How the unit's state signal becomes running, stopped or unknown time; each version keeps its own rules and staleness.";
 const NEW_VERSION_TEXT = 'Physical state only: schedule status comes from the calendar, causes from events. The version in force ends when the new one starts.';
 
 function UnitStateSections({ unitId, canWrite, format }: { unitId: string; canWrite: boolean; format: ReliabilityFormat }) {
@@ -37,15 +40,22 @@ function UnitStateSections({ unitId, canWrite, format }: { unitId: string; canWr
   ) : null;
   return (
     <>
-      <Section title="Mapping versions" actions={action}>
+      <RcaCard title="Mapping versions" info={MAPPING_INFO} actions={action} testId="mapping-versions">
         <MappingVersionsTable page={versions} format={format} />
-      </Section>
-      <Section title="Coverage">
-        <CoveragePanel unitId={unitId} format={format} />
-      </Section>
+      </RcaCard>
+      <CoveragePanel unitId={unitId} format={format} />
       {canWrite && (
-        <EditorSheet open={editing} onOpenChange={setOpen} title="New mapping version" description={NEW_VERSION_TEXT}>
-          <MappingEditor key={current?.id ?? 'first'} unitId={unitId} current={current} timezone={format.timezone} feedback={feedback} resultOf={resultOf} onSaved={() => setEditing(false)} />
+        <EditorSheet open={editing} onOpenChange={setOpen} title="New mapping version" titleAside={<KpiInfo label="new mapping versions" text={NEW_VERSION_TEXT} />}>
+          <MappingEditor
+            key={current?.id ?? 'first'}
+            unitId={unitId}
+            current={current}
+            timezone={format.timezone}
+            feedback={feedback}
+            resultOf={resultOf}
+            onSaved={() => setEditing(false)}
+            onCancel={() => setOpen(false)}
+          />
         </EditorSheet>
       )}
       {feedback.dialog}
@@ -65,12 +75,16 @@ export function UnitStatePage() {
   const unitId = params.get('unitId') ?? '';
   const choose = (next: string) => setParams(next ? { unitId: next } : {}, { replace: true });
   return (
-    <MasterDataLayout title="Unit state" alsoAllowed={canWriteStateMappings} description="How a unit's state signal becomes running, stopped or unknown time.">
-      <div className="max-w-sm"><UnitSelect id="unit-state-unit" label="Unit" value={unitId} onChange={choose} /></div>
+    <MasterDataLayout title="Unit state" alsoAllowed={canWriteStateMappings}>
+      <div className="w-72">
+        <UnitSelect compact id="unit-state-unit" label="Unit" value={unitId} onChange={choose} />
+      </div>
       {unitId ? (
         <UnitStateSections key={unitId} unitId={unitId} canWrite={canWriteStateMappings} format={format} />
       ) : (
-        <p className="text-sm text-muted-foreground">Choose a unit to see its state mapping and coverage.</p>
+        <div className="rounded-lg border bg-card px-4 py-10" data-testid="unit-state-choose">
+          <OwnEmptyMessage text="Choose a unit to see its state mapping and coverage." />
+        </div>
       )}
     </MasterDataLayout>
   );

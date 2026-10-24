@@ -67,7 +67,7 @@ export function SimulationPanel({ rule, schema }: { rule: RuleView; schema: Rule
         <Field id="sim-version" label="Definition">
           <NativeSelect id="sim-version" testId="sim-version" value={version} onChange={setVersion} options={versions} />
         </Field>
-        <Button onClick={run} disabled={simulate.isPending || versions.length === 0} data-testid="sim-run">
+        <Button className="h-9" onClick={run} disabled={simulate.isPending || versions.length === 0} data-testid="sim-run">
           Run simulation
         </Button>
       </div>
