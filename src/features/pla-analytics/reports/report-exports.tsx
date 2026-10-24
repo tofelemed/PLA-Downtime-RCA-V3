@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { ReportCard } from '../components/report-card';
 import { ScopeExport } from '../components/scope-export';
 import { exportBlockedReason, exportRequestOf, oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { REVISION_OPTIONS } from './revision-options';
@@ -19,7 +20,7 @@ export function ReportExports({ scope }: { scope: AnalyticsScope }) {
   const reason = exportBlockedReason(scope, provisional, REVISION_OPTIONS.approved);
   const reasonId = useId();
   return (
-    <div className="space-y-3" data-testid="report-exports">
+    <ReportCard title="Period summary and loss lines" testId="report-exports">
       <DisabledReason id={reasonId} reason={reason} />
       {EXPORTS.map((entry) => (
         <div key={entry.reportType} className="flex flex-wrap gap-4">
@@ -37,6 +38,6 @@ export function ReportExports({ scope }: { scope: AnalyticsScope }) {
           ))}
         </div>
       ))}
-    </div>
+    </ReportCard>
   );
 }

@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DataState } from '@/features/ux-kit/data-state';
+import { ProvisionalMark } from '@/features/ux-kit/report-look';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
@@ -26,6 +27,16 @@ function useOeeFigures(scope: AnalyticsScope, policy: OeePolicy, enabled = true)
   return { query, isLoading: query.isLoading, label: query.data?.data.label, total: query.data?.data.total };
 }
 
+/** A tile's figure; on the Reports page with Revision = Provisional, a marker when the server marks it provisional. */
+function TileValue({ text, provisional }: { text: string | null; provisional: boolean }) {
+  return (
+    <>
+      <span data-testid="oee-tile-value">{text ?? '—'}</span>
+      <ProvisionalMark when={provisional} />
+    </>
+  );
+}
+
 /**
  * The OEE tiles of the scope: operational OEE with its components and the reconciled PLA OEE; with
  * `operationalOnly` (the daily report) the four operational tiles only, and the reconciled OEE is not asked.
@@ -34,7 +45,7 @@ function useOeeFigures(scope: AnalyticsScope, policy: OeePolicy, enabled = true)
 export function OeeTiles({ scope, operationalOnly = false }: { scope: AnalyticsScope; operationalOnly?: boolean }) {
   const { digits } = useCalendarPreference();
   const report = useReportChrome();
-  const said = (spec: KpiTileSpec): KpiTileSpec => (report ? { ...spec, title: reportText(spec.title), info: reportText(spec.info) } : spec);
+  const said = (spec: KpiTileSpec): KpiTileSpec => (report ? { ...spec, title: reportText(spec.title), info: reportText(spec.info, 'note') } : spec);
   const operational = useOeeFigures(scope, 'operational');
   const reconciled = useOeeFigures(scope, 'reconciled', !operationalOnly);
   const asked = operationalOnly ? [operational] : [operational, reconciled];
@@ -47,7 +58,7 @@ export function OeeTiles({ scope, operationalOnly = false }: { scope: AnalyticsS
       {tiles.map((def) => {
         const figures = def.id === 'reconciled' ? reconciled : operational;
         const view = findKpi(figures.total, def.metric);
-        const value = figures.isLoading ? <Skeleton className="h-8 w-20" /> : <span data-testid="oee-tile-value">{oeeTileValue(view, digits) ?? '—'}</span>;
+        const value = figures.isLoading ? <Skeleton className="h-8 w-20" /> : <TileValue text={oeeTileValue(view, digits)} provisional={view?.quality === 'provisional'} />;
         return <KpiTile key={def.id} spec={said(oeeTileSpec(def, view, labels))} value={value} testId={`dashboard-oee-${def.id}-tile`} />;
       })}
     </KpiTileRow>

@@ -46,7 +46,7 @@ const QUERY = ready({});
 
 describe('Reports text cleanup: header', () => {
   it('keeps the h1 "Reports" and drops the description, scope line, revision badge and snapshot status', () => {
-    elsewhere(<ReportsHeader scope={SCOPE} />);
+    elsewhere(<ReportsHeader />);
     expect(screen.getByRole('heading', { level: 1, name: 'Reports' })).toBeInTheDocument();
     for (const gone of [/Approved figures of the chosen units/, /All units in your scope/, /Approved revisions only/, /Provisional/, /As of/, /Details/, /Incomplete data/, /UTC/]) {
       expect(screen.queryByText(gone)).toBeNull();
@@ -54,12 +54,9 @@ describe('Reports text cleanup: header', () => {
     expect(screen.queryByTestId('report-snapshot-details')).toBeNull();
   });
 
-  it('keeps the shown snapshot readable for end-to-end tests without showing it', () => {
-    elsewhere(<ReportsHeader scope={{ ...SCOPE, unitIds: ['u1'] }} />);
-    const marker = screen.getByTestId('report-snapshot');
-    expect(marker).not.toBeVisible();
-    expect(marker).toHaveAttribute('data-run-ids', 'run-1');
-    expect(marker).toHaveAttribute('data-unit-ids', 'u1');
+  it('has no hidden snapshot marker (the OEE card carries the units and runs)', () => {
+    elsewhere(<ReportsHeader />);
+    expect(screen.queryByTestId('report-snapshot')).toBeNull();
   });
 });
 
