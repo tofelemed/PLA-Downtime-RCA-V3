@@ -80,6 +80,15 @@ describe('Work-order operations (SME D10)', () => {
     expect(screen.queryByText('Open in work-order operations')).toBeNull();
   });
 
+  it('the active repair label explains that Other (not counted) is the only kind left out', async () => {
+    stubV2Fetch((call) => (call.url.pathname.endsWith('/repair-evidence') ? jsonResponse(200, EVIDENCE) : undefined));
+    actAs('Operator');
+    wrap(<RepairEvidencePanel eventId="e1" />);
+    await screen.findByTestId('repair-evidence');
+    fireEvent.focus(screen.getByRole('button', { name: 'About active repair' }));
+    expect((await screen.findAllByText(/Other \(not counted\)” is the only operation kind left out/))[0]).toBeInTheDocument();
+  });
+
   it('a stop without CMMS operations says it gives no active repair time', async () => {
     stubV2Fetch((call) => (call.url.pathname.endsWith('/repair-evidence') ? jsonResponse(200, { ...EVIDENCE, operations: 0, activeOperations: 0, activeRepairSeconds: null, reason: 'no_operations' }) : undefined));
     wrap(<RepairEvidencePanel eventId="e1" />);

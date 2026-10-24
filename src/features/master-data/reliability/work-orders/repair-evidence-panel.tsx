@@ -7,6 +7,10 @@ import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { useReliabilityFormat, type ReliabilityFormat } from '../shared/use-reliability-format';
 import { WorkOrderTable } from './work-order-table';
 import { plural } from '@/features/ux-kit/format/plural';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+
+/** Which operation kinds count towards the active repair time. */
+const ACTIVE_REPAIR_INFO = 'Diagnosis, repair and test operations count as active repair. “Other (not counted)” is the only operation kind left out of it.';
 
 function EvidenceFacts({ evidence, format }: { evidence: RepairEvidenceView; format: ReliabilityFormat }) {
   if (evidence.reason === 'no_operations') {
@@ -17,7 +21,10 @@ function EvidenceFacts({ evidence, format }: { evidence: RepairEvidenceView; for
   }
   return (
     <dl className="grid grid-cols-[12rem_1fr] gap-x-3 gap-y-1 text-sm" data-testid="repair-evidence">
-      <dt className="text-muted-foreground">Active repair</dt>
+      <dt className="flex items-center gap-1 text-muted-foreground">
+        Active repair
+        <KpiInfo label="active repair" text={ACTIVE_REPAIR_INFO} />
+      </dt>
       <dd>{format.duration(evidence.activeRepairSeconds ?? 0)}</dd>
       <dt className="text-muted-foreground">Waiting (parts, permit, crew)</dt>
       <dd>{format.duration(evidence.waitingSeconds)}</dd>
