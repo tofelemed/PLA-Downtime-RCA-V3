@@ -23,12 +23,16 @@ function useScrollToAnchor() {
   }, [hash]);
 }
 
-function LockedNote({ locked }: { locked: boolean }) {
-  if (!locked) return null;
+const CAUSES_INFO = 'Root, direct and contributing causes, each with a code from the cause library when one fits.';
+const LOCKED_INFO = 'Causes are locked once closure is requested; they can be changed again if the closure is sent back.';
+
+/** The Causes ⓘ; once closure is requested it also says why the causes cannot be changed. */
+function CausesInfo({ locked }: { locked: boolean }) {
+  if (!locked) return <KpiInfo label="Causes" text={CAUSES_INFO} />;
   return (
-    <p role="note" className="text-sm text-muted-foreground" data-testid="causes-locked">
-      Causes are locked once closure is requested; they can be changed again if the closure is sent back.
-    </p>
+    <span className="inline-flex" data-testid="causes-locked">
+      <KpiInfo label="Causes" text={`${CAUSES_INFO} ${LOCKED_INFO}`} />
+    </span>
   );
 }
 
@@ -51,9 +55,8 @@ export function CausesPanel() {
     </Button>
   ) : null;
   return (
-    <Section id={CAUSES_ANCHOR} title="Causes" titleAside={<KpiInfo label="Causes" text="Root, direct and contributing causes, each with a code from the cause library when one fits." />} actions={add}>
+    <Section id={CAUSES_ANCHOR} title="Causes" titleAside={<CausesInfo locked={locked} />} actions={add}>
       <div className="space-y-3" data-testid="causes-panel">
-        <LockedNote locked={locked} />
         {canWrite && editing === 'new' && <CauseEditor onDone={() => setEditing(null)} />}
         <DataState state={dataStateOf(causes, { isEmpty: items.length === 0 })} error={causes.error} onRetry={() => causes.refetch()} detail="No causes recorded yet.">
           {groupCauses(items).filter((group) => group.causes.length > 0).map((group) => (

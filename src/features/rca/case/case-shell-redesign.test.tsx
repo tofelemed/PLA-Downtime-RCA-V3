@@ -145,6 +145,15 @@ describe('RCA case shell redesign', () => {
     expect(screen.queryByTestId('save-case')).toBeNull();
   });
 
+  it('definition, writer on an open unlocked case: team lead and member selects are editable, Add member h-9', () => {
+    renderInCase(<DefinitionPage />, SHELL_CASE, '/rca/c1/definition');
+    const team = screen.getByTestId('team-editor');
+    expect(team).toHaveAttribute('data-mode', 'edit');
+    expect(within(team).getByRole('combobox', { name: 'Team lead' })).toBeEnabled();
+    expect(within(team).getByRole('combobox', { name: 'Add a team member' })).toBeEnabled();
+    expect(within(team).getByRole('button', { name: 'Add member' }).className).toMatch(/\bh-9\b/);
+  });
+
   it('definition, editable: labelled inputs; field hints behind ⓘ instead of paragraphs', () => {
     renderInCase(<DefinitionPage />, SHELL_CASE, '/rca/c1/definition');
     expect(screen.getByLabelText('Title')).toHaveValue('Gearbox trip');

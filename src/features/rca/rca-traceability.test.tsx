@@ -171,11 +171,14 @@ describe('RCA history, recommendation → action → task, typed causes (items 2
     expect(calls.find((call) => call.method === 'POST')?.url.pathname).toBe('/api/v2/rcas/c1/causes');
   });
 
-  it('item 7: causes are read-only once closure is requested; a CAUSES_LOCKED refusal reads in words', async () => {
+  it('item 7: causes are read-only once closure is requested (the rule behind the Causes ⓘ); a CAUSES_LOCKED refusal reads in words', async () => {
     reply = (call) => (call.url.pathname.endsWith('/rcas/c1/causes') ? json(200, [CAUSE]) : json(200, USERS));
     const view = wrap(<CausesPanel />, { ...CASE, status: 'Closure Review' } as RcaCaseView);
     await screen.findByTestId('cause-item');
-    expect(screen.getByTestId('causes-locked')).toBeInTheDocument();
+    expect(screen.queryByText(/Causes are locked once closure is requested/)).toBeNull();
+    const info = within(screen.getByTestId('causes-locked')).getByRole('button', { name: 'About Causes' });
+    fireEvent.focus(info);
+    expect((await screen.findAllByText(/Causes are locked once closure is requested/)).length).toBeGreaterThan(0);
     expect(screen.queryByTestId('add-cause')).toBeNull();
     expect(screen.queryByTestId('edit-cause')).toBeNull();
     view.unmount();
