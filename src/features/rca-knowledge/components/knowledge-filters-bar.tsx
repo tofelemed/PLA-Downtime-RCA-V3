@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useCodeLibrary } from '@/api/v2/queries/reference-data';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { useUnitNames } from '@/features/rca/use-unit-names';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { ALL, type KnowledgeFilterState, type PublishedChoice } from '../model/knowledge-filters';
@@ -16,18 +18,21 @@ interface Option {
   label: string;
 }
 
-function FilterSelect({ label, value, options, onChange }: { label: string; value: string; options: Option[]; onChange: (value: string) => void }) {
+function FilterSelect(props: { id: string; label: string; value: string; options: Option[]; onChange: (value: string) => void }) {
   return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className="w-full sm:w-48">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <div className={FIELD_CLASS}>
+      <Label htmlFor={props.id}>{props.label}</Label>
+      <Select value={props.value} onValueChange={props.onChange}>
+        <SelectTrigger id={props.id} className="h-9 w-full sm:w-48">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {props.options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }
 
@@ -37,7 +42,7 @@ const PUBLISHED_OPTIONS: Option[] = [
   { value: 'unpublished', label: 'Unpublished only' },
 ];
 
-/** Search text (debounced), unit, reason (failure) code and published state; every filter is applied by the server. */
+/** Unit, reason (failure) code, published state and search text (debounced); every filter is applied by the server. */
 export function KnowledgeFiltersBar({ value, onChange }: KnowledgeFiltersBarProps) {
   const { units } = useUnitNames();
   const reasons = useCodeLibrary('reason-codes');
@@ -47,22 +52,28 @@ export function KnowledgeFiltersBar({ value, onChange }: KnowledgeFiltersBarProp
   );
   const unitOptions = [{ value: ALL, label: 'All units' }, ...units.map((unit) => ({ value: unit.id, label: unit.name }))];
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap" data-testid="knowledge-filters">
-      <DebouncedSearchInput
-        className="sm:w-72"
-        label="Search knowledge entries"
-        placeholder="Search title, root cause or problem"
-        value={value.text}
-        onChange={(text) => onChange({ ...value, text })}
-      />
-      <FilterSelect label="Unit filter" value={value.unitId} options={unitOptions} onChange={(unitId) => onChange({ ...value, unitId })} />
-      <FilterSelect label="Reason code filter" value={value.reasonCodeId} options={reasonOptions} onChange={(reasonCodeId) => onChange({ ...value, reasonCodeId })} />
+    <div className="flex flex-wrap items-end gap-3" data-testid="knowledge-filters">
+      <FilterSelect id="knowledge-unit" label="Unit" value={value.unitId} options={unitOptions} onChange={(unitId) => onChange({ ...value, unitId })} />
+      <FilterSelect id="knowledge-reason" label="Reason code" value={value.reasonCodeId} options={reasonOptions} onChange={(reasonCodeId) => onChange({ ...value, reasonCodeId })} />
       <FilterSelect
-        label="Published filter"
+        id="knowledge-published"
+        label="State"
         value={value.published}
         options={PUBLISHED_OPTIONS}
         onChange={(published) => onChange({ ...value, published: published as PublishedChoice })}
       />
+      <div className={FIELD_CLASS}>
+        <p className="text-sm font-medium leading-none" aria-hidden="true">
+          Search
+        </p>
+        <DebouncedSearchInput
+          className="sm:w-72 [&_input]:h-9"
+          label="Search knowledge entries"
+          placeholder="Search title, root cause or problem"
+          value={value.text}
+          onChange={(text) => onChange({ ...value, text })}
+        />
+      </div>
     </div>
   );
 }

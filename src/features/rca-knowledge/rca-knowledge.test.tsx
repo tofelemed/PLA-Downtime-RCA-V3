@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -101,10 +101,38 @@ describe('RCA knowledge base v2 screen', () => {
     reply = (call) => json(200, list(call.url.pathname === '/api/v2/rca-knowledge' ? [ENTRY] : []));
     wrap(<RcaKnowledgePage />);
     expect(await screen.findByText('Extruder coupling failures')).toBeTruthy();
-    expect(screen.getByTestId('quality-score').textContent).toBe('Record quality 77 / 100');
+    // the column says "Record quality" (QA L11), so the badge carries the score only
+    expect(screen.getByRole('columnheader', { name: 'Record quality' })).toBeInTheDocument();
+    expect(screen.getByTestId('quality-score').textContent).toBe('77 / 100');
     expect(knowledgeCalls()[0].url.searchParams.get('limit')).toBe('20');
     fireEvent.change(screen.getByLabelText('Search knowledge entries'), { target: { value: 'coupling' } });
     await waitFor(() => expect(knowledgeCalls().some((call) => call.url.searchParams.get('q') === 'coupling')).toBe(true));
+  });
+
+  it('cleanup: no header description or section paragraph; Entries card and From other plants with ⓘ; labelled h-9 filters', async () => {
+    reply = (call) => json(200, list(call.url.pathname === '/api/v2/rca-knowledge' ? [ENTRY] : []));
+    wrap(<RcaKnowledgePage />);
+    expect(await screen.findByText('Extruder coupling failures')).toBeTruthy();
+    expect(screen.queryByText(/Learning from closed investigations/)).toBeNull();
+    expect(screen.queryByText(/Check the fit/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument();
+    const card = screen.getByRole('region', { name: 'Entries' });
+    expect(card.className).toContain('bg-card');
+    expect(within(card).getByRole('button', { name: 'About Entries' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'From other plants' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About From other plants' })).toBeInTheDocument();
+    const bar = screen.getByTestId('knowledge-filters');
+    expect(bar.className).toContain('items-end');
+    expect(within(bar).getByText('Search')).toBeInTheDocument();
+    for (const label of ['Unit', 'Reason code', 'State']) expect(within(bar).getByLabelText(label).className).toContain('h-9');
+  });
+
+  it('cleanup: an empty list keeps its own message and Clear filters (not "No data for these dates")', async () => {
+    reply = () => json(200, list([]));
+    wrap(<RcaKnowledgePage />);
+    expect(await screen.findByText('No entry matches these filters.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
+    expect(screen.queryByText('No data for these dates')).toBeNull();
   });
 
   it('shows the server score breakdown, votes once and publishes with If-Match', async () => {
@@ -116,6 +144,8 @@ describe('RCA knowledge base v2 screen', () => {
     wrap(<KnowledgeDetail id="k1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Quality' }));
     expect((await screen.findByTestId('quality-breakdown')).textContent).toContain('30 / 30');
+    expect(screen.queryByText('How the server scored this entry.')).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Quality' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^Helpful/ }));
     await waitFor(() => expect(calls.some((call) => call.url.pathname.endsWith('/votes'))).toBe(true));
     const vote = calls.find((call) => call.url.pathname.endsWith('/votes'));
