@@ -13,6 +13,7 @@ import { timelineOf, type TimelineEntry } from '../../../../model/timeline';
 import { useRcaFormat } from '../../../../use-rca-format';
 import { useCaseWorkspace } from '../../../case-context';
 import { useCasePatch } from '../../../use-case-patch';
+import { ToolCanvas } from '../tool-canvas';
 import { addEvent, removeEvent, updateEvent } from '../event-diagram/diagram-model';
 import { EventDialog, type EventFields } from '../event-diagram/event-dialog';
 import { EvidenceLinkPopover } from '../evidence-link-popover';
@@ -52,13 +53,33 @@ function EntryActions({ entry, onEdit }: { entry: TimelineEntry; onEdit: () => v
   );
 }
 
+function TimelineRow({ entry, readOnly, onEdit }: { entry: TimelineEntry; readOnly: boolean; onEdit: () => void }) {
+  const { dateTime } = useRcaFormat();
+  const { number } = useNumberFormat();
+  return (
+    <li className="flex flex-wrap items-start justify-between gap-2 rounded-md border bg-card p-3" data-testid="timeline-entry">
+      <div className="min-w-0 space-y-1 text-sm">
+        <p className="font-medium">
+          <span className="tabular-nums text-muted-foreground">{entry.at ? dateTime(entry.at) : 'No time'}</span> · {entry.title}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          <Badge variant="secondary" className="whitespace-nowrap">{entry.type ?? 'Event'}</Badge>
+          {entry.severity && <Badge variant="outline" className="whitespace-nowrap">{entry.severity}</Badge>}
+          {entry.asset && <Badge variant="outline" className="whitespace-nowrap">{entry.asset}</Badge>}
+          <Badge variant="outline" className="whitespace-nowrap">{evidenceCountText(entry.evidence, number)}</Badge>
+        </div>
+        {entry.description && <p className="max-w-[75ch] text-muted-foreground">{entry.description}</p>}
+      </div>
+      {!readOnly && <EntryActions entry={entry} onEdit={onEdit} />}
+    </li>
+  );
+}
+
 /** Event timeline: diagram events and the production events linked to the case, in time order. */
 export function TimelineTool() {
   const { rca, readOnly } = useCaseWorkspace();
   const links = useRcaLinks(rca.id);
   const patch = useCasePatch();
-  const { dateTime } = useRcaFormat();
-  const { number } = useNumberFormat();
   const [editing, setEditing] = useState<Editing>(null);
   const entries = timelineOf(rca.eventDiagram.nodes, links.data ?? [], rca.evidence);
   const save = async (fields: EventFields) => {
@@ -67,32 +88,30 @@ export function TimelineTool() {
   };
   return (
     <div className="space-y-3" data-testid="event-timeline">
-      {!readOnly && (
-        <Button size="sm" onClick={() => setEditing({ mode: 'add' })}>
-          Add event
-        </Button>
-      )}
       {patch.error ? <FriendlyErrorAlert error={patch.error} /> : null}
-      {entries.length === 0 && <p className="text-sm text-muted-foreground">No events yet: add one here or on the event diagram, or link production events to the investigation.</p>}
-      <ol className="space-y-2">
-        {entries.map((entry) => (
-          <li key={entry.id} className="flex flex-wrap items-start justify-between gap-2 rounded border p-3" data-testid="timeline-entry">
-            <div className="space-y-1 text-sm">
-              <p className="font-medium">
-                {entry.at ? dateTime(entry.at) : 'No time'} · {entry.title}
-              </p>
-              <div className="flex flex-wrap gap-1">
-                <Badge variant="secondary">{entry.type ?? 'Event'}</Badge>
-                {entry.severity && <Badge variant="outline">{entry.severity}</Badge>}
-                {entry.asset && <Badge variant="outline">{entry.asset}</Badge>}
-                <Badge variant="outline">{evidenceCountText(entry.evidence, number)}</Badge>
-              </div>
-              {entry.description && <p className="text-muted-foreground">{entry.description}</p>}
-            </div>
-            {!readOnly && <EntryActions entry={entry} onEdit={() => setEditing({ mode: 'edit', id: entry.id })} />}
-          </li>
-        ))}
-      </ol>
+      <ToolCanvas
+        label="Event timeline"
+        toolbar={
+          readOnly ? undefined : (
+            <Button className="h-9" onClick={() => setEditing({ mode: 'add' })}>
+              <ActionIcon.add aria-hidden="true" className="h-4 w-4" />
+              Add event
+            </Button>
+          )
+        }
+      >
+        {entries.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {readOnly ? 'No events recorded.' : 'No events yet: add one here or on the event diagram, or link production events to the investigation.'}
+          </p>
+        ) : (
+          <ol className="space-y-2">
+            {entries.map((entry) => (
+              <TimelineRow key={entry.id} entry={entry} readOnly={readOnly} onEdit={() => setEditing({ mode: 'edit', id: entry.id })} />
+            ))}
+          </ol>
+        )}
+      </ToolCanvas>
       {editing && (
         <EventDialog
           title={editing.mode === 'edit' ? 'Edit event' : 'Add event'}

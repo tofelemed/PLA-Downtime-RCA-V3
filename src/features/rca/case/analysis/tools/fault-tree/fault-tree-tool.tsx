@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import type { FaultTreeContent, FaultTreeNode } from '@/api/v2/types/rca-analyses';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { ActionIcon } from '@/lib/icons';
 import { rowId } from '../../../../model/analysis-settings';
 import { useCaseWorkspace } from '../../../case-context';
+import { ToolCanvas } from '../tool-canvas';
 import { useToolDraft } from '../tool-draft';
+import { ToolTextField } from '../tool-fields';
 import { SaveBar, ToolFrame, type ToolRecord } from '../tool-record';
 import { buildFaultTree } from './fault-tree-model';
 import { FaultTreeNodeItem, type FaultTreeActions } from './fault-tree-node-item';
@@ -36,20 +37,28 @@ function Editor({ record, save }: { record: ToolRecord<'faultTree'>; save: (body
   };
   return (
     <div className="space-y-4" data-testid="fault-tree-tool">
-      <div className="space-y-1">
-        <Label htmlFor="ft-top">Top event (the undesired outcome)</Label>
-        <Input id="ft-top" value={content.topEvent} maxLength={255} disabled={readOnly} onChange={(e) => setContent({ ...content, topEvent: e.target.value })} />
-      </div>
-      <ul className="space-y-2" aria-label={`Below the top event: ${content.topEvent}`}>
-        {buildFaultTree(content.nodes).map((item) => (
-          <FaultTreeNodeItem key={item.node.id} item={item} actions={actions} depth={0} />
-        ))}
-      </ul>
-      {!readOnly && (
-        <Button type="button" size="sm" variant="outline" onClick={() => add()}>
-          Add event or gate under the top event
-        </Button>
-      )}
+      <ToolTextField id="ft-top" label="Top event (the undesired outcome)" value={content.topEvent} maxLength={255} onChange={(topEvent) => setContent({ ...content, topEvent })} />
+      <ToolCanvas
+        label="Fault tree"
+        toolbar={
+          readOnly ? undefined : (
+            <Button type="button" variant="outline" className="h-9" onClick={() => add()}>
+              <ActionIcon.add aria-hidden="true" className="h-4 w-4" />
+              Add event or gate under the top event
+            </Button>
+          )
+        }
+      >
+        {content.nodes.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">No events or gates yet.</p>
+        ) : (
+          <ul className="space-y-2" aria-label={`Below the top event: ${content.topEvent}`}>
+            {buildFaultTree(content.nodes).map((item) => (
+              <FaultTreeNodeItem key={item.node.id} item={item} actions={actions} depth={0} />
+            ))}
+          </ul>
+        )}
+      </ToolCanvas>
       {removing && (
         <ConfirmDialog
           open
@@ -62,7 +71,9 @@ function Editor({ record, save }: { record: ToolRecord<'faultTree'>; save: (body
         />
       )}
       <TopEventProbability record={record} />
-      <SaveBar onSave={() => save(content)} disabled={content.topEvent.trim() === '' || content.nodes.length === 0} hint="Name the top event and add at least one node." label="Save fault tree" updatedAt={record?.updatedAt} />
+      <div className="border-t pt-3">
+        <SaveBar onSave={() => save(content)} disabled={content.topEvent.trim() === '' || content.nodes.length === 0} hint="Name the top event and add at least one node." label="Save fault tree" updatedAt={record?.updatedAt} />
+      </div>
     </div>
   );
 }
