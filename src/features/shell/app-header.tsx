@@ -1,12 +1,12 @@
-import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { PlantSelector } from '@/features/plant-selector/plant-selector';
 import { NotificationBell } from '@/features/notifications/notification-bell';
 import { UiIcon } from '@/lib/icons';
+import { PlantTimezoneReadout } from './plant-timezone-readout';
 import { ThemeToggle } from './theme-toggle';
 import { UserBadge } from './user-badge';
 
 /**
- * The one-row app header (h-14, sticky): plant scope, display currency,
+ * The one-row app header (h-14, sticky): plant scope, plant timezone,
  * in-app notifications (SLA escalations) and the user. No dead controls: search and settings return only when they work.
  * The app name is not a heading — every page owns its single `<h1>` (PageHeader).
  */
@@ -42,7 +42,7 @@ export function AppHeader({ navigation }: AppHeaderProps) {
         <PlantSelector />
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-        <DisplayCurrencyToggle />
+        <PlantTimezoneReadout />
         <ThemeToggle />
         <NotificationBell />
         <UserBadge />

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { DisplayCurrencyContext } from './display-currency-context';
-import { loadDisplayCurrency, saveDisplayCurrency, type DisplayCurrency } from './display-currency-store';
+import { DISPLAY_CURRENCY_SWITCH_ENABLED, loadDisplayCurrency, saveDisplayCurrency, type DisplayCurrency } from './display-currency-store';
 
 /** The signed-in user's display currency (USD unless they chose IRR), kept per user in this browser. */
 export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
@@ -15,6 +15,7 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
 
   const setCurrency = useCallback(
     (next: DisplayCurrency) => {
+      if (!DISPLAY_CURRENCY_SWITCH_ENABLED) return;
       setState(next);
       saveDisplayCurrency(userId, next);
     },
