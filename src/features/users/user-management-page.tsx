@@ -27,7 +27,7 @@ export function UserManagementPage() {
   });
   return <PageGate title="User management" allowed={tabs.length > 0} deniedText="You do not have permission to manage users or approval delegations.">
     <Page width="wide">
-      <PageHeader title="User management" description="Manage plant members, their permissions and approval delegations in one place." />
+      <PageHeader title="User management" />
       <Tabs value={active} onValueChange={select}>
         <TabsList className="h-auto flex-wrap">{tabs.map((tab) => <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>)}</TabsList>
         <TabsContent value={active} className="mt-5">

@@ -6,5 +6,5 @@ import { useFromOtherPlant } from './use-from-other-plant';
 export function FromPlantBadge({ user }: { user: Pick<UserView, 'tenantId' | 'tenantName'> }) {
   const fromOtherPlant = useFromOtherPlant(user);
   if (!fromOtherPlant) return null;
-  return <Badge variant="outline">From {user.tenantName ?? 'another plant'}</Badge>;
+  return <Badge variant="outline" className="whitespace-nowrap">From {user.tenantName ?? 'another plant'}</Badge>;
 }

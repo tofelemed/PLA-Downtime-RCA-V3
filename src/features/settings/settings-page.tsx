@@ -30,7 +30,7 @@ export function SettingsPage({ embedded = false }: { embedded?: boolean }) {
   const saveWeek = useSaveWeekStart();
 
   return (
-    <SectionPage embedded={embedded} title="Plant settings" description={tenant.data ? `Settings of ${tenant.data.name}` : undefined}>
+    <SectionPage embedded={embedded} title="Plant settings">
       <Section title="Date and number display" description="Applies to every screen and PDF export of this plant, for every user. CSV exports keep ISO dates.">
         <DataState state={state} error={tenant.error} onRetry={() => void tenant.refetch()}>
           <CalendarSettingsForm saved={saved} timeZone={zone.timezone} canEdit={canManagePlantSettings} />

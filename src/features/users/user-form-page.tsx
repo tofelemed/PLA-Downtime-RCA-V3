@@ -8,7 +8,9 @@ import { useCommandFeedback } from '@/features/admin/shared/use-command-feedback
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { AdminCard } from '@/features/admin/shared/admin-card';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { StatusIcon } from '@/lib/icons';
 import { UserAccessSection } from './components/user-access-section';
 import { placeOf, plantRolesText } from './components/user-columns';
@@ -19,6 +21,8 @@ import { useFromOtherPlant } from './components/use-from-other-plant';
 import { EMPTY_USER_FORM, formOf, toCreateInput, toUpdateInput, type UserFormValues } from './model/user-form';
 
 const BACK = { to: '/users', label: 'Users' };
+const NEW_USER_INFO = 'The user signs in with this e-mail and password. Their plant roles, given under Access, decide what they see.';
+const STATUS_INFO = 'Deactivated users cannot sign in; their history keeps their name.';
 
 /** `/users/new` and `/users/:userId`: a user's details, status and access (was the "Edit User" dialog). */
 export function UserFormPage() {
@@ -43,10 +47,10 @@ function NewUser() {
   };
   return (
     <Page>
-      <PageHeader title="Add user" back={BACK} description="The user signs in with this e-mail and password. Their plant roles, given under Access, decide what they see." />
-      <Section title="Details">
+      <PageHeader title="Add user" back={BACK} titleAside={<KpiInfo label="Add user" text={NEW_USER_INFO} />} />
+      <AdminCard title="Details">
         <UserDetailsForm mode="create" initial={EMPTY_USER_FORM} choosePlant={choosePlant} submitLabel="Create user" onSubmit={submit} onCancel={() => navigate(BACK.to)} />
-      </Section>
+      </AdminCard>
     </Page>
   );
 }
@@ -95,14 +99,14 @@ function UserDetail({ user }: { user: UserView }) {
     <Page>
       <PageHeader title={user.name} back={BACK} description={`${plantRolesText(user)} · ${placeOf(user)}`} meta={<UserStatusBadge isActive={user.isActive} />} />
       <ReadOnlyNote user={user} fromOtherPlant={fromOtherPlant} />
-      <Section title="Details">
+      <AdminCard title="Details">
         <UserDetailsForm key={user.updatedAt} mode="edit" initial={formOf(user)} choosePlant={false} readOnly={!user.manageable} submitLabel="Save changes" onSubmit={submit} onCancel={() => navigate(BACK.to)} />
-      </Section>
+      </AdminCard>
       <UserAccessSection userId={user.id} userName={user.name} canWrite={user.accessManageable} />
       {user.manageable && (
-        <Section title="Status" description="Deactivated users cannot sign in; their history keeps their name.">
+        <AdminCard title="Status" info={STATUS_INFO}>
           <UserLifecycleActions user={user} isSelf={isSelf} />
-        </Section>
+        </AdminCard>
       )}
     </Page>
   );
