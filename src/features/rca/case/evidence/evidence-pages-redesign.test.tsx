@@ -176,3 +176,24 @@ describe('evidence form (RCA detail redesign)', () => {
     await waitFor(() => expect(screen.getByTestId('location').textContent).toMatch(/^\/rca\/c1\/evidence\/ev-/));
   });
 });
+
+describe('evidence form leave confirm (app unsaved-changes dialog)', () => {
+  it('asks before a tab link drops typed input: title, buttons, Esc stays on the form', async () => {
+    const { UnsavedChangesDialogHost } = await import('@/features/ux-kit/unsaved-changes-dialog-host');
+    render(
+      <>
+        <UnsavedChangesDialogHost />
+        {app('/rca/c1/evidence/new')}
+      </>,
+    );
+    fireEvent.change(await screen.findByLabelText(/^Title/), { target: { value: 'Half typed' } });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Investigation sections' })).getByRole('link', { name: /Overview/ }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByRole('heading', { name: 'Leave this page?' })).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent)).toEqual(['Stay on this page', 'Leave and discard']);
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(screen.getByLabelText(/^Title/)).toHaveValue('Half typed');
+    expect(screen.getByTestId('location')).toHaveTextContent('/rca/c1/evidence/new');
+  });
+});
