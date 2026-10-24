@@ -82,5 +82,7 @@ describe('QA PLA fixes', () => {
     const button = screen.getByTestId('x-start');
     expect(button).toBeDisabled();
     expect(document.getElementById(button.getAttribute('aria-describedby') ?? '')).toHaveTextContent('not approved yet');
+    expect(button).toHaveAttribute('title', 'Some periods of these dates are not approved yet.');
+    expect(screen.queryByTestId('disabled-reason')).toBeNull();
   });
 });
