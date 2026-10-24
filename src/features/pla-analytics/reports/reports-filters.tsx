@@ -14,15 +14,16 @@ export interface ReportsFiltersProps {
 }
 
 /**
- * Report filters (plan 3.6 step 4) after the report picker in the top bar: the plant dates the periods
- * start on (From / To, typed or picked in the plant calendar), named units (sent when the list closes),
- * and the revision — approved only, or approved else the latest draft (provisional).
+ * Report filters after the report picker in the top bar, each a sibling item of the bar (they wrap one by
+ * one, every control h-9): the plant dates the periods start on (From / To, typed or picked in the plant
+ * calendar), named units (sent when the list closes), and the revision — approved only, or approved else
+ * the latest draft (provisional).
  */
 export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProps) {
   const env = useEventHubEnv();
   const setDates = (range: { from: string; to: string }) => onChange({ ...range, windowLabel: CHOSEN_DATES });
   return (
-    <div className="flex flex-wrap items-start gap-4" role="group" aria-label="Report filters" data-testid="reports-filters">
+    <>
       <PlantDaysInput
         label="Period dates"
         value={{ from: scope.from, to: scope.to }}
@@ -31,16 +32,22 @@ export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProp
         onChange={setDates}
         toLabel="To"
         calendarPicker
-        hideLegend
+        toolbar
       />
-      <MultiCheckSelect
-        label="Units"
-        testId="report-units"
-        options={env.units.map((unit) => ({ value: unit.id, label: unit.name }))}
-        selected={scope.unitIds}
-        onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
-        commitOnClose
-      />
+      <div className="space-y-1">
+        {/* the button names itself ("Units: All"); the blank line keeps it level with the labelled controls */}
+        <span aria-hidden="true" className="invisible block text-sm font-medium leading-none">
+          Units
+        </span>
+        <MultiCheckSelect
+          label="Units"
+          testId="report-units"
+          options={env.units.map((unit) => ({ value: unit.id, label: unit.name }))}
+          selected={scope.unitIds}
+          onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
+          commitOnClose
+        />
+      </div>
       <div className="space-y-1">
         <Label htmlFor="report-revision">Revision</Label>
         <select
@@ -54,6 +61,6 @@ export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProp
           <option value="shown">{REVISION_OPTIONS.shown}</option>
         </select>
       </div>
-    </div>
+    </>
   );
 }

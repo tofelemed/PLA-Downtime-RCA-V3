@@ -22,6 +22,8 @@ export interface CalendarPopoverProps {
   /** the date shown when `value` is empty (e.g. today on the plant clock) */
   fallbackDate?: string;
   disabled?: boolean;
+  /** a 36 px button, for toolbars where every control is h-9 */
+  compact?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface CalendarPopoverProps {
  * Hijri) and digits. Choosing a day (click or Enter) writes it and closes; Esc closes; focus returns to
  * the button.
  */
-export function CalendarPopover({ label, value, onSelect, weekStart, fallbackDate, disabled, ...shown }: CalendarPopoverProps) {
+export function CalendarPopover({ label, value, onSelect, weekStart, fallbackDate, disabled, compact, ...shown }: CalendarPopoverProps) {
   const preference = useCalendarPreference();
   const [open, setOpen] = useState(false);
   const panel = {
@@ -45,7 +47,7 @@ export function CalendarPopover({ label, value, onSelect, weekStart, fallbackDat
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="icon" className="h-10 w-10 shrink-0" aria-label={`Open calendar for ${label}`} disabled={disabled}>
+        <Button type="button" variant="outline" size="icon" className={compact ? 'h-9 w-9 shrink-0' : 'h-10 w-10 shrink-0'} aria-label={`Open calendar for ${label}`} disabled={disabled}>
           <UiIcon.datePicker className="h-4 w-4" aria-hidden />
         </Button>
       </PopoverTrigger>

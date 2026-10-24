@@ -40,28 +40,30 @@ export interface DateInputProps {
   textEntry?: boolean;
   /** shows a calendar button that opens a month grid in the plant calendar */
   calendarPicker?: CalendarPickerOptions;
+  /** a 36 px field and button, for toolbars where every control is h-9 */
+  compact?: boolean;
 }
 
 /**
  * A date field in the tenant calendar: the native picker for Gregorian, a `YYYY/MM/DD` text field
  * for Jalali (`persian`). Always emits an ISO date, so models and payloads stay Gregorian.
  */
-export function DateInput({ id, label, hideLabel = false, calendar, error, textEntry = false, calendarPicker, ...field }: DateInputProps) {
+export function DateInput({ id, label, hideLabel = false, calendar, error, textEntry = false, calendarPicker, compact, ...field }: DateInputProps) {
   const preference = useCalendarPreference();
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const shown = calendar ?? preference.calendar;
   const ariaLabel = hideLabel ? label : undefined;
   const trailing = calendarPicker && (
-    <CalendarPopover label={label} value={field.value} onSelect={field.onChange} calendar={shown} disabled={field.disabled} {...calendarPicker} />
+    <CalendarPopover label={label} value={field.value} onSelect={field.onChange} calendar={shown} disabled={field.disabled} compact={compact} {...calendarPicker} />
   );
   return (
     <div className="space-y-1">
       {!hideLabel && <FieldLabel htmlFor={inputId} label={label} required={field.required} />}
       {shown === 'persian' || textEntry ? (
-        <PersianDateField id={inputId} ariaLabel={ariaLabel} error={error} calendar={shown} trailing={trailing} {...field} />
+        <PersianDateField id={inputId} ariaLabel={ariaLabel} error={error} calendar={shown} trailing={trailing} compact={compact} {...field} />
       ) : (
-        <NativeDateField id={inputId} ariaLabel={ariaLabel} error={error} trailing={trailing} {...field} />
+        <NativeDateField id={inputId} ariaLabel={ariaLabel} error={error} trailing={trailing} compact={compact} {...field} />
       )}
     </div>
   );
@@ -76,13 +78,14 @@ function FieldLabel({ htmlFor, label, required }: { htmlFor: string; label: stri
   );
 }
 
-type NativeDateFieldProps = Omit<DateInputProps, 'label' | 'hideLabel' | 'calendar' | 'id' | 'calendarPicker'> & {
+type NativeDateFieldProps = Omit<DateInputProps, 'label' | 'hideLabel' | 'calendar' | 'id' | 'calendarPicker' | 'compact'> & {
   id: string;
   ariaLabel?: string;
   trailing?: ReactNode;
+  compact?: boolean;
 };
 
-function NativeDateField({ id, value, onChange, ariaLabel, error, trailing, ...rest }: NativeDateFieldProps) {
+function NativeDateField({ id, value, onChange, ariaLabel, error, trailing, compact, ...rest }: NativeDateFieldProps) {
   const hintId = useId();
   const errorId = useId();
   const messages = { hintId, errorId, error };
@@ -92,6 +95,7 @@ function NativeDateField({ id, value, onChange, ariaLabel, error, trailing, ...r
         <Input
           id={id}
           type="date"
+          className={compact ? 'h-9' : undefined}
           value={value}
           aria-label={ariaLabel}
           aria-invalid={Boolean(error)}

@@ -111,4 +111,27 @@ describe('Reports top bar: dates and revision', () => {
       expect(order[index - 1].compareDocumentPosition(order[index]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
   });
+
+  it('gives every control one height (h-9): selects, date fields, calendar buttons, units', () => {
+    open();
+    const bar = screen.getByTestId('reports-top-bar');
+    const controls = within(bar).getAllByRole('combobox').concat(within(bar).getAllByRole('button'), [screen.getByLabelText('From'), screen.getByLabelText('To')]);
+    expect(controls.length).toBeGreaterThanOrEqual(8);
+    for (const control of controls) {
+      expect(control.className).toMatch(/(^|\s)h-9(\s|$)/);
+      expect(control.className).not.toMatch(/(^|\s)h-10(\s|$)/);
+    }
+  });
+
+  it('is one wrapping row: the filters are items of the bar, not a nested group', () => {
+    open();
+    expect(screen.queryByTestId('reports-filters')).toBeNull();
+    const bar = screen.getByTestId('reports-top-bar');
+    const boxed = [...bar.children].filter((child) => !child.classList.contains('contents'));
+    // type, report, units, revision (the From / To fieldset takes no box: its fields are items of the bar)
+    expect(boxed).toHaveLength(4);
+    const dates = screen.getByRole('group', { name: 'Period dates' });
+    expect(dates.parentElement).toBe(bar);
+    expect(dates).toHaveClass('contents');
+  });
 });

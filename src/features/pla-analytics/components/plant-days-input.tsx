@@ -2,7 +2,7 @@ import { DateRangeInput, rangeFromDates, datesFromRange, type DateRangeInputProp
 import { plantDaysOf, rangeOfPlantDays } from '../model/window-range';
 
 /** Presentation options passed through to the date range fields (labels, calendar button). */
-type FieldOptions = Pick<DateRangeInputProps, 'toLabel' | 'calendarPicker' | 'weekStart' | 'hideLegend'>;
+type FieldOptions = Pick<DateRangeInputProps, 'toLabel' | 'calendarPicker' | 'weekStart' | 'hideLegend' | 'toolbar'>;
 
 export interface PlantDaysInputProps extends FieldOptions {
   label: string;

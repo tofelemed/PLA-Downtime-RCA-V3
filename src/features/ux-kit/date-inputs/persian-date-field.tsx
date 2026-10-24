@@ -22,6 +22,8 @@ export interface PersianDateFieldProps {
   calendar?: CalendarSystem;
   /** shown after the input on the same line (e.g. a calendar button) */
   trailing?: ReactNode;
+  /** a 36 px field, for toolbars where every control is h-9 */
+  compact?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface PersianDateFieldProps {
  * Gregorian equivalent as a hint, or Gregorian `YYYY-MM-DD`. Parses on blur and Enter and keeps unreadable
  * text visible with an inline error.
  */
-export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error, calendar = 'persian', trailing }: PersianDateFieldProps) {
+export function PersianDateField({ id, value, onChange, ariaLabel, min, max, disabled, required, error, calendar = 'persian', trailing, compact }: PersianDateFieldProps) {
   const { digits } = useCalendarPreference();
   const [text, setText] = useState(() => dateToText(value, calendar, digits));
   const [ownError, setOwnError] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export function PersianDateField({ id, value, onChange, ariaLabel, min, max, dis
         <Input
           id={id}
           type="text"
+          className={compact ? 'h-9' : undefined}
           inputMode="numeric"
           autoComplete="off"
           placeholder={calendar === 'persian' ? 'YYYY/MM/DD' : 'YYYY-MM-DD'}
