@@ -13,10 +13,10 @@ export const PORTFOLIO_KIND_LABELS: Readonly<Record<RcaPortfolioCauseKind, strin
 };
 
 export const WINDOW_LABELS: Readonly<Record<WindowDays, string>> = {
-  30: 'Opened in the last 30 days',
-  90: 'Opened in the last 90 days',
-  180: 'Opened in the last 180 days',
-  365: 'Opened in the last 365 days',
+  30: 'Last 30 days',
+  90: 'Last 90 days',
+  180: 'Last 180 days',
+  365: 'Last 365 days',
 };
 
 /** Choices of the portfolio page (item 2.1), kept in the URL; every figure is the server's. */

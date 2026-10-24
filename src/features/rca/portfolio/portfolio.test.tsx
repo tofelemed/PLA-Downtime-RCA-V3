@@ -130,7 +130,7 @@ describe('item 2.1 cause portfolio', () => {
     await screen.findByTestId('portfolio');
     expect(screen.queryByTestId('portfolio-approved')).toBeNull();
     expect(screen.queryByTestId('portfolio-claimed')).toBeNull();
-    expect(screen.queryByText(/Approved loss \(/)).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: /Approved loss|Claimed avoided/ })).toBeNull();
     expect(screen.getAllByTestId('portfolio-actions').length).toBeGreaterThan(0);
   });
 
@@ -138,4 +138,31 @@ describe('item 2.1 cause portfolio', () => {
     renderAt('/dashboard', 'USD', <ReliabilityHeader />);
     expect(screen.getByTestId('dashboard-rca-portfolio')).toHaveAttribute('href', '/reliability/portfolio');
   });
+
+  it('cleanup: title only, Unit first in one labelled row, the server note and value basis behind the card ⓘ', async () => {
+    renderAt('/reliability/portfolio');
+    await screen.findByTestId('portfolio');
+    expect(screen.queryByText(/Approved loss linked to investigations by coded cause/)).toBeNull();
+    expect(screen.queryByText(/never added together/)).toBeNull();
+    expect(screen.queryByText(/Value basis/)).toBeNull();
+    const card = screen.getByRole('region', { name: 'Loss, cause, action and outcome' });
+    fireEvent.focus(within(card).getByRole('button', { name: 'About Loss, cause, action and outcome' }));
+    expect((await screen.findAllByTestId('portfolio-note'))[0].textContent).toMatch(/never added together.*Value basis: Contribution margin/);
+    const labels = Array.from(screen.getByTestId('portfolio-controls').querySelectorAll('label')).map((label) => label.textContent);
+    expect(labels).toEqual(['Unit', 'Group by', 'Investigations opened']);
+    expect(screen.getByRole('option', { name: 'Last 90 days' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Approved loss' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Claimed avoided' })).toBeInTheDocument();
+    // more pages to load: no count of the loaded rows in the title
+    expect(within(card).queryByTestId('portfolio-count')).toBeNull();
+  });
+
+  it('a window without investigations keeps its own empty message', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json(page([], null))));
+    renderAt('/reliability/portfolio');
+    expect(await screen.findByText('No investigation was opened in this window.')).toBeInTheDocument();
+    expect(screen.queryByText('No data for these dates')).toBeNull();
+    expect(screen.getByTestId('portfolio-count')).toHaveTextContent('(0)');
+  });
 });
+
