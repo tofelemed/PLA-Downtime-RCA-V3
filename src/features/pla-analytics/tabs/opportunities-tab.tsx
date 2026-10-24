@@ -1,13 +1,11 @@
 import { useLossTree } from '@/api/v2/queries/pla-analytics';
-import type { LossTreeMetricParam, LossTreeView } from '@/api/v2/types/pla-analytics';
-import { Label } from '@/components/ui/label';
+import type { LossTreeView } from '@/api/v2/types/pla-analytics';
 import { entriesInCurrency } from '@/features/display-currency/money-format';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { lossTreeQuery, VALUE_METRICS, type AnalyticsScope } from '../model/analytics-scope';
-import { METRIC_LABELS, shownMetricLabel } from '../model/display';
+import { lossTreeQuery, type AnalyticsScope } from '../model/analytics-scope';
+import { shownMetricLabel } from '../model/display';
 import { AnalyticsCard } from '../components/analytics-card';
-import { SELECT_CLASS } from '../components/analytics-filters';
 import { LossTable } from '../components/loss-table';
 import { lossGroupLink, lossLinesNote, noLinkReason } from '../model/links';
 
@@ -23,22 +21,10 @@ export interface OpportunitiesTabProps {
  * display currency (USD by default, IRR on request; the server reports both, D08) for one valuation view,
  * with the server's basis label; lines without a price are shown as not valued with the reason, never as 0.
  */
-export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
+export function OpportunitiesTab({ scope }: OpportunitiesTabProps) {
   const env = useEventHubEnv();
   const query = useLossTree(lossTreeQuery(scope, { metric: scope.valueMetric, groupBy: 'reason', limit: TOP }), env.timezone);
   const data = query.data?.data;
-  const controls = (
-    <div className="flex items-center gap-2">
-      <Label htmlFor="value-metric">Value</Label>
-      <select id="value-metric" data-testid="value-metric" className={SELECT_CLASS} value={scope.valueMetric} onChange={(e) => onChange({ valueMetric: e.target.value as LossTreeMetricParam })}>
-        {VALUE_METRICS.map((m) => (
-          <option key={m} value={m}>
-            {METRIC_LABELS[m]}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
   return (
     <AnalyticsCard
       title={`Top ${TOP} opportunities · ${shownMetricLabel(scope.valueMetric, data)}`}
@@ -47,8 +33,7 @@ export function OpportunitiesTab({ scope, onChange }: OpportunitiesTabProps) {
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
       emptyText="No loss lines in this scope."
-      note={`${lossLinesNote(scope.approvedOnly)} Valuation views are never added to each other.`}
-      actions={controls}
+      info={`${lossLinesNote(scope.approvedOnly)} Valuation views are never added to each other.`}
     >
       {data && <Currencies data={data} scope={scope} />}
     </AnalyticsCard>

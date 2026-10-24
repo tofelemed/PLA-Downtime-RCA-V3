@@ -8,6 +8,7 @@ import { TREND_LABELS } from '../model/display';
 import { breakdownModesFor } from '../model/money-access';
 import { BREAKDOWN_MODES, INSPECTION_MODES, SERIES_MODES, TREND_POLICY_LABELS, VALUATION_MODES } from '../model/view-modes';
 import { FIELD_CLASS, SELECT_CLASS } from './analytics-filters';
+import { LossBreakdownFields } from './loss-breakdown-fields';
 import { ModeField } from './mode-field';
 
 export interface ViewPickerProps {
@@ -19,11 +20,23 @@ export interface ViewPickerProps {
 /** What the page shows — its mode, trend grouping and OEE policy, or valuation basis — as filter-bar fields after Units. */
 export function ViewPicker({ view, scope, onChange }: ViewPickerProps) {
   const { canViewMoney } = useCapabilities();
-  if (view === 'losses') return <ModeField param="breakdown" label="Explore" options={breakdownModesFor(BREAKDOWN_MODES, canViewMoney)} />;
+  if (view === 'losses') return <LossFields scope={scope} onChange={onChange} canViewMoney={canViewMoney} />;
   if (view === 'reconciliation') return <ModeField param="inspection" label="Inspect" options={INSPECTION_MODES} />;
   if (view === 'valuation') return <ModeField param="valuation" label="Valuation basis" options={VALUATION_MODES} />;
   if (view === 'trends') return <TrendFields scope={scope} onChange={onChange} />;
   return null;
+}
+
+function LossFields({ scope, onChange, canViewMoney }: Omit<ViewPickerProps, 'view'> & { canViewMoney: boolean }) {
+  const [params] = useSearchParams();
+  const modes = breakdownModesFor(BREAKDOWN_MODES, canViewMoney);
+  const breakdown = modes.find((mode) => mode.value === params.get('breakdown'))?.value ?? modes[0].value;
+  return (
+    <>
+      <ModeField param="breakdown" label="Explore" options={modes} />
+      <LossBreakdownFields breakdown={breakdown} scope={scope} onChange={onChange} />
+    </>
+  );
 }
 
 function TrendFields({ scope, onChange }: Omit<ViewPickerProps, 'view'>) {

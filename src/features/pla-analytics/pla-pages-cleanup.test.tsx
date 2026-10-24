@@ -113,6 +113,25 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
     expect(document.body.textContent).not.toMatch(/Events are current operational records/);
   });
 
+  it('Loss breakdown: the loss tree Group by and Metric are filter-bar fields; its title does not repeat the ledger, no caption', async () => {
+    open(`/pla-analytics/losses?${WINDOW}`);
+    const card = await screen.findByTestId('pla-loss-tree');
+    const bar = screen.getByTestId('analytics-filters');
+    const explore = within(bar).getByLabelText('Explore');
+    const groupBy = within(bar).getByLabelText('Group by');
+    expect(before(explore, groupBy) && before(groupBy, within(bar).getByLabelText('Metric'))).toBe(true);
+    expect(within(card).queryByLabelText('Group by')).toBeNull();
+    expect(within(card).getByRole('heading', { level: 2 })).not.toHaveTextContent(/ledger/);
+    expect(card).not.toHaveTextContent(/From the calculated loss lines/);
+  });
+
+  it('Loss events: the event type is a filter-bar field; the list is a titled report card', async () => {
+    open(`/pla-analytics/losses?${WINDOW}&breakdown=loss-events`);
+    const card = await screen.findByTestId('loss-events-card');
+    expect(within(card).getByRole('heading', { level: 2, name: 'Loss events' })).toBeInTheDocument();
+    expect(within(screen.getByTestId('analytics-filters')).getByLabelText('Event type')).toHaveValue('all');
+  });
+
   it('Trends: Show, Trend by and the OEE policy are filter-bar fields; no "Operational" or "(ISO 22400)"', async () => {
     open(`/pla-analytics/trends?${WINDOW}`);
     const bar = await screen.findByTestId('analytics-filters');

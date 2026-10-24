@@ -12,6 +12,7 @@ import { useCalendarPreference, type CalendarPreference } from '@/lib/dates';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { lineEvidenceText, linesWithoutEventQuery } from '../model/lines-without-event';
 import { periodLabel } from '../model/period-label';
+import { ReportCard } from '../components/report-card';
 
 function columnsOf(env: { timezone: string; unitName: (id: string) => string }, pref: CalendarPreference): Array<DataTableColumn<LineWithoutEventView>> {
   return [
@@ -49,14 +50,10 @@ export function LinesWithoutEvent({ scope }: { scope: AnalyticsScope }) {
   const data = query.data?.data;
   if (!data || data.total === 0) return null;
   const shown = data.items.length < data.total ? ` (the ${displayCount(data.items.length)} largest)` : '';
+  const info = `${plural(data.total, 'loss line', 'loss lines')}${shown} of this ${scope.eventOee === 'all' ? 'scope' : `component (${humanize(scope.eventOee)})`} explain no stop or event: they were entered on the period with their reason and evidence.`;
   return (
-    <section className="space-y-2" data-testid="lines-without-event" aria-label="Loss lines with no event">
-      <h3 className="text-sm font-semibold">Loss lines with no event</h3>
-      <p className="text-xs text-muted-foreground">
-        {plural(data.total, 'loss line', 'loss lines')}
-        {shown} of this {scope.eventOee === 'all' ? 'scope' : `component (${humanize(scope.eventOee)})`} explain no stop or event: they were entered on the period with their reason and evidence.
-      </p>
+    <ReportCard title={`Loss lines with no event (${displayCount(data.total)})`} testId="lines-without-event" info={info}>
       <DataTable caption="Loss lines with no event" columns={columnsOf(env, pref)} rows={data.items} getRowKey={(line) => line.lineId} pager="none" density="compact" />
-    </section>
+    </ReportCard>
   );
 }
