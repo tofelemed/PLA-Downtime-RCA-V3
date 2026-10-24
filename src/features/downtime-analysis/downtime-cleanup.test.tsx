@@ -28,7 +28,9 @@ const envelope = (data: unknown) => ({
   dataQuality: { missingCount: 0, provisionalCount: 0 }, isProvisional: true,
 });
 const REPORT = {
-  calculationRunIds: ['run-1', 'run-2'], groups: [], total: '0', totals: [], views: [], units: [], groupBy: 'reason', metric: 'duration', unit: 's', scheduleClass: null,
+  calculationRunIds: ['run-1', 'run-2'], groups: [], total: '0', totals: [], views: [], groupBy: 'reason', metric: 'duration', unit: 's', scheduleClass: null,
+  failureDefinition: 'A failure is a failure work order',
+  units: [{ unitId: 'u1', assetId: null, label: null, exposureSeconds: '81000', failures: '1', mtbf: kpi('mtbf', '81000'), mttr: kpi('mttr', '1800'), meanDowntimeToRestore: kpi('mean_downtime_to_restore', '3600') }],
   summary: [kpi('downtime_total', '3600'), kpi('stop_count', '2'), kpi('scheduled_availability', '0.9'), kpi('coded_downtime_ratio', '0.8')],
 };
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -170,5 +172,33 @@ describe('Downtime analysis cleanup: Causes & Pareto', () => {
     expect(paretoAxisLabel('MECH-GEARBOX · Gearbox failure')).toBe('MECH-GEARBOX');
     expect(paretoAxisLabel('Not coded')).toBe('Not coded');
     expect(paretoAxisLabel('QUALITY-DOWNGRADE-LONG-CODE · x')).toBe('QUALITY-DOWNGRADE…');
+  });
+});
+
+describe('Downtime analysis cleanup: Trends & comparisons', () => {
+  it('crew comparison: the crew note is the ⓘ', async () => {
+    openDowntime(`/downtime/trends?${WINDOW}&comparison=crew`);
+    await screen.findByRole('button', { name: 'About Crew comparison' });
+    expect(document.body.textContent).not.toMatch(/Crew of the shift each period belongs to/);
+  });
+
+  it('previous-period comparison: a card, dashboard tiles, each window with its own approval label', async () => {
+    openDowntime(`/downtime/trends?${WINDOW}&comparison=calendar`);
+    const grid = await screen.findByTestId('calendar-comparison');
+    await waitFor(() => expect(within(grid).getAllByTestId('report-meta')).toHaveLength(2));
+    expect(within(grid).getAllByTestId('kpi-downtime_total')).toHaveLength(2);
+    expect(grid).not.toHaveTextContent(/Union of stop time/);
+  });
+});
+
+describe('Downtime analysis cleanup: Reliability', () => {
+  it('failure definition and column notes are ⓘ; compact report table; one Provisional label', async () => {
+    openDowntime(`/downtime/reliability?${WINDOW}`);
+    await screen.findByRole('button', { name: 'About Reliability' });
+    const text = document.body.textContent ?? '';
+    expect(text).not.toMatch(/Active repair from work orders|Full outage, failure to production resumed/);
+    expect(screen.getByRole('button', { name: 'About Mean active repair time (MTTR)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About Mean time to restore production' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText('Provisional')).toHaveLength(1));
   });
 });
