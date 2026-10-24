@@ -26,7 +26,7 @@ export function KpiTile({ spec, value, testId }: KpiTileProps) {
     <div
       data-testid={testId}
       className={cn(
-        'min-w-0 rounded-md border bg-card p-3',
+        'min-w-0 rounded-md border bg-canvas p-3',
         spec.highlight && 'border-primary shadow-[inset_3px_0_0_hsl(var(--primary))]',
       )}
     >

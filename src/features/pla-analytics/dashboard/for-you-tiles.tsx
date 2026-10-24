@@ -78,7 +78,7 @@ export function ApprovalsTile() {
   const count = usePageCount(first);
   const to = pendingApprovalsHref(first);
   return (
-    <ForYouTile testId="for-you-approvals" title="Pending approvals" note="Waiting for your decision" to={to} openLabel={to === '/approvals' ? undefined : 'open it'}
+    <ForYouTile testId="for-you-approvals" title="Pending approvals" note="Waiting for your decision" to={to} openLabel={to === '/approvals' ? undefined : 'open it'} attention={(first?.items.length ?? 0) > 0}
       count={count} loading={inbox.status.isLoading} failed={inbox.status.isError} onRetry={retry} />
   );
 }

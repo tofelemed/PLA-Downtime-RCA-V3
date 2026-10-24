@@ -26,10 +26,10 @@ export const APPROVAL_ROLES: readonly string[] = [
 ];
 
 const TILES_BY_ROLE: ReadonlyArray<readonly [readonly string[], readonly ForYouTileKey[]]> = [
+  [APPROVAL_ROLES, ['approvals']],
   [STOP_ROLES, ['currentStops', 'stopsToCode']],
   [['production_accountant'], ['periodsDue']],
   [['reliability_engineer'], ['recommended', 'myOverdueActions']],
-  [APPROVAL_ROLES, ['approvals']],
 ];
 
 /** The tiles of the "For you" row, in a fixed order, each once; empty when no role asks for one. */

@@ -14,7 +14,7 @@ export function KpiSection({ title, link, controls, children }: KpiSectionProps)
   return (
     <section aria-labelledby={headingId} className="space-y-3 rounded-lg border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 id={headingId} className="text-base font-semibold">
+        <h2 id={headingId} className="text-base font-semibold text-heading">
           {title}
         </h2>
         <div className="flex flex-wrap items-center gap-3">

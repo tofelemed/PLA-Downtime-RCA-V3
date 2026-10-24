@@ -1,16 +1,12 @@
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { Link } from 'react-router-dom';
-import { useOeeReport } from '@/api/v2/queries/reports';
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import { Label } from '@/components/ui/label';
 import { DataState } from '@/features/ux-kit/data-state';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Page, Section } from '@/features/ux-kit/page-layout';
 import { EventHubEnvProvider } from '@/features/event-hub/event-hub-env';
-import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { SELECT_CLASS } from '../components/analytics-filters';
-import { SnapshotStatus } from '../components/snapshot-status';
-import { oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { DASHBOARD_PRESETS, presetKeyOf } from '../model/dashboard-scope';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePlantSelection } from '@/contexts/PlantSelectionContext';
+import { DashboardHeader } from './dashboard-header';
 import { useDashboardScope } from './use-dashboard-scope';
 import { DashboardDowntime, DashboardTopAssets } from './dashboard-downtime';
 import { eventsHref, reportsHref } from './dashboard-links';
@@ -37,45 +33,17 @@ export function AnalyticsDashboard() {
   );
 }
 
-function WindowSelect({ value, onChange }: { value: string; onChange: (key: string) => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Label htmlFor="dashboard-window">Window</Label>
-      <select id="dashboard-window" data-testid="dashboard-window" className={SELECT_CLASS} value={value} onChange={(e) => onChange(e.target.value)}>
-        {DASHBOARD_PRESETS.map((preset) => (
-          <option key={preset.key} value={preset.key}>
-            {preset.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function DashboardStatus({ scope }: { scope: AnalyticsScope }) {
-  const env = useEventHubEnv();
-  const lead = useOeeReport(oeeQuery(scope, 'unit', 'operational'), env.timezone);
-  return (
-    <SnapshotStatus
-      scopeLabel={`All units in your scope · ${scope.windowLabel}`}
-      timezone={env.timezone}
-      timezoneIsFallback={env.timezoneIsFallback}
-      response={lead.data}
-      isError={lead.isError}
-      testId="dashboard-snapshot"
-    />
-  );
-}
-
 function DashboardScreen() {
-  const { key, setKey, scope } = useDashboardScope();
+  const { key, setKey, scope, orgOnly } = useDashboardScope();
+  const { session } = useAuth();
+  const { selection } = usePlantSelection();
+  const plantName = selection?.tenant?.name ?? session?.tenant?.name ?? 'your plant';
   // QA re-test N2: the Reports page is closed to operators (menu gate `canViewAnalysis`), so is its link
   const { canViewAnalysis } = useCapabilities();
-  const choose = (next: string) => setKey(presetKeyOf(next));
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="analytics-dashboard">
-        <PageHeader title="Dashboard" description="Key figures of the selected plant." actions={<WindowSelect value={key} onChange={choose} />} meta={<DashboardStatus scope={scope} />} />
+        <DashboardHeader scope={scope} keyValue={key} onKey={setKey} orgOnly={orgOnly} plantName={plantName} />
         <ForYouRow scope={scope} />
         <Section title="OEE" actions={canViewAnalysis ? <Link className="text-sm underline" to={reportsHref(scope, 'production')} data-testid="dashboard-oee-report-link">OEE and downtime report</Link> : undefined}>
           <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
