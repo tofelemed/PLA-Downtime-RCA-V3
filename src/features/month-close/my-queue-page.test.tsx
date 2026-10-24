@@ -86,7 +86,9 @@ describe('My work page (UX audit §5.7)', () => {
   it('cleanup: Tasks and RCA actions are titled cards with the link beside the title', async () => {
     stubV2Fetch(reply);
     open('/my-queue?tab=tasks');
-    expect(await screen.findByRole('heading', { level: 2, name: 'My open tasks' })).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { level: 2, name: 'My open tasks' });
+    const row = heading.parentElement;
+    expect(row).toContainElement(screen.getByRole('link', { name: 'All my tasks' }));
   });
 
   it('cleanup: RCA actions sit in a titled card', () => {

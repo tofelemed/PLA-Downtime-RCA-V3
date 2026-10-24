@@ -7,6 +7,7 @@ import { PeriodGrid } from './components/period-grid';
 import { PlanSummary } from './components/plan-summary';
 import { usePlanContext } from './hooks/use-plan-context';
 import { periodGridTitle } from './model/period-title';
+import { planMetaText } from './model/plan-meta';
 
 const BACK = { to: '/planning', label: 'Plans' };
 
@@ -38,7 +39,7 @@ export function PlanDashboardPage() {
         <PageHeader
           title={periodGridTitle(plan.data.name)}
           back={BACK}
-          meta={<span className="inline-flex flex-wrap items-center gap-2">{unitName} · Version {version.version} <VersionStateBadge state={version.approvalState} /></span>}
+          meta={<span className="inline-flex flex-wrap items-center gap-2">{planMetaText(unitName, version.version)} <VersionStateBadge state={version.approvalState} /></span>}
         />
         <Tabs value={tab} onValueChange={(next) => setParams(next === 'plan' ? { tab: next } : {}, { replace: true })}>
           <TabsList className="h-auto flex-wrap">

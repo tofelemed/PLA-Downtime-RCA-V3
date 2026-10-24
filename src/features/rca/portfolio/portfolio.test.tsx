@@ -14,7 +14,12 @@ vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user'
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 
 const { PortfolioPage } = await import('./portfolio-page');
-const { RcaTiles } = await import('@/features/pla-analytics/dashboard/rca-tiles');
+const { KpiSection } = await import('@/features/pla-analytics/dashboard/kpi-section');
+const { useReliabilityLinks } = await import('@/features/pla-analytics/dashboard/reliability-links');
+
+function ReliabilityHeader() {
+  return <KpiSection title="Asset reliability" links={useReliabilityLinks()}>{null}</KpiSection>;
+}
 
 const UNIT = '11111111-1111-4111-8111-111111111111';
 const NOW = Date.parse('2026-10-20T10:00:30Z');
@@ -129,8 +134,8 @@ describe('item 2.1 cause portfolio', () => {
     expect(screen.getAllByTestId('portfolio-actions').length).toBeGreaterThan(0);
   });
 
-  it('the dashboard investigations card links to the portfolio for analysis roles', async () => {
-    renderAt('/dashboard', 'USD', <RcaTiles />);
-    expect(await screen.findByTestId('dashboard-rca-portfolio')).toHaveAttribute('href', '/reliability/portfolio');
+  it('the dashboard Asset reliability header links to the portfolio for analysis roles', () => {
+    renderAt('/dashboard', 'USD', <ReliabilityHeader />);
+    expect(screen.getByTestId('dashboard-rca-portfolio')).toHaveAttribute('href', '/reliability/portfolio');
   });
 });

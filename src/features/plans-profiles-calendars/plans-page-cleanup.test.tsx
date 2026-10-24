@@ -48,6 +48,21 @@ describe('Plans page cleanup', () => {
     expect(screen.getByLabelText('Current version')).toBeTruthy();
   });
 
+  it('the profiles view of the shared page has no description or scope line', async () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/setup/profiles']}>
+          <PlanningPage view="profiles" />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole('heading', { level: 1 })).toBeTruthy();
+    expect(screen.queryByTestId('scope-header')).toBeNull();
+    expect(screen.queryByText(/Versioned production plans/)).toBeNull();
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading.parentElement?.querySelector('p')).toBeNull();
+  });
+
   it('puts New plan beside the title and the table in a titled card', async () => {
     open();
     await waitFor(() => expect(screen.getByTestId('plan-row')).toBeTruthy());

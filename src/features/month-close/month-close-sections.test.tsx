@@ -142,6 +142,7 @@ describe('month-close section navigation and command ownership', () => {
     expect(missing).toHaveTextContent('13 expected periods do not exist yet');
     expect(missing).toHaveTextContent('Extruder 1 · 2026-10-21 · shift A');
     expect(missing).toHaveTextContent('and 12 more');
+    expect(screen.getByRole('button', { name: 'About the month end' })).toBeInTheDocument();
   });
 
   it('shows explicit empty states for all lists and history', async () => {

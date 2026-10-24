@@ -27,7 +27,7 @@ function UnitBudgets({ unitId, timezone }: { unitId: string; timezone: string })
   const budgets = useUncertaintyBudgets(unitId);
   const items = budgets.data?.items ?? [];
   return (
-    <ReportCard title="Uncertainty budgets" badge={<span className="text-sm text-muted-foreground" data-testid="budget-count">{items.length}</span>} info={INFO} testId="budget-section">
+    <ReportCard title="Uncertainty budgets" badge={budgets.data && <span className="text-sm text-muted-foreground" data-testid="budget-count">{items.length}</span>} info={INFO} testId="budget-section">
       <DataState state={dataStateOf(budgets)} error={budgets.error} onRetry={() => void budgets.refetch()}>
         {items.length === 0 && (
           <div className="py-8 text-center" data-testid="budget-empty">

@@ -1,8 +1,10 @@
 import type { MonthCloseView } from '@/api/v2/types/month-close';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 
 const LISTED = 10;
+const MONTH_END_INFO = 'The month must have ended in plant time, and each scheduled shift needs its period approved before the close.';
 
 function MissingPeriods({ view }: { view: MonthCloseView }) {
   const { missingPeriodCount: count, missingPeriods: list } = view.prerequisites;
@@ -36,9 +38,12 @@ export function CloseMonthEnd({ view }: { view: MonthCloseView }) {
   const tz = view.deadlines.timezone;
   return (
     <div className="space-y-1" data-testid="close-month-end">
-      <p className="text-sm" data-testid="close-month-end-status" data-ended={monthEnded}>
-        {monthEnded ? 'Month ended ' : 'Month ends '}
-        <PlantTime iso={monthEndsAt} tz={tz} withDate withZone={false} />
+      <p className="flex items-center gap-1.5 text-sm" data-testid="close-month-end-status" data-ended={monthEnded}>
+        <span>
+          {monthEnded ? 'Month ended ' : 'Month ends '}
+          <PlantTime iso={monthEndsAt} tz={tz} withDate withZone={false} />
+        </span>
+        <KpiInfo label="the month end" text={MONTH_END_INFO} />
       </p>
       <MissingPeriods view={view} />
     </div>
