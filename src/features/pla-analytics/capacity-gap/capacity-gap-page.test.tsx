@@ -12,9 +12,10 @@ vi.mock('@/features/event-hub/use-event-hub-env', () => ({
   useEventHubEnv: () => ({ timezone: 'Asia/Tehran', units: [{ id: 'u1', name: 'Reactor 1' }], unitName: (id: string) => id }),
 }));
 
-const { CapacityGapPage } = await import('./capacity-gap-page');
+const { CapacityGapPage, KindDefinitionsInfo } = await import('./capacity-gap-page');
 const { capacityGapQueryOf, parseCapacityFilters } = await import('./capacity-gap-model');
 const { AnalyticsHeader } = await import('../components/analytics-header');
+const { ReportChrome } = await import('../components/report-chrome');
 
 const kind = (value: string | null, timebase: CapacityKindView['timebase'] = 'h'): CapacityKindView => ({
   value,
@@ -81,7 +82,9 @@ describe('Capacity gap page (plan 1.2)', () => {
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[`/pla-analytics/capacity-gap${search}`]}>
-          <CapacityGapPage scope={scope} onChange={() => undefined} />
+          <ReportChrome approvedOnly={false}>
+            <CapacityGapPage scope={scope} onChange={() => undefined} />
+          </ReportChrome>
         </MemoryRouter>
       </QueryClientProvider>,
     );
@@ -104,9 +107,14 @@ describe('Capacity gap page (plan 1.2)', () => {
     expect(screen.getByTestId('capacity-gap-truncated')).toHaveTextContent('first 200 profiles');
   });
 
-  it('states the kind definitions and sends units, products and the as-of instant to the server', async () => {
+  it('says the kind definitions behind the card ⓘ (no definitions box) and sends units, products and the as-of instant to the server', async () => {
     renderPage('?products=pr1&asOf=2026-10-19');
     await screen.findByText('HDPE-A');
+    expect(screen.queryByTestId('capacity-gap-definitions')).toBeNull();
+    const card = screen.getByTestId('capacity-gap-card');
+    expect(within(card).getByRole('button', { name: 'About Approved rates and gaps' })).toBeInTheDocument();
+    expect(card).not.toHaveTextContent(/Approved versions in force|\+03:30|Asia\/Tehran/);
+    render(<KindDefinitionsInfo />);
     expect(screen.getByTestId('capacity-gap-definitions')).toHaveTextContent('Sustained: approved sustainable capability (capacity ledger)');
     expect(screen.getByTestId('capacity-gap-definitions')).toHaveTextContent('never added together');
     const request = urls.find((url) => url.pathname.endsWith('/reports/capacity-gap'));
@@ -114,6 +122,15 @@ describe('Capacity gap page (plan 1.2)', () => {
     expect(request?.searchParams.getAll('productIds')).toEqual(['pr1']);
     // 00:00 Tehran (UTC+03:30) on the chosen plant date
     expect(request?.searchParams.get('at')).toBe('2026-10-18T20:30:00.000Z');
+  });
+
+  it('the filters are one bottom-aligned row: Units, Products, then "As of" labelled above (no hint in the label)', async () => {
+    renderPage();
+    const bar = screen.getByTestId('capacity-gap-filters');
+    expect(bar).toHaveClass('items-end');
+    expect(within(bar).getByLabelText('As of')).toBeInTheDocument();
+    expect(bar).not.toHaveTextContent(/empty = now|plant date/);
+    expect(within(bar).getByRole('button', { name: 'About As of' })).toBeInTheDocument();
   });
 
   it('asks for "now" when no date is chosen and ignores a malformed one', () => {
