@@ -7,9 +7,9 @@ import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { IconButton } from '@/features/ux-kit/icon-button';
 import { CALENDAR_SYSTEM_LABELS, labelOf } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
 import { weekStartLabel } from '@/features/settings/week-start-choices';
+import { RecordListCard } from '@/features/master-data/components/record-list-card';
 import { useCommandFeedback } from '../shared/use-command-feedback';
 import { PLANTS_PAGE } from './plants-page-path';
 
@@ -29,7 +29,7 @@ function DeleteButton({ name, kind, onConfirm }: { name: string; kind: 'organiza
 function EditLink({ kind, id, name }: { kind: 'organization' | 'plant'; id: string; name: string }) {
   const path = kind === 'plant' ? `${PLANTS_PAGE}/${encodeURIComponent(id)}/edit` : `${PLANTS_PAGE}/organizations/${encodeURIComponent(id)}/edit`;
   return (
-    <Button asChild variant="ghost" size="sm">
+    <Button asChild variant="ghost" size="sm" className="whitespace-nowrap">
       <Link to={path} aria-label={`Edit ${kind} ${name}`}>
         <ActionIcon.edit aria-hidden="true" />
         Edit
@@ -49,10 +49,10 @@ function useOrganizationColumns(): ReadonlyArray<DataTableColumn<OrganizationVie
       header: <span className="sr-only">Actions</span>,
       headerLabel: 'Actions',
       cell: (org) => (
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end gap-1 whitespace-nowrap">
           {org.canEdit && <EditLink kind="organization" id={org.id} name={org.name} />}
           {org.canAddPlants && (
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="whitespace-nowrap">
               <Link to={`${PLANTS_PAGE}/new?organizationId=${encodeURIComponent(org.id)}`}>Add plant</Link>
             </Button>
           )}
@@ -78,7 +78,7 @@ function usePlantColumns(): ReadonlyArray<DataTableColumn<PlantView>> {
       header: <span className="sr-only">Actions</span>,
       headerLabel: 'Actions',
       cell: (plant) => (
-        <div className="flex justify-end gap-1">
+        <div className="flex justify-end gap-1 whitespace-nowrap">
           {plant.canEdit && <EditLink kind="plant" id={plant.id} name={plant.name} />}
           {plant.canDelete && <DeleteButton name={plant.name} kind="plant" onConfirm={() => feedback(() => remove.submit(plant.id), 'Plant deleted')} />}
         </div>
@@ -86,6 +86,8 @@ function usePlantColumns(): ReadonlyArray<DataTableColumn<PlantView>> {
     },
   ];
 }
+
+const PLANTS_INFO = 'Plants you administer. Units, assets and products are managed in Setup › Plant & equipment; people in Users. New units, assets and products go to the plant selected in the header.';
 
 /** Organizations and plants (was "Hierarchy management"); units and assets live in Master data. */
 export function PlantsSection() {
@@ -96,10 +98,11 @@ export function PlantsSection() {
   const plantColumns = usePlantColumns();
   return (
     <>
-      <Section
+      <RecordListCard
         title="Organizations"
-        description="Companies that own plants."
-        actions={isSuperAdmin && <Button asChild variant="outline"><Link to={`${PLANTS_PAGE}/organizations/new`}><ActionIcon.add aria-hidden="true" />Add organization</Link></Button>}
+        info="Companies that own plants."
+        actions={isSuperAdmin && <Button asChild variant="outline" size="sm" className="h-9"><Link to={`${PLANTS_PAGE}/organizations/new`}><ActionIcon.add aria-hidden="true" />Add organization</Link></Button>}
+        testId="organizations-card"
       >
         <DataTable
           caption="Organizations"
@@ -107,15 +110,25 @@ export function PlantsSection() {
           rows={organizations.data?.items ?? []}
           getRowKey={(org) => org.id}
           status={{ isLoading: organizations.isLoading, isError: organizations.isError, error: organizations.error, onRetry: () => void organizations.refetch() }}
+          empty={{ title: 'No organizations', text: 'No organization you can see yet.' }}
         />
-      </Section>
-      <Section
+      </RecordListCard>
+      <RecordListCard
         title="Plants"
-        description={<>Plants you administer. Units, assets and products are managed in <Link className="underline" to="/master-data/units">Setup › Plant &amp; equipment</Link>; people in <Link className="underline" to="/users">Users</Link>.</>}
-        actions={canManagePlants && <Button asChild variant="outline"><Link to={`${PLANTS_PAGE}/new`}><ActionIcon.add aria-hidden="true" />Add plant</Link></Button>}
+        info={PLANTS_INFO}
+        actions={canManagePlants && <Button asChild variant="outline" size="sm" className="h-9"><Link to={`${PLANTS_PAGE}/new`}><ActionIcon.add aria-hidden="true" />Add plant</Link></Button>}
+        testId="plants-card"
       >
-        <DataTable caption="Plants" columns={plantColumns} rows={plants.rows} getRowKey={(plant) => plant.id} pager={plants.pager} status={plants.status} />
-      </Section>
+        <DataTable
+          caption="Plants"
+          columns={plantColumns}
+          rows={plants.rows}
+          getRowKey={(plant) => plant.id}
+          pager={plants.pager}
+          status={plants.status}
+          empty={{ title: 'No plants', text: 'No plant you administer yet.' }}
+        />
+      </RecordListCard>
     </>
   );
 }

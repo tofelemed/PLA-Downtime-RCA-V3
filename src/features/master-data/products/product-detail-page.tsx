@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { DataState } from '@/features/ux-kit/data-state';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { Section } from '@/features/ux-kit/page-layout';
 import type { MasterProductView } from '../api/master-data-types';
 import { PRODUCTS } from '../api/record-resource';
@@ -87,8 +88,8 @@ export function ProductDetailPage() {
     />
   ) : undefined;
   return (
-    <MasterDataLayout title={product.name} description={<RecordStatusBadge retired={!product.isActive} />} back={BACK} actions={actions}>
-      <Section title="Details" description={shared ? 'Changes apply to every plant of the organization.' : undefined}>
+    <MasterDataLayout title={product.name} titleAside={<RecordStatusBadge retired={!product.isActive} />} back={BACK} actions={actions}>
+      <Section title="Details" titleAside={shared ? <KpiInfo label="Details" text="Changes apply to every plant of the organization." /> : undefined}>
         <ProductEditor product={product} />
       </Section>
     </MasterDataLayout>

@@ -1,7 +1,8 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOrganization, usePlant, useUpdateOrganization, useUpdatePlant } from '@/api/v2/queries/administration-config';
 import type { OrganizationView, PlantDetailView } from '@/api/v2/types/administration';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -139,7 +140,7 @@ function HierarchyEditor({ kind, record, reload, save, toSaved }: EditorProps) {
   const { base } = editor;
   return (
     <Page>
-      <PageHeader title={`Edit ${base.name}`} back={back} description={plant ? 'Plant' : 'Organization'} />
+      <PageHeader title={`Edit ${base.name}`} back={back} titleAside={<Badge variant="outline">{plant ? 'Plant' : 'Organization'}</Badge>} />
       {editor.conflict && <ConflictAlert kind={kind} latest={base} />}
       {editor.readOnly && <p className="text-sm text-muted-foreground">Only a super administrator or the organization’s administrator can change this {kind}.</p>}
       <Section title="Details">
@@ -151,17 +152,12 @@ function HierarchyEditor({ kind, record, reload, save, toSaved }: EditorProps) {
             plant={plant}
             codeReadOnly
             timezoneLockedReason={lockReasonOf(plant, base)}
-            disabled={editor.readOnly || editor.busy}
+            disabled={editor.busy}
+            asText={editor.readOnly}
           />
           {!editor.readOnly && <FormButtons busy={editor.busy} onCancel={() => navigate(back.to)} />}
         </form>
       </Section>
-      {plant && (
-        <p className="text-sm text-muted-foreground">
-          Units and assets of a plant are edited in <Link className="underline" to="/master-data/units">Setup › Plant &amp; equipment</Link> and{' '}
-          <Link className="underline" to="/master-data/assets">Assets</Link>; they act on the selected plant.
-        </p>
-      )}
     </Page>
   );
 }

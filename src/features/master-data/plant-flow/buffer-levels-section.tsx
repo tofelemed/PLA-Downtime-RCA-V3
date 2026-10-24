@@ -4,18 +4,18 @@ import { useBufferLevels } from '@/api/v2/queries/plant-model';
 import type { BufferLevelView } from '@/api/v2/types/plant-model';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
-import { Section } from '@/features/ux-kit/page-layout';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { Quantity } from '@/features/ux-kit/quantity';
 import type { Option } from '@/features/plans-profiles-calendars/components/native-select';
 import type { PlanningRefs } from '@/features/plans-profiles-calendars/hooks/use-planning-refs';
 import { ActionIcon } from '@/lib/icons';
+import { RecordListCard } from '../components/record-list-card';
 import { BufferLevelDialog } from './buffer-level-dialog';
 
 function levelColumns(refs: PlanningRefs): DataTableColumn<BufferLevelView>[] {
   return [
     { id: 'buffer', header: 'Buffer', cell: (l) => `${refs.unitName(l.fromUnitId)} → ${refs.unitName(l.toUnitId)}` },
-    { id: 'at', header: 'Read at', nowrap: true, cell: (l) => <PlantTime iso={l.observedAt} tz={refs.timezone} withDate /> },
+    { id: 'at', header: 'Read at', nowrap: true, cell: (l) => <PlantTime iso={l.observedAt} tz={refs.timezone} withDate withZone={false} /> },
     { id: 'level', header: 'Level', align: 'right', nowrap: true, cell: (l) => <Quantity value={l.level} uom={l.uom} /> },
     { id: 'source', header: 'Source', cell: (l) => l.source },
   ];
@@ -36,14 +36,14 @@ export function BufferLevelsSection({ refs, bufferOptions, canWrite }: BufferLev
   const action = canWrite ? (
     <>
       <DisabledReason id="buffer-level-new-reason" reason={noBuffer} />
-      <Button type="button" size="sm" onClick={() => setRecording(true)} disabled={noBuffer !== null} aria-describedby={noBuffer ? 'buffer-level-new-reason' : undefined} data-testid="buffer-level-new">
+      <Button type="button" size="sm" className="h-9" onClick={() => setRecording(true)} disabled={noBuffer !== null} aria-describedby={noBuffer ? 'buffer-level-new-reason' : undefined} data-testid="buffer-level-new">
         <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
         Record buffer level
       </Button>
     </>
   ) : null;
   return (
-    <Section title="Buffer levels" description="A level read within 24 h before an upstream stop replaces the configured usable inventory." actions={action}>
+    <RecordListCard title="Buffer levels" info="A level read within 24 h before an upstream stop replaces the configured usable inventory." actions={action} testId="buffer-levels-card">
       <div className="space-y-2">
         <DataTable
           caption="Buffer levels"
@@ -56,6 +56,6 @@ export function BufferLevelsSection({ refs, bufferOptions, canWrite }: BufferLev
         />
       </div>
       {recording && <BufferLevelDialog bufferOptions={bufferOptions} timezone={refs.timezone} onClose={() => setRecording(false)} />}
-    </Section>
+    </RecordListCard>
   );
 }

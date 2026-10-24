@@ -93,7 +93,7 @@ export function AssetDetailPage() {
     />
   ) : undefined;
   return (
-    <MasterDataLayout title={asset.name} description={<RecordStatusBadge retired={asset.retiredAt !== null} />} back={back} actions={actions}>
+    <MasterDataLayout title={asset.name} titleAside={<RecordStatusBadge retired={asset.retiredAt !== null} />} back={back} actions={actions}>
       <Section title="Details">
         <AssetEditor asset={asset} back={back} />
       </Section>

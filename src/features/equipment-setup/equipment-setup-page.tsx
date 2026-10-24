@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { pageNameOf } from '@/features/auth/navigation-items';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { PageGate } from '@/features/admin/shared/page-gate';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { UnitSelect } from '@/features/master-data/components/unit-select';
 import { NumberText } from '@/features/ux-kit/number-text';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
@@ -28,9 +29,8 @@ function useOpenPhases() {
 
 function GuideToolbar({ unitId, onUnitChange, phases }: { unitId: string; onUnitChange: (id: string) => void; phases: ReturnType<typeof useOpenPhases> }) {
   return <section aria-label="Guide options" className="flex flex-wrap items-end justify-between gap-4 rounded-lg border bg-background p-4">
-    <div className="w-full max-w-sm space-y-1">
-      <UnitSelect id="setup-guide-unit" label="Production unit (optional)" value={unitId} onChange={onUnitChange} allowAll allLabel="No unit selected" />
-      <p className="text-xs text-muted-foreground">Choose a unit to open it directly from the links below and to run its readiness checks.</p>
+    <div className="w-full max-w-sm">
+      <UnitSelect id="setup-guide-unit" label="Production unit (optional)" value={unitId} onChange={onUnitChange} allowAll allLabel="No unit selected" compact />
     </div>
     <div className="flex gap-2">
       <Button size="sm" variant="outline" disabled={phases.open.size === ALL_PHASES.size} onClick={phases.expandAll}>Expand all</Button>
@@ -44,17 +44,17 @@ export function EquipmentSetupPage() {
   const capabilities = useCapabilities();
   const [unitId, setUnitId] = useGuideUnit();
   const phases = useOpenPhases();
-  const description = <>Set up a production unit, such as an HDPE extruder, in <NumberText value={SETUP_PHASES.length} /> phases and <NumberText value={SETUP_STEPS.length} /> steps. Each step links to the page where you do it.</>;
-  return <PageGate title={pageNameOf('/equipment-setup')} allowed={capabilities.canReachMasterData} deniedText="Your current role cannot access the equipment setup guide.">
+  const title = pageNameOf('/equipment-setup');
+  const info = <>Set up a production unit, such as an HDPE extruder, in <NumberText value={SETUP_PHASES.length} /> phases and <NumberText value={SETUP_STEPS.length} /> steps. Each step links to the page where you do it. Choose a unit to open it directly from the links and to run its readiness checks. Opening a page from this guide does not save, approve or certify anything: finish each step on its own page, then review its check.</>;
+  return <PageGate title={title} allowed={capabilities.canReachMasterData} deniedText="Your current role cannot access the equipment setup guide.">
     <Page>
-      <PageHeader title={pageNameOf('/equipment-setup')} description={description} />
+      <PageHeader title={title} titleAside={<KpiInfo label={title} text={info} />} />
       <GuideToolbar unitId={unitId} onUnitChange={setUnitId} phases={phases} />
       <EquipmentReadiness unitId={unitId}>
         <ol aria-label="Setup phases" className="relative space-y-4 before:absolute before:bottom-6 before:left-4 before:top-6 before:w-px before:bg-border sm:before:left-5">
           {SETUP_PHASES.map((phase, index) => <SetupPhaseSection key={phase.id} phase={phase} number={index + 1} unitId={unitId} open={phases.open.has(phase.id)} onOpenChange={(isOpen) => phases.toggle(phase.id, isOpen)} />)}
         </ol>
       </EquipmentReadiness>
-      <p className="text-sm text-muted-foreground">Opening a page from this guide does not save, approve or certify anything. Finish each step on its own page, then review its check.</p>
     </Page>
   </PageGate>;
 }

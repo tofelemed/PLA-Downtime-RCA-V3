@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePlantSelection } from '@/contexts/PlantSelectionContext';
 import { usePlantDirectory, type PlantDirectory } from '@/features/plant-selector/use-plant-directory';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 
 export interface ActingPlantFieldProps {
@@ -14,7 +15,7 @@ export interface ActingPlantFieldProps {
 }
 
 const ID = 'acting-plant';
-const HINT_ID = `${ID}-hint`;
+const PLANT_INFO = 'The record is created in this plant, the one selected in the header.';
 
 /** "Organization › Plant" of the header selection. */
 function usePlantLabel(): string {
@@ -75,14 +76,16 @@ export function ActingPlantField({ editable, onSwitched }: ActingPlantFieldProps
   const name = target?.name ?? '';
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={ID}>Plant</Label>
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={ID}>Plant</Label>
+        <KpiInfo label="Plant" text={PLANT_INFO} />
+      </div>
       <Select value={currentId} onValueChange={choose} disabled={directory.isLoading}>
-        <SelectTrigger id={ID} aria-describedby={HINT_ID} className="sm:max-w-sm">
+        <SelectTrigger id={ID} className="sm:max-w-sm">
           <SelectValue placeholder={directory.isLoading ? 'Loading plants…' : 'Choose a plant'} />
         </SelectTrigger>
         <PlantOptions directory={directory} />
       </Select>
-      <p id={HINT_ID} className="text-xs text-muted-foreground">The record is created in this plant, the one selected in the header.</p>
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}

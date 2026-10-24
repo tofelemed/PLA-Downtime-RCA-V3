@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { Input } from '@/components/ui/input';
 import { useCreateFlowRoute } from '@/api/v2/queries/plant-model';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { focusFirstField } from '../components/focus-first-field';
 import { FormField } from '@/features/plans-profiles-calendars/components/form-field';
 import { NativeSelect, type Option } from '@/features/plans-profiles-calendars/components/native-select';
-import { PlantDateTimeField } from '@/features/plans-profiles-calendars/components/plant-date-time-field';
 import type { FieldErrors } from '@/features/plans-profiles-calendars/model/profile-form';
 import { refusalOf } from '@/features/plans-profiles-calendars/model/refusal';
+import { FlowDateTimeField } from './flow-date-time-field';
 import { PlantFlowSaveAlert } from './plant-flow-save-alert';
 import { emptyFlowRouteForm, flowRouteCreateBody, type FlowRouteFormValues, validateFlowRouteForm } from './plant-flow-form-model';
 
@@ -99,22 +101,24 @@ export function FlowRouteDialog({ unitOptions, timezone, onDone }: FlowRouteDial
   const fields = { values, set, fieldError };
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onDone()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('routeFrom')}>
         <DialogHeader>
-          <DialogTitle>Add route</DialogTitle>
-          <DialogDescription>A draft route; another user approves it before stops propagate along it.</DialogDescription>
+          <div className="flex items-center gap-1.5">
+            <DialogTitle>Add route</DialogTitle>
+            <KpiInfo label="Add route" text="A draft route; another user approves it before stops propagate along it." />
+          </div>
         </DialogHeader>
-        <form noValidate className="space-y-3" data-testid="flow-route-form" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <form noValidate className="space-y-3 [&_input]:h-9" data-testid="flow-route-form" onSubmit={(e) => { e.preventDefault(); void save(); }}>
           <PlantFlowSaveAlert error={failure} timezone={timezone} />
           <UnitFields {...fields} unitOptions={unitOptions} />
           <BufferFields {...fields} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <PlantDateTimeField id="routeEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
-            <PlantDateTimeField id="routeEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
+            <FlowDateTimeField id="routeEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
+            <FlowDateTimeField id="routeEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onDone} disabled={busy}>Cancel</Button>
-            <Button type="submit" disabled={busy}>Add draft route</Button>
+            <Button type="button" variant="outline" className="h-9" onClick={onDone} disabled={busy}>Cancel</Button>
+            <Button type="submit" className="h-9" disabled={busy}>Add draft route</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { focusFirstField } from './focus-first-field';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import type { AttributeDefinitionView as CustomAttributeDefinition } from '@/api/v2/types/administration';
 
@@ -26,13 +28,13 @@ function ValueInput({ definition, value, onChange }: { definition: CustomAttribu
       </div>
     );
   }
-  if (definition.dataType === 'date') return <DateInput id={id} label={definition.displayName} value={value} onChange={onChange} />;
+  if (definition.dataType === 'date') return <DateInput id={id} label={definition.displayName} value={value} onChange={onChange} compact />;
   if (definition.dataType === 'select') {
     return (
       <div className="space-y-1.5">
         <Label htmlFor={id}>{definition.displayName}</Label>
         <Select value={value || undefined} onValueChange={onChange}>
-          <SelectTrigger id={id}>
+          <SelectTrigger id={id} className="h-9">
             <SelectValue placeholder="Choose a value" />
           </SelectTrigger>
           <SelectContent>
@@ -51,6 +53,7 @@ function ValueInput({ definition, value, onChange }: { definition: CustomAttribu
       <Label htmlFor={id}>{definition.displayName}</Label>
       <Input
         id={id}
+        className="h-9"
         value={value}
         inputMode={definition.dataType === 'number' ? 'decimal' : undefined}
         onChange={(event) => onChange(event.target.value)}
@@ -66,19 +69,21 @@ export function AttributeValueDialog({ definition, value, saving, onSave, onClos
   const missing = definition.isRequired && draft.trim() === '';
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[420px]" aria-describedby={undefined} onOpenAutoFocus={focusFirstField('attribute-value')}>
         <DialogHeader>
-          <DialogTitle>Edit {definition.displayName}</DialogTitle>
-          {definition.description && <DialogDescription>{definition.description}</DialogDescription>}
+          <div className="flex items-center gap-1.5">
+            <DialogTitle>Edit {definition.displayName}</DialogTitle>
+            {definition.description && <KpiInfo label={definition.displayName} text={definition.description} />}
+          </div>
         </DialogHeader>
         <ValueInput definition={definition} value={draft} onChange={setDraft} />
         {invalidNumber && <p className="text-sm text-destructive">Enter a number.</p>}
         {missing && <p className="text-sm text-destructive">This attribute is required.</p>}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" className="h-9" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={saving || invalidNumber || missing} onClick={() => void onSave(draft).then(onClose, () => undefined)}>
+          <Button className="h-9" disabled={saving || invalidNumber || missing} onClick={() => void onSave(draft).then(onClose, () => undefined)}>
             Save
           </Button>
         </DialogFooter>

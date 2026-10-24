@@ -3,6 +3,7 @@ import { useV2InfiniteList, flattenPages } from '@/api/v2/queries/use-v2-list';
 import { useUnitNames } from '@/features/ux-kit/labels';
 import { EntityIcon } from '@/lib/icons';
 import type { MasterAssetView, MasterUnitView } from '../api/master-data-types';
+import { codeAndName } from './record-label';
 
 const LIMIT = 20;
 
@@ -36,7 +37,7 @@ export function HierarchySearchResults({ q }: { q: string }) {
           <EntityIcon.unit className="h-4 w-4 text-muted-foreground" aria-hidden />
           <span className="sr-only">Unit: </span>
           <Link className="underline-offset-4 hover:underline" to={`/master-data/units/${unit.id}`}>
-            {unit.code} — {unit.name}
+            {codeAndName(unit.code, unit.name)}
           </Link>
         </li>
       ))}
@@ -45,7 +46,7 @@ export function HierarchySearchResults({ q }: { q: string }) {
           <EntityIcon.asset className="h-4 w-4 text-muted-foreground" aria-hidden />
           <span className="sr-only">Asset: </span>
           <Link className="underline-offset-4 hover:underline" to={`/master-data/assets/${asset.id}`}>
-            {asset.code} — {asset.name}
+            {codeAndName(asset.code, asset.name)}
           </Link>
           <span className="text-muted-foreground">in {unitNames.nameOf(asset.unitId)}</span>
         </li>

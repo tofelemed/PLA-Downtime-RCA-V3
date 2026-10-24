@@ -136,7 +136,9 @@ describe('organization and plant editing (Setup › Organizations & plants)', ()
     actAs('OrgAdmin');
     wrap(<OrganizationEditPage />, '/setup/plants/organizations/o2/edit', '/setup/plants/organizations/:organizationId/edit');
     expect(await screen.findByText(/Only a super administrator or the organization’s administrator can change this organization/)).toBeTruthy();
-    expect(screen.getByLabelText(/^Name/)).toBeDisabled();
+    // read-only users see the values as text, not disabled inputs (cleanup 25 Oct 2026)
+    expect(within(screen.getByRole('group', { name: 'Name' })).getByText(OTHER_ORG.name)).toBeTruthy();
+    expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull();
   });
 
