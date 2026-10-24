@@ -1,6 +1,7 @@
 import { useAllCodes } from '@/api/v2/queries/reference-data';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import { Label } from '@/components/ui/label';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { DateInput } from '@/features/ux-kit/date-inputs';
 import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
 import { ReasonCodePicker } from '@/features/ux-kit/reason-code-picker/reason-code-picker';
@@ -23,10 +24,10 @@ export function LinkPickerFiltersBar({ idPrefix, value, onChange, searchLabel, w
   const codes = useAllCodes('reason-codes', { includeRetired: true });
   const set = (patch: Partial<LinkPickerFilters>) => onChange({ ...value, ...patch });
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-testid={`${idPrefix}-filters`}>
-      <div className="space-y-1">
+    <div className="flex flex-wrap items-end gap-x-4 gap-y-3" data-testid={`${idPrefix}-filters`}>
+      <div className={FIELD_CLASS}>
         <Label htmlFor={`${idPrefix}-unit`}>Unit</Label>
-        <select id={`${idPrefix}-unit`} className="h-10 w-full rounded border bg-background px-2 text-sm" value={value.unitId} onChange={(e) => set({ unitId: e.target.value })}>
+        <select id={`${idPrefix}-unit`} className={`${SELECT_CLASS} w-48`} value={value.unitId} onChange={(e) => set({ unitId: e.target.value })}>
           <option value="">All units</option>
           {units.map((unit) => (
             <option key={unit.id} value={unit.id}>
@@ -35,17 +36,19 @@ export function LinkPickerFiltersBar({ idPrefix, value, onChange, searchLabel, w
           ))}
         </select>
       </div>
-      <ReasonCodePicker
-        id={`${idPrefix}-reason`}
-        label="Reason"
-        codes={flattenPages(codes.data?.pages)}
-        value={value.reasonCodeId}
-        emptyLabel="Any reason"
-        onChange={(reasonCodeId) => set({ reasonCodeId })}
-      />
-      <DateInput id={`${idPrefix}-from`} label="From" value={value.fromDay} onChange={(fromDay) => set({ fromDay })} error={windowError} />
-      <DateInput id={`${idPrefix}-to`} label="To" value={value.toDay} onChange={(toDay) => set({ toDay })} />
-      <div className="space-y-1">
+      <div className="w-56">
+        <ReasonCodePicker
+          id={`${idPrefix}-reason`}
+          label="Reason"
+          codes={flattenPages(codes.data?.pages)}
+          value={value.reasonCodeId}
+          emptyLabel="Any reason"
+          onChange={(reasonCodeId) => set({ reasonCodeId })}
+        />
+      </div>
+      <DateInput id={`${idPrefix}-from`} label="From" compact value={value.fromDay} onChange={(fromDay) => set({ fromDay })} error={windowError} />
+      <DateInput id={`${idPrefix}-to`} label="To" compact value={value.toDay} onChange={(toDay) => set({ toDay })} />
+      <div className={`${FIELD_CLASS} w-64`}>
         <p className="text-sm font-medium" aria-hidden="true">
           Search
         </p>

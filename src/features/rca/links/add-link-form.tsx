@@ -5,6 +5,7 @@ import type { RcaLinkType } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { hasWindow, linkedLossLineKeys } from '../model/link-picker';
 import { LINK_TYPE_LABELS } from '../model/rca-labels';
@@ -29,11 +30,11 @@ function WorkOrderField({ busy, onLink }: { busy: boolean; onLink: (targetId: st
   const [number, setNumber] = useState('');
   return (
     <div className="flex flex-wrap items-end gap-2">
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="link-work-order">Work order number</Label>
-        <Input id="link-work-order" className="max-w-sm" value={number} onChange={(e) => setNumber(e.target.value)} />
+        <Input id="link-work-order" className="h-9 w-64" value={number} onChange={(e) => setNumber(e.target.value)} />
       </div>
-      <Button type="button" size="sm" disabled={number.trim() === '' || busy} onClick={() => void onLink(number.trim()).then((ok) => ok && setNumber(''))}>
+      <Button type="button" disabled={number.trim() === '' || busy} onClick={() => void onLink(number.trim()).then((ok) => ok && setNumber(''))}>
         Link
       </Button>
     </div>
@@ -64,12 +65,13 @@ export function AddLinkForm({ rcaId }: { rcaId: string }) {
   const pick = (targetId: string) => void submit(linkType, targetId);
   const picker = { onLink: pick, busy: link.isPending, linkedIds, filters: filters.value };
   return (
-    <div className="space-y-3 rounded border p-2" data-testid="add-link">
-      <div className="space-y-1">
+    <div className="space-y-3 border-t pt-4" data-testid="add-link">
+      <h3 className="text-sm font-semibold">Add a link</h3>
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="link-type">Link</Label>
         <select
           id="link-type"
-          className="h-10 rounded border bg-background px-2 text-sm"
+          className={`${SELECT_CLASS} w-56`}
           value={linkType}
           onChange={(e) => setLinkType(PICKER_TYPES.find((type) => type === e.target.value) ?? 'event')}
         >
