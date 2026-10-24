@@ -16,6 +16,7 @@ import { DisabledReason } from './disabled-reason';
 
 /** Dialog widths: sm 420 px for confirms (default), md 560 px when the body holds a short form or a summary. */
 const SIZE_CLASS = { sm: 'sm:max-w-[420px]', md: 'sm:max-w-[560px]' } as const;
+const sizeClass = (size: keyof typeof SIZE_CLASS = 'sm') => SIZE_CLASS[size];
 
 export interface ConfirmDialogProps {
   /** controlled usage; omit together with `onOpenChange` and pass `trigger` instead */
@@ -97,7 +98,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
     <AlertDialog open={isOpen} onOpenChange={(next) => !busy && setOpen(next)}>
       {trigger && <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>}
       <AlertDialogContent
-        className={cn('flex max-h-[min(90vh,44rem)] flex-col', SIZE_CLASS[props.size ?? 'sm'])}
+        className={cn('flex max-h-[min(90vh,44rem)] flex-col', sizeClass(props.size))}
         onOpenAutoFocus={(event) => {
           const target = props.initialFocus?.current ?? (destructive ? null : confirmRef.current);
           if (!target) return;
