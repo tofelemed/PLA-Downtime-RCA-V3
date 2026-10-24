@@ -93,6 +93,17 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
     expect(screen.getAllByText('Provisional', { selector: '[data-testid="provisional-mark"]' })).toHaveLength(1);
   });
 
+  it('Overview: the waterfall title does not repeat the ledger; its totals are KPI tiles with an ⓘ definition', async () => {
+    open(`/pla-analytics?${WINDOW}`);
+    await screen.findByTestId('waterfall');
+    const card = screen.getByTestId('pla-waterfall');
+    expect(within(card).getByRole('heading', { level: 2 })).toHaveTextContent(/^Waterfall · target → actual$/);
+    const tiles = within(card).getAllByTestId(/^waterfall-total-/);
+    expect(tiles.map((tile) => tile.querySelector('span')?.textContent)).toEqual(['Plan target', 'Actual good output']);
+    expect(tiles[0].querySelector('span')).toHaveClass('uppercase');
+    expect(within(card).getByRole('button', { name: 'About Plan target' })).toBeInTheDocument();
+  });
+
   it('Loss breakdown: "Explore" is a filter-bar field after Units and before the window; no loss-events note', async () => {
     open(`/pla-analytics/losses?${WINDOW}&breakdown=loss-events`);
     const bar = await screen.findByTestId('analytics-filters');

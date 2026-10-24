@@ -12,6 +12,7 @@ import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { StatusIcon } from '@/lib/icons';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
+import { KpiTile, type KpiTileSpec } from '../dashboard/kpi-tile';
 import { waterfallQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { waterfallBarLink } from '../model/links';
 import { waterfallBarLabel } from '@/features/plan-dashboard/model/display';
@@ -65,7 +66,7 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
   const linkOf = (bar: Bar) => waterfallBarLink(scope, bar.key);
   return (
     <AnalyticsCard
-      title={`Waterfall · ${scope.ledger === 'plan' ? 'plan ledger (target → actual)' : 'capacity ledger (capacity → good)'}`}
+      title={`Waterfall · ${scope.ledger === 'plan' ? 'target → actual' : 'capacity → good'}`}
       testId="pla-waterfall"
       query={query}
       response={query.data}
@@ -98,11 +99,18 @@ export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
   );
 }
 
+const OPENING: Readonly<Record<'plan' | 'capacity', KpiTileSpec>> = {
+  plan: { title: 'Plan target', info: 'The approved plan quantity of the shown periods (plan ledger): where the waterfall starts.' },
+  capacity: { title: 'Sustained capacity', info: 'Output at the approved sustained rate over the scheduled time of the shown periods (capacity ledger): where the waterfall starts.' },
+};
+const CLOSING: KpiTileSpec = { title: 'Actual good output', info: 'The good output of the shown periods: where the waterfall ends.' };
+
+/** Where the waterfall starts and ends, as the dashboard's KPI tiles (uppercase label, ⓘ definition). */
 function WaterfallTotals({ data, plan }: { data: ScopeWaterfallView; plan: boolean }) {
-  return <dl className="grid grid-cols-2 gap-3">
-    <div className="rounded-md border p-3"><dt className="text-sm text-muted-foreground">{plan ? 'Plan target' : 'Sustained capacity'}</dt><dd className="text-xl font-semibold"><Quantity value={data.opening} uom={data.uom} /></dd></div>
-    <div className="rounded-md border p-3"><dt className="text-sm text-muted-foreground">Actual good output</dt><dd className="text-xl font-semibold"><Quantity value={data.closing} uom={data.uom} /></dd></div>
-  </dl>;
+  return <div className="grid grid-cols-2 gap-3">
+    <KpiTile spec={OPENING[plan ? 'plan' : 'capacity']} value={<Quantity value={data.opening} uom={data.uom} />} testId="waterfall-total-opening" />
+    <KpiTile spec={CLOSING} value={<Quantity value={data.closing} uom={data.uom} />} testId="waterfall-total-closing" />
+  </div>;
 }
 
 function WaterfallState({ data }: { data: ScopeWaterfallView | undefined }) {
