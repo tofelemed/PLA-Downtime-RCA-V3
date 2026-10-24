@@ -8,7 +8,7 @@ import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { PHYSICAL_STATE_LABELS } from '@/features/ux-kit/labels/event-labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
 import { useEventHubEnv, type EventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import type { AnalyticsScope } from '../model/analytics-scope';
+import { lossEventsQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { eventsHref } from './dashboard-links';
 import { KpiSection } from './kpi-section';
 
@@ -26,15 +26,13 @@ function columnsOf(env: EventHubEnv): Array<DataTableColumn<ProductionEventView>
 
 /**
  * The latest stops, slowdowns and quality losses of the window (the v1 "critical alerts / recent events"):
- * the newest five from the server, each opening its event page; the full list is in the Event Hub.
+ * the newest five on the scope's units (the same query as Losses → Events), each opening its event page;
+ * the full list is in the Event Hub.
  */
 export function LatestEvents({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const navigate = useNavigate();
-  const query = useProductionEvents(
-    { from: scope.from, to: scope.to, sort: '-startTime', limit: LATEST, physicalTypes: ['downtime', 'slowdown', 'quality_loss'], physicalStates: ['open', 'closed'] },
-    env.timezone,
-  );
+  const query = useProductionEvents({ ...lossEventsQuery(scope), limit: LATEST }, env.timezone);
   const rows = query.data?.pages[0]?.items ?? [];
   const state = dataStateOf(query);
   return (
