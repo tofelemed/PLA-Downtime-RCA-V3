@@ -12,6 +12,9 @@ vi.mock('@/features/ux-kit/use-plant-timezone', () => ({ usePlantTimezone: () =>
 vi.mock('@/features/event-hub/event-hub-env', () => ({ EventHubEnvProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ tenantId: 'tenant-a', timezone: 'Asia/Tehran', timezoneIsFallback: false, units: [], unitsLoading: false, allReasonCodes: [], reasonCodes: [], unitName: (id: string) => id, reasonName: (id: string) => id }) }));
 vi.mock('@/features/plan-dashboard/components/waterfall-chart', () => ({ WaterfallChart: () => <div>Waterfall chart</div> }));
+vi.mock('@/features/pla-analytics/charts/series-chart', () => ({
+  SeriesChart: ({ series }: { series: ReadonlyArray<{ label: string; colour?: string }> }) => <output data-testid="chart-series">{series.map((entry) => `${entry.label}=${entry.colour ?? ''}`).join(';')}</output>,
+}));
 vi.mock('@/features/pla-analytics/hooks/use-production-day-start', () => ({ useProductionDayStart: () => ({ dayStart: '06:00', loading: false }) }));
 
 const { PlaAnalyticsPage } = await import('./pla-analytics-page');
@@ -27,7 +30,10 @@ function reportData(url: URL): object {
   if (url.pathname.endsWith('/scope-waterfall')) return { ...base, ledger: 'plan', opening: '224', closing: '190', closes: true, uom: 't', bars: [{ key: 'target', label: 'Plan target', kind: 'total', delta: null, start: '0', end: '224' }], excluded: [] };
   if (url.pathname.endsWith('/loss-value')) return { ...base, total: { currencies: [] }, components: [] };
   if (url.pathname.endsWith('/reconciliation-status')) return { ...base, periods: 0, waitingForData: 0, rejectionEscalated: 0, overdueCount: 0, overdue: [], workflow: [], residual: [], ages: [], sla: { submitWithinHours: 1, approveWithinHours: 1 } };
-  if (url.pathname.endsWith('/oee')) return { ...base, label: 'Operational OEE (ISO 22400)', policy: 'operational', groupBy: url.searchParams.get('groupBy'), groups: [], total: [] };
+  if (url.pathname.endsWith('/oee')) {
+    const total = ['availability', 'performance', 'quality', 'oee'].map((metric) => ({ metric, value: '0.9', numerator: '9', denominator: '10', unit: 'ratio', quality: 'ok', reason: null, rows: 1, missing: 0 }));
+    return { ...base, label: 'Operational OEE (ISO 22400)', policy: 'operational', groupBy: url.searchParams.get('groupBy'), groups: [{ key: '2026-10-01', metrics: total }], total };
+  }
   return { ...base, groupBy: url.searchParams.get('groupBy'), metric: 'qty' };
 }
 
@@ -141,6 +147,13 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
     expect(within(policy).getAllByRole('option').map((option) => option.textContent)).toEqual(['OEE', 'Reconciled PLA OEE']);
     expect(await screen.findByTestId('pla-oee-trend')).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/Operational|ISO 22400|Buckets use the plant/);
+  });
+
+  it('Trends: the OEE lines read OEE, Availability, Performance, Quality in the dashboard colours (server order reordered, nothing computed)', async () => {
+    open(`/pla-analytics/trends?${WINDOW}`);
+    expect(await screen.findByTestId('chart-series')).toHaveTextContent(
+      'OEE=hsl(var(--chart-1));Availability=hsl(var(--chart-8));Performance=hsl(var(--chart-2));Quality=hsl(var(--warning))',
+    );
   });
 
   it('Reconciliation and Loss valuation: their picker is in the filter bar; no explanatory paragraph', async () => {
