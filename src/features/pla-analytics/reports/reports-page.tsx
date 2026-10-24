@@ -7,6 +7,7 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { useAnalyticsScope } from '../hooks/use-analytics-scope';
 import { useProductionDayStart } from '../hooks/use-production-day-start';
 import type { AnalyticsScope } from '../model/analytics-scope';
+import { ReportChrome } from '../components/report-chrome';
 import { viewOf } from './report-catalog';
 import { ReportViewBody } from './report-view-body';
 import { ReportViewPicker } from './report-view-picker';
@@ -65,12 +66,14 @@ function ReportsBody({ dayStart }: { dayStart: string }) {
   return (
     <Page width="wide">
       <div className="space-y-4" data-testid="reports-v2">
-        <ReportsHeader scope={named} shownUnitIds={scope.unitIds} />
-        <div className="flex flex-wrap items-start gap-4 print:hidden" data-testid="reports-top-bar">
+        <ReportsHeader scope={named} />
+        <div className="flex flex-wrap items-start gap-x-4 gap-y-3 print:hidden" role="group" aria-label="Report filters" data-testid="reports-top-bar">
           <ReportViewPicker view={view} onViewChange={chooseView} />
           <ReportsFilters scope={scope} dayStart={dayStart} onChange={change} />
         </div>
-        <ReportViewBody view={view} scope={named} dayStart={dayStart} />
+        <ReportChrome>
+          <ReportViewBody view={view} scope={named} dayStart={dayStart} />
+        </ReportChrome>
       </div>
     </Page>
   );

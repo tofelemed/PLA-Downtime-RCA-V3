@@ -21,10 +21,6 @@ export function ReportExports({ scope }: { scope: AnalyticsScope }) {
   return (
     <div className="space-y-3" data-testid="report-exports">
       <DisabledReason id={reasonId} reason={reason} />
-      <p className="text-sm text-muted-foreground">
-        Exports contain approved revisions only (the latest approved revision of every period of these units and dates), prepared in the background. CSV: every row names its
-        period, revision and approval. PDF: a printable report in the plant calendar, with money in your display currency.
-      </p>
       {EXPORTS.map((entry) => (
         <div key={entry.reportType} className="flex flex-wrap gap-4">
           {(['csv', 'pdf'] as const).map((format) => (

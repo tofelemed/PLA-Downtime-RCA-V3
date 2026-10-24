@@ -11,6 +11,8 @@ export interface OeeGroupTableProps {
   /** display name of a group key (unit / product names, a formatted date — never a UUID) */
   labelOf: (key: string | null) => string;
   testId: string;
+  /** the table's accessible caption (default: "<policy label> by <group>") */
+  caption?: string;
 }
 
 const metricLabel = (metric: string) => OEE_METRIC_LABELS[metric.replace('reconciled_', '')] ?? metric;
@@ -57,12 +59,12 @@ function columnsOf(report: OeeReportView, groupTitle: string, labelOf: OeeGroupT
  * OEE components per server group (20 per page): "Not available: <reason>" when the server has no value (T41),
  * said once per row when the whole row shares it or no approved plan covers the row (QA re-test N4).
  */
-export function OeeGroupTable({ report, groupTitle, labelOf, testId }: OeeGroupTableProps) {
+export function OeeGroupTable({ report, groupTitle, labelOf, testId, caption }: OeeGroupTableProps) {
   const { digits } = useCalendarPreference();
   return (
     <div data-testid={testId}>
       <DataTable
-        caption={`${report.label} by ${inSentence(groupTitle)}`}
+        caption={caption ?? `${report.label} by ${inSentence(groupTitle)}`}
         columns={columnsOf(report, groupTitle, labelOf, digits)}
         rows={report.groups}
         getRowKey={(group) => group.key ?? '-'}

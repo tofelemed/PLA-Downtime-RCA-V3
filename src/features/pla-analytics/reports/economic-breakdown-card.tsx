@@ -6,6 +6,9 @@ import { EconomicBreakdownTable } from '@/features/valuation-breakdown/economic-
 import { AnalyticsCard } from '../components/analytics-card';
 import { lossValueComponentsQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { revisionSelectionLabel } from '../model/links';
+import { useReportChrome } from '../components/use-report-chrome';
+
+const NOT_BROKEN_DOWN = 'Values from before the breakdown are listed as not broken down.';
 
 /**
  * VA-04 on Reports: the economic view of the scope by component (lost contribution, scrap cost, salvage,
@@ -16,6 +19,7 @@ export function EconomicBreakdownCard({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useReport<LossValueReportView>('loss-value', lossValueComponentsQuery(scope), env.timezone);
   const components = query.data?.data.components ?? [];
+  const report = useReportChrome();
   return (
     <AnalyticsCard
       title={`Economic impact by component · ${LEDGER_LABELS[scope.ledger].toLowerCase()}`}
@@ -25,7 +29,8 @@ export function EconomicBreakdownCard({ scope }: { scope: AnalyticsScope }) {
       approvedOnly={scope.approvedOnly}
       isEmpty={components.length === 0}
       emptyText="No economic value in these periods (the valuation policy may have no economic view)."
-      note={`${revisionSelectionLabel(scope.approvedOnly)}. Values from before the breakdown are listed as not broken down.`}
+      note={`${revisionSelectionLabel(scope.approvedOnly)}. ${NOT_BROKEN_DOWN}`}
+      info={report ? NOT_BROKEN_DOWN : undefined}
     >
       <EconomicBreakdownTable components={components} caption="Economic impact by component" />
     </AnalyticsCard>

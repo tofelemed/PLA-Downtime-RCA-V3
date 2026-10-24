@@ -8,9 +8,11 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { useCalendarPreference } from '@/lib/dates';
 import { oeeQuery, type AnalyticsScope, type OeePolicy } from '../model/analytics-scope';
 import { findKpi } from '../model/display';
+import { reportText } from '../model/report-text';
+import { useReportChrome } from '../components/use-report-chrome';
 import { reportsHref } from './dashboard-links';
 import { KpiSection } from './kpi-section';
-import { KpiTile, KpiTileRow } from './kpi-tile';
+import { KpiTile, KpiTileRow, type KpiTileSpec } from './kpi-tile';
 import { OEE_TILES, OPERATIONAL_LABEL, oeeTileSpec, oeeTileValue, RECONCILED_LABEL } from './oee-tile-model';
 
 const OeeTrendChart = lazy(() => import('../charts/oee-trend-chart').then((m) => ({ default: m.OeeTrendChart })));
@@ -27,9 +29,12 @@ function useOeeFigures(scope: AnalyticsScope, policy: OeePolicy, enabled = true)
 /**
  * The OEE tiles of the scope: operational OEE with its components and the reconciled PLA OEE; with
  * `operationalOnly` (the daily report) the four operational tiles only, and the reconciled OEE is not asked.
+ * On the Reports page the titles and tooltips drop "Operational" and "(ISO 22400)".
  */
 export function OeeTiles({ scope, operationalOnly = false }: { scope: AnalyticsScope; operationalOnly?: boolean }) {
   const { digits } = useCalendarPreference();
+  const report = useReportChrome();
+  const said = (spec: KpiTileSpec): KpiTileSpec => (report ? { ...spec, title: reportText(spec.title), info: reportText(spec.info) } : spec);
   const operational = useOeeFigures(scope, 'operational');
   const reconciled = useOeeFigures(scope, 'reconciled', !operationalOnly);
   const asked = operationalOnly ? [operational] : [operational, reconciled];
@@ -43,7 +48,7 @@ export function OeeTiles({ scope, operationalOnly = false }: { scope: AnalyticsS
         const figures = def.id === 'reconciled' ? reconciled : operational;
         const view = findKpi(figures.total, def.metric);
         const value = figures.isLoading ? <Skeleton className="h-8 w-20" /> : <span data-testid="oee-tile-value">{oeeTileValue(view, digits) ?? '—'}</span>;
-        return <KpiTile key={def.id} spec={oeeTileSpec(def, view, labels)} value={value} testId={`dashboard-oee-${def.id}-tile`} />;
+        return <KpiTile key={def.id} spec={said(oeeTileSpec(def, view, labels))} value={value} testId={`dashboard-oee-${def.id}-tile`} />;
       })}
     </KpiTileRow>
   );

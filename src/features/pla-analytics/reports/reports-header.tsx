@@ -1,40 +1,21 @@
 import { useOeeReport } from '@/api/v2/queries/reports';
-import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/features/ux-kit/page-layout';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
-import { revisionSelectionLabel, unitsLabel } from '../model/links';
-import { SnapshotStatus } from '../components/snapshot-status';
 import { oeeQuery, type AnalyticsScope } from '../model/analytics-scope';
-import { useDatesLabel } from '../hooks/use-dates-label';
 
 /**
- * Reports header (§16.2 Reports, AN03): named units, the period dates, the revision selection, and of the
- * shown snapshot the generated time, approval status and — behind Details — the calculation runs.
+ * Reports header: the h1 only (redesign 24 Oct 2026 — no description, scope line, revision badge or
+ * snapshot status; the top bar shows the dates, units and revision). A hidden marker keeps the shown
+ * snapshot's units and calculation runs readable for the end-to-end tests (T24).
  */
-export function ReportsHeader({ scope, shownUnitIds }: { scope: AnalyticsScope; shownUnitIds: readonly string[] }) {
+export function ReportsHeader({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useOeeReport(oeeQuery(scope, 'day', 'operational'), env.timezone);
-  const response = query.data;
-  const runIds = response?.data.calculationRunIds ?? [];
-  const dates = useDatesLabel(scope, env.timezone);
+  const runIds = query.data?.data.calculationRunIds ?? [];
   return (
-    <PageHeader
-      title="Reports"
-      description="Approved figures of the chosen units and plant dates, with exports."
-      meta={
-        <div className="space-y-1" data-testid="report-snapshot" data-run-ids={[...runIds].sort().join(',')} data-unit-ids={scope.unitIds.join(',')}>
-          <SnapshotStatus
-            scopeLabel={`${unitsLabel(shownUnitIds, env.unitName)} · ${dates}`}
-            timezone={env.timezone}
-            timezoneIsFallback={env.timezoneIsFallback}
-            response={response}
-            isError={query.isError}
-            testId="report-snapshot-details"
-            approvedOnly={scope.approvedOnly}
-          />
-          <Badge variant="outline">{revisionSelectionLabel(scope.approvedOnly)}</Badge>
-        </div>
-      }
-    />
+    <>
+      <PageHeader title="Reports" />
+      <span hidden data-testid="report-snapshot" data-run-ids={[...runIds].sort().join(',')} data-unit-ids={scope.unitIds.join(',')} />
+    </>
   );
 }
