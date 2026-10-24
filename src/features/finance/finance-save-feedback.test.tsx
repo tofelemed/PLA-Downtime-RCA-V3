@@ -80,7 +80,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
     wrap(<FinanceHeaderActions tab="fx" />);
     fireEvent.click(screen.getByTestId('fx-new'));
     fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '600000' } });
-    setDateTime('Valid from (UTC)', '2026-10-01', '00:00');
+    setDateTime('Valid from', '2026-10-01', '00:00');
     fireEvent.click(screen.getByTestId('fx-save'));
     const result = await screen.findByTestId('save-result-dialog');
     expect(screen.queryByTestId('fx-form')).toBeNull();
@@ -99,7 +99,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
     wrap(<FinanceHeaderActions tab="fx" />);
     fireEvent.click(screen.getByTestId('fx-new'));
     fireEvent.change(screen.getByLabelText('Rate'), { target: { value: '600000' } });
-    setDateTime('Valid from (UTC)', '2026-10-01', '00:00');
+    setDateTime('Valid from', '2026-10-01', '00:00');
     fireEvent.click(screen.getByTestId('fx-save'));
     const alert = await screen.findByTestId('save-failure-alert');
     expect(within(screen.getByTestId('fx-form')).getByTestId('save-failure-alert')).toBe(alert);
@@ -115,7 +115,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
     const cancel = await screen.findByRole('link', { name: 'Cancel' });
     expect(cancel.getAttribute('href')).toBe('/finance?tab=policies');
     fireEvent.change(screen.getByLabelText('Default management view'), { target: { value: 'contribution_margin' } });
-    setDateTime('Starts (UTC)', '2099-01-01', '00:00');
+    setDateTime('Starts', '2099-01-01', '00:00');
     fireEvent.click(screen.getByTestId('policy-save'));
     const result = await screen.findByTestId('save-result-dialog');
     expect(posts()).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
     reply = (call) => (call.method === 'POST' ? json(201, POLICY) : json(200, EMPTY));
     wrap(<PolicyNewPage />, '/finance/policies/new');
     fireEvent.change(await screen.findByLabelText('Default management view'), { target: { value: 'contribution_margin' } });
-    setDateTime('Starts (UTC)', '2099-01-01', '00:00');
+    setDateTime('Starts', '2099-01-01', '00:00');
     fireEvent.click(screen.getByTestId('policy-save'));
     await screen.findByTestId('save-result-dialog');
     fireEvent.keyDown(screen.getByTestId('save-result-dialog'), { key: 'Escape' });
@@ -190,7 +190,7 @@ describe('finance — save feedback (DECISIONS 2026-10-22)', () => {
     fireEvent.click(screen.getByTestId('demand-new'));
     await screen.findByRole('option', { name: 'HD-1 · HDPE film' });
     fireEvent.change(screen.getByLabelText('Product'), { target: { value: 'prod-1' } });
-    setDateTime('Valid from (UTC)', '2026-10-01', '00:00');
+    setDateTime('Valid from', '2026-10-01', '00:00');
     fireEvent.change(screen.getByLabelText('Evidence'), { target: { value: 'orders' } });
     fireEvent.click(screen.getByTestId('demand-save'));
     const result = await screen.findByTestId('save-result-dialog');

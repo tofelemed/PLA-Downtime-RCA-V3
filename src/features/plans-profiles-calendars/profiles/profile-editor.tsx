@@ -87,13 +87,13 @@ export function ProfileEditor({ profile, refs, cancelTo, onSaved }: ProfileEdito
         <FormField id="operatingMode" label="Operating mode" error={fieldError('operatingMode')} required={!profile}>
           <Input id="operatingMode" value={values.operatingMode} disabled={!!profile} onChange={(e) => set('operatingMode', e.target.value)} />
         </FormField>
-        <FormField id="quantityUom" label="Quantity unit" required error={fieldError('quantityUom')} hint="Unit of every rate of this profile, e.g. t">
-          <Input id="quantityUom" value={values.quantityUom} onChange={(e) => set('quantityUom', e.target.value)} />
+        <FormField id="quantityUom" label="Quantity unit" required error={fieldError('quantityUom')}>
+          <Input id="quantityUom" placeholder="e.g. t" value={values.quantityUom} onChange={(e) => set('quantityUom', e.target.value)} />
         </FormField>
         <FormField id="rateTimebase" label="Rate timebase" required error={fieldError('rateTimebase')}>
           <NativeSelect id="rateTimebase" value={values.rateTimebase} options={TIMEBASE_OPTIONS} placeholder="Choose" onChange={(v) => set('rateTimebase', v as ProfileFormValues['rateTimebase'])} invalid={!!fieldError('rateTimebase')} />
         </FormField>
-        <FormField id="capacityModel" label="Capacity model" hint="Shared or independent streams matter only when products run at the same time">
+        <FormField id="capacityModel" label="Capacity model">
           <NativeSelect id="capacityModel" value={values.capacityModel} options={CAPACITY_OPTIONS} onChange={(v) => set('capacityModel', v as ProfileFormValues['capacityModel'])} />
         </FormField>
         <PlantDateTimeField id="effectiveFrom" label="Effective from" required value={values.effectiveFrom} timezone={refs.timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />

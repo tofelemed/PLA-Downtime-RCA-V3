@@ -1,22 +1,20 @@
-import { useMemo, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { useMemo } from 'react';
+import { Label } from '@/components/ui/label';
 import { useApprovedUnitStreams, useUnitStreams } from '@/api/v2/queries/plant-model';
 import type { UnitStreamView } from '@/api/v2/types/plant-model';
 import { useCapabilities } from '@/features/auth/use-capabilities';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
-import { ActionIcon } from '@/lib/icons';
-import { AddDialog } from '@/features/ux-kit/add-dialog';
-import { FormField } from '../components/form-field';
+import { ChooseUnitEmpty } from '../components/choose-unit-empty';
 import { NativeSelect } from '../components/native-select';
+import { TableCard } from '../components/table-card';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
 import { percentOfShare } from '../model/stream-form';
 import { VersionActions } from '../profiles/version-actions';
 import { StreamRunsPanel } from './stream-runs-panel';
-import { UnitStreamForm } from './unit-stream-form';
 import { FocusedListNotice } from '@/features/ux-kit/focused-list-notice';
 import { useAnchorFocus } from '@/features/ux-kit/use-anchor-focus';
 import { infiniteListState, useSeekAnchor } from '@/features/ux-kit/use-seek-anchor';
@@ -33,14 +31,16 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<UnitStreamView>[] {
       nowrap: true,
       cell: (s) => (
         <span className="text-xs">
-          <PlantTime iso={s.effectiveFrom} tz={refs.timezone} withDate /> → {s.effectiveTo ? <PlantTime iso={s.effectiveTo} tz={refs.timezone} withDate /> : 'open-ended'}
+          <PlantTime iso={s.effectiveFrom} tz={refs.timezone} withDate withZone={false} /> → {s.effectiveTo ? <PlantTime iso={s.effectiveTo} tz={refs.timezone} withDate withZone={false} /> : 'open-ended'}
         </span>
       ),
     },
-    { id: 'state', header: 'State', cell: (s) => <VersionStateBadge state={s.state} /> },
-    { id: 'actions', header: 'Actions', cell: (s) => <VersionActions resource="unit-streams" id={s.id} state={s.state} timezone={refs.timezone} authorId={s.createdBy} /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (s) => <VersionStateBadge state={s.state} /> },
+    { id: 'actions', header: 'Actions', nowrap: true, cell: (s) => <VersionActions resource="unit-streams" id={s.id} state={s.state} timezone={refs.timezone} authorId={s.createdBy} /> },
   ];
 }
+
+const STREAMS_INFO = "Parallel trains or lines with their share of the unit's rate. With runs recorded, each product gets the capacity of the stream time it ran.";
 
 /**
  * Streams of a unit (SME E6 / LA-10): parallel trains or lines with their share of the unit's rate, and
@@ -48,11 +48,10 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<UnitStreamView>[] {
  * (concurrent products are never counted twice); without, the unit is one stream as before.
  */
 export function UnitStreamsTab() {
-  const { canWriteProfiles, canWritePeriods } = useCapabilities();
+  const { canWritePeriods } = useCapabilities();
   const refs = usePlanningRefs();
   // a deep link names the unit of the linked row (`?unitId=…#…`); the choice stays in the URL
   const [unitId, setUnitId] = useUnitParam();
-  const [adding, setAdding] = useState(false);
   const anchor = useAnchorFocus('unit-stream-');
   const streams = useUnitStreams(unitId, anchor.focus);
   useSeekAnchor(anchor, infiniteListState(streams.query));
@@ -65,43 +64,30 @@ export function UnitStreamsTab() {
   return (
     <div className="space-y-4" data-testid="unit-streams-tab">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-64">
-          <FormField id="streamUnit" label="Unit">
-            <NativeSelect id="streamUnit" value={unitId} options={refs.unitOptions} placeholder="Choose a unit" onChange={setUnitId} />
-          </FormField>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <ReadOnlyHint />
-          {canWriteProfiles && unitId && (
-            <Button size="sm" onClick={() => setAdding(true)} data-testid="unit-stream-new">
-              <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
-              Add stream
-            </Button>
-          )}
+        <div className={`${FIELD_CLASS} w-64`}>
+          <Label htmlFor="streamUnit">Unit</Label>
+          <NativeSelect id="streamUnit" value={unitId} options={refs.unitOptions} placeholder="Choose a unit" onChange={setUnitId} />
         </div>
       </div>
-      {unitId && (
-        <AddDialog open={adding} onOpenChange={setAdding} title="Add stream" description="A draft stream of this unit; another manager approves it." testId="unit-stream-dialog">
-          <UnitStreamForm unitId={unitId} timezone={refs.timezone} onDone={() => setAdding(false)} />
-        </AddDialog>
-      )}
       {unitId ? (
         <>
           <FocusedListNotice anchor={anchor} what="streams" />
-          <DataTable
-            caption="Unit streams"
-            columns={columnsOf(refs)}
-            rows={streams.rows}
-            getRowKey={(s) => s.id}
-            getRowAnchor={(s) => `unit-stream-${s.id}`}
-            pager={streams.pager}
-            status={streams.status}
-            empty={{ title: 'No streams', text: 'The unit is one stream: every product slice uses the whole period.' }}
-          />
+          <TableCard title="Streams" info={STREAMS_INFO}>
+            <DataTable
+              caption="Unit streams"
+              columns={columnsOf(refs)}
+              rows={streams.rows}
+              getRowKey={(s) => s.id}
+              getRowAnchor={(s) => `unit-stream-${s.id}`}
+              pager={streams.pager}
+              status={streams.status}
+              empty={{ title: 'No streams', text: 'No streams: the unit is one stream and every product slice uses the whole period.' }}
+            />
+          </TableCard>
           <StreamRunsPanel unitId={unitId} refs={refs} streamOptions={streamOptions} canWrite={canWritePeriods} />
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">Choose a unit to see its streams and the products they run.</p>
+        <ChooseUnitEmpty what="streams and the products they run" />
       )}
     </div>
   );

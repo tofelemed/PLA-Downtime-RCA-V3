@@ -70,19 +70,19 @@ export function DemandStatusForm({ timezone, onSaved, onCancel }: DemandStatusFo
         </FinanceField>
       </div>
       <FinanceField id="effectiveFrom" label="Valid from" withLabel={false} error={fieldError('effectiveFrom')}>
-        <DateTimeInput label={`Valid from (${timezone})`} value={values.effectiveFrom} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveFrom', iso)} required />
+        <DateTimeInput compact label="Valid from" value={values.effectiveFrom} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveFrom', iso)} required />
       </FinanceField>
       <FinanceField id="effectiveTo" label="Valid until" withLabel={false} error={fieldError('effectiveTo')}>
-        <DateTimeInput label="Valid until (optional)" value={values.effectiveTo} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveTo', iso)} />
+        <DateTimeInput compact label="Valid until (optional)" value={values.effectiveTo} timeZone={timezone} calendar={calendar} onChange={(iso) => set('effectiveTo', iso)} />
       </FinanceField>
       <FinanceField id="demandEvidence" label="Evidence" error={fieldError('evidence')}>
         <Textarea id="demandEvidence" value={values.evidence} onChange={(e) => set('evidence', e.target.value)} />
       </FinanceField>
       <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>
+        <Button size="sm" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button onClick={save} disabled={create.isPending} data-testid="demand-save">
+        <Button size="sm" onClick={save} disabled={create.isPending} data-testid="demand-save">
           Save draft
         </Button>
       </div>

@@ -1,15 +1,13 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { Label } from '@/components/ui/label';
 import type { ProfileView } from '@/api/v2/types/profiles';
-import { useCapabilities } from '@/features/auth/use-capabilities';
+import { FIELD_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { CAPACITY_MODEL_LABELS, labelOf } from '@/features/ux-kit/labels';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { ReadOnlyHint } from '@/features/ux-kit/read-only-hint';
 import { useCurrentAddress, withReturnTo } from '@/features/ux-kit/page-layout';
-import { ActionIcon } from '@/lib/icons';
-import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
+import { TableCard } from '../components/table-card';
 import { VersionStateBadge } from '@/features/ux-kit/version-state-badge';
 import { usePagedProfiles } from '../hooks/use-profile-reads';
 import { usePlanningRefs, type PlanningRefs } from '../hooks/use-planning-refs';
@@ -36,11 +34,11 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
       nowrap: true,
       cell: (p) => (
         <span className="text-xs">
-          <PlantTime iso={p.effectiveFrom} tz={refs.timezone} withDate /> → {p.effectiveTo ? <PlantTime iso={p.effectiveTo} tz={refs.timezone} withDate /> : 'open-ended'}
+          <PlantTime iso={p.effectiveFrom} tz={refs.timezone} withDate withZone={false} /> → {p.effectiveTo ? <PlantTime iso={p.effectiveTo} tz={refs.timezone} withDate withZone={false} /> : 'open-ended'}
         </span>
       ),
     },
-    { id: 'state', header: 'State', cell: (p) => <VersionStateBadge state={p.state} /> },
+    { id: 'state', header: 'State', nowrap: true, cell: (p) => <VersionStateBadge state={p.state} /> },
   ];
 }
 
@@ -48,9 +46,9 @@ function columnsOf(refs: PlanningRefs): DataTableColumn<ProfileView>[] {
  * Production profiles: what a unit can make of a product, with effective-dated rates and valuation rates.
  * 20 per page; a row opens the profile at `/planning/profiles/:profileId`. The unit and product filters are in
  * the URL and every sub-page link carries this address (`?back=`), so Back returns to the list as it was.
+ * "Import rates" and "New profile" are beside the page title (`ProfilesHeaderActions`).
  */
 export function ProfilesTab() {
-  const { canWriteProfiles, canApproveProfiles } = useCapabilities();
   const refs = usePlanningRefs();
   const navigate = useNavigate();
   const [unitId, setUnitId] = useUnitParam();
@@ -60,47 +58,28 @@ export function ProfilesTab() {
   return (
     <div className="space-y-4" data-testid="profiles-tab">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="w-64">
-          <FormField id="profileUnitFilter" label="Unit">
-            <NativeSelect id="profileUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
-          </FormField>
+        <div className={`${FIELD_CLASS} w-64`}>
+          <Label htmlFor="profileUnitFilter">Unit</Label>
+          <NativeSelect id="profileUnitFilter" value={unitId} options={refs.unitOptions} placeholder="All units" onChange={setUnitId} />
         </div>
-        <div className="w-64">
-          <FormField id="profileProductFilter" label="Product">
-            <NativeSelect id="profileProductFilter" value={productId} options={refs.productOptions} placeholder="All products" onChange={setProductId} />
-          </FormField>
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <ReadOnlyHint />
-          {canApproveProfiles && (
-            <Button asChild size="sm" variant="outline" data-testid="rate-import">
-              <Link to={withReturnTo('/planning/profiles/import', here)}>
-                <ActionIcon.import className="h-4 w-4" aria-hidden="true" />
-                Import rates
-              </Link>
-            </Button>
-          )}
-          {canWriteProfiles && (
-            <Button asChild size="sm" data-testid="profile-new">
-              <Link to={withReturnTo('/planning/profiles/new', here)}>
-                <ActionIcon.add className="h-4 w-4" aria-hidden="true" />
-                New profile
-              </Link>
-            </Button>
-          )}
+        <div className={`${FIELD_CLASS} w-64`}>
+          <Label htmlFor="profileProductFilter">Product</Label>
+          <NativeSelect id="profileProductFilter" value={productId} options={refs.productOptions} placeholder="All products" onChange={setProductId} />
         </div>
       </div>
-      <DataTable
-        caption="Production profiles"
-        columns={columnsOf(refs)}
-        rows={profiles.rows}
-        getRowKey={(p) => p.id}
-        pager={profiles.pager}
-        status={profiles.status}
-        empty={{ title: 'No profiles', text: 'No profiles match these filters.' }}
-        onRowClick={(p) => navigate(withReturnTo(`/planning/profiles/${p.id}`, here))}
-        rowLabel={(p) => `Open profile ${refs.unitName(p.unitId)} × ${refs.productName(p.productId)}`}
-      />
+      <TableCard title="Production profiles">
+        <DataTable
+          caption="Production profiles"
+          columns={columnsOf(refs)}
+          rows={profiles.rows}
+          getRowKey={(p) => p.id}
+          pager={profiles.pager}
+          status={profiles.status}
+          empty={{ title: 'No profiles', text: 'No profiles match these filters.' }}
+          onRowClick={(p) => navigate(withReturnTo(`/planning/profiles/${p.id}`, here))}
+          rowLabel={(p) => `Open profile ${refs.unitName(p.unitId)} × ${refs.productName(p.productId)}`}
+        />
+      </TableCard>
     </div>
   );
 }

@@ -32,6 +32,7 @@ export function PolicyTable({ policies, pager, status }: PolicyTableProps) {
     {
       id: 'status',
       header: 'Status',
+      nowrap: true,
       cell: (policy) => (
         <Badge variant={policy.approved ? 'default' : 'outline'} data-testid="policy-status">
           {POLICY_STATUS_LABELS[policyStatus(policy)]}
@@ -51,7 +52,7 @@ export function PolicyTable({ policies, pager, status }: PolicyTableProps) {
       getRowKey={(policy) => policy.id}
       pager={pager}
       status={status}
-      empty={{ title: 'No valuation policy versions' }}
+      empty={{ title: 'No valuation policy versions', text: 'Create a policy version; losses stay unvalued until one is approved.' }}
       onRowClick={(policy) => navigate(`/finance/policies/${policy.id}`)}
       rowLabel={(policy) => `Valuation policy version ${policy.version}`}
     />

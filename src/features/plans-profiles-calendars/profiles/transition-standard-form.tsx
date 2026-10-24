@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateTransitionStandard } from '@/api/v2/queries/profile-commands';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { FormButtons } from '../components/form-buttons';
 import { FormField } from '../components/form-field';
 import { NativeSelect, type Option } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
@@ -79,17 +79,10 @@ export function TransitionStandardForm({ unitId, productOptions, timezone, onDon
         <Textarea id="tsEvidence" value={values.evidence} onChange={(e) => set('evidence', e.target.value)} rows={2} />
       </FormField>
       <div className="grid gap-2 sm:grid-cols-2">
-        <PlantDateTimeField id="tsEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
-        <PlantDateTimeField id="tsEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
+        <PlantDateTimeField compact id="tsEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
+        <PlantDateTimeField compact id="tsEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={create.isPending}>
-          Add draft standard
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      <FormButtons label="Add draft standard" busy={create.isPending} onSave={() => void save()} onCancel={onDone} testId="transition-standard-save" />
     </div>
   );
 }

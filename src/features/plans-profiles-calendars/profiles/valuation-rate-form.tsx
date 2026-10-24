@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { useCreateValuationRate } from '@/api/v2/queries/profile-commands';
 import type { ValuationBasis } from '@/api/v2/types/profiles';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { VALUATION_BASIS_LABELS } from '@/features/ux-kit/labels';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { FormButtons } from '../components/form-buttons';
 import { FormField } from '../components/form-field';
 import { NativeSelect } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
@@ -81,17 +81,10 @@ export function ValuationRateForm({ profileId, uom, timezone, onDone }: Valuatio
         )}
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <PlantDateTimeField id="valEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
-        <PlantDateTimeField id="valEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
+        <PlantDateTimeField compact id="valEffectiveFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
+        <PlantDateTimeField compact id="valEffectiveTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={create.isPending}>
-          Add draft valuation rate
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      <FormButtons label="Add draft valuation rate" busy={create.isPending} onSave={() => void save()} onCancel={onDone} testId="valuation-save" />
     </div>
   );
 }

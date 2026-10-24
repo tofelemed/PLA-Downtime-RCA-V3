@@ -25,8 +25,10 @@ vi.mock('./hooks/use-profile-reads', async (original) => ({
 }));
 
 const { ProfilesTab } = await import('./profiles/profiles-tab');
+const { ProfilesHeaderActions } = await import('./profiles/profiles-header-actions');
 const { ProfilePage } = await import('./profiles/profile-page');
 const { CalendarsTab } = await import('./calendars/calendars-tab');
+const { CalendarsHeaderActions } = await import('./calendars/calendars-header-actions');
 const { NewCalendarVersionPage } = await import('./calendars/calendar-editor-page');
 
 const EMPTY = { items: [], nextCursor: null };
@@ -59,7 +61,7 @@ describe('Setup sub-pages keep the list context', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('profiles: the unit and product filters are in the URL and the sub-page links carry the list address', () => {
-    wrap(<ProfilesTab />, '/setup/profiles?unitId=u1', '/setup/profiles');
+    wrap(<><ProfilesHeaderActions tab="profiles" /><ProfilesTab /></>, '/setup/profiles?unitId=u1', '/setup/profiles');
     expect((screen.getByLabelText('Unit') as HTMLSelectElement).value).toBe('u1');
     fireEvent.change(screen.getByLabelText('Product'), { target: { value: 'p1' } });
     expect(screen.getByTestId('where')).toHaveTextContent('/setup/profiles?unitId=u1&productId=p1');
@@ -81,7 +83,8 @@ describe('Setup sub-pages keep the list context', () => {
   });
 
   it('calendars: the unit is in the URL; a new version returns to the same unit on Back and Cancel', () => {
-    const { unmount } = wrap(<CalendarsTab />, '/setup/calendars', '/setup/calendars');
+    // "New calendar version" is beside the page title (CalendarsHeaderActions), the list below it
+    const { unmount } = wrap(<><CalendarsHeaderActions /><CalendarsTab /></>, '/setup/calendars', '/setup/calendars');
     fireEvent.change(screen.getByLabelText(/Calendar of/), { target: { value: 'u1' } });
     expect(screen.getByTestId('where')).toHaveTextContent('/setup/calendars?unitId=u1');
     expect(screen.getByTestId('calendar-new')).toHaveAttribute('href', `/planning/calendars/new?unitId=u1&${back('/setup/calendars?unitId=u1')}`);

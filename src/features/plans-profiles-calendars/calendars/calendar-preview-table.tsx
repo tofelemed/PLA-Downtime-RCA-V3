@@ -42,7 +42,7 @@ export function CalendarPreviewTable({ preview }: { preview: CalendarPreviewView
       },
     },
     { id: 'shift', header: 'Shift', cell: (i) => i.shiftName },
-    { id: 'local', header: 'Interval', nowrap: true, cell: (i) => <span className="text-xs"><PlantTime iso={i.utcStart} tz={preview.timezone} withDate /> → <PlantTime iso={i.utcEnd} tz={preview.timezone} /></span> },
+    { id: 'local', header: 'Interval', nowrap: true, cell: (i) => <span className="text-xs"><PlantTime iso={i.utcStart} tz={preview.timezone} withDate withZone={false} /> → <PlantTime iso={i.utcEnd} tz={preview.timezone} withZone={false} /></span> },
     { id: 'offset', header: 'UTC offset', nowrap: true, cell: (i) => `${offsetLabel(i.utcOffsetStart)}${i.utcOffsetEnd !== i.utcOffsetStart ? ` → ${offsetLabel(i.utcOffsetEnd)}` : ''}` },
     { id: 'duration', header: 'Duration', align: 'right', nowrap: true, cell: (i) => <DurationText seconds={i.durationSeconds} /> },
     { id: 'scheduled', header: 'Scheduled', cell: (i) => <Scheduled instance={i} warnings={warningsOf(byRow, i)} /> },

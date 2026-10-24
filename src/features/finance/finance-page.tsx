@@ -1,5 +1,4 @@
 import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
-import { usePlantDates } from '@/features/codes-admin/hooks/use-plant-dates';
 import { useUrlParam } from '@/features/codes-admin/hooks/use-url-param';
 import { DataState } from '@/features/ux-kit/data-state';
 import { pageNameOf } from '@/features/auth/navigation-items';
@@ -16,19 +15,21 @@ const TABS = ['policies', 'fx', 'demand'] as const;
 type FinanceTab = (typeof TABS)[number];
 
 function FinanceScreen() {
-  const { timezone, utcFallback } = usePlantDates();
   const [tab] = useUrlParam<FinanceTab>('tab', TABS, 'policies');
   return (
     <Page width="wide">
       <div className="space-y-6" data-testid="finance">
         <PageHeader
           title={pageNameOf('/finance')}
-          description={`Valuation policy, exchange rates and product demand of this plant. Times in ${timezone}${utcFallback ? ' (no plant timezone set)' : ''}.`}
-          actions={<FinanceHeaderActions tab={tab} />}
+          titleAside={<RecalculationNotice />}
+          actions={
+            <>
+              <ValuationRatesLink />
+              <FinanceHeaderActions tab={tab} />
+            </>
+          }
         />
         <FinanceAreaTabs current={tab} />
-        <ValuationRatesLink />
-        <RecalculationNotice />
         {tab === 'policies' && <PoliciesTab />}
         {tab === 'fx' && <FxRatesTab />}
         {tab === 'demand' && <DemandStatusesTab />}

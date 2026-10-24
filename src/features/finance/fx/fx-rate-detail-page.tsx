@@ -15,9 +15,12 @@ import { FxVersionActions } from './fx-version-actions';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { fxRateText } from '../model/fx-rate-text';
+import { InfoMark } from '@/features/plans-profiles-calendars/components/info-mark';
 import { PolicyPerson } from '../components/policy-person';
 
 const BACK = { to: '/finance?tab=fx', label: 'Exchange rates' };
+const PROVISIONAL_NOTE =
+  'Provisional rate: it converts only dates without an approved final rate, and every value it converts is shown as provisional. Approving the final rate revalues those figures; approved periods get a change proposal.';
 
 function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
   const dates = usePlantDates();
@@ -27,22 +30,17 @@ function RatePage({ rate }: { rate: FxRateView & WithRevaluation }) {
       <PageHeader
         title={`${rate.fromCurrency} → ${rate.toCurrency}, version ${rate.version}`}
         back={BACK}
-        description={
-          <span className="flex flex-wrap gap-1">
+        titleAside={
+          <span className="flex items-center gap-1.5">
             <VersionStateBadge state={rate.state} />
             <ProvisionalRateBadge provisional={rate.provisional} />
+            {rate.provisional && <InfoMark label="the provisional rate" text={PROVISIONAL_NOTE} testId="fx-provisional-note" />}
           </span>
         }
         actions={<FxVersionActions rate={rate} />}
       />
       <FinanceAreaTabs current="fx" />
       <RevaluationQueued revaluation={rate.revaluation} />
-      {rate.provisional && (
-        <p className="rounded-md border border-warning/60 p-3 text-sm" data-testid="fx-provisional-note">
-          Provisional rate: it converts only dates without an approved final rate, and every value it converts is shown as provisional. Approving the final rate revalues those
-          figures; approved periods get a change proposal.
-        </p>
-      )}
       <Section title="Rate">
         <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Fact label="Rate">
