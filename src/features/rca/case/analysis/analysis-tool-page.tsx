@@ -1,9 +1,9 @@
 import { lazy, type ComponentType } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Section } from '@/features/ux-kit/page-layout';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
+import { UiIcon } from '@/lib/icons';
 import { toolOf, type AnalysisToolSlug } from '../../model/analysis-tools';
 import { useCaseWorkspace } from '../case-context';
-import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 const named = <T,>(load: () => Promise<T>, name: keyof T) =>
   lazy(async () => ({ default: (await load())[name] as unknown as ComponentType }));
@@ -21,7 +21,7 @@ const TOOLS: Record<AnalysisToolSlug, ComponentType> = {
   change: named(() => import('./tools/change/change-tool'), 'ChangeTool'),
 };
 
-/** `/rca/:caseId/analysis/:tool`: one analysis method of the case. */
+/** `/rca/:caseId/analysis/:tool`: one analysis method of the case, in a card with its ⓘ and the way back to all methods. */
 export function AnalysisToolPage() {
   const { basePath } = useCaseWorkspace();
   const { tool: slug } = useParams();
@@ -29,16 +29,18 @@ export function AnalysisToolPage() {
   if (!tool) return <Navigate to={`${basePath}/analysis`} replace />;
   const Tool = TOOLS[tool.slug];
   return (
-    <Section
+    <ReportCard
       title={tool.name}
-      titleAside={<KpiInfo label={tool.name} text={tool.description} />}
+      info={tool.description}
+      testId="analysis-tool-card"
       actions={
-        <Link className="text-sm underline" to={`${basePath}/analysis`}>
+        <Link className="inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline" to={`${basePath}/analysis`}>
+          <UiIcon.previous aria-hidden="true" className="h-4 w-4" />
           All methods
         </Link>
       }
     >
       <Tool />
-    </Section>
+    </ReportCard>
   );
 }

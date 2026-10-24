@@ -11,8 +11,8 @@ export function CopyReportButton({ text, disabled }: { text: () => string; disab
   };
   return (
     <span className="inline-flex items-center gap-2">
-      <Button type="button" size="sm" variant="outline" disabled={disabled} onClick={() => void copy()}>
-        <ActionIcon.copy aria-hidden="true" className="mr-1 h-4 w-4" />
+      <Button type="button" size="sm" variant="outline" className="h-9" disabled={disabled} onClick={() => void copy()}>
+        <ActionIcon.copy aria-hidden="true" className="h-4 w-4" />
         Copy report
       </Button>
       {copied && (
