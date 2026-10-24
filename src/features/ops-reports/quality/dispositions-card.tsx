@@ -1,7 +1,7 @@
 import { useQualityDispositions } from '@/api/v2/queries/ops-reports';
 import type { DispositionGroupView } from '@/api/v2/types/ops-reports';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
@@ -25,11 +25,7 @@ export function DispositionsCard({ scope }: { scope: AnalyticsScope }) {
   const data = query.data;
   const state = dataStateOf(query, { isEmpty: data !== undefined && data.groups.length === 0 });
   return (
-    <Card data-testid="quality-dispositions">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Lot dispositions</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
+    <ReportCard title="Lot dispositions" testId="quality-dispositions">
         {data && data.pending > 0 && (
           <p className="text-sm" data-testid="quality-pending">
             <NumberText value={data.pending} /> {data.pending === 1 ? 'lot waits' : 'lots wait'} for a quality decision
@@ -41,10 +37,9 @@ export function DispositionsCard({ scope }: { scope: AnalyticsScope }) {
             .
           </p>
         )}
-        <DataState state={state} error={query.error} detail={state === 'empty' ? 'No lot dispositions for lots produced on these dates.' : undefined} onRetry={() => void query.refetch()}>
-          <DataTable caption="Lot dispositions" columns={COLUMNS} rows={data?.groups ?? []} getRowKey={(g) => `${g.dispositionClass}|${g.state}|${g.productId ?? '-'}|${g.uom}`} density="compact" />
-        </DataState>
-      </CardContent>
-    </Card>
+      <DataState state={state} error={query.error} detail={state === 'empty' ? 'No lot dispositions for lots produced on these dates.' : undefined} onRetry={() => void query.refetch()}>
+        <DataTable caption="Lot dispositions" columns={COLUMNS} rows={data?.groups ?? []} getRowKey={(g) => `${g.dispositionClass}|${g.state}|${g.productId ?? '-'}|${g.uom}`} density="compact" />
+      </DataState>
+    </ReportCard>
   );
 }

@@ -31,13 +31,14 @@ const COLUMNS: Array<DataTableColumn<ChronicRowView>> = [
   },
 ];
 
-function Medians({ stops, mean }: { stops: string | null; mean: string | null }) {
-  if (stops === null || mean === null) return null;
+/** Where the patterns are cut (the card's ⓘ): the medians of the chosen dates. */
+function mediansNote(stops: string | null, mean: string | null) {
+  if (stops === null || mean === null) return undefined;
   return (
-    <p className="text-xs text-muted-foreground" data-testid="chronic-medians">
+    <span data-testid="chronic-medians">
       Cut at the medians of these dates: <NumberText value={stops} fractionDigits={1} /> stops and a mean stop of <DurationText seconds={mean} />. Chronic = more stops than the median and shorter;
       sporadic = fewer and longer.
-    </p>
+    </span>
   );
 }
 
@@ -62,10 +63,9 @@ export function ChronicSporadicReport({ scope }: { scope: AnalyticsScope }) {
     </div>
   );
   return (
-    <AnalyticsCard title="Chronic and sporadic losses" testId="chronic-sporadic" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.rows.length === 0} emptyText="No unplanned stops on these dates." actions={controls}>
+    <AnalyticsCard title="Chronic and sporadic losses" testId="chronic-sporadic" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data !== undefined && data.rows.length === 0} emptyText="No unplanned stops on these dates." actions={controls} info={data && mediansNote(data.medianStops, data.medianMeanSeconds)}>
       {data && (
         <div className="space-y-2">
-          <Medians stops={data.medianStops} mean={data.medianMeanSeconds} />
           <DataTable caption="Chronic and sporadic losses" columns={COLUMNS} rows={data.rows} getRowKey={(r) => r.key ?? '-'} density="compact" />
           {data.truncated && <p className="text-xs text-muted-foreground">Showing the 100 causes with the most downtime.</p>}
         </div>

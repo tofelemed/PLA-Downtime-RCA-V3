@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useExportJob } from '@/api/v2/queries/period-overview';
 import { downloadReportExport, useCreateReportExport, type ReportExportFormat } from '@/api/v2/queries/report-exports';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
@@ -18,8 +17,6 @@ export interface ReportExportBarProps {
   query: object | null;
   /** formats offered (default PDF and Excel) */
   formats?: readonly ReportExportFormat[];
-  /** the figures are provisional: the file will say so on every page */
-  provisional?: boolean;
   timezone: string;
 }
 
@@ -45,9 +42,10 @@ function ExportJobStatus({ jobId, format, onDownload }: { jobId: string; format:
 /**
  * PDF and Excel export of an operating report (owner 2026-10-20): the server renders the same figures as the
  * page — a designed PDF with the Marun logo, or a workbook with a sheet per table — in the background;
- * provisional figures are exported and stamped. Money is printed in the user's display currency.
+ * the server stamps provisional figures in the file. Money is printed in the user's display currency. The
+ * buttons sit on the right, like a card's actions.
  */
-export function ReportExportBar({ kind, query, formats = ['pdf', 'xlsx'], provisional = false, timezone }: ReportExportBarProps) {
+export function ReportExportBar({ kind, query, formats = ['pdf', 'xlsx'], timezone }: ReportExportBarProps) {
   const { currency } = useDisplayCurrency();
   const exporter = useCreateReportExport();
   const [jobs, setJobs] = useState<Partial<Record<ReportExportFormat, string>>>({});
@@ -72,14 +70,13 @@ export function ReportExportBar({ kind, query, formats = ['pdf', 'xlsx'], provis
   };
   return (
     <div className="space-y-2 print:hidden" data-testid={`report-export-${kind}`}>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {formats.map((format) => (
           <Button key={format} size="sm" variant="outline" disabled={!query || exporter.isPending} onClick={() => void start(format)} data-testid={`report-export-${format}`}>
             <ActionIcon.export className="mr-1 h-4 w-4" aria-hidden="true" />
             {LABELS[format]}
           </Button>
         ))}
-        {provisional && <Badge variant="outline">Exports will be stamped provisional</Badge>}
         {formats.map((format) => {
           const jobId = jobs[format];
           return jobId ? <ExportJobStatus key={format} jobId={jobId} format={format} onDownload={() => void download(format, jobId)} /> : null;

@@ -1,5 +1,6 @@
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { useReportLook } from '../report-look/use-report-look';
 import { cellClass, headClass, renderCellValue, rowActivationProps, rowHintOf, rowLabelHint } from './data-table-cells';
 import { EmptyRow, SkeletonRows } from './data-table-states';
 import type { DataTableColumn, DataTableDensity, DataTableEmpty } from './data-table-types';
@@ -21,12 +22,16 @@ export interface DataTableGridProps<T> {
   scrollable?: boolean;
 }
 
+/** Header cells of a report table (Reports page): small, uppercase and muted. */
+const REPORT_HEAD = 'text-xs uppercase tracking-wider';
+
 function GridHeader<T>({ columns, density, sticky }: { columns: ReadonlyArray<DataTableColumn<T>>; density: DataTableDensity; sticky: boolean }) {
+  const report = useReportLook() !== null;
   return (
     <TableHeader className={cn(sticky && 'sticky top-0 z-10 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]')}>
       <TableRow className="hover:bg-transparent">
         {columns.map((column) => (
-          <TableHead key={column.id} scope="col" aria-label={column.headerLabel} className={headClass(column, density)} style={{ width: column.width }}>
+          <TableHead key={column.id} scope="col" aria-label={column.headerLabel} className={cn(headClass(column, density), report && REPORT_HEAD)} style={{ width: column.width }}>
             {column.header}
           </TableHead>
         ))}

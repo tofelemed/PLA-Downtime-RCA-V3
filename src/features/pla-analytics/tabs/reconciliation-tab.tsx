@@ -8,6 +8,7 @@ import { GRID_WORKFLOW_LABELS, RESIDUAL_LABELS } from '@/features/ux-kit/labels'
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { AnalyticsCard } from '../components/analytics-card';
+import { useReportChrome } from '../components/use-report-chrome';
 import { statusQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { ageText } from '../model/display';
 import { withPeriodList } from '../model/period-list';
@@ -24,6 +25,10 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
   const query = useReconciliationStatus(statusQuery(scope), env.timezone);
   const data = query.data?.data;
   const { number } = useNumberFormat();
+  const report = useReportChrome();
+  const note = data
+    ? `${number(data.periods)} periods · overdue = not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted) · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`
+    : undefined;
   return (
     <AnalyticsCard
       title="Reconciliation status and age"
@@ -33,11 +38,8 @@ export function ReconciliationTab({ scope }: { scope: AnalyticsScope }) {
       approvedOnly={scope.approvedOnly}
       isEmpty={data?.periods === 0}
       emptyText="No production periods in this scope."
-      note={
-        data
-          ? `${number(data.periods)} periods · overdue = not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted) · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`
-          : undefined
-      }
+      note={note}
+      info={report ? note : undefined}
     >
       {data && (
         <div className="space-y-3" data-testid="reconciliation-status" data-overdue={data.overdueCount}>

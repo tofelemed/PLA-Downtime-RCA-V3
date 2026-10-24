@@ -3,7 +3,7 @@ import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-se
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { CHOSEN_DATES, type AnalyticsScope } from '../model/analytics-scope';
 import { PlantDaysInput } from '../components/plant-days-input';
-import { SELECT_CLASS } from '../components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '../components/analytics-filters';
 import { REVISION_OPTIONS } from './revision-options';
 
 export interface ReportsFiltersProps {
@@ -14,26 +14,39 @@ export interface ReportsFiltersProps {
 }
 
 /**
- * Report filters (plan 3.6 step 4): named units (sent when the list closes), the plant dates the periods
- * start on (not when rows were created; Persian or Gregorian per the plant setting), and the revision
- * selector — approved only, or approved else the latest draft (provisional).
+ * Report filters after the report picker in the top bar, each a sibling item of the bar (they wrap one by
+ * one, every control h-9): the plant dates the periods start on (From / To, typed or picked in the plant
+ * calendar), named units (sent when the list closes), and the revision — approved only, or approved else
+ * the latest draft (provisional).
  */
 export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProps) {
   const env = useEventHubEnv();
   const setDates = (range: { from: string; to: string }) => onChange({ ...range, windowLabel: CHOSEN_DATES });
   return (
-    <div className="flex flex-wrap items-end gap-4" role="group" aria-label="Report filters" data-testid="reports-filters">
-      <MultiCheckSelect
-        label="Units"
-        testId="report-units"
-        options={env.units.map((unit) => ({ value: unit.id, label: unit.name }))}
-        selected={scope.unitIds}
-        onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
-        commitOnClose
+    <>
+      <PlantDaysInput
+        label="Period dates"
+        value={{ from: scope.from, to: scope.to }}
+        timeZone={env.timezone}
+        dayStart={dayStart}
+        onChange={setDates}
+        toLabel="To"
+        calendarPicker
+        toolbar
       />
-      <PlantDaysInput label="Period dates" value={{ from: scope.from, to: scope.to }} timeZone={env.timezone} dayStart={dayStart} onChange={setDates} />
-      <div className="space-y-1">
-        <Label htmlFor="report-revision">Revisions</Label>
+      {/* the button names itself ("Units: All"); the bar aligns every control on its bottom edge */}
+      <div>
+        <MultiCheckSelect
+          label="Units"
+          testId="report-units"
+          options={env.units.map((unit) => ({ value: unit.id, label: unit.name }))}
+          selected={scope.unitIds}
+          onChange={(unitIds) => onChange({ unitIds: [...unitIds].sort() })}
+          commitOnClose
+        />
+      </div>
+      <div className={FIELD_CLASS}>
+        <Label htmlFor="report-revision">Revision</Label>
         <select
           id="report-revision"
           data-testid="report-revision"
@@ -45,6 +58,6 @@ export function ReportsFilters({ scope, dayStart, onChange }: ReportsFiltersProp
           <option value="shown">{REVISION_OPTIONS.shown}</option>
         </select>
       </div>
-    </div>
+    </>
   );
 }

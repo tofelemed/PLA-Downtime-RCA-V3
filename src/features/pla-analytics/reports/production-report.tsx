@@ -10,16 +10,31 @@ import { AnalyticsCard } from '../components/analytics-card';
 import { OeeGroupTable } from '../components/oee-group-table';
 import { oeeQuery, scopeBase, type AnalyticsScope } from '../model/analytics-scope';
 import { shareText } from '../model/display';
+import { reportText } from '../model/report-text';
 
-/** OEE per plant date (operational, ISO 22400): one row per day the periods start on, 20 per page. */
+/**
+ * OEE per plant date (operational policy): one row per day the periods start on, 20 per page. The card carries
+ * the shown units and calculation runs (`data-unit-ids`, `data-run-ids`) for the end-to-end tests (T24).
+ */
 export function OeeByDay({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const pref = useCalendarPreference();
   const query = useOeeReport(oeeQuery(scope, 'day', 'operational'), env.timezone);
   const data = query.data?.data;
+  const attributes = { 'data-unit-ids': scope.unitIds.join(','), 'data-run-ids': [...(data?.calculationRunIds ?? [])].sort().join(',') };
   return (
-    <AnalyticsCard title={`${data?.label ?? 'OEE'} by plant date`} testId="report-oee" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={data?.groups.length === 0} emptyText="No periods start on these dates.">
-      {data && <OeeGroupTable report={data} groupTitle="Plant date" labelOf={(key) => formatOperationalDate(key, pref)} testId="report-oee-days" />}
+    <AnalyticsCard
+      title={reportText(data?.label ?? 'OEE')}
+      testId="report-oee"
+      query={query}
+      response={query.data}
+      approvedOnly={scope.approvedOnly}
+      isEmpty={data?.groups.length === 0}
+      emptyText="No periods start on these dates."
+      attributes={attributes}
+      provisionalRows
+    >
+      {data && <OeeGroupTable report={data} groupTitle="Plant date" caption={`${reportText(data.label)} by day`} labelOf={(key) => formatOperationalDate(key, pref)} testId="report-oee-days" />}
     </AnalyticsCard>
   );
 }

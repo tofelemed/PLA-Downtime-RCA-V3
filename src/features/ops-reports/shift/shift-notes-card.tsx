@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useCreateShiftNote } from '@/api/v2/queries/shift-handover';
 import type { ShiftInstanceView, ShiftNoteView } from '@/api/v2/types/ops-reports';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCapabilities } from '@/features/auth/use-capabilities';
@@ -63,24 +63,19 @@ export function ShiftNotesCard(props: ShiftNotesCardProps) {
   const pref = useCalendarPreference();
   const units = new Map(props.instances.map((i) => [i.unitId, i.unitName]));
   return (
-    <Card data-testid="shift-notes">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Handover notes</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {props.notes.length === 0 && <p className="text-sm text-muted-foreground">No notes for this shift yet.</p>}
-        <ul className="space-y-2">
-          {props.notes.map((note) => (
-            <li key={note.id} className="rounded-md border p-2 text-sm" data-testid="shift-note">
-              <p className="whitespace-pre-wrap">{note.body}</p>
-              <p className="text-xs text-muted-foreground">
-                {note.authorName ?? 'Unknown author'} · {units.get(note.unitId) ?? ''} · {formatDateTime(note.createdAt, { timeZone: props.timeZone, ...pref })}
-              </p>
-            </li>
-          ))}
-        </ul>
-        {canWriteEvents && props.instances.length > 0 && <NoteForm localDate={props.localDate} shiftName={props.shiftName} instances={props.instances} />}
-      </CardContent>
-    </Card>
+    <ReportCard title="Handover notes" testId="shift-notes">
+      {props.notes.length === 0 && <p className="text-sm text-muted-foreground">No notes for this shift yet.</p>}
+      <ul className="space-y-2">
+        {props.notes.map((note) => (
+          <li key={note.id} className="rounded-md border p-2 text-sm" data-testid="shift-note">
+            <p className="whitespace-pre-wrap">{note.body}</p>
+            <p className="text-xs text-muted-foreground">
+              {note.authorName ?? 'Unknown author'} · {units.get(note.unitId) ?? ''} · {formatDateTime(note.createdAt, { timeZone: props.timeZone, ...pref })}
+            </p>
+          </li>
+        ))}
+      </ul>
+      {canWriteEvents && props.instances.length > 0 && <NoteForm localDate={props.localDate} shiftName={props.shiftName} instances={props.instances} />}
+    </ReportCard>
   );
 }

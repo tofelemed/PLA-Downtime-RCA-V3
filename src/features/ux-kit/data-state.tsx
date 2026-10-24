@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusIcon, type AppIcon } from '@/lib/icons';
 import type { DataStateKind } from './data-state-of';
+import { EmptyMessage } from './data-table/data-table-states';
+import { REPORT_EMPTY, useReportLook } from './report-look/use-report-look';
 import { describeError, type FriendlyError } from './errors/describe-error';
 import { FieldMessageList } from './errors/field-message-list';
 import { SupportReference } from './errors/support-reference';
@@ -66,12 +68,28 @@ function LoadingState() {
   );
 }
 
+function ReportEmpty() {
+  return (
+    <div className="py-10">
+      <EmptyMessage empty={REPORT_EMPTY} />
+    </div>
+  );
+}
+
 /**
  * Standard UX03 states (plan 3.1): loading skeleton, empty, no-permission, source-offline, incomplete,
  * calculation-pending and error. An error reads in plain language (`describeError`); its code stays in
- * `data-code` and, with the correlation id, behind "Copy support reference". Screens never invent data.
+ * `data-code` and, with the correlation id, behind "Copy support reference". Screens never invent data. On the
+ * Reports page (`ReportLookContext`) "empty" is the centred "No data for these dates" whatever the detail.
  */
-export function DataState({ state, error, onRetry, detail, children, back }: DataStateProps) {
+export function DataState(props: DataStateProps) {
+  const report = useReportLook() !== null;
+  // the Reports page: one centred empty state for every report card (redesign 24 Oct 2026)
+  if (props.state === 'empty' && report) return <ReportEmpty />;
+  return <StandardDataState {...props} />;
+}
+
+function StandardDataState({ state, error, onRetry, detail, children, back }: DataStateProps) {
   if (state === 'ready') return <>{children}</>;
   if (state === 'loading') return <LoadingState />;
   const message = MESSAGES[state];

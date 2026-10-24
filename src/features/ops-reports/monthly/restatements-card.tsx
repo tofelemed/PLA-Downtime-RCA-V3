@@ -1,8 +1,8 @@
 import { useRestatements } from '@/api/v2/queries/ops-reports';
 import type { RestatementRowView } from '@/api/v2/types/ops-reports';
 import type { PostingTreatment } from '@/api/v2/types/restatement';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { scopeBase, type AnalyticsScope } from '@/features/pla-analytics/model/analytics-scope';
 import { POSTING_TREATMENT_OPTIONS } from '@/features/plan-dashboard/model/restatement-labels';
 import { DataState } from '@/features/ux-kit/data-state';
@@ -34,16 +34,13 @@ export function RestatementsCard({ scope }: { scope: AnalyticsScope }) {
   const rows = query.data?.rows ?? [];
   const state = dataStateOf(query, { isEmpty: query.data !== undefined && rows.length === 0 });
   return (
-    <Card data-testid="statement-restatements">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Restatements</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <DataState state={state} error={query.error} detail={state === 'empty' ? 'No period of this month was restated after approval.' : undefined} onRetry={() => void query.refetch()}>
+    <ReportCard title="Restatements" testId="statement-restatements">
+      <DataState state={state} error={query.error} detail={state === 'empty' ? 'No period of this month was restated after approval.' : undefined} onRetry={() => void query.refetch()}>
+        <div className="space-y-2">
           <DataTable caption="Restatements" columns={columns} rows={rows} getRowKey={(r) => `${r.periodId}-${r.revision}`} density="compact" />
           {query.data?.truncated && <p className="text-xs text-muted-foreground">Showing the 200 latest restatements.</p>}
-        </DataState>
-      </CardContent>
-    </Card>
+        </div>
+      </DataState>
+    </ReportCard>
   );
 }

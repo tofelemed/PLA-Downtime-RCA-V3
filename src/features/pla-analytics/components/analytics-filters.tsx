@@ -13,6 +13,8 @@ export interface AnalyticsFiltersProps {
 }
 
 export const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
+/** A labelled filter control: its label stacked above it. */
+export const FIELD_CLASS = 'flex flex-col gap-1.5';
 
 /**
  * Scope filters shared by every view (server-side), in one row: site (selects its units), units (sent when

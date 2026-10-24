@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { LocalizedNumber } from '@/features/ux-kit/localized-number';
 import { NumberText } from '@/features/ux-kit/number-text';
+import { anyProvisional, ProvisionalMark } from '@/features/ux-kit/report-look';
 import { useCalendarPreference } from '@/lib/dates';
 import { EventStatusCard } from '../daily/event-status-card';
 import { ReportExportBar } from '../components/report-export-bar';
@@ -17,7 +18,7 @@ const delay = (seconds: string | null) => (seconds === null ? '—' : <DurationT
 function useColumns(groupTitle: string): Array<DataTableColumn<ComplianceRowView>> {
   const { digits } = useCalendarPreference();
   return [
-    { id: 'name', header: groupTitle, cell: (r) => <span data-testid="compliance-row">{r.label ?? (r.key ? r.key : 'Not recorded')}</span> },
+    { id: 'name', header: groupTitle, cell: (r) => <span data-testid="compliance-row">{r.label ?? (r.key ? r.key : 'Not recorded')}<ProvisionalMark when={anyProvisional([r.codedDowntimeRatio, r.stateCoverage])} /></span> },
     { id: 'stops', header: 'Stops', align: 'right', cell: (r) => <NumberText value={r.stops} /> },
     { id: 'coded', header: 'Coded', align: 'right', cell: (r) => <NumberText value={r.coded} /> },
     { id: 'verified', header: 'Verified', align: 'right', cell: (r) => <NumberText value={r.verified} /> },
@@ -46,7 +47,7 @@ export function CodingComplianceReport({ scope }: { scope: AnalyticsScope }) {
   return (
     <div className="space-y-4" data-testid="coding-compliance">
       <ReportExportBar kind="compliance" query={scopeBase(scope)} timezone={env.timezone} />
-      <AnalyticsCard title="Coding by crew and shift" testId="coding-compliance-tables" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={empty} emptyText="No stops or calculated periods on these dates." note="Coding delay: from the end of a stop to its first coding with a reason.">
+      <AnalyticsCard title="Coding by crew and shift" testId="coding-compliance-tables" query={query} response={query.data} approvedOnly={scope.approvedOnly} isEmpty={empty} emptyText="No stops or calculated periods on these dates." info="Coding delay: from the end of a stop to its first coding with a reason." provisionalRows>
         {data && (
           <div className="space-y-4">
             <ComplianceTable rows={data.byCrew} title="Crew" />

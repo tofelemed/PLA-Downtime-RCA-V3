@@ -1,6 +1,6 @@
 import type { MonthCloseView, PersonRef } from '@/api/v2/types/month-close';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { CLOSE_STATE_LABELS } from '@/features/month-close/model/close-labels';
 import { resolvedActorText } from '@/features/ux-kit/labels';
 import { NumberText } from '@/features/ux-kit/number-text';
@@ -40,12 +40,13 @@ export function MonthStatusCard({ view }: { view: MonthCloseView }) {
   const { prerequisites: p, signOffs: s } = view;
   const tz = view.deadlines.timezone;
   return (
-    <Card data-testid="statement-status" data-state={view.state}>
-      <CardHeader className="flex flex-row flex-wrap items-center gap-2 space-y-0 pb-2">
-        <CardTitle className="text-base">Certification</CardTitle>
-        <Badge variant={view.state === 'locked' ? 'default' : 'secondary'}>{CLOSE_STATE_LABELS[view.state]}</Badge>
-      </CardHeader>
-      <CardContent className="grid gap-4 text-sm md:grid-cols-2">
+    <ReportCard
+      title="Certification"
+      testId="statement-status"
+      attributes={{ 'data-state': view.state }}
+      badge={<Badge variant={view.state === 'locked' ? 'default' : 'secondary'}>{CLOSE_STATE_LABELS[view.state]}</Badge>}
+    >
+      <div className="grid gap-4 text-sm md:grid-cols-2">
         <ul className="space-y-1">
           <Count label="Periods approved" value={p.approved} of={p.periods} />
           <Count label="Production days certified" value={p.certifiedDays} of={p.days} />
@@ -59,7 +60,7 @@ export function MonthStatusCard({ view }: { view: MonthCloseView }) {
           <SignOff label="Finance signed off" who={s.financeSignedOffBy} at={s.financeSignedOffAt} timezone={tz} />
           <SignOff label="Locked" who={s.lockedBy} at={s.lockedAt} timezone={tz} />
         </ul>
-      </CardContent>
-    </Card>
+      </div>
+    </ReportCard>
   );
 }

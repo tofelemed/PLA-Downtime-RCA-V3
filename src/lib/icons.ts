@@ -258,6 +258,8 @@ export const UiIcon = {
   last: ChevronsRight,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+  /** opens a date field's calendar popover */
+  datePicker: CalendarDays,
   /** the header's in-app notifications */
   notifications: Bell,
   /** the header's theme switch: the icon of the theme it switches to */

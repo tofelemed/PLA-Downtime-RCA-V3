@@ -120,6 +120,6 @@ describe('QA Reports: "Provisional" follows the revisions choice on every card',
   it('the Revisions select offers choices, approved first', () => {
     wrap(<ReportsFilters scope={parseScope(new URLSearchParams(), NOW, REPORTS)} dayStart="06:00" onChange={vi.fn()} />);
     const options = within(screen.getByTestId('report-revision')).getAllByRole('option').map((o) => o.textContent);
-    expect(options).toEqual(['Approved revisions only', 'Include open drafts (provisional figures)']);
+    expect(options).toEqual(['Approved only', 'Provisional']);
   });
 });

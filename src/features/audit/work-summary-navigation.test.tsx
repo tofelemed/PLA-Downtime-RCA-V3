@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -104,10 +104,15 @@ describe('Work summary under Audit Logs', () => {
     expect(location).not.toContain('approved=');
   });
 
-  it('removes Work summary from Reports while retaining production report tabs', () => {
+  it('removes Work summary from Reports while retaining the production reports', () => {
     open(`/reports?${WINDOW}`);
-    expect(screen.queryByRole('tab', { name: 'Work summary' })).not.toBeInTheDocument();
-    for (const name of ['OEE and downtime', 'Reconciliation', 'Loss value', 'Exports']) expect(screen.getByRole('tab', { name })).toBeInTheDocument();
+    const reports = () => within(screen.getByTestId('report-view')).getAllByRole('option').map((option) => option.textContent);
+    expect(reports()).toContain('OEE and downtime');
+    fireEvent.change(screen.getByLabelText('Report type'), { target: { value: 'pla' } });
+    expect(reports()).toEqual(expect.arrayContaining(['Reconciliation', 'Loss value']));
+    fireEvent.change(screen.getByLabelText('Report type'), { target: { value: 'management' } });
+    expect(reports()).toContain('Exports');
+    expect(screen.queryByRole('option', { name: 'Work summary' })).not.toBeInTheDocument();
   });
 
   it.each(['Operator', 'Engineer', 'viewer'])('keeps summary behind the audit access gate for %s', async (role) => {

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { type ReactNode, useId } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { type CalendarSystem, useCalendarPreference } from '@/lib/dates';
@@ -6,6 +6,16 @@ import { describedBy } from './described-by';
 import { FieldMessages } from './field-messages';
 import { RequiredMarker } from '../form-field';
 import { PersianDateField } from './persian-date-field';
+import { CalendarPopover } from './calendar-popover';
+import { WithTrailing } from './with-trailing';
+
+/** Opt-in calendar button beside the field (see {@link CalendarPopover}). */
+export interface CalendarPickerOptions {
+  /** defaults to the acting plant's week start */
+  weekStart?: string | null;
+  /** the date the calendar opens on while the field is empty */
+  fallbackDate?: string;
+}
 
 /** Props of {@link DateInput}. Dates are ISO `YYYY-MM-DD` whatever calendar is shown. */
 export interface DateInputProps {
@@ -28,56 +38,72 @@ export interface DateInputProps {
   error?: string | null;
   /** typed in the plant date format in every calendar (the browser's native picker shows its own locale) */
   textEntry?: boolean;
+  /** shows a calendar button that opens a month grid in the plant calendar */
+  calendarPicker?: CalendarPickerOptions;
+  /** a 36 px field and button, for toolbars where every control is h-9 */
+  compact?: boolean;
 }
 
 /**
  * A date field in the tenant calendar: the native picker for Gregorian, a `YYYY/MM/DD` text field
  * for Jalali (`persian`). Always emits an ISO date, so models and payloads stay Gregorian.
  */
-export function DateInput({ id, label, hideLabel = false, calendar, error, textEntry = false, ...field }: DateInputProps) {
+export function DateInput({ id, label, hideLabel = false, calendar, error, textEntry = false, calendarPicker, compact, ...field }: DateInputProps) {
   const preference = useCalendarPreference();
   const generatedId = useId();
   const inputId = id ?? generatedId;
   const shown = calendar ?? preference.calendar;
   const ariaLabel = hideLabel ? label : undefined;
+  const trailing = calendarPicker && (
+    <CalendarPopover label={label} value={field.value} onSelect={field.onChange} calendar={shown} disabled={field.disabled} compact={compact} {...calendarPicker} />
+  );
   return (
     <div className="space-y-1">
-      {!hideLabel && (
-        <Label htmlFor={inputId}>
-          {label}
-          {field.required && <RequiredMarker />}
-        </Label>
-      )}
+      {!hideLabel && <FieldLabel htmlFor={inputId} label={label} required={field.required} />}
       {shown === 'persian' || textEntry ? (
-        <PersianDateField id={inputId} ariaLabel={ariaLabel} error={error} calendar={shown} {...field} />
+        <PersianDateField id={inputId} ariaLabel={ariaLabel} error={error} calendar={shown} trailing={trailing} compact={compact} {...field} />
       ) : (
-        <NativeDateField id={inputId} ariaLabel={ariaLabel} error={error} {...field} />
+        <NativeDateField id={inputId} ariaLabel={ariaLabel} error={error} trailing={trailing} compact={compact} {...field} />
       )}
     </div>
   );
 }
 
-type NativeDateFieldProps = Omit<DateInputProps, 'label' | 'hideLabel' | 'calendar' | 'id'> & {
+function FieldLabel({ htmlFor, label, required }: { htmlFor: string; label: string; required?: boolean }) {
+  return (
+    <Label htmlFor={htmlFor}>
+      {label}
+      {required && <RequiredMarker />}
+    </Label>
+  );
+}
+
+type NativeDateFieldProps = Omit<DateInputProps, 'label' | 'hideLabel' | 'calendar' | 'id' | 'calendarPicker' | 'compact'> & {
   id: string;
   ariaLabel?: string;
+  trailing?: ReactNode;
+  compact?: boolean;
 };
 
-function NativeDateField({ id, value, onChange, ariaLabel, error, ...rest }: NativeDateFieldProps) {
+function NativeDateField({ id, value, onChange, ariaLabel, error, trailing, compact, ...rest }: NativeDateFieldProps) {
   const hintId = useId();
   const errorId = useId();
   const messages = { hintId, errorId, error };
   return (
     <div>
-      <Input
-        id={id}
-        type="date"
-        value={value}
-        aria-label={ariaLabel}
-        aria-invalid={Boolean(error)}
-        aria-describedby={describedBy(messages)}
-        onChange={(event) => onChange(event.target.value)}
-        {...rest}
-      />
+      <WithTrailing trailing={trailing}>
+        <Input
+          id={id}
+          type="date"
+          className={compact ? 'h-9' : undefined}
+          value={value}
+          aria-label={ariaLabel}
+          aria-invalid={Boolean(error)}
+          aria-describedby={describedBy(messages)}
+          onChange={(event) => onChange(event.target.value)}
+          {...rest}
+        />
+      </WithTrailing>
       <FieldMessages {...messages} />
     </div>
   );

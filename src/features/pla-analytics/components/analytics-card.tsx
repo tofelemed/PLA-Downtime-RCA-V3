@@ -1,6 +1,10 @@
 import { useContext, type ReactNode } from 'react';
 import { AnalysisSnapshotContext } from '@/features/analysis-navigation/analysis-snapshot-context';
+import { ReportCard, type CardDataAttributes } from './report-card';
 import { SnapshotStatus } from './snapshot-status';
+import { useReportChrome } from './use-report-chrome';
+import { KpiInfo } from '../dashboard/kpi-info';
+import { reportText } from '../model/report-text';
 import { shownAsProvisional } from '../model/provisional';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
 import { Badge } from '@/components/ui/badge';
@@ -17,9 +21,15 @@ export interface AnalyticsCardProps {
   approvedOnly?: boolean;
   isEmpty?: boolean;
   emptyText?: string;
-  /** a label the figures need (scope or cohort note) */
+  /** a label the figures need (scope or cohort note); not shown on the Reports page */
   note?: ReactNode;
+  /** what an operator needs to read the figures, behind an ⓘ beside the title */
+  info?: ReactNode;
   actions?: ReactNode;
+  /** `data-*` attributes of the card element (e.g. the units and runs end-to-end tests read) */
+  attributes?: CardDataAttributes;
+  /** Reports page: the rows or figures carry their own "Provisional" markers, so none beside the title */
+  provisionalRows?: boolean;
   children: ReactNode;
 }
 
@@ -27,31 +37,68 @@ export interface AnalyticsCardProps {
  * One analytics widget: title, its own loading / empty / error state and the figures. The page-wide facts
  * (incomplete coverage, calculation runs, policy versions) are said once in the page header (UI guidelines
  * §2 "say it once"); the card carries at most a "Provisional" chip. While a new scope loads the previous
- * figures stay, under a thin refreshing bar.
+ * figures stay, under a thin refreshing bar. On the Reports page (`ReportChrome`) it is a `ReportCard`: the
+ * title and ⓘ only (no chip, caption or calculation details), and with Revision = Provisional one marker
+ * beside the title when the response is provisional and its rows do not say so themselves.
  */
 export function AnalyticsCard(props: AnalyticsCardProps) {
-  const { title, testId, query, response, isEmpty, emptyText, note, actions, children } = props;
-  const provisional = shownAsProvisional(response, props.approvedOnly ?? false);
-  const state = dataStateOf(query, { isEmpty });
-  const refreshing = Boolean(query.isPlaceholderData || (query.isFetching && !query.isLoading));
+  const report = useReportChrome();
+  return report ? <ReportAnalyticsCard {...props} /> : <PlainAnalyticsCard {...props} />;
+}
+
+const isRefreshing = (query: AnalyticsCardProps['query']) => Boolean(query.isPlaceholderData || (query.isFetching && !query.isLoading));
+
+function ReportAnalyticsCard(props: AnalyticsCardProps) {
+  const { testId, query, response, info, actions, attributes, provisionalRows } = props;
+  const title = reportText(props.title);
+  const refreshing = isRefreshing(query);
   return (
-    <Card data-testid={testId} aria-busy={refreshing || undefined}>
+    <ReportCard title={title} testId={testId} info={info} actions={actions} attributes={attributes} provisional={!provisionalRows && response?.isProvisional === true} aria-busy={refreshing || undefined}>
+      <CardBody {...props} refreshing={refreshing} />
+    </ReportCard>
+  );
+}
+
+function PlainAnalyticsCard(props: AnalyticsCardProps) {
+  const { title, testId, query, response, note, info, actions, attributes, approvedOnly = false } = props;
+  const refreshing = isRefreshing(query);
+  return (
+    <Card data-testid={testId} aria-busy={refreshing || undefined} {...attributes}>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0 pb-2">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="text-base">{title}</CardTitle>
-          {provisional && <Badge variant="secondary">Provisional</Badge>}
+          {info && <KpiInfo label={title} text={info} />}
+          {shownAsProvisional(response, approvedOnly) && <Badge variant="secondary">Provisional</Badge>}
         </div>
         {actions}
       </CardHeader>
       <CardContent className="relative space-y-2">
-        {refreshing && <div className="absolute inset-x-6 top-0 h-0.5 animate-pulse bg-primary/60" role="status" aria-label="Refreshing" />}
-        <CalculationDetails response={response} />
-        {note && <p className="text-xs text-muted-foreground">{note}</p>}
-        <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? emptyText : undefined}>
-          {children}
-        </DataState>
+        <CardBody
+          {...props}
+          refreshing={refreshing}
+          lead={
+            <>
+              <CalculationDetails response={response} />
+              {note && <p className="text-xs text-muted-foreground">{note}</p>}
+            </>
+          }
+        />
       </CardContent>
     </Card>
+  );
+}
+
+/** The refreshing bar, what the card says above the figures (`lead`), then the figures or their state. */
+function CardBody({ query, isEmpty, emptyText, children, refreshing, lead }: AnalyticsCardProps & { refreshing: boolean; lead?: ReactNode }) {
+  const state = dataStateOf(query, { isEmpty });
+  return (
+    <>
+      {refreshing && <div className="absolute inset-x-6 top-0 h-0.5 animate-pulse bg-primary/60" role="status" aria-label="Refreshing" />}
+      {lead}
+      <DataState state={state} error={query.error} onRetry={() => query.refetch()} detail={state === 'empty' ? emptyText : undefined}>
+        {children}
+      </DataState>
+    </>
   );
 }
 
