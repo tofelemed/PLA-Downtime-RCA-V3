@@ -7,9 +7,9 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { DurationText } from '@/features/ux-kit/duration-text';
-import { labelOf, PHYSICAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { Section } from '@/features/ux-kit/page-layout';
 import { defaultFilters, currentStopsQuery } from '../model/event-filters';
+import { stopSinceText } from '../model/stop-since';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { usePrefetchEvent } from '../hooks/use-prefetch-event';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -88,7 +88,7 @@ function CurrentStop({ stop, onClose, onCode }: CurrentStopProps) {
         </span>
       </div>
       <div className="text-xs text-muted-foreground">
-        {labelOf(PHYSICAL_TYPE_LABELS, stop.classification.physicalType)} since {dateTime(stop.startTime)} · as of {dateTime(stop.asOf)}
+        {stopSinceText(dateTime(stop.startTime), dateTime(new Date().toISOString()))}
       </div>
       <div className="text-xs">{env.reasonName(stop.reasonCodeId)}</div>
       <div className="mt-1 flex gap-2">

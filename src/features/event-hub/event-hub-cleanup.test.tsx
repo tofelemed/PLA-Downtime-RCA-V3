@@ -154,6 +154,32 @@ describe('Event Hub cleanup (daily operations, 24 Oct 2026)', () => {
     await waitFor(() => expect(screen.getByTestId('current-stops')).toHaveTextContent(/^Current stops \(0\)$/));
   });
 
+  it('filters: compact gaps and search so the row fits one line at 1440 px, still wrapping item by item', () => {
+    const filters = defaultFilters({ from: '2026-10-17T00:00:00.000Z', to: '2026-10-24T00:00:00.000Z', label: 'Last 7 days' });
+    wrap(<EventFiltersBar filters={filters} onChange={vi.fn()} onReset={vi.fn()} />);
+    const row = screen.getByTestId('filter-units').parentElement as HTMLElement;
+    expect(row.className).toContain('flex-wrap');
+    expect(row.className).toContain('gap-x-2');
+    expect(row.querySelector('input[type="search"], input')?.closest('div')?.className ?? '').not.toContain('w-56');
+  });
+
+  it('a current stop shows only "Since <time>" (date when not today), without type, "as of" or the zone', async () => {
+    const today = new Date().toISOString();
+    items = [{ ...EVENT, id: 'e2', isOpen: true, endTime: null, startTime: today } as unknown as ProductionEventView];
+    const { unmount } = wrap(<CurrentStopsPanel unitIds={[]} onClose={() => undefined} />);
+    const card = await screen.findByTestId('current-stop');
+    expect(card).toHaveTextContent(/Since \d{2}:\d{2}/);
+    expect(card).not.toHaveTextContent(/as of|Downtime since|UTC|[+-]\d\d:\d\d/);
+    expect(card).toHaveTextContent('Ongoing');
+    expect(screen.getByRole('link', { name: 'Open' })).toBeInTheDocument();
+    unmount();
+    cleanup();
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    items = [{ ...EVENT, id: 'e3', isOpen: true, endTime: null, startTime: '2026-10-01T06:00:00.000Z' } as unknown as ProductionEventView];
+    wrap(<CurrentStopsPanel unitIds={[]} onClose={() => undefined} />);
+    expect(await screen.findByTestId('current-stop')).toHaveTextContent('Since 2026-10-01 06:00');
+  });
+
   it('the list sits in an "Events" card with the report look; an empty list keeps its own message', async () => {
     items = [EVENT];
     const { unmount } = wrap(<EventListCard query={{ from: '2026-10-17T00:00:00.000Z', to: '2026-10-24T00:00:00.000Z' }} actions={<button>Merge</button>} />);

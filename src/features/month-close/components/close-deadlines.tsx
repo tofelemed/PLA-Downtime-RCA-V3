@@ -1,8 +1,7 @@
 import type { MonthCloseState, MonthCloseView } from '@/api/v2/types/month-close';
-import { PlantTime } from '@/features/ux-kit/plant-time';
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import type { StatusTone } from '@/features/ux-kit/status-tone';
-import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { formatDateTime, formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { CLOSE_STATE_LABELS, weekendText } from '../model/close-labels';
 import { CloseCard } from './close-card';
 
@@ -17,12 +16,9 @@ function Deadline({ label, date, at, overdue, timezone, testId }: { label: strin
   const pref = useCalendarPreference();
   return (
     <div className="rounded-md border p-3" data-testid={testId} data-overdue={overdue}>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs text-muted-foreground" title={`Until ${formatDateTime(at, { timeZone: timezone, ...pref })}`}>{label}</p>
       <p className="font-medium">
         {formatOperationalDate(date, pref)} {overdue && <StatusBadge tone="danger">Overdue</StatusBadge>}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        until <PlantTime iso={at} tz={timezone} withDate withZone={false} />
       </p>
     </div>
   );

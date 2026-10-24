@@ -75,3 +75,45 @@ describe('month close page cleanup', () => {
     expect(screen.getByTestId('month-close')).not.toHaveTextContent('newest first');
   });
 });
+
+describe('month close overview trims (24 Oct 2026)', () => {
+  let view: MonthCloseView;
+  let unconfigure: () => void;
+  const mount = () => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter initialEntries={['/month-close?month=1405-07']}><MonthClosePage /></MemoryRouter>
+  </QueryClientProvider>);
+  beforeEach(() => {
+    view = monthCloseFixture(); actAs('manager_approver', 'manager');
+    unconfigure = configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
+    vi.stubGlobal('fetch', vi.fn(async () => json(view)));
+  });
+  afterEach(() => { unconfigure(); vi.unstubAllGlobals(); actAs('SuperAdmin'); });
+
+  it('hides the "x of y" sub-line when the total is zero and keeps it above zero', async () => {
+    view.prerequisites = { ...view.prerequisites, periods: 0, approved: 0, pendingCount: 0, days: 0, certifiedDays: 0 };
+    const { unmount } = mount(); await screen.findByTestId('close-prerequisites');
+    expect(screen.getByTestId('close-prerequisites')).not.toHaveTextContent(/of 0 (approved|certified)/);
+    unmount();
+    view = monthCloseFixture();
+    mount(); await screen.findByTestId('close-prerequisites');
+    expect(screen.getByTestId('close-count-periods')).toHaveTextContent(/\d+ of \d+ approved/);
+  });
+
+  it('shows the deadline date only; the exact instant sits in the label tooltip', async () => {
+    mount(); await screen.findByTestId('deadline-quantities');
+    const card = screen.getByTestId('deadline-quantities');
+    expect(card).not.toHaveTextContent(/until/i);
+    expect(card.querySelector('[title^="Until "]')).not.toBeNull();
+  });
+
+  it('renders the Materiality card only when the policy enables it', async () => {
+    view.policy = { ...view.policy, materialityEnabled: false };
+    const { unmount } = mount(); await screen.findByTestId('close-prerequisites');
+    expect(screen.queryByRole('heading', { name: 'Materiality' })).toBeNull();
+    expect(screen.queryByText(/not enabled by this policy/)).toBeNull();
+    unmount();
+    view.policy = { ...view.policy, materialityEnabled: true };
+    mount();
+    expect(await screen.findByRole('heading', { name: 'Materiality' })).toBeVisible();
+  });
+});

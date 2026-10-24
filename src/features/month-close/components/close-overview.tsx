@@ -11,9 +11,9 @@ import { UncoveredDays } from './no-plan-notice';
 function PrerequisiteCounts({ view, params }: { view: MonthCloseView; params: URLSearchParams }) {
   const { prerequisites: p, policy } = view;
   const counts: Array<{ section: CloseSection; label: string; count: number; detail: string }> = [
-    { section: 'periods', label: 'Periods not approved', count: p.pendingCount, detail: `${displayCount(p.approved)} of ${displayCount(p.periods)} approved` },
+    { section: 'periods', label: 'Periods not approved', count: p.pendingCount, detail: p.periods > 0 ? `${displayCount(p.approved)} of ${displayCount(p.periods)} approved` : '' },
     { section: 'days', label: 'Days not certified', count: p.days - p.certifiedDays,
-      detail: policy.requireCertifiedDays ? `${displayCount(p.certifiedDays)} of ${displayCount(p.days)} certified` : 'Certification does not block close under this policy' },
+      detail: policy.requireCertifiedDays ? (p.days > 0 ? `${displayCount(p.certifiedDays)} of ${displayCount(p.days)} certified` : '') : 'Certification does not block close under this policy' },
     { section: 'proposals', label: 'Open proposals', count: p.openProposalCount,
       detail: view.state !== 'locked' && !policy.blockOnOpenProposals ? 'Open proposals do not block close under this policy' : '' },
   ];
@@ -41,6 +41,7 @@ function Materiality({ view }: { view: MonthCloseView }) {
   const status = signOffs.materialityRequired
     ? (signOffs.materialityReviewedBy ? 'Required review completed.' : 'An extra review is needed before finance signs off.')
     : (policy.materialityEnabled ? 'No extra review required for this month.' : 'Materiality review is not enabled by this policy.');
+  if (!policy.materialityEnabled && !signOffs.materialityRequired && materiality.findings.length === 0) return null;
   return <CloseCard title="Materiality">
     <p className="text-sm text-muted-foreground">{status}</p>
     {materiality.findings.length > 0 && <p className="mt-2 text-sm break-words" data-testid="materiality-findings">

@@ -90,7 +90,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
   );
   return (
     <div className="space-y-3" role="search" aria-label="Event filters">
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-3">
+      <div className="flex flex-wrap items-end gap-x-2 gap-y-3">
         {primary.map(select)}
         <WindowSelect
           unitIds={filters.unitIds}
@@ -99,7 +99,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
           onChange={(w) => onChange({ ...filters, from: w.from, to: w.to, windowLabel: w.label, relativeWindow: w.relative ?? null })}
         />
         <OpenSelect value={filters.isOpen} onChange={(value) => set('isOpen', value)} />
-        <DebouncedSearchInput label="Search description or source id" placeholder="Search events" value={filters.q} onChange={(q) => set('q', q)} className="w-56 [&_input]:h-9" />
+        <DebouncedSearchInput label="Search description or source id" placeholder="Search events" value={filters.q} onChange={(q) => set('q', q)} className="w-44 [&_input]:h-9" />
         <Button variant="outline" size="sm" aria-expanded={showMore} onClick={() => setShowMore((open) => !open)} data-testid="more-filters">
           More filters{moreActive > 0 ? ` (${moreActive})` : ''}
         </Button>
