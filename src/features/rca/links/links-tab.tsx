@@ -58,7 +58,7 @@ function LinkRow({ link, timezone }: { link: RcaLinkView; timezone: string }) {
         </TableCell>
         <TableCell className={`${CASE_CELL} whitespace-nowrap`}>{dateTime(link.linkedAt)}</TableCell>
         <TableCell className={`${CASE_CELL} whitespace-nowrap`}>{labelOf(RCA_LINK_SOURCE_LABELS, link.source)}</TableCell>
-        <TableCell className={`${CASE_CELL} text-muted-foreground`}>{link.reason ?? '—'}</TableCell>
+        <TableCell className={`${CASE_CELL} text-muted-foreground`}>{link.reason || '—'}</TableCell>
         <TableCell className={`${CASE_CELL} text-right`}>
           <Button size="sm" variant="ghost" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? 'Hide evidence' : 'Evidence'}

@@ -3,7 +3,8 @@ import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import type { FmeaScoredCause } from '@/api/v2/types/rca-analyses';
 import type { RcaPolicyVersion } from '../event-hub/rca-policy/rca-policy-api';
 import { draftOf, inputOf } from '../event-hub/rca-policy/rca-policy-draft';
-import { causeScore } from './case/analysis/tools/fmea/fmea-model';
+import { causeStatus, rpnText } from './case/analysis/tools/fmea/fmea-model';
+import { depthCount } from './case/analysis/tools/five-why/five-why-model';
 import { blockersOf, moveReady, transitionBody, workflowMoves } from './model/case-workflow';
 import { plantDayOf, plantDayStart } from './model/plant-day';
 import { recommendationDetail } from './model/rca-labels';
@@ -69,19 +70,35 @@ describe('FMEA scores come from the server (SME CA5)', () => {
   const cause = (overrides: Partial<FmeaScoredCause>): FmeaScoredCause =>
     ({ id: 'c', description: 'd', occurrence: 4, detection: 3, detectionControl: null, recommendedActions: [], severity: 7, rpn: 84, actionPriority: 'medium', needsAction: false, missing: [], ...overrides }) as FmeaScoredCause;
 
-  it('a missing rating reads as incomplete, never as a default score', () => {
-    expect(causeScore(cause({ rpn: null, actionPriority: null, needsAction: null, missing: ['detection'] }), 'rpn')).toEqual({
-      text: 'incomplete: detection missing',
+  it('a missing rating reads as incomplete, never as a default score; before a save it says so', () => {
+    expect(causeStatus(cause({ rpn: null, actionPriority: null, needsAction: null, missing: ['detection'] }))).toEqual({
+      text: 'Incomplete: detection missing',
       alert: false,
     });
+    expect(causeStatus(cause({ missing: ['severity', 'occurrence'] })).text).toBe('Incomplete: severity, occurrence missing');
+    expect(causeStatus(undefined)).toEqual({ text: 'Scored after save', alert: false });
   });
 
-  it('shows the server RPN, priority and needs-action without a browser threshold', () => {
-    expect(causeScore(cause({ rpn: 40, needsAction: true, severity: 10, actionPriority: 'high' }), 'rpn')).toEqual({
-      text: 'RPN 40 · priority high · needs action',
-      alert: true,
-    });
-    expect(causeScore(cause({}), 'action_priority')?.text).toBe('priority medium');
+  it('shows the server priority and needs-action without a browser threshold', () => {
+    expect(causeStatus(cause({ rpn: 40, needsAction: true, severity: 10, actionPriority: 'high' }))).toEqual({ text: 'Priority high · needs action', alert: true });
+    expect(causeStatus(cause({}))).toEqual({ text: 'Priority medium', alert: false });
+    expect(causeStatus(cause({ actionPriority: null, needsAction: true }))).toEqual({ text: 'needs action', alert: true });
+    expect(causeStatus(cause({ actionPriority: null, needsAction: false }))).toEqual({ text: 'No action needed', alert: false });
+    expect(causeStatus(cause({ actionPriority: null, needsAction: null }))).toEqual({ text: '—', alert: false });
+  });
+
+  it('the RPN column is the server number, or a dash before a save or with a rating missing', () => {
+    expect(rpnText(cause({ rpn: 84 }))).toBe('84');
+    expect(rpnText(cause({ rpn: null, missing: ['detection'] }))).toBe('—');
+    expect(rpnText(undefined)).toBe('—');
+  });
+});
+
+describe('5-Why depth count (CA6)', () => {
+  it('reads against the guideline when there is one, else as plain levels', () => {
+    expect(depthCount(3, 5)).toBe('3 of 5 guideline levels');
+    expect(depthCount(1, null)).toBe('1 level');
+    expect(depthCount(4, null)).toBe('4 levels');
   });
 });
 

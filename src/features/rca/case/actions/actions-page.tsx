@@ -2,7 +2,7 @@ import { useRcaActions } from '@/api/v2/queries/rca-cases';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ActionsTab } from '../../actions/actions-tab';
 import { useCaseWorkspace } from '../case-context';
-import { CaseCard } from '../evidence/case-card';
+import { CaseCard } from '../components/case-card';
 import { RecommendationsSection } from './recommendations-section';
 
 /** `/rca/:caseId/actions`: the recommendations of the analysis and the tracked actions with verification. */

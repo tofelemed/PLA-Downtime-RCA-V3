@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { useRef } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
@@ -53,6 +54,27 @@ describe('ConfirmDialog', () => {
     });
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retire profile' })).toBeEnabled();
+  });
+
+  it('is 420 px wide by default (confirm size) and 560 px with size="md"', async () => {
+    const view = render(<ConfirmDialog open onOpenChange={() => undefined} title="Retire?" confirmLabel="Retire" onConfirm={() => undefined} />);
+    expect(screen.getByRole('alertdialog').className).toContain('sm:max-w-[420px]');
+    view.unmount();
+    render(<ConfirmDialog open size="md" onOpenChange={() => undefined} title="Approve?" confirmLabel="Approve" onConfirm={() => undefined} />);
+    expect(screen.getByRole('alertdialog').className).toContain('sm:max-w-[560px]');
+  });
+
+  it('focuses the initialFocus element on open, even for destructive actions', async () => {
+    function WithReason() {
+      const field = useRef<HTMLTextAreaElement>(null);
+      return (
+        <ConfirmDialog open onOpenChange={() => undefined} title="Cancel it?" confirmLabel="Cancel action" destructive initialFocus={field} onConfirm={() => undefined}>
+          <textarea ref={field} aria-label="Reason" />
+        </ConfirmDialog>
+      );
+    }
+    render(<WithReason />);
+    await waitFor(() => expect(screen.getByLabelText('Reason')).toHaveFocus());
   });
 
   it('closes when the promise resolves', async () => {

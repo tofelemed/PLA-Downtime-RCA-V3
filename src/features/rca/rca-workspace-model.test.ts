@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { RcaEvidenceItem, RcaLinkView, RcaLogicNode } from '@/api/v2/types/rca';
+import type { RcaAnalysesView } from '@/api/v2/types/rca-analyses';
+import type { RcaCaseView, RcaEvidenceItem, RcaLinkView, RcaLogicNode } from '@/api/v2/types/rca';
 import { addLevel, depthGuidance, fiveWhyChecks, removeLevel, setAnswer } from './case/analysis/tools/five-why/five-why-model';
+import { toolOf, toolStatus } from './model/analysis-tools';
 import { filtersFromParams, legacyRedirect, paramsFromFilters, toCaseQuery } from './model/case-filters';
 import { EMPTY_EVIDENCE_FORM, evidenceFormOf, evidenceItemOf } from './model/evidence-form';
 import { buildTree, newNode, removeSubtree, toggleEvidenceLink, treeCounts } from './model/logic-tree';
@@ -114,5 +116,24 @@ describe('5-Why and timeline', () => {
       [],
     );
     expect(entries.map((e) => e.id)).toEqual(['l1', 'e1', 'e2']);
+  });
+});
+
+describe('analysis index status (kind, not display words)', () => {
+  const rca = (logicTree: number, events: number) =>
+    ({
+      logicTree: Array.from({ length: logicTree }, (_, i) => node(`n${i}`, null)),
+      eventDiagram: { nodes: Array.from({ length: events }, (_, i) => ({ id: `e${i}` })), edges: [] },
+    }) as unknown as RcaCaseView;
+  const tool = (slug: string) => toolOf(slug)!;
+  const none = { fiveWhy: null, fishbone: null, fmea: null, faultTree: null, barrier: null, change: null } as unknown as RcaAnalysesView;
+
+  it('counts the case-stored tools and reads the record tools from the analyses', () => {
+    expect(toolStatus(tool('logic-tree'), rca(3, 0), undefined)).toEqual({ kind: 'started', text: '3 nodes' });
+    expect(toolStatus(tool('logic-tree'), rca(0, 0), undefined)).toEqual({ kind: 'not_started', text: 'Not started' });
+    expect(toolStatus(tool('timeline'), rca(0, 1), undefined)).toEqual({ kind: 'started', text: '1 event' });
+    expect(toolStatus(tool('five-why'), rca(0, 0), undefined)).toEqual({ kind: 'loading', text: '…' });
+    expect(toolStatus(tool('five-why'), rca(0, 0), none)).toEqual({ kind: 'not_started', text: 'Not started' });
+    expect(toolStatus(tool('fmea'), rca(0, 0), { ...none, fmea: {} } as unknown as RcaAnalysesView)).toEqual({ kind: 'started', text: 'Saved' });
   });
 });

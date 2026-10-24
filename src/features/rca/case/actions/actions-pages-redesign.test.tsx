@@ -143,7 +143,7 @@ describe('actions (RCA detail redesign)', () => {
     render(app('/rca/c1/actions'));
     const card = await screen.findByTestId('actions-card');
     expect(within(card).getByRole('heading', { level: 2, name: 'Actions' })).toBeInTheDocument();
-    expect(within(card).getByTestId('card-count')).toHaveTextContent('1');
+    expect(within(card).getByTestId('card-count')).toHaveTextContent(/^1$/);
     const meta = within(card).getByTestId('action-meta');
     expect(meta.tagName).toBe('DL');
     expect(within(meta).getByText('Verification method').tagName).toBe('DT');
@@ -173,6 +173,7 @@ describe('actions (RCA detail redesign)', () => {
     fireEvent.change(await screen.findByLabelText('Status of Align the coupling'), { target: { value: 'cancelled' } });
     const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getByRole('heading', { name: 'Cancel "Align the coupling"?' })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('It counts as finished for closure and is left out of the effectiveness verdict; set it back to open to resume it.');
     const reason = within(dialog).getByLabelText(/Reason for cancelling/);
     expect(reason).toHaveAttribute('rows', '3');
     await waitFor(() => expect(reason).toHaveFocus());
@@ -180,5 +181,32 @@ describe('actions (RCA detail redesign)', () => {
     fireEvent.keyDown(dialog, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
     expect(writes).toHaveLength(0);
+  });
+});
+
+describe('closed investigation (RCA detail redesign)', () => {
+  const closed = () => ({ ...structuredClone(CASE), status: 'Closed', actualCloseDate: '2026-10-18T14:41:00Z' } as RcaCaseView);
+
+  it('actions page: recommendations and actions as text, with no add, create, edit, delete or add-action disclosure', async () => {
+    query.rca = closed();
+    query.actions = [ACTION];
+    render(app('/rca/c1/actions'));
+    const recommendations = await screen.findByTestId('recommendations-card');
+    expect(within(recommendations).getAllByTestId('rec')[0]).toHaveTextContent('Realign the coupling');
+    expect(screen.queryByRole('link', { name: /Add recommendation/ })).toBeNull();
+    expect(screen.queryByTestId('create-action-for-recommendation')).toBeNull();
+    const actions = screen.getByTestId('actions-card');
+    expect(within(actions).getByTestId('action-row')).toHaveTextContent('Align the coupling');
+    expect(screen.queryByTestId('edit-action')).toBeNull();
+    expect(screen.queryByTestId('new-action-disclosure')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Delete/ })).toBeNull();
+    expect(writes).toHaveLength(0);
+  });
+
+  it('recommendation form: a closed case sends the edit route back to the actions page', async () => {
+    query.rca = closed();
+    render(app('/rca/c1/actions/recommendations/rec-1/edit'));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/rca\/c1\/actions$/));
+    expect(screen.queryByTestId('form-footer')).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useUpdateRcaAction, useVerifyRcaAction } from '@/api/v2/queries/rca-commands';
 import type { RcaActionView } from '@/api/v2/types/rca';
 import { Badge } from '@/components/ui/badge';
@@ -30,21 +30,16 @@ function CancelActionDialog({ action, open, onOpenChange, onConfirm, error }: Ca
   const field = useRef<HTMLTextAreaElement>(null);
   const id = `cancel-reason-${action.id}`;
   const trimmed = reason.trim();
-  useEffect(() => {
-    if (!open) return undefined;
-    // after the alert dialog's own focus move (to Cancel): the reason is the first thing to fill in
-    const timer = window.setTimeout(() => field.current?.focus(), 0);
-    return () => window.clearTimeout(timer);
-  }, [open]);
   return (
     <ConfirmDialog
       open={open}
+      initialFocus={field}
       onOpenChange={(next) => {
         if (!next) setReason('');
         onOpenChange(next);
       }}
       title={`Cancel "${action.title}"?`}
-      description="It counts as finished for closure and leaves the effectiveness verdict; set it back to open to resume it."
+      description="It counts as finished for closure and is left out of the effectiveness verdict; set it back to open to resume it."
       confirmLabel="Cancel action"
       cancelLabel="Keep action"
       destructive

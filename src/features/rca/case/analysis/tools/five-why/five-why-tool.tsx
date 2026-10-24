@@ -77,7 +77,7 @@ function Editor({ record, save }: { record: ToolRecord<'fiveWhy'>; save: (body: 
       <div className="space-y-2 rounded-md border bg-muted/30 p-3">
         <ToolTextField id="why-root-cause" label="Root cause" value={content.rootCause} maxLength={4000} multiline onChange={(rootCause) => setContent({ ...content, rootCause })} />
         {!readOnly && last?.answer.trim() && (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setContent({ ...content, rootCause: last.answer })}>
+          <Button type="button" variant="ghost" className="h-9" onClick={() => setContent({ ...content, rootCause: last.answer })}>
             Use the last answer
           </Button>
         )}

@@ -5,11 +5,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/features/ux-kit/form-field';
 import { cn } from '@/lib/utils';
 import { useCaseWorkspace } from '../../case-context';
+import { isBlank } from '../../components/is-blank';
 import type { ChoiceOption } from './tool-choices';
 
 /** A saved value as text (read-only mode): label above, the value wrapped at ~75 characters, "Not recorded" when empty. */
 export function ReadField({ label, value, className, testId }: { label: string; value: ReactNode; className?: string; testId?: string }) {
-  const empty = value === null || value === undefined || value === '';
+  const empty = isBlank(value);
   return (
     <div className={cn('min-w-0 space-y-1', className)} data-testid={testId}>
       <p className="text-sm font-medium text-muted-foreground">{label}</p>

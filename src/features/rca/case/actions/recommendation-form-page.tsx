@@ -20,8 +20,8 @@ import {
 } from '../../model/recommendation-form';
 import { useAssignableUsers } from '../../use-assignable-users';
 import { useCaseWorkspace } from '../case-context';
-import { CaseCard } from '../evidence/case-card';
-import { AreaField, ChoiceField, FormFooter, optionsOf, TextField } from '../evidence/form-controls';
+import { CaseCard } from '../components/case-card';
+import { AreaField, ChoiceField, FormFooter, optionsOf, TextField } from '../components/form-controls';
 import { useCasePatch } from '../use-case-patch';
 
 const COST_INVALID = 'Enter the estimated cost as a number, e.g. 1250.50.';

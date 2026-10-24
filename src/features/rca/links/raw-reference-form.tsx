@@ -34,7 +34,7 @@ export function RawReferenceForm({ busy, onLink }: RawReferenceFormProps) {
           ))}
         </select>
         <Input className="h-9 max-w-sm" aria-label="Reference" placeholder="Reference copied from the record" value={targetId} onChange={(e) => setTargetId(e.target.value)} />
-        <Button type="button" disabled={targetId.trim() === '' || busy} onClick={() => void submit()} data-testid="link-reference">
+        <Button type="button" className="h-9" disabled={targetId.trim() === '' || busy} onClick={() => void submit()} data-testid="link-reference">
           Link reference
         </Button>
       </div>

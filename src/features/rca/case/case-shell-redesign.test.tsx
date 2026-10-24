@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -145,6 +145,15 @@ describe('RCA case shell redesign', () => {
     expect(screen.queryByTestId('save-case')).toBeNull();
   });
 
+  it('definition, writer on an open unlocked case: team lead and member selects are editable, Add member h-9', () => {
+    renderInCase(<DefinitionPage />, SHELL_CASE, '/rca/c1/definition');
+    const team = screen.getByTestId('team-editor');
+    expect(team).toHaveAttribute('data-mode', 'edit');
+    expect(within(team).getByRole('combobox', { name: 'Team lead' })).toBeEnabled();
+    expect(within(team).getByRole('combobox', { name: 'Add a team member' })).toBeEnabled();
+    expect(within(team).getByRole('button', { name: 'Add member' }).className).toMatch(/\bh-9\b/);
+  });
+
   it('definition, editable: labelled inputs; field hints behind ⓘ instead of paragraphs', () => {
     renderInCase(<DefinitionPage />, SHELL_CASE, '/rca/c1/definition');
     expect(screen.getByLabelText('Title')).toHaveValue('Gearbox trip');
@@ -165,6 +174,34 @@ describe('RCA case shell redesign', () => {
     expect(screen.queryByText(/Work orders are referenced by their number/)).toBeNull();
     expect(await screen.findByTestId('outcome-panel')).toBeInTheDocument();
     expect(screen.queryByText(/they are never added together/)).toBeNull();
+  });
+
+  it('outcome ⓘ: only the server note when it sends one (no repeated rule); the short rule without a note', async () => {
+    const view = renderInCase(<LinksPage />, CLOSED, '/rca/c1/links');
+    await screen.findByTestId('outcome-panel');
+    fireEvent.focus(screen.getByRole('button', { name: 'About Outcome' }));
+    expect((await screen.findByRole('tooltip')).textContent).toBe(OUTCOME.note);
+    expect(screen.queryByText(/three separate figures/)).toBeNull();
+    view.unmount();
+    client.clear();
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const path = new URL(url).pathname;
+      return json(path.endsWith('/outcome') ? { ...OUTCOME, note: '' } : reply(path));
+    }));
+    renderInCase(<LinksPage />, CLOSED, '/rca/c1/links');
+    await screen.findByTestId('outcome-panel');
+    fireEvent.focus(screen.getByRole('button', { name: 'About Outcome' }));
+    expect((await screen.findAllByText(/three separate figures, never added up/)).length).toBeGreaterThan(0);
+  });
+
+  it('links: an empty reason reads as a dash', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const path = new URL(url).pathname;
+      return json(path.endsWith('/links') ? [{ ...LINK, reason: '' }] : reply(path));
+    }));
+    renderInCase(<LinksPage />, CLOSED, '/rca/c1/links');
+    const row = await screen.findByTestId('link-row');
+    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent(/^—$/);
   });
 
   it('history: entries in a compact table with when, by and the change', async () => {

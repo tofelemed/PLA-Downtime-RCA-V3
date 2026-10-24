@@ -149,11 +149,12 @@ describe('RCA case shell dialogs: title, fields, buttons, Esc', () => {
     await expectEscCloses();
   });
 
-  it('Dismiss re-evaluation (overview notice): required labelled Reason, confirm disabled until written, Esc closes', async () => {
+  it('Dismiss re-evaluation (overview notice): required labelled Reason focused on open, confirm disabled until written, Esc closes', async () => {
     renderInCase(<ReevaluateNotice />, { ...CASE, status: 'Closed' });
     fireEvent.click(await screen.findByTestId('dismiss-recommendation'));
     const dialog = await expectDialog('Dismiss this recommendation?', 'Dismiss recommendation');
     expect(within(dialog).getByLabelText(/Reason/)).toHaveAttribute('rows', '3');
+    await waitFor(() => expect(within(dialog).getByLabelText(/Reason/)).toHaveFocus());
     expect(within(dialog).getByRole('button', { name: 'Dismiss recommendation' })).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: 'Seasonal' } });
     expect(within(dialog).getByRole('button', { name: 'Dismiss recommendation' })).toBeEnabled();
@@ -165,6 +166,10 @@ describe('RCA case shell dialogs: title, fields, buttons, Esc', () => {
     expect(screen.getByRole('heading', { name: 'Add a link' })).toBeInTheDocument();
     expect(screen.getByLabelText('Link').className).toMatch(/h-9/);
     expect(screen.getByLabelText('Unit').className).toMatch(/h-9/);
+    expect(screen.getByTestId('link-reference').className).toMatch(/\bh-9\b/);
+    fireEvent.change(screen.getByLabelText('Link'), { target: { value: 'work_order' } });
+    expect(screen.getByRole('button', { name: 'Link' }).className).toMatch(/\bh-9\b/);
+    fireEvent.change(screen.getByLabelText('Link'), { target: { value: 'event' } });
     expect(screen.getByLabelText('From')).toBeInTheDocument();
     expect(screen.getByLabelText('To')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('combobox', { name: /Reason/ }));

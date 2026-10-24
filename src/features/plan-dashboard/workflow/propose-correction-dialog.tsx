@@ -42,6 +42,7 @@ export function ProposeCorrectionDialog({ onPropose, description }: ProposeCorre
   };
   return (
     <ConfirmDialog
+      size="md"
       trigger={
         <Button variant="outline" size="sm" data-testid="propose-correction">
           Propose a correction…

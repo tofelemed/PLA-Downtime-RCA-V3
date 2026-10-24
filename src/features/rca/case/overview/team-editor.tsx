@@ -59,7 +59,7 @@ function AddMember({ addable, onAdd }: { addable: readonly PersonOption[]; onAdd
         <Label htmlFor="team-add">Add a team member</Label>
         <PersonSelect id="team-add" value={candidate} options={addable} noneLabel="Choose a person" onChange={setCandidate} />
       </div>
-      <Button type="button" variant="outline" disabled={candidate === NONE} onClick={() => { onAdd(candidate); setCandidate(NONE); }}>
+      <Button type="button" variant="outline" className="h-9" disabled={candidate === NONE} onClick={() => { onAdd(candidate); setCandidate(NONE); }}>
         Add member
       </Button>
     </div>

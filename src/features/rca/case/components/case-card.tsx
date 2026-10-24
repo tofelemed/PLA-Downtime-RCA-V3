@@ -8,6 +8,8 @@ const CASE_LOOK: ReportLook = { provisional: false, ownEmpty: true };
 
 export interface CaseCardProps {
   title: string;
+  /** a count (or short count line) after the title, muted */
+  count?: ReactNode;
   /** what the section means, behind the ⓘ next to the title */
   info?: ReactNode;
   /** at the right of the title row */
@@ -21,9 +23,9 @@ export interface CaseCardProps {
 
 /**
  * A section of an RCA case page (redesign 24 Oct 2026): card `rounded-lg border bg-card p-4`, h2 title with
- * its ⓘ, actions right, content in the shared compact report look.
+ * its count and ⓘ, actions right, content in the shared compact report look.
  */
-export function CaseCard({ title, info, actions, id, testId, className, children }: CaseCardProps) {
+export function CaseCard({ title, count, info, actions, id, testId, className, children }: CaseCardProps) {
   const headingId = useId();
   return (
     <ReportLookContext.Provider value={CASE_LOOK}>
@@ -33,6 +35,11 @@ export function CaseCard({ title, info, actions, id, testId, className, children
             <h2 id={headingId} className="text-base font-semibold text-heading">
               {title}
             </h2>
+            {count !== undefined && (
+              <span className="whitespace-nowrap text-sm text-muted-foreground" data-testid="card-count">
+                {count}
+              </span>
+            )}
             {info && <KpiInfo label={title} text={info} />}
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

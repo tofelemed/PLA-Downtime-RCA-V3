@@ -36,13 +36,25 @@ export const ANALYSIS_TOOLS: readonly AnalysisTool[] = [
 
 export const toolOf = (slug: string | undefined): AnalysisTool | undefined => ANALYSIS_TOOLS.find((tool) => tool.slug === slug);
 
-/** Short status of a tool for the analysis index ("3 nodes", "Saved", "Not started"). */
-export function toolStatus(tool: AnalysisTool, rca: RcaCaseView, analyses: RcaAnalysesView | undefined): string {
-  if (tool.slug === 'logic-tree') return rca.logicTree.length ? plural(rca.logicTree.length, 'node', 'nodes') : 'Not started';
-  if (tool.slug === 'event-diagram' || tool.slug === 'timeline') {
-    return rca.eventDiagram.nodes.length ? plural(rca.eventDiagram.nodes.length, 'event', 'events') : 'Not started';
-  }
-  if (!tool.record) return 'Not started';
-  if (!analyses) return '…';
-  return analyses[tool.record] ? 'Saved' : 'Not started';
+/** Whether a tool has content (`started`), none (`not_started`) or its record is still loading. */
+export type ToolStatusKind = 'started' | 'not_started' | 'loading';
+
+export interface ToolStatus {
+  kind: ToolStatusKind;
+  /** the short status line ("3 nodes", "Saved", "Not started", "…") */
+  text: string;
+}
+
+const NOT_STARTED: ToolStatus = { kind: 'not_started', text: 'Not started' };
+
+const countStatus = (count: number, one: string, many: string): ToolStatus =>
+  count ? { kind: 'started', text: plural(count, one, many) } : NOT_STARTED;
+
+/** Status of a tool for the analysis index: its kind and short text ("3 nodes", "Saved", "Not started"). */
+export function toolStatus(tool: AnalysisTool, rca: RcaCaseView, analyses: RcaAnalysesView | undefined): ToolStatus {
+  if (tool.slug === 'logic-tree') return countStatus(rca.logicTree.length, 'node', 'nodes');
+  if (tool.slug === 'event-diagram' || tool.slug === 'timeline') return countStatus(rca.eventDiagram.nodes.length, 'event', 'events');
+  if (!tool.record) return NOT_STARTED;
+  if (!analyses) return { kind: 'loading', text: '…' };
+  return analyses[tool.record] ? { kind: 'started', text: 'Saved' } : NOT_STARTED;
 }

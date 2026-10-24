@@ -10,7 +10,7 @@ import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-lab
 import { useCaseWorkspace } from '../case-context';
 import { useCasePatch } from '../use-case-patch';
 import { AttachmentList } from './attachment-list';
-import { CaseCard } from './case-card';
+import { CaseCard } from '../components/case-card';
 import { EvidenceMainFacts, EvidenceRecordFacts, EvidenceRequestFacts, SeriesFacts } from './evidence-facts';
 
 const peopleOf = (item: RcaEvidenceItem | undefined) => (item ? [item.collectedBy, item.verifiedBy, item.taskAssigneeId] : []);

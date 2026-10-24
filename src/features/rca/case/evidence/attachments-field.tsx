@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { uploadRcaFile } from '../../api/rca-files';
 import { AttachmentList } from './attachment-list';
-import { FieldGroup } from './form-controls';
+import { FieldGroup } from '../components/form-controls';
 
 export interface AttachmentsFieldProps {
   rcaId: string;

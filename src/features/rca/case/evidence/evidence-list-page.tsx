@@ -12,8 +12,8 @@ import { EVIDENCE_TYPES } from '../../model/evidence-form';
 import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-labels';
 import { useRcaFormat } from '../../use-rca-format';
 import { useCaseWorkspace } from '../case-context';
-import { CaseCard } from './case-card';
-import { SearchField } from './search-field';
+import { CaseCard } from '../components/case-card';
+import { SearchField } from '../components/search-field';
 import { TaskOverdueBadge } from './task-overdue-badge';
 
 function columns(day: (value: string | null) => string, userName: (id: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {

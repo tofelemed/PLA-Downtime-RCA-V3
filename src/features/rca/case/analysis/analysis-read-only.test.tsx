@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import type { ComponentType } from 'react';
-import { renderInCase, stubAnalysesFetch } from './analysis-test-kit';
+import { KIT_CASE, renderInCase, stubAnalysesFetch } from './analysis-test-kit';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
@@ -73,6 +73,22 @@ describe('analysis tools on a closed case (read-only renders text)', () => {
     renderInCase(<LogicTreeTool />, true);
     const node = await screen.findByTestId('logic-node');
     expect(within(node).getByText('Verified')).toBeInTheDocument();
+    expectNoControls();
+  });
+
+  it('logic tree read-only: a muted "Not verified" for an unverified node; "Confirmed root cause" for a verified cause', async () => {
+    const base = KIT_CASE.logicTree[0];
+    const logicTree = [
+      { ...base, id: 'ln-1', label: 'Gearbox trips', verified: false },
+      { ...base, id: 'ln-2', parentId: 'ln-1', label: 'Contaminated oil', kind: 'root_cause', verified: true },
+    ];
+    renderInCase(<LogicTreeTool />, true, { ...KIT_CASE, logicTree });
+    const [top, cause] = await screen.findAllByTestId('logic-node');
+    expect(within(top).getByTestId('node-not-verified')).toHaveTextContent('Not verified');
+    expect(within(top).getByTestId('node-not-verified')).toHaveClass('text-muted-foreground');
+    expect(within(top).queryByText('Verified')).toBeNull();
+    expect(within(cause).getByText('Confirmed root cause')).toBeInTheDocument();
+    expect(within(cause).queryByTestId('node-not-verified')).toBeNull();
     expectNoControls();
   });
 

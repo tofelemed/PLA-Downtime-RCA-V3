@@ -111,6 +111,7 @@ describe('evidence detail (RCA detail redesign)', () => {
     expect(detail.tagName).toBe('DL');
     expect(within(detail).getByText('Source').tagName).toBe('DT');
     expect(within(detail).getByText('P101.VIB').tagName).toBe('DD');
+    expect(within(detail).getByText('Category').nextElementSibling).toHaveTextContent('Not recorded');
     const request = screen.getByTestId('evidence-request-card');
     expect(within(request).getByRole('heading', { level: 2, name: 'Evidence request' })).toBeInTheDocument();
     expect(within(request).getByText('Export the trend')).toBeInTheDocument();
@@ -147,6 +148,28 @@ describe('evidence detail (RCA detail redesign)', () => {
   });
 });
 
+describe('closed investigation (evidence pages)', () => {
+  const closed = () => ({ ...structuredClone(CASE), status: 'Closed', actualCloseDate: '2026-10-18T14:41:00Z' } as RcaCaseView);
+
+  it('list: the evidence as rows, with no Add evidence', async () => {
+    query.rca = closed();
+    render(app('/rca/c1/evidence'));
+    const card = await screen.findByTestId('evidence-card');
+    expect(within(card).getByTestId('evidence-list')).toHaveTextContent('Vibration trend');
+    expect(screen.queryByTestId('add-evidence')).toBeNull();
+    expect(screen.queryByRole('link', { name: /Add evidence/ })).toBeNull();
+  });
+
+  it('detail: values as text with no Edit or Delete', async () => {
+    query.rca = closed();
+    render(app('/rca/c1/evidence/ev-1'));
+    expect(await screen.findByTestId('evidence-detail')).toHaveTextContent('P101.VIB');
+    expect(screen.queryByRole('link', { name: /Edit evidence/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+});
+
 describe('evidence form (RCA detail redesign)', () => {
   it('labels above h-9 controls and a footer with Cancel left of the primary', async () => {
     render(app('/rca/c1/evidence/new'));
@@ -156,6 +179,17 @@ describe('evidence form (RCA detail redesign)', () => {
     expect(within(form).getByLabelText('Description')).toHaveAttribute('rows', '3');
     const footer = within(form).getByTestId('form-footer');
     expect(within(footer).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Add evidence']);
+  });
+
+  it('date and time fields are compact (h-9) in the evidence form and the historian query', async () => {
+    const series = { streams: 'P101.VIB', mode: 'summary', start: '2026-10-01T06:00:00.000Z', end: '2026-10-01T08:00:00.000Z', interval: null, intervals: 12, summaryTypes: 'max' };
+    query.rca = { ...structuredClone(CASE), evidence: [{ ...ITEM, type: 'Time Series', timeSeries: series } as unknown as RcaEvidenceItem] };
+    render(app('/rca/c1/evidence/ev-1/edit'));
+    const form = await screen.findByTestId('evidence-form');
+    for (const label of ['Observed at', 'From', 'To']) {
+      expect(within(form).getByLabelText(`${label} date`)).toHaveClass('h-9');
+      expect(within(form).getByLabelText(`${label} time`)).toHaveClass('h-9');
+    }
   });
 
   it('shows the title validation under the field once it is left empty', async () => {

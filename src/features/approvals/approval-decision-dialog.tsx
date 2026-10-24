@@ -28,7 +28,7 @@ export function ApprovalDecisionDialog({ item, action, onDecided }: Props) {
   const label = ACTION_LABELS[action];
   const canConfirm = !decisionBlocked({ reasonRequired, reason, changed, waiting: record.supported && !record.isSuccess });
   return (
-    <ConfirmDialog title={`${label}: ${item.title}`} confirmLabel={label} destructive={['retire', 'reject', 'return'].includes(action)}
+    <ConfirmDialog size="md" title={`${label}: ${item.title}`} confirmLabel={label} destructive={['retire', 'reject', 'return'].includes(action)}
       trigger={<Button size="sm" variant={action === 'approve' || action === 'activate' ? 'default' : 'outline'}>{label}</Button>}
       description={action === 'retire' ? 'Retiring removes this draft from future use and keeps its history. It cannot be undone.' : 'Review the record and its effective dates before deciding. Existing approval and data checks still apply.'}
       busy={command.isPending} confirmDisabled={!canConfirm}

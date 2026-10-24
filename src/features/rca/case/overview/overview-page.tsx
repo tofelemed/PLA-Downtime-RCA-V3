@@ -21,7 +21,7 @@ function Progress({ rca }: { rca: RcaCaseView }) {
 /** Overview of a case: progress and the saved definition (main), workflow and team (side column from 1280 px). */
 export function OverviewPage() {
   const { rca } = useCaseWorkspace();
-  useScrollToWorkflow(true);
+  useScrollToWorkflow();
   return (
     <div className="space-y-4">
       <ReevaluateNotice />

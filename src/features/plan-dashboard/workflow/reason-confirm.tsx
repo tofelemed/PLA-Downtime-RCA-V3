@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,12 +21,14 @@ export interface ReasonConfirmProps {
   children?: ReactNode;
 }
 
-/** A workflow command that needs a reason: the reason is a required field of its confirmation dialog. */
+/** A workflow command that needs a reason: the reason is a required field of its confirmation dialog, focused on open. */
 export function ReasonConfirm({ trigger, triggerTestId, triggerVariant = 'outline', disabled, title, description, confirmLabel, destructive, onConfirm, children }: ReasonConfirmProps) {
   const [reason, setReason] = useState('');
   const id = useId();
+  const field = useRef<HTMLTextAreaElement>(null);
   return (
     <ConfirmDialog
+      initialFocus={field}
       trigger={
         <Button variant={triggerVariant} size="sm" data-testid={triggerTestId} disabled={disabled}>
           {trigger}
@@ -41,7 +43,7 @@ export function ReasonConfirm({ trigger, triggerTestId, triggerVariant = 'outlin
     >
       <div className="space-y-1">
         <Label htmlFor={id}>Reason<RequiredMarker /></Label>
-        <Textarea id={id} rows={3} data-testid="wf-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <Textarea ref={field} id={id} rows={3} data-testid="wf-reason" value={reason} onChange={(e) => setReason(e.target.value)} />
       </div>
       {children}
     </ConfirmDialog>

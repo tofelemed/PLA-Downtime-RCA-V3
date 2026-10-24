@@ -24,17 +24,6 @@ export interface CauseScore {
   alert: boolean;
 }
 
-/** What the server computed for a saved cause, in words; null before the first save of the cause. */
-export function causeScore(scored: FmeaScoredCause | undefined, method: FmeaRecord['method'] | undefined): CauseScore | null {
-  if (!scored) return null;
-  if (scored.missing.length > 0) {
-    return { text: `incomplete: ${scored.missing.map((rating) => RATING_WORDS[rating] ?? rating).join(', ')} missing`, alert: false };
-  }
-  const main = method === 'action_priority' && scored.actionPriority ? `priority ${scored.actionPriority}` : `RPN ${scored.rpn ?? '—'}`;
-  const extra = method !== 'action_priority' && scored.actionPriority ? ` · priority ${scored.actionPriority}` : '';
-  return { text: `${main}${extra}${scored.needsAction ? ' · needs action' : ''}`, alert: scored.needsAction === true };
-}
-
 /** The RPN column of a cause: the server's number, or "—" before a save or while a rating is missing. */
 export const rpnText = (scored: FmeaScoredCause | undefined): string => (scored?.rpn === null || scored?.rpn === undefined ? '—' : String(scored.rpn));
 

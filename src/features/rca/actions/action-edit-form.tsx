@@ -14,7 +14,7 @@ import { useOptionalCaseWorkspace } from '../case/case-context';
 import { OwnerSelect } from './owner-select';
 import { RecommendationSelect } from './recommendation-select';
 import { VerificationPlanFields } from './verification-plan-fields';
-import { FormFooter } from '../case/evidence/form-controls';
+import { FormFooter } from '../case/components/form-controls';
 
 const TITLE_REQUIRED = 'Enter the action.';
 const WINDOW_LOCKED = 'The verification window is fixed once the action is done; reopen the action to change it.';

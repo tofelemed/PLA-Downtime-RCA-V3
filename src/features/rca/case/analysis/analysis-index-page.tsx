@@ -4,24 +4,24 @@ import { ReportCard } from '@/features/pla-analytics/components/report-card';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { StatusIcon } from '@/lib/icons';
 import { cn } from '@/lib/utils';
-import { ANALYSIS_TOOLS, toolStatus, type AnalysisTool } from '../../model/analysis-tools';
+import { ANALYSIS_TOOLS, toolStatus, type AnalysisTool, type ToolStatus } from '../../model/analysis-tools';
 import { useCaseWorkspace } from '../case-context';
 import { CausesPanel } from '../causes/causes-panel';
 
 /** The status line of a tile: a check for a started method, a dash for one not started (the words say it either way). */
-function ToolStatus({ status }: { status: string }) {
+function ToolStatusLine({ status }: { status: ToolStatus }) {
   const { text } = useNumberFormat();
-  const started = status !== 'Not started' && status !== '…';
+  const started = status.kind === 'started';
   const Icon = started ? StatusIcon.success : StatusIcon.pending;
   return (
     <span className={cn('mt-auto inline-flex items-center gap-1.5 pt-3 text-xs', started ? 'font-medium' : 'text-muted-foreground')} data-testid="tool-status">
       <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-      {text(status)}
+      {text(status.text)}
     </span>
   );
 }
 
-function ToolTile({ tool, status, to }: { tool: AnalysisTool; status: string; to: string }) {
+function ToolTile({ tool, status, to }: { tool: AnalysisTool; status: ToolStatus; to: string }) {
   return (
     <Link
       to={to}
@@ -30,7 +30,7 @@ function ToolTile({ tool, status, to }: { tool: AnalysisTool; status: string; to
     >
       <span className="block font-medium text-heading">{tool.name}</span>
       <span className="block text-sm text-muted-foreground">{tool.description}</span>
-      <ToolStatus status={status} />
+      <ToolStatusLine status={status} />
     </Link>
   );
 }
