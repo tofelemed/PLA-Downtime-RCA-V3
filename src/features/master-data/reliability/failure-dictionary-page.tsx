@@ -6,9 +6,9 @@ import { DICTIONARY_KIND_LABELS, type FailureDictionaryEntryView } from '@/api/v
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { AddDialog, useAddDialog } from '@/features/ux-kit/add-dialog';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { Section } from '@/features/ux-kit/page-layout';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
 import { ActionIcon } from '@/lib/icons';
 import { MasterDataLayout } from '../components/master-data-layout';
@@ -17,6 +17,9 @@ import { DictionaryEntryForm } from './dictionary-entry-form';
 import { dictionaryEntryName } from './dictionary-entry-name';
 import { DictionaryFilters } from './dictionary-filters';
 import { useDictionaryFilters } from './use-dictionary-filters';
+
+/** What the dictionary is, behind the ⓘ of its card. */
+const DICTIONARY_INFO = "Failure codes (ISO 14224) that maintenance uses to describe a stop's technical failure. A retired entry is no longer offered; recorded stops keep it.";
 
 type DateText = (iso: string | null | undefined) => string;
 
@@ -29,7 +32,7 @@ function columnsOf(canWrite: boolean, onRetire: (entry: FailureDictionaryEntryVi
     { id: 'detail', header: 'Asset types / category', cell: (e) => (e.assetTypes.length ? e.assetTypes.join(', ') : (e.category ?? '—')) },
     { id: 'from', header: 'In force since', cell: (e) => date(e.effectiveFrom), nowrap: true },
     ...(canWrite
-      ? [{ id: 'actions', header: '', headerLabel: 'Actions', align: 'right' as const, cell: (e: FailureDictionaryEntryView) => <Button size="sm" variant="ghost" onClick={() => onRetire(e)}>Retire</Button> }]
+      ? [{ id: 'actions', header: '', headerLabel: 'Actions', align: 'right' as const, cell: (e: FailureDictionaryEntryView) => <Button size="sm" variant="ghost" className="whitespace-nowrap" onClick={() => onRetire(e)}>Retire</Button> }]
       : []),
   ];
 }
@@ -93,11 +96,10 @@ export function FailureDictionaryPage() {
     <MasterDataLayout
       title="Failure dictionary"
       alsoAllowed={canValidateFailures}
-      description="ISO 14224-aligned failure codes that maintenance uses to describe a stop's technical failure."
       actions={canWrite ? <HeaderActions onAdd={adding.open} /> : undefined}
     >
-      <Section title="Entries in force">
-        <DictionaryFilters state={filterState} classes={classes} />
+      <DictionaryFilters state={filterState} classes={classes} />
+      <RcaCard title="Entries in force" info={DICTIONARY_INFO} testId="dictionary-card">
         <DataTable
           caption="Failure dictionary entries"
           columns={columnsOf(canWrite, setRetiring, dates.date)}
@@ -108,13 +110,19 @@ export function FailureDictionaryPage() {
           empty={
             filtered
               ? { title: 'No matching entries', text: 'No entry in force matches the search and filters.' }
-              : { title: 'No dictionary yet', text: 'Failure fields stay free text until the plant imports its codes.' }
+              : { title: 'No dictionary yet', text: 'No entries yet. Failure fields stay free text until the plant imports its codes.' }
           }
         />
-      </Section>
+      </RcaCard>
       <RetireEntryDialog entry={retiring} onClose={() => setRetiring(null)} />
-      <AddDialog open={adding.isOpen} onOpenChange={adding.setOpen} title="Add dictionary entry" wide testId="dictionary-entry-dialog">
-        <DictionaryEntryForm classes={classes} onAdded={adding.close} />
+      <AddDialog
+        open={adding.isOpen}
+        onOpenChange={adding.setOpen}
+        title="Add dictionary entry"
+        wide
+        testId="dictionary-entry-dialog"
+      >
+        <DictionaryEntryForm classes={classes} onAdded={adding.close} onCancel={adding.close} />
       </AddDialog>
     </MasterDataLayout>
   );

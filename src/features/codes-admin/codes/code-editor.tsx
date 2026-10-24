@@ -13,6 +13,7 @@ import { OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/l
 import { useCodesSaveFeedback } from '../hooks/use-codes-save-feedback';
 import { changeBodyOf, type CodeForm, formOf, LIBRARIES, OEE_COMPONENTS, SCHEDULE_CLASSES } from '../model/code-fields';
 import { libraryListPath } from '../model/codes-save-result';
+import { CodeFacts } from './code-facts';
 
 export interface CodeEditorProps {
   library: CodeLibraryPath;
@@ -62,10 +63,17 @@ export function CodeEditor({ library, code }: CodeEditorProps) {
   const readOnly = !code.active || !canWriteCodes;
   const save = () => feedback.run(() => change.submit({ code, body: changeBodyOf(spec, form) }), `${code.code} saved as version ${code.version + 1}`).catch(() => undefined);
   useUnsavedChangesGuard(hasUnsavedChanges(form, formOf(code), [readOnly, change.isPending]));
+  if (readOnly) {
+    return (
+      <div className="space-y-4" data-testid="code-editor">
+        {!code.active && <p className="text-sm text-muted-foreground">This code is retired and can no longer be changed.</p>}
+        <CodeFacts library={library} code={code} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-4" data-testid="code-editor">
       {feedback.alert}
-      {!code.active && <p className="text-sm text-muted-foreground">This code is retired and can no longer be changed.</p>}
       <div className="grid gap-3 md:grid-cols-2">
         <Field id="code-name" label="Name">
           <Input id="code-name" value={form.name} disabled={readOnly} onChange={(event) => set('name')(event.target.value)} />
@@ -90,16 +98,14 @@ export function CodeEditor({ library, code }: CodeEditorProps) {
           </Field>
         )}
       </div>
-      {canWriteCodes && code.active && (
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={save} disabled={change.isPending || form.name.trim() === ''} data-testid="code-save">
-            <span>Save as version {code.version + 1}</span>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to={libraryListPath(library)} data-testid="code-cancel">Cancel</Link>
-          </Button>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" asChild>
+          <Link to={libraryListPath(library)} data-testid="code-cancel">Cancel</Link>
+        </Button>
+        <Button onClick={save} disabled={change.isPending || form.name.trim() === ''} data-testid="code-save">
+          <span>Save as version {code.version + 1}</span>
+        </Button>
+      </div>
     </div>
   );
 }

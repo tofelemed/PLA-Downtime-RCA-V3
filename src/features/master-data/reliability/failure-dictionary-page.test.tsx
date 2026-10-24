@@ -166,3 +166,51 @@ describe('Failure dictionary is paged and filtered on the server (SETUP_UX_FIXES
     expect(tableCalls(calls).every((c) => c.url.searchParams.get('limit') === '20')).toBe(true);
   });
 });
+
+// Configuration cleanup (24 Oct 2026): no header description, the table in a report card with ⓘ, labelled h-9 filters
+describe('Failure dictionary cleanup', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    toast.mockReset();
+    actAs('SuperAdmin');
+  });
+
+  it('drops the ISO description under the title; the card keeps it behind its ⓘ', async () => {
+    showPage(replyWith(jsonResponse(200, PUMP)));
+    const card = await screen.findByTestId('dictionary-card');
+    expect(screen.queryByText(/ISO 14224-aligned failure codes/)).toBeNull();
+    expect(within(card).getByRole('heading', { level: 2, name: 'Entries in force' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'About Entries in force' })).toBeInTheDocument();
+    expect(await within(card).findByRole('button', { name: 'Retire' })).toBeInTheDocument();
+  });
+
+  it('filters: Search, List and Equipment class with labels above, h-9', async () => {
+    showPage(replyWith(jsonResponse(200, PUMP)));
+    const filters = await screen.findByTestId('dictionary-filters');
+    expect(filters.className).toContain('items-end');
+    expect(within(filters).getByText('Search')).toBeInTheDocument();
+    expect(within(filters).getByLabelText('List')).toHaveClass('h-9');
+    expect(within(filters).getByLabelText('Equipment class')).toHaveClass('h-9');
+  });
+
+  it('an empty dictionary says so in its own words, not the generic report empty', async () => {
+    showPage(() => undefined);
+    expect(await screen.findByText(/No entries yet\. Failure fields stay free text/)).toBeInTheDocument();
+    expect(screen.queryByText('No data for these dates')).toBeNull();
+  });
+
+  it('Add dictionary entry: List focused, Cancel before the primary buttons, Cancel and Esc close it', async () => {
+    showPage(replyWith(jsonResponse(200, PUMP)));
+    fireEvent.click(await screen.findByTestId('dictionary-entry-new'));
+    const dialog = await screen.findByTestId('dictionary-entry-dialog');
+    await waitFor(() => expect(within(dialog).getByLabelText('List')).toHaveFocus());
+    const names = within(dialog).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Add entry'));
+    expect(within(dialog).getByTestId('dictionary-entry-form').className).toContain('[&_input:not([type=checkbox]):not([type=radio])]:h-9');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByTestId('dictionary-entry-dialog')).toBeNull());
+    fireEvent.click(screen.getByTestId('dictionary-entry-new'));
+    fireEvent.keyDown(await screen.findByTestId('dictionary-entry-dialog'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('dictionary-entry-dialog')).toBeNull());
+  });
+});

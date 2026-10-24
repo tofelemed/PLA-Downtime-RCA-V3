@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { useCreateDictionaryEntry } from '@/api/v2/queries/failure-dictionary';
 import { DICTIONARY_KIND_LABELS, type DictionaryKind } from '@/api/v2/types/failure-dictionary';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { COMPACT_FIELDS } from '../components/compact-fields';
 
 const SELECT_CLASS = 'h-9 w-full rounded-md border border-input bg-background px-2 text-sm';
 const KINDS = Object.keys(DICTIONARY_KIND_LABELS) as DictionaryKind[];
@@ -25,6 +26,8 @@ export interface DictionaryEntryFormProps {
   classes: readonly string[];
   /** in the header's "Add entry" dialog: "Add entry" closes it, "Save and add another" keeps it open for the next one */
   onAdded?: () => void;
+  /** in the dialog: Cancel left of the primary buttons */
+  onCancel?: () => void;
 }
 
 /**
@@ -32,7 +35,7 @@ export interface DictionaryEntryFormProps {
  * and empty code / name fields (list and class stay for the next entry), then `onAdded` unless the user
  * chose "Save and add another"; a refusal: the red alert on top, the input kept.
  */
-export function DictionaryEntryForm({ classes, onAdded }: DictionaryEntryFormProps) {
+export function DictionaryEntryForm({ classes, onAdded, onCancel }: DictionaryEntryFormProps) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const command = useCreateDictionaryEntry();
   const feedback = useSaveFeedback();
@@ -55,7 +58,7 @@ export function DictionaryEntryForm({ classes, onAdded }: DictionaryEntryFormPro
     }
   };
   return (
-    <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="dictionary-entry-form">
+    <form className={`grid gap-3 sm:grid-cols-2 ${COMPACT_FIELDS}`} onSubmit={(e) => { e.preventDefault(); void submit(); }} data-testid="dictionary-entry-form">
       <div className="sm:col-span-2 empty:hidden">{feedback.alert}</div>
       <div className="space-y-1">
         <Label htmlFor="entry-kind">List</Label>
@@ -91,8 +94,9 @@ export function DictionaryEntryForm({ classes, onAdded }: DictionaryEntryFormPro
         Pending / unknown choice
       </label>
       <div className="flex items-end justify-end gap-2 sm:col-span-2">
-        {onAdded && <Button type="button" variant="outline" disabled={!ready} onClick={() => void submit(true)}>Save and add another</Button>}
-        <Button type="submit" disabled={!ready}>Add entry</Button>
+        {onCancel && <Button type="button" variant="ghost" className="h-9" onClick={onCancel}>Cancel</Button>}
+        {onAdded && <Button type="button" variant="outline" className="h-9" disabled={!ready} onClick={() => void submit(true)}>Save and add another</Button>}
+        <Button type="submit" className="h-9" disabled={!ready}>Add entry</Button>
       </div>
     </form>
   );

@@ -38,7 +38,7 @@ export function CodeFlatTable({ library, includeRetired }: CodeFlatTableProps) {
       getRowKey={(code) => code.id}
       pager={codes.pager}
       status={codes.status}
-      empty={CODE_LIBRARY_EMPTY}
+      empty={{ ...CODE_LIBRARY_EMPTY, text: 'No codes in this library yet.' }}
       onRowClick={(code) => navigate(`/master-data/codes-rules/${library}/${code.id}`)}
       rowLabel={(code) => `${code.code} ${code.name}`}
     />
