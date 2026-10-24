@@ -30,7 +30,7 @@ export function DowntimeSection({ scope, assetId }: { scope: AnalyticsScope; ass
         ) : (
           <DataState state={dataStateOf(query)} error={query.error} onRetry={() => query.refetch()}>
             <DowntimeTiles summary={series.summary} asset={series.asset} controllable={controllable} />
-            <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
               <DowntimeTrendChart steps={series.steps} subtitle={subtitle} />
               <DowntimePareto groups={series.pareto} subtitle={subtitle} />
             </div>

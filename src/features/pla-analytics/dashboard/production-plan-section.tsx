@@ -62,7 +62,7 @@ function PlanBody({ scope, buckets, totals }: { scope: AnalyticsScope; buckets: 
     <div className="space-y-4">
       <UomPicker uoms={uoms} value={uom} onChange={setPicked} />
       <PlanTiles total={total} />
-      <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
         <PlanTrendChart scope={scope} buckets={buckets} uom={uom} />
         <TopLossReasons scope={scope} uom={uom} />
       </div>

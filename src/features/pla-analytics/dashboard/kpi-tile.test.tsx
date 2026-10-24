@@ -23,6 +23,18 @@ function renderTile(value: string | null) {
 }
 
 describe('KpiTile', () => {
+  it('wraps a long label to two lines instead of truncating it', () => {
+    renderTile('1');
+    const label = screen.getByText('Operational OEE');
+    expect(label).toHaveClass('line-clamp-2');
+    expect(label).not.toHaveClass('truncate');
+  });
+
+  it('lets a row take extra layout classes', () => {
+    const { container } = render(<KpiTileRow className="xl:grid-cols-3">{null}</KpiTileRow>);
+    expect(container.firstChild).toHaveClass('grid-cols-2', 'xl:grid-cols-3');
+  });
+
   it('shows title and value, not the info text', () => {
     renderTile('82.1%');
     expect(screen.getByText('Operational OEE')).toBeInTheDocument();

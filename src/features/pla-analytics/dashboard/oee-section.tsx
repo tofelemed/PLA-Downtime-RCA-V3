@@ -62,7 +62,7 @@ export function OeeSection({ scope, assetSelected }: { scope: AnalyticsScope; as
           </p>
         )}
         <OeeTiles scope={scope} />
-        <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>
             <OeeTrendChart scope={scope} />
           </Suspense>

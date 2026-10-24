@@ -9,6 +9,8 @@ export interface PlantTimeProps {
   withDate?: boolean;
   /** table cells: the zone "(+03:30 Asia/Tehran)" on its own small line, so the column stays narrow */
   stacked?: boolean;
+  /** `false`: the wall clock only, without "(+03:30 Asia/Tehran)" (where the page already states the plant timezone) */
+  withZone?: boolean;
   className?: string;
 }
 
@@ -20,9 +22,10 @@ export function splitZone(text: string): { clock: string; zone: string | null } 
 
 /** `06:00 (+04:00 Asia/Dubai)`: plant wall clock with offset and zone; the UTC instant on hover;
  * the calendar and digits follow `useCalendarPreference()` (Gregorian without a provider). */
-export function PlantTime({ iso, tz, withDate = false, stacked = false, className }: PlantTimeProps) {
+export function PlantTime({ iso, tz, withDate = false, stacked = false, withZone = true, className }: PlantTimeProps) {
   const preference = useCalendarPreference();
-  const text = formatPlantTime(iso, tz, withDate, preference);
+  const formatted = formatPlantTime(iso, tz, withDate, preference);
+  const text = withZone ? formatted : splitZone(formatted).clock;
   if (!stacked) {
     return (
       <time className={className} dateTime={iso ?? undefined} title={iso ?? undefined}>

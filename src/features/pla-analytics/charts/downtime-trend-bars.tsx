@@ -22,6 +22,9 @@ const DOWNTIME_CLASS_COLOURS: Readonly<Record<ScheduleClass, string>> = {
 };
 const STOPS_COLOUR = 'hsl(var(--heading))';
 
+/** Legend text in the foreground token (the series colour stays on the swatch only, so grey series stay readable in dark mode). */
+export const legendText = (value: string) => <span style={{ color: 'hsl(var(--foreground))' }}>{value}</span>;
+
 const toNumber = (value: string | null | undefined) => (value === null || value === undefined ? null : Number(value));
 
 /** Stacked downtime per step by schedule class (server values, drawn not summed) with the stop count as a line on its own axis. */
@@ -39,7 +42,7 @@ export function DowntimeTrendBars({ rows, classes }: { rows: readonly DowntimeBa
           <YAxis yAxisId="time" tick={{ fontSize: 11 }} width={80} tickFormatter={(value: unknown) => unbreakable(seconds(value))} />
           <YAxis yAxisId="stops" orientation="right" allowDecimals={false} tick={{ fontSize: 11 }} width={40} />
           <Tooltip {...CHART_TOOLTIP_STYLE} formatter={(value: unknown, name: string) => (name === 'Stops' ? formatCount(String(value), digits) : seconds(value))} />
-          <Legend />
+          <Legend formatter={legendText} />
           {classes.map((c) => (
             <Bar key={c} yAxisId="time" dataKey={c} name={labelOf(SCHEDULE_CLASS_LABELS, c)} stackId="class" fill={DOWNTIME_CLASS_COLOURS[c]} isAnimationActive={false} />
           ))}

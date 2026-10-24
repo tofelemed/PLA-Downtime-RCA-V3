@@ -45,7 +45,7 @@ function DashboardScreen() {
         <ProductionPlanSection scope={scope} assetSelected={Boolean(node.assetId)} />
         <DowntimeSection scope={scope} assetId={node.assetId} />
         <ReliabilitySection scope={scope} node={node} />
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <ReconciliationTiles scope={scope} />
           <LatestEvents scope={scope} />
         </div>

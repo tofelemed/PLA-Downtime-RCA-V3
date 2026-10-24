@@ -16,7 +16,7 @@ const LATEST = 5;
 
 function columnsOf(env: EventHubEnv): Array<DataTableColumn<ProductionEventView>> {
   return [
-    { id: 'start', header: 'Start', nowrap: true, cell: (e) => <PlantTime iso={e.startTime} tz={env.timezone} withDate /> },
+    { id: 'start', header: 'Start', nowrap: true, cell: (e) => <PlantTime iso={e.startTime} tz={env.timezone} withDate withZone={false} /> },
     { id: 'unit', header: 'Unit', cell: (e) => env.unitName(e.unitId) },
     { id: 'type', header: 'Type', cell: (e) => labelOf(PHYSICAL_TYPE_LABELS, e.classification.physicalType) },
     { id: 'reason', header: 'Reason', cell: (e) => (e.reasonCodeId ? env.reasonName(e.reasonCodeId) : 'Not coded') },
@@ -37,7 +37,7 @@ export function LatestEvents({ scope }: { scope: AnalyticsScope }) {
   const state = dataStateOf(query);
   return (
     <KpiSection title="Latest loss events" link={{ to: eventsHref(scope), label: 'All events' }}>
-      <div data-testid="dashboard-latest-events">
+      <div data-testid="dashboard-latest-events" className="min-w-0 max-w-full overflow-x-auto">
         <DataTable
           caption="Latest loss events"
           columns={columnsOf(env)}

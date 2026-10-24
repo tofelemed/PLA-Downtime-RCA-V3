@@ -42,6 +42,11 @@ describe('UX kit formatting (plan 3.1)', () => {
     expect(formatPlantTime('nope', 'UTC')).toBe('—');
   });
 
+  it('PlantTime withZone={false} drops the zone suffix', () => {
+    render(<PlantTime iso="2026-10-09T02:30:00Z" tz="Asia/Tehran" withDate withZone={false} />);
+    expect(screen.getByText('2026-10-09 06:00')).toBeInTheDocument();
+  });
+
   it('formats decimal strings without floating point and always with a unit', () => {
     expect(roundDecimal('0.125', 2)).toBe('0.13');
     expect(roundDecimal('9.995', 2)).toBe('10.00');

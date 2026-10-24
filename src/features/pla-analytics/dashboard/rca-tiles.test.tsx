@@ -67,18 +67,4 @@ describe('Dashboard RCA tiles', () => {
     expect(screen.getByRole('link', { name: 'Overdue actions: 3, open the list' })).toHaveAttribute('href', '/rca?tab=actions&mine=false&overdue=true');
     expect(screen.queryByRole('link', { name: /Effectiveness pending/ })).toBeNull();
   });
-
-  it('links Investigations to operators and Cause portfolio only with analysis access', async () => {
-    caps.canViewAnalysis = false;
-    renderTiles();
-    await waitFor(() => expect(screen.getByTestId('dashboard-rca-open')).toBeInTheDocument());
-    expect(screen.getByRole('link', { name: 'Investigations' })).toHaveAttribute('href', '/rca');
-    expect(screen.queryByRole('link', { name: 'Cause portfolio' })).toBeNull();
-  });
-
-  it('links Cause portfolio with analysis access', async () => {
-    renderTiles();
-    await waitFor(() => expect(screen.getByTestId('dashboard-rca-open')).toBeInTheDocument());
-    expect(screen.getByRole('link', { name: 'Cause portfolio' })).toHaveAttribute('href', '/reliability/portfolio');
-  });
 });

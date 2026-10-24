@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useRcaSummary } from '@/api/v2/queries/rca-cases';
 import type { RcaCaseSummaryCounts } from '@/api/v2/types/rca';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
@@ -35,25 +34,6 @@ function TileCount({ tile, count }: { tile: RcaTile; count: string }) {
   );
 }
 
-/** Investigations (RCA Analysis is open to operators) and, for analysts, the cause portfolio: which causes cost most and whether the actions worked. */
-function RcaLinks() {
-  const { canViewOperations, canViewAnalysis } = useCapabilities();
-  return (
-    <div className="flex flex-wrap justify-end gap-4 text-sm font-medium">
-      {canViewAnalysis && (
-        <Link className="text-primary hover:underline" to="/reliability/portfolio" data-testid="dashboard-rca-portfolio">
-          Cause portfolio
-        </Link>
-      )}
-      {canViewOperations && (
-        <Link className="text-primary hover:underline" to={RCA_LIST_LINKS.all} data-testid="dashboard-rca-investigations">
-          Investigations
-        </Link>
-      )}
-    </div>
-  );
-}
-
 /** The five RCA counts of the caller's scope (server counts); the first four open their filtered list. */
 export function RcaTiles() {
   const query = useRcaSummary();
@@ -61,7 +41,6 @@ export function RcaTiles() {
   const { number } = useNumberFormat();
   return (
     <div className="space-y-3" data-testid="dashboard-rca">
-      <RcaLinks />
       {query.isLoading ? (
         <Skeleton className="h-20 w-full" />
       ) : (
