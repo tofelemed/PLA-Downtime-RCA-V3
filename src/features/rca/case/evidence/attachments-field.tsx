@@ -3,10 +3,9 @@ import type { RcaEvidenceAttachment } from '@/api/v2/types/rca';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
-import { Section } from '@/features/ux-kit/page-layout';
 import { uploadRcaFile } from '../../api/rca-files';
 import { AttachmentList } from './attachment-list';
-import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { FieldGroup } from './form-controls';
 
 export interface AttachmentsFieldProps {
   rcaId: string;
@@ -40,10 +39,12 @@ export function AttachmentsField({ rcaId, value, onChange, onBusy }: Attachments
     }
   };
   return (
-    <Section title="Files" headingLevel={3} titleAside={<KpiInfo label="Files" text="Photos, documents, spreadsheets or videos (up to 25 MB each)." />}>
-      <div className="space-y-2">
-        <Label htmlFor={inputId}>Add files</Label>
-        <Input id={inputId} type="file" multiple disabled={uploading} onChange={(e) => void upload(e.target.files)} />
+    <FieldGroup title="Files" info="Photos, documents, spreadsheets or videos (up to 25 MB each).">
+      <div className="space-y-2 md:col-span-2">
+        <div className="space-y-1">
+          <Label htmlFor={inputId}>Add files</Label>
+          <Input id={inputId} type="file" multiple className="h-9 max-w-md" disabled={uploading} onChange={(e) => void upload(e.target.files)} />
+        </div>
         {uploading && (
           <p role="status" className="text-sm text-muted-foreground">
             Uploading…
@@ -52,6 +53,6 @@ export function AttachmentsField({ rcaId, value, onChange, onBusy }: Attachments
         {error ? <FriendlyErrorAlert error={error} /> : null}
         <AttachmentList rcaId={rcaId} attachments={value} onRemove={(fileName) => onChange(value.filter((file) => file.fileName !== fileName))} />
       </div>
-    </Section>
+    </FieldGroup>
   );
 }
