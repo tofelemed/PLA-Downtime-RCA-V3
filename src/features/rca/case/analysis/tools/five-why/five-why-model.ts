@@ -81,6 +81,11 @@ export function depthGuidance(levels: number, guideline: number | null): string 
   return `${levels} of the ${guideline} levels of the guideline. ${base}`;
 }
 
+/** The depth in a few words next to the steps' title: "3 of 5 guideline levels" or "3 levels". */
+export function depthCount(levels: number, guideline: number | null): string {
+  return guideline ? `${levels} of ${guideline} guideline levels` : plural(levels, 'level', 'levels');
+}
+
 /** Plain-text report for the clipboard. */
 export function fiveWhyReport(content: FiveWhyContent): string {
   const chain = content.whyLevels.map((level) =>
