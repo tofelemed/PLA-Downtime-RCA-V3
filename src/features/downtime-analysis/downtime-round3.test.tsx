@@ -111,18 +111,18 @@ describe('Downtime round-3 QA fixes', () => {
     expect(screen.getByTestId('controllable-switch')).toHaveAttribute('data-state', 'checked');
   });
 
-  it('L21 / L23 / L25: unit chip in words, export reason on screen, page subtitle per page', async () => {
+  it('L23 / cleanup: export reason on screen; no unit chip or page subtitle', async () => {
     const { result } = renderHook(() => useDowntimeBundle(pageBundleQuery(FILTERS, 'overview', null), 'Asia/Tehran'), { wrapper });
     await waitFor(() => expect(result.current.data).toBeDefined());
-    render(<DowntimeHeader filters={FILTERS} bundle={result.current} title="Downtime analysis · Trends & comparisons" description="Compare downtime over time" />, { wrapper });
+    render(<DowntimeHeader filters={FILTERS} bundle={result.current} title="Downtime analysis · Trends & comparisons" />, { wrapper });
     expect(document.body.textContent).not.toContain('h:mm');
-    expect(document.body.textContent).toContain('hours and minutes');
+    expect(document.body.textContent).not.toContain('hours and minutes');
     const button = screen.getByTestId('downtime-export');
     expect(button).toBeDisabled();
     const reason = screen.getByTestId('disabled-reason');
     expect(reason).toHaveTextContent('approved figures only');
     expect(button).toHaveAttribute('aria-describedby', reason.id);
-    expect(screen.getByText('Compare downtime over time')).toBeInTheDocument();
+    expect(screen.queryByText('Compare downtime over time')).toBeNull();
   });
 
   it('N4 / L25: trend caption with a singular period and class names; axis ticks never wrap', () => {

@@ -20,6 +20,7 @@ export function ProductionDateRange({ from, to, timeZone, onChange }: Production
   return (
     <DateRangeInput
       label="Period dates"
+      toolbar
       value={toCalendarDayRange({ from, to }, timeZone, dayStart)}
       timeZone={timeZone}
       onChange={(range) => {

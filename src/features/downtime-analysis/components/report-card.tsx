@@ -1,32 +1,29 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { AnalyticsResponse } from '@/api/v2/types/envelopes';
-import { Badge } from '@/components/ui/badge';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf, type QueryLike } from '@/features/ux-kit/data-state-of';
 import { policyVersionsLabel } from '@/features/ux-kit/labels';
-import { Section } from '@/features/ux-kit/page-layout';
+import { ReportLookContext, type ReportLook } from '@/features/ux-kit/report-look';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { formatRatio, INCOMPLETE_TEXT } from '../model/kpi-display';
+import { FigureStatus } from './figure-status';
 
 type RunResponse = AnalyticsResponse<{ calculationRunIds: string[] }>;
 
-/** What a figure states about itself (UX03): approval, runs and coverage, policy versions behind "Details". */
+/** The card's label carries provisional figures once: rows get no marker of their own. */
+const CARD_LOOK: ReportLook = { provisional: false };
+
+/** What a figure states about itself (UX03): approval as the label; runs, coverage and policy versions behind its ⓘ. */
 export function ReportMeta({ response }: { response: RunResponse }) {
   const { digits, number } = useNumberFormat();
   const runs = response.data.calculationRunIds.length;
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground" data-testid="report-meta" data-run-count={runs}>
-      <Badge variant={response.isProvisional ? 'secondary' : 'default'}>{response.isProvisional ? 'Provisional' : 'Approved'}</Badge>
-      <span>Coverage {formatRatio(String(response.coverage.ratio), 0, digits)}</span>
-      <details className="inline">
-        <summary className="cursor-pointer">Details</summary>
-        <span>
-          {runs === 1 ? `${number(1)} calculation run` : `${number(runs)} calculation runs`}
-          {response.policyVersion ? ` · ${policyVersionsLabel(response.policyVersion)}` : ''}
-        </span>
-      </details>
-    </div>
-  );
+  const parts = [
+    `Coverage ${formatRatio(String(response.coverage.ratio), 0, digits)}`,
+    runs === 1 ? `${number(1)} calculation run` : `${number(runs)} calculation runs`,
+    ...(response.policyVersion ? [policyVersionsLabel(response.policyVersion)] : []),
+  ];
+  return <FigureStatus provisional={response.isProvisional} info={parts.join(' · ')} testId="report-meta" data={{ 'data-run-count': runs }} />;
 }
 
 export interface ReportCardProps {
@@ -36,7 +33,9 @@ export interface ReportCardProps {
   response: RunResponse | undefined;
   isEmpty?: boolean;
   emptyText?: string;
-  /** a label the figures need (scope or cohort note) */
+  /** what the figures mean, behind the ⓘ beside the title */
+  info?: ReactNode;
+  /** a row under the title the figures need (e.g. the reason level breadcrumb) */
   note?: ReactNode;
   actions?: ReactNode;
   /** false for widgets of the page snapshot: their runs and approval are stated once in the page header */
@@ -45,26 +44,40 @@ export interface ReportCardProps {
 }
 
 /**
- * A report section: title, the UX03 state of its query (incomplete when periods lack a run), the
- * figures, and — for reads outside the page snapshot — the approval / coverage line of its response.
+ * A report card (`rounded-lg border bg-card p-4`): h2 title with its ⓘ and — for reads outside the page
+ * snapshot — the Provisional / Approved label, actions right, then the UX03 state of its query (incomplete
+ * when periods lack a run) around the figures, in the shared compact report table look.
  */
 export function ReportCard(props: ReportCardProps) {
-  const { title, testId, query, response, isEmpty, emptyText, note, actions, showMeta = true, children } = props;
+  const { title, testId, query, response, isEmpty, emptyText, info, note, actions, showMeta = true, children } = props;
+  const headingId = useId();
   const incomplete = response ? response.coverage.ratio < 1 || response.dataQuality.missingCount > 0 : false;
   const state = dataStateOf(query, { isEmpty, isIncomplete: incomplete });
   return (
-    <Section title={title} actions={actions} description={note} className="rounded-md border p-4">
-      <div data-testid={testId} className="space-y-2">
-        <DataState
-          state={state}
-          error={query.error}
-          onRetry={() => query.refetch()}
-          detail={state === 'empty' ? emptyText : state === 'incomplete' ? INCOMPLETE_TEXT : undefined}
-        >
-          {children}
-        </DataState>
-        {response && showMeta && <ReportMeta response={response} />}
-      </div>
-    </Section>
+    <ReportLookContext.Provider value={CARD_LOOK}>
+      <section aria-labelledby={headingId} className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h2 id={headingId} className="text-base font-semibold text-heading">
+              {title}
+            </h2>
+            {info && <KpiInfo label={title} text={info} />}
+            {response && showMeta && <ReportMeta response={response} />}
+          </div>
+          {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
+        </div>
+        {note}
+        <div data-testid={testId} className="space-y-2">
+          <DataState
+            state={state}
+            error={query.error}
+            onRetry={() => query.refetch()}
+            detail={state === 'empty' ? emptyText : state === 'incomplete' ? INCOMPLETE_TEXT : undefined}
+          >
+            {children}
+          </DataState>
+        </div>
+      </section>
+    </ReportLookContext.Provider>
   );
 }

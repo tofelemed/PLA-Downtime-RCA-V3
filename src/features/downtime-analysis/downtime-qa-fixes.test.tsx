@@ -14,7 +14,6 @@ const { useDowntimeFilters } = await import('./hooks/use-downtime-filters');
 const { KpiSummary } = await import('./components/kpi-summary');
 const { pageBundleQuery } = await import('./model/bundle-views');
 const { parseFilters } = await import('./model/downtime-filters');
-const { activeFilterParts } = await import('./model/active-filters');
 const { reasonText } = await import('./model/kpi-display');
 
 const SEARCH = 'from=2026-10-17T02:30:00.000Z&to=2026-10-18T02:30:00.000Z&window=Chosen%20dates&units=u1&class=planned';
@@ -70,19 +69,6 @@ describe('Downtime QA audit fixes (F1, F2, L15)', () => {
     expect(screen.getByTestId('kpi-class-note')).toHaveTextContent('Figures for planned stops only');
     expect(screen.getByTestId('kpi-scheduled_availability')).toHaveTextContent('Not split by schedule class');
     expect(reasonText('not_by_schedule_class')).toBe('Not split by schedule class');
-  });
-
-  it('F2: the scope line names every active filter', () => {
-    const filters = parseFilters(new URLSearchParams(`${SEARCH}&products=p1&shifts=A&crews=c1&micro=1&approved=1`), 0);
-    expect(activeFilterParts(filters, { product: () => 'HD5502 HDPE film', crew: () => 'Crew A' })).toEqual([
-      'Products: HD5502 HDPE film',
-      'Shifts: A',
-      'Crews: Crew A',
-      'Schedule class: Planned',
-      'Micro-stops included',
-      'Approved only',
-    ]);
-    expect(activeFilterParts(parseFilters(new URLSearchParams('window=7d'), 0), { product: String, crew: String })).toEqual([]);
   });
 
   it('L15: a filter change closes the listed Pareto bar but keeps the analysis mode', () => {

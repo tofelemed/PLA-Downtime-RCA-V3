@@ -24,10 +24,3 @@ export function downtimePageSettings(view: DowntimeView, params: URLSearchParams
     showTrend: view === 'trends' && mode !== 'crew' && mode !== 'calendar',
   };
 }
-
-export const DOWNTIME_SCOPE_NOTES: Record<DowntimeFilterScope, string> = {
-  period: 'Product, shift and crew selections keep whole production periods. Stop drill-down shows the underlying operational records of the selected units and dates.',
-  operational: 'Current operational stops and state observations: product, shift, crew, micro-stop and approved-revision filters do not apply. The state timeline also ignores schedule class.',
-  output: 'Lost production uses every production period of the selected units and dates. Product, shift, crew, schedule-class and micro-stop filters do not apply.',
-  reliability: 'Reliability uses every production period of the selected units and dates. Product, shift, crew, schedule-class and micro-stop filters do not apply.',
-};

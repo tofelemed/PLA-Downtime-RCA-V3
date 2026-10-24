@@ -67,7 +67,7 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     await expect(tile(page, 'stop_count').getByTestId('kpi-value')).toHaveText('4');
     await expect(page.getByTestId('unknown-lower-bound')).toBeVisible();
     // snapshot widgets state approval once, in the page header (UX03)
-    await expect(page.getByTestId('scope-header')).toContainText('Provisional');
+    await expect(page.getByTestId('snapshot-runs')).toContainText('Provisional');
 
     // Pareto level 1 with the server's cumulative share reaching 100 %
     await expect(bars(page)).toHaveCount(3);
@@ -125,7 +125,6 @@ test.describe('Downtime Analysis — AN01 / T24 (plan 3.3)', () => {
     for (const report of current) expect([...report.body.data.calculationRunIds].sort()).toEqual(runIds);
     const shown = await page.getByTestId('snapshot-runs').getAttribute('data-run-ids');
     expect(shown?.split(',').sort()).toEqual(runIds);
-    await expect(page.getByTestId('snapshot-runs')).toContainText('same 3 calculation runs');
     // reads outside the snapshot keep their own status line; any shown names the same runs
     const metaCounts = await page.getByTestId('report-meta').evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-run-count')));
     for (const count of metaCounts.filter((c) => c !== '0')) expect(count).toBe('3');
