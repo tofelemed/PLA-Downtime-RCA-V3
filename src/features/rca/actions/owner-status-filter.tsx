@@ -11,10 +11,10 @@ export interface OwnerStatusFilterProps {
 /** "Status" of an owner's RCA actions: still to do, done, or all (Marun G2, QA L16). */
 export function OwnerStatusFilter({ id, value, onChange }: OwnerStatusFilterProps) {
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col gap-1.5">
       <Label htmlFor={id}>Status</Label>
       <Select value={value} onValueChange={(next) => onChange(OWNER_STATUSES.find((s) => s === next) ?? 'open')}>
-        <SelectTrigger id={id} className="w-full sm:w-56" data-testid="owner-action-status">
+        <SelectTrigger id={id} className="h-9 w-full sm:w-56" data-testid="owner-action-status">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
