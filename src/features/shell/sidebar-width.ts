@@ -7,5 +7,8 @@ export const SIDEBAR_WIDTH_CLASS = { expanded: 'w-52', collapsed: 'w-16' } as co
 export const sidebarWidthClass = (collapsed: boolean): string =>
   collapsed ? SIDEBAR_WIDTH_CLASS.collapsed : SIDEBAR_WIDTH_CLASS.expanded;
 
-/** The page content's left padding (`main` in Layout), repeated before the header's hierarchy. */
-export const CONTENT_INSET_CLASS = 'pl-4 md:pl-6';
+/**
+ * Inset before the header's hierarchy: the page content's left padding (`main`: p-4 / md:p-6) minus the
+ * hierarchy button's own `px-2`, so its first icon lines up with the page title.
+ */
+export const CONTENT_INSET_CLASS = 'pl-2 md:pl-4';
