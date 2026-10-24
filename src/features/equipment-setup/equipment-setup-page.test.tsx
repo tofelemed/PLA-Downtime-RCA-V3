@@ -6,7 +6,10 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { actAs } from '@/test/acting-user';
 import { EquipmentSetupPage } from './equipment-setup-page';
+import { pageNameOf } from '@/features/auth/navigation-items';
 import { SETUP_PHASES, SETUP_STEPS, setupStep } from './setup-steps';
+
+const setupStepTitle = () => pageNameOf('/equipment-setup');
 
 vi.mock('./equipment-readiness', () => ({ EquipmentReadiness: ({ children }: { children: ReactNode }) => <>{children}</> }));
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
@@ -51,14 +54,12 @@ describe('equipment setup guide page', () => {
 
   it('fills unit deep links from the chosen unit and keeps it in the URL', () => {
     show();
-    expect(within(stepRow('stop-policy')).getByText('Select a unit above to open this unit directly.')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Production unit (optional)'), { target: { value: 'unit-a' } });
     expect(screen.getByTestId('location')).toHaveTextContent('/equipment-setup?unitId=unit-a');
     expect(goTo('unit')).toHaveAttribute('href', '/master-data/units/unit-a');
     expect(goTo('stop-policy')).toHaveAttribute('href', '/master-data/stop-policy?unitId=unit-a');
     expect(goTo('state')).toHaveAttribute('href', '/master-data/unit-state?unitId=unit-a');
     expect(goTo('authority')).toHaveAttribute('href', '/connectivity/source-authority?unitId=unit-a');
-    expect(screen.queryByText('Select a unit above to open this unit directly.')).toBeNull();
   });
 
   it('reads a shared unit from the URL', () => {
@@ -86,5 +87,25 @@ describe('equipment setup guide page', () => {
   it('no longer puts a setup bar on the other pages', () => {
     const layout = readFileSync(join(__dirname, '../../components/Layout.tsx'), 'utf8');
     expect(layout).not.toMatch(/SetupJourneyBar|EquipmentSetupProvider/);
+  });
+
+  // cleanup 25 Oct 2026: no description, hints or footer notes; the guide's rules behind the title ⓘ
+  it('has no header description, unit hint, phase captions, per-step unit hints or footer note', () => {
+    show();
+    expect(screen.queryByText(/Set up a production unit, such as an HDPE extruder/)).toBeNull();
+    expect(screen.queryByText(/Choose a unit to open it directly/)).toBeNull();
+    for (const phase of SETUP_PHASES) expect(screen.queryByText(phase.description)).toBeNull();
+    expect(screen.queryByText('Select a unit above to open this unit directly.')).toBeNull();
+    expect(screen.queryByText(/Opening a page from this guide does not save/)).toBeNull();
+    expect(screen.getByRole('button', { name: `About ${setupStepTitle()}` })).toBeInTheDocument();
+  });
+
+  it('keeps the guide controls h-9 on one row: unit first, then Expand all / Collapse all', () => {
+    show();
+    const toolbar = screen.getByRole('region', { name: 'Guide options' });
+    expect(within(toolbar).getByLabelText('Production unit (optional)')).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: 'Expand all' })).toHaveClass('h-9');
+    expect(within(toolbar).getByRole('button', { name: 'Collapse all' })).toHaveClass('h-9');
+    expect(toolbar).toHaveClass('items-end');
   });
 });

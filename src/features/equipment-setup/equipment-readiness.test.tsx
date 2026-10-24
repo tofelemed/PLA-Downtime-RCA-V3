@@ -44,7 +44,15 @@ describe('automatic equipment readiness', () => {
     await screen.findByText('Approved profile covers the full window.');
     expect(screen.getByRole('status')).toHaveTextContent('Passed 1 · Missing 1 · Needs attention 1 · Not checked 1');
     expect(screen.getByTestId('step-status')).toHaveTextContent('Missing');
-    expect(screen.getByText(/Last checked:/)).toHaveTextContent('Asia/Dubai');
+    // cleanup 25 Oct 2026: no zone suffix, the explanation behind the ⓘ, the filter row h-9
+    expect(screen.getByText(/Last checked:/)).not.toHaveTextContent('Asia/Dubai');
+    expect(screen.queryByText(/Updates on return and every minute/)).toBeNull();
+    expect(screen.queryByText(/Results apply to the product/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Automatic readiness checks' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Product grade')).toHaveClass('h-9');
+    expect(screen.getByLabelText('Operating mode')).toHaveClass('h-9');
+    expect(screen.queryByText(/Must match the production profile/)).toBeNull();
+    expect(screen.getByRole('link', { name: /Open / })).toHaveAttribute('href', '/approvals');
     expect(screen.getAllByRole('link', { name: `Go to ${setupStep('profiles').page}` })[0]).toHaveAttribute('href', '/setup/profiles');
     fireEvent.click(screen.getByRole('button', { name: 'Refresh checks' }));
     await waitFor(() => expect(calls.length).toBeGreaterThan(1));
