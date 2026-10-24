@@ -10,14 +10,15 @@ export interface SelectFieldProps {
   onChange: (value: string) => void;
   /** a first choice that emits '' (e.g. "All units") */
   placeholder?: string;
+  disabled?: boolean;
 }
 
 /** A filter-bar select of the Asset reliability reports: label above, h-9 control (as on the PLA and Downtime pages). */
-export function SelectField({ id, label, value, options, onChange, placeholder }: SelectFieldProps) {
+export function SelectField({ id, label, value, options, onChange, placeholder, disabled }: SelectFieldProps) {
   return (
     <div className={FIELD_CLASS}>
       <Label htmlFor={id}>{label}</Label>
-      <NativeSelect id={id} value={value} options={options} onChange={onChange} placeholder={placeholder} />
+      <NativeSelect id={id} value={value} options={options} onChange={onChange} placeholder={placeholder} disabled={disabled} />
     </div>
   );
 }
