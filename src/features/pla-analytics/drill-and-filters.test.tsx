@@ -48,13 +48,16 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
     expect(drills[2].getAttribute('href')).toMatch(/^\/pla-analytics\/reconciliation\?/);
   });
 
-  it('the window control shows plant dates and holds the presets and the date range together', () => {
+  it('the window is a preset select plus From / To fields, with no dates inside the select', () => {
     const onChange = vi.fn();
     wrap(<WindowRangeControl scope={SCOPE} timeZone="UTC" onChange={onChange} />);
-    expect(screen.getByTestId('pla-window')).toHaveTextContent('Last 7 days · 2026-10-11 – 2026-10-17');
-    fireEvent.click(screen.getByTestId('pla-window'));
+    const select = screen.getByLabelText('Window') as HTMLSelectElement;
+    expect(select.tagName).toBe('SELECT');
+    expect(select).toHaveValue('7d');
+    expect(select.selectedOptions[0]).toHaveTextContent(/^Last 7 days$/);
     expect(screen.getByLabelText('From')).toHaveValue('2026-10-11');
-    fireEvent.click(screen.getByTestId('pla-window-30d'));
+    expect(screen.getByLabelText('To')).toHaveValue('2026-10-17');
+    fireEvent.change(select, { target: { value: '30d' } });
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ windowLabel: 'Last 30 days' }));
   });
 
@@ -62,8 +65,9 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
     const onChange = vi.fn();
     const day = parseScope(new URLSearchParams('from=2026-10-17T02:30:00.000Z&to=2026-10-18T02:30:00.000Z'), 0);
     wrap(<WindowRangeControl scope={day} timeZone="Asia/Tehran" onChange={onChange} />);
-    expect(screen.getByTestId('pla-window')).toHaveTextContent('Chosen dates · 2026-10-17 (production day 06:00–06:00)');
-    fireEvent.click(screen.getByTestId('pla-window'));
+    const select = screen.getByLabelText('Window') as HTMLSelectElement;
+    expect(select).toHaveValue('');
+    expect(select.selectedOptions[0]).toHaveTextContent('Chosen dates');
     const to = screen.getByLabelText('To');
     expect(to).toHaveAttribute('type', 'text');
     expect(to).toHaveValue('2026-10-17');

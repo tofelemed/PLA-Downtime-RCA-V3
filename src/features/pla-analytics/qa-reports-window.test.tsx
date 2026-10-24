@@ -71,16 +71,20 @@ describe('QA Reports N1: production days and machine URL values', () => {
 });
 
 describe('QA PLA window labels (N6, shift C)', () => {
-  it('a rolling window shows its real bounds with times', () => {
+  it('a rolling window shows its preset and the plant dates it spans', () => {
     const scope = parseScope(new URLSearchParams('window=7d'), NOW);
     wrap(<WindowRangeControl scope={scope} timeZone={TEHRAN} onChange={vi.fn()} />);
-    expect(screen.getByTestId('pla-window')).toHaveTextContent('Last 7 days · 2026-10-12 15:04 – 2026-10-19 15:04');
+    expect(screen.getByLabelText('Window')).toHaveValue('7d');
+    expect(screen.getByLabelText('From')).toHaveValue('2026-10-12');
+    expect(screen.getByLabelText('To')).toHaveValue('2026-10-19');
   });
 
   it('a shift-C window reads as part of one production day', () => {
     const scope = parseScope(new URLSearchParams('from=2026-10-17T18:30:00.000Z&to=2026-10-18T02:30:00.000Z&window=dates'), NOW);
     wrap(<WindowRangeControl scope={scope} timeZone={TEHRAN} onChange={vi.fn()} />);
-    expect(screen.getByTestId('pla-window')).toHaveTextContent('Chosen dates · Production day 2026-10-17 · 22:00–06:00');
+    expect(screen.getByLabelText('Window')).toHaveValue('');
+    expect(screen.getByLabelText('From')).toHaveValue('2026-10-17');
+    expect(screen.getByLabelText('To')).toHaveValue('2026-10-17');
   });
 });
 
