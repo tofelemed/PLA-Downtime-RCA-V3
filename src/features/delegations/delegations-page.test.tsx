@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { configureV2Session } from '@/api/v2/config';
@@ -74,6 +74,68 @@ describe('delegations page (SME R1 / R6)', () => {
     await waitFor(() => expect(screen.getByText('Reza Deputy')).toBeTruthy());
     expect(screen.queryByTestId('delegation-revoke')).toBeNull();
     expect(screen.queryByTestId('delegation-new')).toBeNull();
+  });
+});
+
+describe('Approval delegations cleanup (25 Oct 2026)', () => {
+  const wrap = (node: ReactNode) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{node}</QueryClientProvider>);
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(async () => json({ items: [DELEGATION], nextCursor: null, asOf: '2026-10-15T00:00:00.000Z', scope: { tenantId: 'tenant-a' } })));
+    configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    actAs('SuperAdmin', 'user-1');
+  });
+
+  it('the description sits behind ⓘ; the list is a card with its count, the Show filter and times without a zone', async () => {
+    actAs('manager_approver', 'manager');
+    wrap(<DelegationsPage />);
+    await waitFor(() => expect(screen.getByText('Reza Deputy')).toBeTruthy());
+    expect(screen.queryByText(/Hand an approval role to a delegate/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About Approval delegations' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Approval delegations', level: 2 })).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Show' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'In force', pressed: true })).toBeTruthy();
+    expect(screen.queryByText(/Asia\/Tehran|\+03:30/)).toBeNull();
+  });
+
+  it('New delegation opens a dialog: the role holder hands over their own role as text, first field focused, Cancel closes', async () => {
+    actAs('manager_approver', 'manager');
+    wrap(<DelegationsPage />);
+    fireEvent.click(await screen.findByTestId('delegation-new'));
+    const dialog = await screen.findByRole('dialog', { name: 'New delegation' });
+    expect(within(dialog).getByTestId('delegation-delegator-text')).toBeTruthy();
+    expect(within(dialog).queryByTestId('delegation-delegator')).toBeNull();
+    await waitFor(() => expect(within(dialog).getByTestId('delegation-delegate')).toHaveFocus());
+    expect(within(dialog).getByTestId('delegation-save')).toBeDisabled();
+    const names = within(dialog).getAllByRole('button').map((button) => button.textContent?.trim());
+    expect(names.indexOf('Cancel')).toBeLessThan(names.indexOf('Delegate'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('a plant administrator chooses who hands over; Esc closes the dialog', async () => {
+    actAs('TenantAdmin', 'admin');
+    wrap(<DelegationsPage />);
+    fireEvent.click(await screen.findByTestId('delegation-new'));
+    const dialog = await screen.findByRole('dialog', { name: 'New delegation' });
+    expect(within(dialog).getByTestId('delegation-delegator')).toBeTruthy();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('Revoke opens a confirm with a labelled reason, focused; the confirm waits for the reason', async () => {
+    actAs('manager_approver', 'manager');
+    wrap(<DelegationsPage />);
+    fireEvent.click(await screen.findByTestId('delegation-revoke'));
+    const confirm = await screen.findByRole('alertdialog', { name: 'End this delegation now?' });
+    await waitFor(() => expect(within(confirm).getByLabelText('Reason')).toHaveFocus());
+    expect(within(confirm).getByRole('button', { name: 'Revoke delegation' })).toBeDisabled();
+    fireEvent.change(within(confirm).getByLabelText('Reason'), { target: { value: 'back early' } });
+    expect(within(confirm).getByRole('button', { name: 'Revoke delegation' })).toBeEnabled();
+    fireEvent.keyDown(confirm, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
   });
 });
 
