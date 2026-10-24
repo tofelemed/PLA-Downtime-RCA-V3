@@ -19,13 +19,15 @@ export interface DateTimeInputProps {
   required?: boolean;
   /** an error owned by the caller, shown under the date */
   error?: string | null;
+  /** opt-in h-9 date, calendar and time controls (forms of 36 px controls); default height otherwise */
+  compact?: boolean;
 }
 
 /**
  * Date (tenant calendar) plus 24-hour time on the plant clock, converted DST-safely to UTC.
  * Picking a date without a time means 00:00.
  */
-export function DateTimeInput({ label, value, timeZone, onChange, calendar, disabled, required, error }: DateTimeInputProps) {
+export function DateTimeInput({ label, value, timeZone, onChange, calendar, disabled, required, error, compact }: DateTimeInputProps) {
   const [local, setLocal] = useState<LocalDateTime>(() => splitInstant(value, timeZone));
 
   useEffect(() => {
@@ -55,12 +57,13 @@ export function DateTimeInput({ label, value, timeZone, onChange, calendar, disa
             disabled={disabled}
             required={required}
             error={error}
+            compact={compact}
             onChange={(date) => update({ date, time: date ? local.time : '' })}
           />
         </div>
         <Input
           type="time"
-          className="w-[8rem]"
+          className={compact ? 'h-9 w-[8rem]' : 'w-[8rem]'}
           aria-label={`${label} time`}
           value={local.time}
           disabled={disabled || !local.date}

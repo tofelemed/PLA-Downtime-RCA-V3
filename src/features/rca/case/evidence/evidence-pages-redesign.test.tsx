@@ -181,6 +181,17 @@ describe('evidence form (RCA detail redesign)', () => {
     expect(within(footer).getAllByRole('button').map((button) => button.textContent)).toEqual(['Cancel', 'Add evidence']);
   });
 
+  it('date and time fields are compact (h-9) in the evidence form and the historian query', async () => {
+    const series = { streams: 'P101.VIB', mode: 'summary', start: '2026-10-01T06:00:00.000Z', end: '2026-10-01T08:00:00.000Z', interval: null, intervals: 12, summaryTypes: 'max' };
+    query.rca = { ...structuredClone(CASE), evidence: [{ ...ITEM, type: 'Time Series', timeSeries: series } as unknown as RcaEvidenceItem] };
+    render(app('/rca/c1/evidence/ev-1/edit'));
+    const form = await screen.findByTestId('evidence-form');
+    for (const label of ['Observed at', 'From', 'To']) {
+      expect(within(form).getByLabelText(`${label} date`)).toHaveClass('h-9');
+      expect(within(form).getByLabelText(`${label} time`)).toHaveClass('h-9');
+    }
+  });
+
   it('shows the title validation under the field once it is left empty', async () => {
     render(app('/rca/c1/evidence/new'));
     const title = await screen.findByLabelText(/^Title/);

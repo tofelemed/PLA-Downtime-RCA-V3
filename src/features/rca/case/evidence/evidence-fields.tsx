@@ -34,7 +34,7 @@ export function EvidenceDetailsFields({ form, onChange, titleTouched = false, on
       <ChoiceField id="ev-type" label="Type" value={form.type} options={optionsOf(EVIDENCE_TYPES)} onChange={(type) => onChange({ type })} />
       <TextField id="ev-source" label="Source (tag, document, photo reference)" value={form.source} maxLength={500} onChange={(source) => onChange({ source })} />
       <AreaField id="ev-description" label="Description" value={form.description} maxLength={4000} onChange={(description) => onChange({ description })} />
-      <DateTimeInput label="Observed at" value={form.occurredAt} timeZone={timezone} onChange={(occurredAt) => onChange({ occurredAt })} />
+      <DateTimeInput compact label="Observed at" value={form.occurredAt} timeZone={timezone} onChange={(occurredAt) => onChange({ occurredAt })} />
       <ChoiceField id="ev-asset" label="Related asset" value={form.assetId} options={assets} allowNone="No asset" onChange={(assetId) => onChange({ assetId })} />
     </FieldGroup>
   );

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { CalendarPopover } from './calendar-popover';
 import { DateInput } from './date-input';
 import { DateRangeInput } from './date-range-input';
+import { DateTimeInput } from './date-time-input';
 import type { InstantRange } from './date-input-model';
 
 const RANGE: InstantRange = { from: '2026-10-01T00:00:00.000Z', to: '2026-10-13T00:00:00.000Z' };
@@ -60,5 +61,19 @@ describe('DateRangeInput toolbar option', () => {
     expect(screen.getByLabelText('To')).toHaveClass('h-9');
     expect(calendarButton('From')).toHaveClass('h-9');
     expect(calendarButton('To')).toHaveClass('h-9');
+  });
+});
+
+describe('DateTimeInput compact option', () => {
+  it('keeps the default heights without `compact` (other pages unchanged)', () => {
+    render(<DateTimeInput label="Observed at" value="2026-10-12T08:30:00.000Z" timeZone="UTC" onChange={vi.fn()} />);
+    expect(screen.getByLabelText('Observed at date')).not.toHaveClass('h-9');
+    expect(screen.getByLabelText('Observed at time')).not.toHaveClass('h-9');
+  });
+
+  it('makes the date and time fields h-9 with `compact`', () => {
+    render(<DateTimeInput label="Observed at" value="2026-10-12T08:30:00.000Z" timeZone="UTC" onChange={vi.fn()} compact />);
+    expect(screen.getByLabelText('Observed at date')).toHaveClass('h-9');
+    expect(screen.getByLabelText('Observed at time')).toHaveClass('h-9', 'w-[8rem]');
   });
 });
