@@ -108,7 +108,8 @@ test.describe('HDPE RCA workspace decomposition', () => {
     await signIn(page, 'grace.whitfield@demo.acme.com');
     await page.goto(`/rca/${rca.id}/definition`);
     await expect(page.getByTestId('case-definition-page')).toBeVisible();
-    await expect(page.locator('#edit-description')).toBeDisabled();
+    await expect(page.getByTestId('case-editor')).toHaveAttribute('data-mode', 'read');
+    await expect(page.locator('#edit-description')).toHaveCount(0);
     await expect(page.getByTestId('save-case')).toHaveCount(0);
     await page.getByRole('link', { name: 'Back to overview', exact: true }).click();
     await expect(page.getByTestId('edit-definition')).toHaveCount(0);
