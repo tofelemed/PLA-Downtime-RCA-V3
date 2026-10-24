@@ -13,16 +13,17 @@ test.describe('Reports Module', () => {
     await expect(page.getByTestId('report-oee')).toBeVisible({ timeout: 15000 });
   });
 
-  test('all report views render and the chosen view is kept in the URL', async ({ page }) => {
+  test('the report type and report dropdowns open each view and keep it in the URL', async ({ page }) => {
     await page.goto('/reports');
     await expect(page.getByTestId('reports-v2')).toBeVisible({ timeout: 15000 });
-    for (const tab of ['Reconciliation', 'Loss value', 'Work summary', 'Exports', 'OEE and downtime']) {
-      await page.getByRole('tab', { name: tab }).click();
-      await expect(page.getByRole('tab', { name: tab })).toHaveAttribute('data-state', 'active');
+    const views = [['pla', 'reconciliation'], ['pla', 'value'], ['management', 'exports'], ['downtime', 'production']] as const;
+    for (const [type, view] of views) {
+      await page.getByTestId('report-type').selectOption(type);
+      await page.getByTestId('report-view').selectOption(view);
+      await expect(page).toHaveURL(new RegExp(`view=${view}`));
     }
-    await page.getByRole('tab', { name: 'Work summary' }).click();
-    await expect(page).toHaveURL(/view=activity/);
-    await expect(page.getByTestId('report-work-summary')).toBeVisible();
+    await page.goto('/reports?view=rca');
+    await expect(page.getByTestId('report-type')).toHaveValue('reliability');
   });
 
   test('audit page loads as dedicated page', async ({ page }) => {

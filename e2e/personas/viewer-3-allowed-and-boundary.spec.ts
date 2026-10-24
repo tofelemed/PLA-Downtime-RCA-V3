@@ -60,7 +60,8 @@ test.describe('Viewer — read-only-allowed routes, scope boundary, user lists',
     await page.goto(url);
     await expect(page.getByTestId('reports-v2')).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId('report-snapshot')).toHaveAttribute('data-unit-ids', unit, { timeout: 60_000 });
-    await page.getByTestId('report-tab-exports').click();
+    await page.getByTestId('report-type').selectOption('management');
+    await page.getByTestId('report-view').selectOption('exports');
     const start = page.getByTestId('export-period-summary-start');
     await expect(start).toBeEnabled({ timeout: 60_000 });
     const accepted = page.waitForResponse((r) => r.url().endsWith('/v2/exports') && r.request().method() === 'POST');
