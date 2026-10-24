@@ -83,7 +83,7 @@ export function OeeGroupTable({ report, groupTitle, labelOf, testId, caption, ro
   return (
     <div data-testid={testId}>
       <DataTable
-        caption={caption ?? `${onReports ? reportText(report.label) : report.label} by ${inSentence(groupTitle)}`}
+        caption={caption ?? `${onReports && report.label ? reportText(report.label) : report.label} by ${inSentence(groupTitle)}`}
         columns={columnsOf({ metrics, groupTitle, labelOf, digits, rowMarks })}
         rows={report.groups}
         getRowKey={(group) => group.key ?? '-'}
