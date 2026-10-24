@@ -53,6 +53,21 @@ describe('Work-order operations (SME D10)', () => {
     expect(await within(panel).findByText('Imported 1 operation: 1 new, 0 updated, 1 linked to a stop.')).toBeInTheDocument();
   });
 
+  it('has no explanatory paragraphs; the definitions sit in the info buttons and the table is compact', async () => {
+    stubV2Fetch((call: V2Call) => (call.url.pathname.endsWith('/work-order-operations') ? jsonResponse(200, listPage([OPERATION])) : undefined));
+    actAs('reliability_engineer');
+    wrap(<WorkOrdersPage />, '/master-data/work-orders');
+    const table = await screen.findByRole('table', { name: 'Work-order operations' });
+    await waitFor(() => expect(within(table).getByText('4000123 / 0020')).toBeInTheDocument());
+    expect(screen.queryByText(/Maintenance operations from the CMMS/)).toBeNull();
+    expect(screen.queryByText(/Rows upsert on work order/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About work-order operations' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'About the CMMS import' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Operations' })).toBeInTheDocument();
+    expect(within(table).getByText('Repair')).toBeInTheDocument();
+    expect(within(table).queryByText(/\(active repair\)/)).toBeNull();
+  });
+
   it('a stop page shows active repair vs waiting as the server counts it', async () => {
     stubV2Fetch((call) => (call.url.pathname.endsWith('/repair-evidence') ? jsonResponse(200, EVIDENCE) : undefined));
     actAs('Operator');

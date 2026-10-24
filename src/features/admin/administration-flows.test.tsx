@@ -118,6 +118,16 @@ describe('administration screens on v2', () => {
     expect(calls.some((call) => call.url.pathname === '/api/v2/tasks/summary')).toBe(true);
   });
 
+  it('keeps the tasks page free of explanatory text: definitions in the info button, labelled filters above the controls', async () => {
+    wrap(<TasksPage />, '/tasks');
+    expect(await screen.findByText('Replace seal')).toBeTruthy();
+    expect(screen.queryByText(/Assign, track and complete tasks/)).toBeNull();
+    expect(screen.queryByText(/Counts use search, priority and My tasks/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'About the task counts' })).toBeTruthy();
+    ['Search', 'Status', 'Priority'].forEach((name) => expect(screen.getByText(name, { selector: 'label' })).toBeTruthy());
+    expect(screen.getByRole('link', { name: /New task/ })).toBeTruthy();
+  });
+
   it('groups plant settings with the related administration sections (no dashboard settings, FE-02) and hides branding from plant administrators', async () => {
     wrap(<AdminPage />, '/admin');
     expect((await screen.findAllByRole('tab')).map((tab) => tab.textContent)).toEqual(['Custom attributes', 'Branding', 'Status automation', 'Plant settings']);

@@ -2,24 +2,28 @@ import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { type TaskFilters, useTaskSummary, useTasksPage } from '@/api/v2/queries/administration-tasks';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { ALL, FilterSelect, optionsOf } from '@/features/admin/shared/filter-select';
+import { ALL, optionsOf } from '@/features/admin/shared/filter-select';
 import { PageGate } from '@/features/admin/shared/page-gate';
 import { usePlantDates } from '@/features/admin/shared/use-plant-dates';
 import { useUrlFilters } from '@/features/admin/shared/use-url-filters';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataTable } from '@/features/ux-kit/data-table';
-import { DebouncedSearchInput } from '@/features/ux-kit/debounced-search-input';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from '@/features/ux-kit/labels';
-import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
+import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { ActionIcon } from '@/lib/icons';
+import { ReportLookContext } from '@/features/ux-kit/report-look';
 import { taskColumns } from './components/task-columns';
 import { TaskSummary } from './components/task-summary';
+import { TasksFilterBar } from './components/tasks-filter-bar';
 
 const DEFAULTS = { q: '', status: ALL, priority: ALL, mine: '', overdue: '' } as const;
 const STATUS_OPTIONS = optionsOf(TASK_STATUS_LABELS, 'All statuses');
 const PRIORITY_OPTIONS = optionsOf(TASK_PRIORITY_LABELS, 'All priorities');
+
+/** The shared report table look (compact rows, small uppercase headers); tasks have no provisional figures. */
+const TASKS_LOOK = { provisional: false, ownEmpty: true } as const;
+const SUMMARY_INFO = 'Counts use search, priority and My tasks. Status and Overdue only filter the task list.';
 
 function toFilters(values: Record<keyof typeof DEFAULTS, string>): TaskFilters {
   return {
@@ -41,15 +45,6 @@ export function TasksPage() {
   );
 }
 
-function Toggle({ id, label, checked, onChange }: { id: string; label: string; checked: boolean; onChange: (on: boolean) => void }) {
-  return (
-    <div className="flex items-center gap-2">
-      <Switch id={id} checked={checked} onCheckedChange={onChange} />
-      <Label htmlFor={id}>{label}</Label>
-    </div>
-  );
-}
-
 function TasksScreen() {
   const navigate = useNavigate();
   const { canWriteTasks } = useCapabilities();
@@ -63,7 +58,6 @@ function TasksScreen() {
     <Page width="wide">
       <PageHeader
         title="Tasks"
-        description="Assign, track and complete tasks linked to investigations, events and plans."
         actions={
           canWriteTasks && (
             <Button asChild>
@@ -75,29 +69,31 @@ function TasksScreen() {
           )
         }
       />
-      <Section title="Summary" description="Counts use search, priority and My tasks. Status and Overdue only filter the task list.">
-        <TaskSummary summary={summary.data} loading={summary.isLoading} isError={summary.isError} error={summary.error} onRetry={() => void summary.refetch()} />
-      </Section>
-      <Section title="Tasks">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <DebouncedSearchInput label="Search tasks" value={values.q} onChange={(q) => setValues({ q })} />
-          <FilterSelect label="Status filter" value={values.status} options={STATUS_OPTIONS} onChange={(status) => setValues({ status })} />
-          <FilterSelect label="Priority filter" value={values.priority} options={PRIORITY_OPTIONS} onChange={(priority) => setValues({ priority })} />
-          <Toggle id="tasks-mine" label="My tasks" checked={values.mine === '1'} onChange={(on) => setValues({ mine: on ? '1' : '' })} />
-          <Toggle id="tasks-overdue" label="Overdue only" checked={values.overdue === '1'} onChange={(on) => setValues({ overdue: on ? '1' : '' })} />
-        </div>
-        <DataTable
-          caption="Tasks"
-          columns={columns}
-          rows={tasks.rows}
-          getRowKey={(task) => task.id}
-          pager={tasks.pager}
-          status={tasks.status}
-          empty={{ title: 'No tasks', text: 'No task matches the filters.' }}
-          onRowClick={(task) => navigate(`/tasks/${task.id}`)}
-          rowLabel={(task) => `Open task ${task.title}`}
-        />
-      </Section>
+      <ReportLookContext.Provider value={TASKS_LOOK}>
+        <section aria-labelledby="tasks-summary-title" className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-1.5">
+            <h2 id="tasks-summary-title" className="text-base font-semibold text-heading">Summary</h2>
+            <KpiInfo label="the task counts" text={SUMMARY_INFO} />
+          </div>
+          <TaskSummary summary={summary.data} loading={summary.isLoading} isError={summary.isError} error={summary.error} onRetry={() => void summary.refetch()} />
+        </section>
+        <section aria-labelledby="tasks-list-title" className="min-w-0 space-y-3 rounded-lg border bg-card p-4">
+          <h2 id="tasks-list-title" className="text-base font-semibold text-heading">Tasks</h2>
+          <TasksFilterBar values={values} statusOptions={STATUS_OPTIONS} priorityOptions={PRIORITY_OPTIONS} onChange={setValues} />
+          <DataTable
+            caption="Tasks"
+            columns={columns}
+            rows={tasks.rows}
+            getRowKey={(task) => task.id}
+            pager={tasks.pager}
+            status={tasks.status}
+            density="compact"
+            empty={{ title: 'No tasks', text: 'No task matches the filters.' }}
+            onRowClick={(task) => navigate(`/tasks/${task.id}`)}
+            rowLabel={(task) => `Open task ${task.title}`}
+          />
+        </section>
+      </ReportLookContext.Provider>
     </Page>
   );
 }
