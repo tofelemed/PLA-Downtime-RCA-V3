@@ -1,20 +1,11 @@
-import type { ReactNode } from 'react';
 import type { RcaCaseView } from '@/api/v2/types/rca';
 import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import { labelOf, useUserNames } from '@/features/ux-kit/labels';
 import { RCA_VERDICT_LABELS } from '@/features/ux-kit/labels/rca-labels';
 import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { useRcaFormat } from '../../use-rca-format';
+import { CaseFact as Fact, CaseFacts } from '../components/case-facts';
 import { RunHourPolicyNote } from './run-hour-policy-note';
-
-function Fact({ label, children, testId }: { label: string; children: ReactNode; testId?: string }) {
-  return (
-    <>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="mb-2 min-w-0 break-words sm:mb-0" data-testid={testId}>{children}</dd>
-    </>
-  );
-}
 
 function verdictText(rca: RcaCaseView, readiness: RcaCaseReadinessView): string {
   if (rca.effectivenessVerdict) return `${labelOf(RCA_VERDICT_LABELS, rca.effectivenessVerdict)} (frozen when closure was requested)`;
@@ -30,7 +21,7 @@ export function WorkflowFacts({ rca, readiness }: { rca: RcaCaseView; readiness:
   const requested = who(rca.closureRequestedBy, rca.closureRequestedAt);
   const approved = who(rca.closureApprovedBy, rca.closureApprovedAt);
   return (
-    <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-[12rem_minmax(0,1fr)]" data-testid="workflow-facts">
+    <CaseFacts layout="stacked" testId="workflow-facts">
       <Fact label="Effectiveness" testId="workflow-verdict">
         {verdictText(rca, readiness)}
       </Fact>
@@ -50,15 +41,15 @@ export function WorkflowFacts({ rca, readiness }: { rca: RcaCaseView; readiness:
       )}
       {rca.residualRisk && (
         <Fact label="Residual risk">
-          <span className="whitespace-pre-wrap">{rca.residualRisk}</span>
+          {rca.residualRisk}
           <RunHourPolicyNote rca={rca} />
         </Fact>
       )}
       {rca.closureNote && (
         <Fact label="Last workflow note">
-          <span className="whitespace-pre-wrap">{rca.closureNote}</span>
+          {rca.closureNote}
         </Fact>
       )}
-    </dl>
+    </CaseFacts>
   );
 }

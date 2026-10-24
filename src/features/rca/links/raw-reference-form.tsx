@@ -18,11 +18,11 @@ export function RawReferenceForm({ busy, onLink }: RawReferenceFormProps) {
     if (await onLink(linkType, targetId.trim())) setTargetId('');
   };
   return (
-    <details className="rounded border p-2" data-testid="raw-reference">
+    <details className="rounded-md border px-3 py-2" data-testid="raw-reference">
       <summary className="cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Advanced: link by reference</summary>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
         <select
-          className="rounded border bg-background px-2 text-sm"
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
           aria-label="Reference type"
           value={linkType}
           onChange={(e) => setLinkType(RCA_LINK_TYPES.find((type) => type === e.target.value) ?? 'event')}
@@ -33,8 +33,8 @@ export function RawReferenceForm({ busy, onLink }: RawReferenceFormProps) {
             </option>
           ))}
         </select>
-        <Input className="max-w-sm" aria-label="Reference" placeholder="Reference copied from the record" value={targetId} onChange={(e) => setTargetId(e.target.value)} />
-        <Button type="button" size="sm" disabled={targetId.trim() === '' || busy} onClick={() => void submit()} data-testid="link-reference">
+        <Input className="h-9 max-w-sm" aria-label="Reference" placeholder="Reference copied from the record" value={targetId} onChange={(e) => setTargetId(e.target.value)} />
+        <Button type="button" disabled={targetId.trim() === '' || busy} onClick={() => void submit()} data-testid="link-reference">
           Link reference
         </Button>
       </div>

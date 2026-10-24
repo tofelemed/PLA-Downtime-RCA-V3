@@ -81,13 +81,16 @@ export function CaseTrace() {
   const impact = outcome.data?.approvedHistoricalLoss;
   if (!trigger && !impact) return null;
   return (
-    <span className="flex flex-wrap items-center gap-x-2 text-sm" data-testid="case-trace">
-      {trigger ? <TriggerText link={trigger} others={others} /> : <span>Not linked to an event</span>}
+    <span className="contents" data-testid="case-trace">
+      <span>
+        <span aria-hidden="true">· </span>
+        {trigger ? <TriggerText link={trigger} others={others} /> : 'Not linked to an event'}
+      </span>
       {impact && (
-        <>
-          <span aria-hidden="true">·</span>
+        <span>
+          <span aria-hidden="true">· </span>
           <ApprovedLossText impact={impact} />
-        </>
+        </span>
       )}
     </span>
   );

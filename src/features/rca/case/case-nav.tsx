@@ -11,6 +11,10 @@ const SECTIONS = [
   { path: '/history', label: 'History', testId: 'tab-history', end: false },
 ] as const;
 
+/** Segmented tab of the case (same look as the RCA Analysis tab row): one row, scrolls sideways when narrow. */
+const TAB_CLASS =
+  'inline-flex items-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
+
 /** The six sub-pages of a case as links (each is its own route, so Back and bookmarks work). */
 export function CaseNav() {
   const { basePath } = useCaseWorkspace();
@@ -20,25 +24,24 @@ export function CaseNav() {
     ? currentPath === basePath || currentPath === `${basePath}/definition`
     : currentPath === `${basePath}${path}` || currentPath.startsWith(`${basePath}${path}/`);
   return (
-    <nav aria-label="Investigation sections" className="border-b">
-      <ul className="-mb-px flex flex-wrap gap-x-1">
-        {SECTIONS.map((section) => (
-          <li key={section.testId}>
-            <Link
-              to={`${basePath}${section.path}${search}`}
-              data-testid={section.testId}
-              aria-current={active(section.path) ? 'page' : undefined}
-              className={
-                cn(
-                  'inline-block border-b-2 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  active(section.path) ? 'border-primary font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
-                )
-              }
-            >
-              {section.label}
-            </Link>
-          </li>
-        ))}
+    <nav aria-label="Investigation sections" className="max-w-full overflow-x-auto">
+      <ul className="inline-flex items-center gap-1 rounded-md bg-muted p-1 text-muted-foreground">
+        {SECTIONS.map((section) => {
+          const isActive = active(section.path);
+          return (
+            <li key={section.testId}>
+              <Link
+                to={`${basePath}${section.path}${search}`}
+                data-testid={section.testId}
+                data-state={isActive ? 'active' : 'inactive'}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(TAB_CLASS, isActive ? 'bg-background text-foreground shadow-sm' : 'hover:text-foreground')}
+              >
+                {section.label}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

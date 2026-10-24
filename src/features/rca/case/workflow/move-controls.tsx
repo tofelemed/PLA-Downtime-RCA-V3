@@ -3,19 +3,29 @@ import type { RcaCaseReadinessView } from '@/api/v2/types/rca-workflow';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
 import { RcaErrorAlert } from '../../components/rca-error-alert';
 import { blockersOf, moveConfirmation, moveReady, statusSlug, transitionBody, workflowMoves, type WorkflowMove } from '../../model/case-workflow';
 import { useCaseTransition } from './use-case-transition';
 
-function TextField(props: { id: string; label: string; hint: string; value: string; onChange: (value: string) => void }) {
+interface TextFieldProps {
+  id: string;
+  label: string;
+  /** what the field is for, behind the ⓘ next to the label */
+  info: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function TextField({ id, label, info, value, onChange }: TextFieldProps) {
   return (
-    <div className="space-y-1">
-      <Label htmlFor={props.id}>{props.label}</Label>
-      <Textarea id={props.id} value={props.value} maxLength={4000} aria-describedby={`${props.id}-hint`} onChange={(e) => props.onChange(e.target.value)} />
-      <p id={`${props.id}-hint`} className="text-xs text-muted-foreground">
-        {props.hint}
-      </p>
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Label htmlFor={id}>{label}</Label>
+        <KpiInfo label={label} text={info} />
+      </div>
+      <Textarea id={id} rows={3} value={value} maxLength={4000} onChange={(e) => onChange(e.target.value)} />
     </div>
   );
 }
@@ -41,10 +51,10 @@ export function MoveControls({ readiness }: { readiness: RcaCaseReadinessView })
   return (
     <div className="space-y-3" data-testid="workflow-moves">
       {moves.some((move) => move.needsResidualRisk) && (
-        <TextField id="workflow-residual-risk" label="Residual risk (for the closure request)" hint="How the risk that remains is accepted or handled, e.g. spare seal kept on site, monthly vibration check." value={residualRisk} onChange={setResidualRisk} />
+        <TextField id="workflow-residual-risk" label="Residual risk (for the closure request)" info="How the risk that remains is accepted or handled, e.g. spare seal kept on site, monthly vibration check." value={residualRisk} onChange={setResidualRisk} />
       )}
       {moves.some((move) => move.needsNote) && (
-        <TextField id="workflow-note" label="Reason (to go back, reject or reopen)" hint="Required for these moves: say why, in a sentence." value={note} onChange={setNote} />
+        <TextField id="workflow-note" label="Reason (to go back, reject or reopen)" info="Required for these moves: say why, in a sentence." value={note} onChange={setNote} />
       )}
       <div className="flex flex-wrap gap-2">
         {moves.map((move) => (

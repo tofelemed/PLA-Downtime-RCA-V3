@@ -7,19 +7,37 @@ import { statusLabel } from '../../model/rca-labels';
 
 const STATE_TEXT: Readonly<Record<StageState, string>> = { done: 'done', current: 'current stage', upcoming: 'to come' };
 
-const STATE_CLASS: Readonly<Record<StageState, string>> = {
-  done: 'border-success/40 text-success',
-  current: 'border-info bg-info/10 font-semibold text-info',
+const DOT_CLASS: Readonly<Record<StageState, string>> = {
+  done: 'border-success bg-success text-success-foreground',
+  current: 'border-info bg-background text-info ring-2 ring-info/30',
+  upcoming: 'border-border bg-background text-muted-foreground',
+};
+
+const LABEL_CLASS: Readonly<Record<StageState, string>> = {
+  done: 'text-foreground',
+  current: 'font-semibold text-foreground',
   upcoming: 'text-muted-foreground',
 };
 
-function Stage({ label, state }: { label: string; state: StageState }) {
-  const Icon = state === 'done' ? StatusIcon.success : StatusIcon.pending;
+interface StageProps {
+  label: string;
+  state: StageState;
+  index: number;
+  last: boolean;
+}
+
+function Stage({ label, state, index, last }: StageProps) {
+  const { number } = useNumberFormat();
   return (
-    <li aria-current={state === 'current' ? 'step' : undefined} className={cn('flex items-center gap-1 rounded border px-2 py-1 text-sm', STATE_CLASS[state])} data-state={state}>
-      <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
-      {label}
-      <span className="sr-only"> ({STATE_TEXT[state]})</span>
+    <li aria-current={state === 'current' ? 'step' : undefined} className={cn('flex min-w-0 items-center gap-2', !last && 'sm:flex-1')} data-state={state}>
+      <span className={cn('inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium', DOT_CLASS[state])}>
+        {state === 'done' ? <StatusIcon.selected aria-hidden="true" className="h-3.5 w-3.5" /> : number(index + 1)}
+      </span>
+      <span className={cn('whitespace-nowrap text-sm', LABEL_CLASS[state])}>
+        {label}
+        <span className="sr-only"> ({STATE_TEXT[state]})</span>
+      </span>
+      {!last && <span aria-hidden="true" className={cn('hidden h-px min-w-4 flex-1 sm:block', state === 'done' ? 'bg-success' : 'bg-border')} />}
     </li>
   );
 }
@@ -27,13 +45,13 @@ function Stage({ label, state }: { label: string; state: StageState }) {
 function Checklist({ steps }: { steps: readonly ProgressStep[] }) {
   const { text } = useNumberFormat();
   return (
-    <ol className="grid gap-2 sm:grid-cols-5" data-testid="case-progress" aria-label="Investigation checklist">
+    <ol className="grid auto-rows-fr gap-2 sm:grid-cols-2 lg:grid-cols-5" data-testid="case-progress" aria-label="Investigation checklist">
       {steps.map((step) => {
         const Icon = step.done ? StatusIcon.success : StatusIcon.pending;
         return (
-          <li key={step.key} className="rounded border p-2 text-sm">
-            <span className="flex items-center gap-1 font-medium">
-              <Icon aria-hidden="true" className="h-4 w-4" />
+          <li key={step.key} className="flex h-full flex-col gap-1 rounded-md border p-3 text-sm" data-done={step.done}>
+            <span className="flex items-center gap-1.5 font-medium">
+              <Icon aria-hidden="true" className={cn('h-4 w-4 shrink-0', step.done ? 'text-success' : 'text-muted-foreground')} />
               {step.label}
               <span className="sr-only">{step.done ? '(done)' : '(open)'}</span>
             </span>
@@ -46,26 +64,21 @@ function Checklist({ steps }: { steps: readonly ProgressStep[] }) {
 }
 
 /**
- * F-4: the workflow stages Draft → … → Closed with the current one marked (`aria-current="step"`), and the
- * content checklist as hints for the current stage. The server decides the moves; this only shows them.
+ * F-4: the workflow stages Draft → … → Closed as a horizontal stepper (done ✓ / current / upcoming, the current
+ * one `aria-current="step"`), then the content checklist in one aligned grid. The server decides the moves.
  */
 export function CaseStepper({ status, steps }: { status: string | null; steps: readonly ProgressStep[] }) {
   const current = stageIndexOf(status);
   return (
-    <div className="space-y-3" data-testid="case-stepper">
+    <div className="space-y-4" data-testid="case-stepper">
       <nav aria-label="Investigation stages">
-        <ol className="flex flex-wrap items-center gap-2">
+        <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
           {CASE_STAGES.map((stage, index) => (
-            <Stage key={stage} label={statusLabel(stage)} state={stageStateOf(index, current)} />
+            <Stage key={stage} label={statusLabel(stage)} state={stageStateOf(index, current)} index={index} last={index === CASE_STAGES.length - 1} />
           ))}
         </ol>
       </nav>
-      <div className="space-y-1">
-        <p className="text-sm font-medium" data-testid="current-stage">
-          Now: {statusLabel(status)}. What the investigation has so far:
-        </p>
-        <Checklist steps={steps} />
-      </div>
+      <Checklist steps={steps} />
     </div>
   );
 }

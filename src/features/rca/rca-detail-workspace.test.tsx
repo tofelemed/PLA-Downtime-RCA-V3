@@ -124,7 +124,9 @@ describe('RCA detail workspace and definition draft safety', () => {
     fireEvent.click(screen.getByRole('link', { name: 'Return to definition' }));
     await screen.findByText(/investigation or plant timezone changed/i);
     fireEvent.click(screen.getByRole('button', { name: 'Restore definition draft' }));
-    expect(screen.getByLabelText('Team lead')).toBeDisabled();
+    // the team is fixed once accepted: shown as text, without controls
+    expect(screen.getByTestId('team-editor')).toHaveAttribute('data-mode', 'read');
+    expect(within(screen.getByTestId('team-editor')).queryByRole('combobox')).toBeNull();
     rejectSave = true;
     fireEvent.click(screen.getByTestId('save-case'));
     await waitFor(() => expect(writes).toHaveLength(1));
@@ -151,10 +153,15 @@ describe('RCA detail workspace and definition draft safety', () => {
     fireEvent.change(await screen.findByLabelText('Title'), { target: { value: 'Private draft' } });
     expect(unload()).toBe(true);
     actAs(role, 'another-user'); view.rerender(app(`${BASE}/definition`));
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue(CASE.title));
+    if (role === 'viewer') {
+      // a reader gets the saved values as text, without inputs or Save
+      await waitFor(() => expect(screen.getByTestId('case-editor')).toHaveAttribute('data-mode', 'read'));
+      expect(within(screen.getByTestId('case-editor')).getByText(CASE.title)).toBeInTheDocument();
+      expect(screen.queryByLabelText('Title')).toBeNull();
+      expect(screen.queryByTestId('save-case')).toBeNull();
+    } else await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue(CASE.title));
     expect(screen.queryByRole('button', { name: 'Restore definition draft' })).toBeNull();
     expect(unload()).toBe(false);
-    if (role === 'viewer') { expect(screen.getByLabelText('Title')).toBeDisabled(); expect(screen.queryByTestId('save-case')).toBeNull(); }
   });
 
   it('keeps action summaries visible and unfinished evidence/new-action inputs mounted when disclosures close', async () => {
