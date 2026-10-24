@@ -1,5 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
+import type { ReactNode } from 'react';
 import { StatusIcon } from '@/lib/icons';
 import type { DataTableEmpty } from './data-table-types';
 
@@ -45,12 +46,13 @@ export function EmptyMessage({ empty }: { empty?: DataTableEmpty }) {
   );
 }
 
-/** A list's or card's own empty result (a real result, e.g. "Nothing overdue."), centred, without a hint. */
-export function OwnEmptyMessage({ text }: { text: string }) {
+/** A list's or card's own empty result (a real result, e.g. "Nothing overdue."), centred, without a hint; its action (e.g. "Clear filters") stays. */
+export function OwnEmptyMessage({ text, action }: { text: string; action?: ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-2 text-center" data-state="empty" data-testid="own-empty">
       <StatusIcon.empty aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
       <p className="font-medium">{text}</p>
+      {action}
     </div>
   );
 }

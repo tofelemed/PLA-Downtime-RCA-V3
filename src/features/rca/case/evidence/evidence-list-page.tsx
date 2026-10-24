@@ -15,6 +15,7 @@ import { useCaseWorkspace } from '../case-context';
 import { TaskOverdueBadge } from './task-overdue-badge';
 import { EVIDENCE_REQUEST_LABELS as REQ } from '../../model/evidence-request-labels';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 function columns(day: (value: string | null) => string, userName: (id: string | null) => string): DataTableColumn<RcaEvidenceItem>[] {
   return [
@@ -69,7 +70,7 @@ export function EvidenceListPage() {
     </Button>
   );
   return (
-    <Section title="Evidence" description="Photos, documents, notes and historian queries collected for this investigation." actions={add}>
+    <Section title="Evidence" titleAside={<KpiInfo label="Evidence" text="Photos, documents, notes and historian queries collected for this investigation." />} actions={add}>
       <div className="space-y-3" data-testid="evidence-list">
         <div className="flex flex-wrap items-center gap-2" aria-label="Evidence by type">
           {counts.map(({ type, count }) => (

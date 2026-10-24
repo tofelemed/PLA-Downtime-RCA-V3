@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useRcaAnalyses } from '@/api/v2/queries/rca-cases';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { Section } from '@/features/ux-kit/page-layout';
 import { ANALYSIS_TOOLS, toolStatus } from '../../model/analysis-tools';
 import { useCaseWorkspace } from '../case-context';
@@ -15,14 +16,16 @@ export function AnalysisIndexPage() {
     <>
       <Section
         title="Analysis methods"
-        description={
-          <>
-            Use the methods that fit the problem; write the agreed root-cause narrative in the{' '}
-            <Link to={`${basePath}/definition`} className="underline">
-              case definition
-            </Link>
-            , and record the coded causes below.
-          </>
+        titleAside={
+          <KpiInfo
+            label="Analysis methods"
+            text="Use the methods that fit the problem; write the agreed root-cause narrative in the case definition, and record the coded causes below."
+          />
+        }
+        actions={
+          <Link to={`${basePath}/definition`} className="text-sm underline">
+            Case definition
+          </Link>
         }
       >
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="analysis-tools">

@@ -13,6 +13,7 @@ import { TeamEditor } from '../overview/team-editor';
 import { useCasePatch } from '../use-case-patch';
 import { DefinitionDraftNotice } from './definition-draft-notice';
 import { useDefinitionDraft, type DefinitionEditorDraft } from './use-definition-draft';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 
 function SaveBar({ draft, pending, saved, onSave, onDiscard }: { draft: DefinitionEditorDraft; pending: boolean; saved: boolean; onSave: () => void; onDiscard: () => void }) {
   return <div className="flex flex-wrap items-center gap-2">
@@ -48,7 +49,7 @@ export function DefinitionPage() {
   return <div className="space-y-5" data-testid="case-definition-page">
     <Link to={`${basePath}${search}`} className="text-sm font-medium underline">Back to overview</Link>
     <DefinitionDraftNotice draft={draft} />
-    <Section title="Investigation definition" description="Status changes stay in the investigation workflow on Overview.">
+    <Section title="Investigation definition" titleAside={<KpiInfo label="Investigation definition" text="Status changes stay in the investigation workflow on Overview." />}>
       <DefinitionFields form={draft.form} onChange={change} readOnly={!draft.editable || patch.isPending} />
     </Section>
     <Section title="Team" description={teamLocked ? 'Fixed since the investigation was accepted, so the closure approver is judged against a known team. Reopen the investigation to change it.' : undefined}>

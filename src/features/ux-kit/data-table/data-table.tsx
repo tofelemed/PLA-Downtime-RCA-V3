@@ -62,7 +62,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
   if (look && props.rows.length === 0 && !status?.isLoading) {
     return (
       <div className={cn('rounded-md border px-4 py-10', className)}>
-        {look.ownEmpty && props.empty?.text ? <OwnEmptyMessage text={props.empty.text} /> : <EmptyMessage empty={REPORT_EMPTY} />}
+        {look.ownEmpty && props.empty?.text ? <OwnEmptyMessage text={props.empty.text} action={props.empty.action} /> : <EmptyMessage empty={REPORT_EMPTY} />}
       </div>
     );
   }
