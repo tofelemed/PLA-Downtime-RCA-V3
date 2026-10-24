@@ -19,8 +19,9 @@ const COMPONENT_NOTES: Readonly<Record<string, string>> = {
 
 /**
  * OEE (KPI03 / KPI04, D04): operational OEE (ISO 22400) and the labelled reconciled PLA OEE side by side,
- * never mixed — each with its policy label and denominator, per unit (20 per page) and for the scope; a
- * missing value reads "Not available: <reason>" (T41).
+ * never mixed — each tile's ⓘ says its policy label and denominator; per unit (20 per page) and for the
+ * scope, tiles and columns in the order OEE, Availability, Performance, Quality; a missing value reads "Not
+ * available" with the reason in the ⓘ (T41). One "Provisional" marker per card covers its tiles and rows.
  */
 export function OeeTab({ scope }: { scope: AnalyticsScope }) {
   return (
@@ -39,7 +40,7 @@ function OeePolicyCard({ scope, policy, prefix, denominator }: { scope: Analytic
   const label = data?.label ?? (policy === 'operational' ? 'Operational OEE (ISO 22400)' : 'Reconciled PLA OEE');
   return (
     <AnalyticsCard title={label} testId={`pla-oee-${policy}`} query={query} response={query.data}>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {['oee', 'availability', 'performance', 'quality'].map((component) => (
           <OeeTile
             key={component}
@@ -51,7 +52,7 @@ function OeePolicyCard({ scope, policy, prefix, denominator }: { scope: Analytic
           />
         ))}
       </div>
-      {data && <OeeGroupTable report={data} groupTitle="Unit" labelOf={(key) => env.unitName(key)} testId={`oee-${policy}-units`} />}
+      {data && <OeeGroupTable report={data} groupTitle="Unit" labelOf={(key) => env.unitName(key)} testId={`oee-${policy}-units`} rowMarks={false} />}
     </AnalyticsCard>
   );
 }

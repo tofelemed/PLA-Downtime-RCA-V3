@@ -129,7 +129,7 @@ test.describe('PLA Analytics and Reports — AN02 / AN03 on server snapshots (pl
     }
 
     await page.getByTestId('tab-oee').click();
-    await expect(page.getByTestId('pla-oee-operational')).toContainText('Operational OEE (ISO 22400)');
+    await expect(page.getByTestId('pla-oee-operational').getByRole('heading', { name: 'OEE', exact: true })).toBeVisible(); // titles drop "Operational" / "(ISO 22400)"
     await expect(page.getByTestId('pla-oee-reconciled')).toContainText('Reconciled PLA OEE');
     await expect(page.getByTestId('oee-operational-oee').getByTestId('oee-tile-value')).toHaveText(/%|^Not available: /);
     await expect(page.getByRole('tab')).toHaveCount(5); // at most 5 views (UI guidelines §2)

@@ -5,6 +5,7 @@ import { anyProvisional, ProvisionalMark } from '@/features/ux-kit/report-look';
 import { NoPlanLink } from '@/features/month-close/components/no-plan-notice';
 import { findKpi, inSentence, kpiText, OEE_METRIC_LABELS } from '../model/display';
 import { oeeColumnOrder } from '../model/oee-column-order';
+import { reportText } from '../model/report-text';
 import { oeeRowNote, rowHasNoFigures, type OeeRowNote } from '../model/oee-row-note';
 import { useReportChrome } from './use-report-chrome';
 
@@ -16,6 +17,8 @@ export interface OeeGroupTableProps {
   testId: string;
   /** the table's accessible caption (default: "<policy label> by <group>") */
   caption?: string;
+  /** default true: rows the server marks provisional say so; false when the card's one marker covers them */
+  rowMarks?: boolean;
 }
 
 const metricLabel = (metric: string) => OEE_METRIC_LABELS[metric.replace('reconciled_', '')] ?? metric;
@@ -32,9 +35,10 @@ interface ColumnsInput {
   groupTitle: string;
   labelOf: OeeGroupTableProps['labelOf'];
   digits: DigitSystem;
+  rowMarks: boolean;
 }
 
-function columnsOf({ metrics, groupTitle, labelOf, digits }: ColumnsInput): Array<DataTableColumn<OeeGroup>> {
+function columnsOf({ metrics, groupTitle, labelOf, digits, rowMarks }: ColumnsInput): Array<DataTableColumn<OeeGroup>> {
   return [
     {
       id: 'group',
@@ -43,7 +47,7 @@ function columnsOf({ metrics, groupTitle, labelOf, digits }: ColumnsInput): Arra
       cell: (group) => (
         <span data-testid="oee-group" data-key={group.key ?? ''}>
           {labelOf(group.key)}
-          <ProvisionalMark when={anyProvisional(group.metrics)} />
+          <ProvisionalMark when={rowMarks && anyProvisional(group.metrics)} />
           <RowNote note={oeeRowNote(group, metrics, digits)} />
         </span>
       ),
@@ -68,10 +72,10 @@ function columnsOf({ metrics, groupTitle, labelOf, digits }: ColumnsInput): Arra
 /**
  * OEE components per server group (20 per page): "Not available: <reason>" when the server has no value (T41),
  * said once per row when the whole row shares it or no approved plan covers the row (QA re-test N4). On the
- * Reports page the columns read OEE, Availability, Performance, Quality and, with Revision = Provisional, a
- * row the server marks provisional says so.
+ * Reports page and the PLA pages (`ReportChrome`) the columns read OEE, Availability, Performance, Quality and,
+ * with Revision = Provisional, a row the server marks provisional says so (unless `rowMarks` is false).
  */
-export function OeeGroupTable({ report, groupTitle, labelOf, testId, caption }: OeeGroupTableProps) {
+export function OeeGroupTable({ report, groupTitle, labelOf, testId, caption, rowMarks = true }: OeeGroupTableProps) {
   const { digits } = useCalendarPreference();
   const onReports = useReportChrome();
   const serverOrder = report.total.map((t) => t.metric);
@@ -79,8 +83,8 @@ export function OeeGroupTable({ report, groupTitle, labelOf, testId, caption }: 
   return (
     <div data-testid={testId}>
       <DataTable
-        caption={caption ?? `${report.label} by ${inSentence(groupTitle)}`}
-        columns={columnsOf({ metrics, groupTitle, labelOf, digits })}
+        caption={caption ?? `${onReports ? reportText(report.label) : report.label} by ${inSentence(groupTitle)}`}
+        columns={columnsOf({ metrics, groupTitle, labelOf, digits, rowMarks })}
         rows={report.groups}
         getRowKey={(group) => group.key ?? '-'}
         empty={{ text: 'No groups in this scope.' }}

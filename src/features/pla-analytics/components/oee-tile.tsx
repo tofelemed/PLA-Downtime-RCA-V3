@@ -2,6 +2,7 @@ import type { KpiAggregateView } from '@/api/v2/types/reports';
 import { Badge } from '@/components/ui/badge';
 import { useCalendarPreference } from '@/lib/dates';
 import { labelOf } from '@/features/ux-kit/labels';
+import { KpiInfo } from '../dashboard/kpi-info';
 import { unavailableReason } from '../dashboard/kpi-unavailable';
 import { kpiText, QUALITY_STATE_LABELS } from '../model/display';
 
@@ -20,19 +21,14 @@ export interface OeeTileProps {
 /** Quality flags said once for the page (provisional) or not worth a flag (ok). */
 const QUIET_QUALITY = new Set(['ok', 'provisional']);
 
-/** "—", a small "Not available" and the server's reason as a one-line caption (full text on hover). */
-function Unavailable({ reason, showReason }: { reason: string; showReason: boolean }) {
+/** "—" and a small "Not available"; the server's reason is said in the tile's ⓘ. */
+function Unavailable() {
   return (
     <>
-      <p className="text-xl font-semibold" data-testid="oee-tile-value">
+      <p className="mt-2 text-2xl font-semibold" data-testid="oee-tile-value">
         <span aria-hidden="true">—</span>
       </p>
       <p className="text-xs font-medium text-muted-foreground">Not available</p>
-      {showReason && (
-        <p className="truncate text-xs text-muted-foreground" title={reason} data-testid="oee-tile-reason">
-          {reason}
-        </p>
-      )}
     </>
   );
 }
@@ -48,25 +44,27 @@ function QualityBadge({ view }: { view: KpiAggregateView | undefined }) {
 }
 
 /**
- * One OEE figure with its policy label and denominator (KPI04); without a server value it shows "—" with
- * "Not available" and the reason as a muted caption (T41) — never a default 87 % or 100 %.
+ * One OEE figure in the dashboard's tile look (cleanup 24 Oct 2026): small uppercase label with an ⓘ that says
+ * the policy label and denominator (KPI04) and, without a server value, why (T41); the value, or "—" with
+ * "Not available" — never a default 87 % or 100 %. No caption under the value.
  */
 export function OeeTile({ title, label, view, denominator, testId, showReason = true }: OeeTileProps) {
   const { digits } = useCalendarPreference();
   const reason = unavailableReason(view);
+  const info = `${label} · ${denominator}${reason !== null && showReason ? `. Not available: ${reason}` : ''}`;
   return (
-    <div className="min-w-0 rounded-md border p-3" data-testid={testId} data-value={view?.value ?? ''} data-reason={view?.reason ?? ''}>
-      <p className="text-xs text-muted-foreground">{title}</p>
+    <div className="min-w-0 rounded-md border bg-canvas p-3" data-testid={testId} data-value={view?.value ?? ''} data-reason={view?.reason ?? ''} data-reason-text={reason ?? ''}>
+      <div className="flex items-start justify-between gap-2">
+        <span className="line-clamp-2 min-w-0 text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</span>
+        <KpiInfo label={title} text={info} />
+      </div>
       {reason !== null ? (
-        <Unavailable reason={reason} showReason={showReason} />
+        <Unavailable />
       ) : (
-        <p className="text-xl font-semibold" data-testid="oee-tile-value">
+        <p className="mt-2 text-2xl font-semibold tabular-nums" data-testid="oee-tile-value">
           {kpiText(view, digits)}
         </p>
       )}
-      <p className="text-xs text-muted-foreground">
-        {label} · {denominator}
-      </p>
       <QualityBadge view={view} />
     </div>
   );

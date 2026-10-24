@@ -143,7 +143,7 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     await expect(status.locator('[data-testid="workflow-count"][data-key="approved"]')).toHaveAttribute('data-count', approved);
     expect(Number(approved)).toBeGreaterThanOrEqual(1); // shift A, approved by the persona in the periods spec
     await page.getByTestId('tab-oee').click();
-    await expect(page.getByTestId('pla-oee-operational')).toContainText('Operational OEE (ISO 22400)');
+    await expect(page.getByTestId('pla-oee-operational').getByRole('heading', { name: 'OEE', exact: true })).toBeVisible(); // titles drop "Operational" / "(ISO 22400)"
     await expect(page.getByTestId('pla-oee-reconciled')).toContainText('Reconciled PLA OEE');
     await expect(page.getByRole('tab')).toHaveCount(5); // at most 5 views (UI guidelines §2)
     expect(writes).toEqual([]); // KPI03: reading analytics writes nothing

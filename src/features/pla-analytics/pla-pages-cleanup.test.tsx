@@ -31,7 +31,7 @@ function reportData(url: URL): object {
   if (url.pathname.endsWith('/loss-value')) return { ...base, total: { currencies: [] }, components: [] };
   if (url.pathname.endsWith('/reconciliation-status')) return { ...base, periods: 0, waitingForData: 0, rejectionEscalated: 0, overdueCount: 0, overdue: [], workflow: [], residual: [], ages: [], sla: { submitWithinHours: 1, approveWithinHours: 1 } };
   if (url.pathname.endsWith('/oee')) {
-    const total = ['availability', 'performance', 'quality', 'oee'].map((metric) => ({ metric, value: '0.9', numerator: '9', denominator: '10', unit: 'ratio', quality: 'ok', reason: null, rows: 1, missing: 0 }));
+    const total = ['availability', 'performance', 'quality', 'oee'].map((metric) => ({ metric, value: '0.9', numerator: '9', denominator: '10', unit: 'ratio', quality: 'provisional', reason: null, rows: 1, missing: 0 }));
     return { ...base, label: 'Operational OEE (ISO 22400)', policy: 'operational', groupBy: url.searchParams.get('groupBy'), groups: [{ key: '2026-10-01', metrics: total }], total };
   }
   return { ...base, groupBy: url.searchParams.get('groupBy'), metric: 'qty' };
@@ -154,6 +154,18 @@ describe('PLA analysis pages cleanup (owner direction, 24 Oct 2026)', () => {
     expect(await screen.findByTestId('chart-series')).toHaveTextContent(
       'OEE=hsl(var(--chart-1));Availability=hsl(var(--chart-8));Performance=hsl(var(--chart-2));Quality=hsl(var(--warning))',
     );
+  });
+
+  it('OEE: tiles and columns read OEE, Availability, Performance, Quality; one Provisional marker per card, none per row; no captions', async () => {
+    open(`/pla-analytics/oee?${WINDOW}`);
+    const card = await screen.findByTestId('pla-oee-operational');
+    await within(card).findByTestId('oee-operational-units');
+    expect(within(card).getByRole('heading', { level: 2 })).toHaveTextContent(/^OEE$/);
+    expect(within(card).getAllByTestId(/^oee-operational-(oee|availability|performance|quality)$/).map((tile) => tile.getAttribute('data-testid'))).toEqual(['oee-operational-oee', 'oee-operational-availability', 'oee-operational-performance', 'oee-operational-quality']);
+    const headers = within(within(card).getByTestId('oee-operational-units')).getAllByRole('columnheader').map((cell) => cell.textContent);
+    expect(headers.slice(1)).toEqual(['OEE', 'Availability', 'Performance', 'Quality']);
+    expect(within(card).getAllByTestId('provisional-mark')).toHaveLength(1);
+    expect(card).not.toHaveTextContent(/ISO 22400|run time ÷ scheduled time|good ÷ total output/);
   });
 
   it('Reconciliation and Loss valuation: their picker is in the filter bar; no explanatory paragraph', async () => {
