@@ -8,6 +8,8 @@ export interface PlantTimeRangeProps {
   to: string | null | undefined;
   tz: string;
   openLabel?: string;
+  /** false: no zone line under the range (the app header shows the plant zone) */
+  withZone?: boolean;
   className?: string;
 }
 
@@ -15,7 +17,7 @@ export interface PlantTimeRangeProps {
  * `2026-10-17 06:00 → 2026-10-18 06:00` with the plant zone once on a small line under it (table cells):
  * the same facts as two `PlantTime`s at about half the width.
  */
-export function PlantTimeRange({ from, to, tz, openLabel = 'open-ended', className }: PlantTimeRangeProps) {
+export function PlantTimeRange({ from, to, tz, openLabel = 'open-ended', withZone = true, className }: PlantTimeRangeProps) {
   const preference = useCalendarPreference();
   const start = splitZone(formatPlantTime(from, tz, true, preference));
   const end = to ? splitZone(formatPlantTime(to, tz, true, preference)) : null;
@@ -27,7 +29,7 @@ export function PlantTimeRange({ from, to, tz, openLabel = 'open-ended', classNa
         {' → '}
         {end ? <time dateTime={to ?? undefined} title={to ?? undefined}>{end.clock}</time> : openLabel}
       </span>
-      {zone && <span className="block whitespace-nowrap text-xs text-muted-foreground"> {zone}</span>}
+      {withZone && zone && <span className="block whitespace-nowrap text-xs text-muted-foreground"> {zone}</span>}
     </span>
   );
 }
