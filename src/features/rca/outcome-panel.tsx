@@ -55,8 +55,8 @@ function Realized({ data }: { data: RcaOutcomeView }) {
 
 /**
  * RCA03 outcome card: approved historical loss (ledger), claimed avoided loss (owners) and realized difference
- * (verification vs baseline) side by side — three figures with different bases, never added up (the server's
- * note on the bases is behind the ⓘ).
+ * (verification vs baseline) side by side — three figures with different bases, never added up. The ⓘ shows the
+ * server's note on the bases when it sends one (it states the rule itself), else the same rule in short.
  */
 export function OutcomePanel({ rcaId }: { rcaId: string }) {
   const outcome = useRcaOutcome(rcaId);
@@ -64,7 +64,7 @@ export function OutcomePanel({ rcaId }: { rcaId: string }) {
   // QA re-test N1: claimed avoided loss is money, not shown (nor sent by the server) without the capability
   const { canViewMoney } = useCapabilities();
   return (
-    <CaseCard title="Outcome" info={data?.note ? `${OUTCOME_INFO} ${data.note}` : OUTCOME_INFO}>
+    <CaseCard title="Outcome" info={data?.note?.trim() || OUTCOME_INFO}>
       <DataState state={dataStateOf(outcome)} error={outcome.error}>
         {data && (
           <div className="grid auto-rows-fr gap-3 md:grid-cols-3" data-testid="outcome-panel">
