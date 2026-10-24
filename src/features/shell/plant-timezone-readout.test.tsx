@@ -18,10 +18,19 @@ describe('PlantTimezoneReadout', () => {
     expect(screen.getByText('Asia/Tehran · UTC+03:30')).toBeInTheDocument();
   });
 
-  it('says so, as a status, when the zone is unknown', () => {
+  it('says so, as a warning status hidden below md, when the zone is unknown', () => {
     timezone.value = { timezone: 'UTC', source: 'utc-fallback', loading: false };
     render(<PlantTimezoneReadout />);
-    expect(screen.getByText('Plant timezone unknown — times in UTC')).toHaveAttribute('role', 'status');
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent('Plant timezone unknown — times in UTC');
+    expect(status).toHaveClass('text-warning', 'hidden', 'md:inline-flex');
+    expect(status.querySelector('svg')).not.toBeNull();
+  });
+
+  it('shows no unknown-zone warning while the sites are loading', () => {
+    timezone.value = { timezone: 'UTC', source: 'utc-fallback', loading: true };
+    const { container } = render(<PlantTimezoneReadout />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it.each([
