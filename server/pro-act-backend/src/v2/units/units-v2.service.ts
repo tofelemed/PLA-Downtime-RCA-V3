@@ -17,6 +17,11 @@ import { statusIncludes } from '../master-data/common/master-data-writer';
 import { applySearch } from '../master-data/common/search';
 import { sortedKeysetPage } from '../master-data/common/sorted-keyset-page';
 import { siteNamesOfPlant } from '../sites/site-references';
+import {
+  assetPresenceRows,
+  queryUnitAssetPresence,
+  UnitAssetPresence,
+} from './unit-asset-presence';
 import { toUnitView, UnitV2View } from './unit-v2.view';
 
 /**
@@ -53,6 +58,14 @@ export class UnitsV2Service {
       tenantId,
       ...(unitIds ? { unitIds } : {}),
     });
+  }
+
+  /** Per unit of the caller scope: does it have an active asset (drives the tree chevrons). */
+  async assetPresence(
+    context: RequestContext,
+  ): Promise<{ data: { items: UnitAssetPresence[] } }> {
+    const rows = await queryUnitAssetPresence(this.units, context);
+    return { data: { items: assetPresenceRows(rows) } };
   }
 
   async get(context: RequestContext, id: string): Promise<UnitV2View> {

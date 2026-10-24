@@ -4,7 +4,7 @@ import { InlineError } from '@/features/ux-kit/errors/inline-error';
 import { EntityIcon } from '@/lib/icons';
 import type { DirectoryOrganization as Organization, DirectoryPlant as Tenant, DirectoryUnit as Unit } from '@/api/v2/types/plant-directory';
 import { TreeRow } from './tree-row';
-import { usePlantUnits, useUnitAssets } from './use-plant-directory';
+import { usePlantUnits, useUnitAssetPresence, useUnitAssets } from './use-plant-directory';
 
 export interface PlantTreeProps {
   organizations: readonly Organization[];
@@ -50,13 +50,13 @@ interface NodeProps {
   toggle: (key: string) => void;
 }
 
-function UnitNode({ org, tenant, unit, ...tree }: NodeProps & { org: Organization; tenant: Tenant; unit: Unit }) {
+function UnitNode({ org, tenant, unit, hasAssets, ...tree }: NodeProps & { org: Organization; tenant: Tenant; unit: Unit; hasAssets: boolean }) {
   const key = `unit:${unit.id}`;
   const open = tree.isOpen(key);
   const assets = useUnitAssets(tenant.id, unit, open);
   const selected = tree.selection?.unit?.id === unit.id && !tree.selection?.asset;
   return (
-    <TreeRow level={2} icon={EntityIcon.unit} label={unit.name} selected={selected} expandable expanded={open}
+    <TreeRow level={2} icon={EntityIcon.unit} label={unit.name} selected={selected} expandable={hasAssets} expanded={open}
       onToggle={() => tree.toggle(key)} onSelect={() => tree.onSelect({ organization: org, tenant, unit })}>
       {assets.isLoading && <Notice level={3} text="Loading assets…" />}
       {assets.isError && <LoadFailed level={3} title="Could not load assets." error={assets.error} onRetry={() => void assets.refetch()} />}
@@ -72,22 +72,23 @@ function UnitNode({ org, tenant, unit, ...tree }: NodeProps & { org: Organizatio
 
 type UnitsQuery = ReturnType<typeof usePlantUnits>;
 
-function UnitList({ units, org, tenant, ...tree }: NodeProps & { units: UnitsQuery; org: Organization; tenant: Tenant }) {
+function UnitList({ units, presence, org, tenant, ...tree }: NodeProps & { units: UnitsQuery; presence: ReadonlyMap<string, boolean>; org: Organization; tenant: Tenant }) {
   if (units.isLoading) return <Notice level={2} text="Loading units…" />;
   if (units.isError) return <LoadFailed level={2} title="Could not load units." error={units.error} onRetry={() => void units.refetch()} />;
   if (units.data?.length === 0) return <Notice level={2} text="No units" />;
-  return <>{units.data?.map((unit) => <UnitNode key={unit.id} org={org} tenant={tenant} unit={unit} {...tree} />)}</>;
+  return <>{units.data?.map((unit) => <UnitNode key={unit.id} org={org} tenant={tenant} unit={unit} hasAssets={presence.get(unit.id) ?? true} {...tree} />)}</>;
 }
 
 function TenantNode({ org, tenant, ...tree }: NodeProps & { org: Organization; tenant: Tenant }) {
   const key = `tenant:${tenant.id}`;
   const open = tree.isOpen(key);
   const units = usePlantUnits(tenant.id, open);
+  const presence = useUnitAssetPresence(open ? tenant.id : null);
   const selected = tree.selection?.tenant?.id === tenant.id && !tree.selection?.unit && !tree.selection?.asset;
   return (
-    <TreeRow level={1} icon={EntityIcon.plant} label={tenant.name} selected={selected} expandable expanded={open}
+    <TreeRow level={1} icon={EntityIcon.plant} label={tenant.name} selected={selected} expandable={units.data === undefined || units.data.length > 0} expanded={open}
       onToggle={() => tree.toggle(key)} onSelect={() => tree.onSelect({ organization: org, tenant })}>
-      <UnitList units={units} org={org} tenant={tenant} {...tree} />
+      <UnitList units={units} presence={presence} org={org} tenant={tenant} {...tree} />
     </TreeRow>
   );
 }

@@ -69,8 +69,8 @@ export function useTransitionPerformance(query: ReportQueryBase | null, tz?: str
   return usePlainReport<TransitionPerformanceView>('transition-performance', query, tz);
 }
 
-/** R6: reliability per plant month for each unit and its most-failing assets. */
-export function useReliabilityTrend(query: ReportQueryBase | null, tz?: string) {
+/** R6: reliability per plant month for each unit, its most-failing assets and the selected scope (`total`). */
+export function useReliabilityTrend(query: (ReportQueryBase & { assetIds?: string[] }) | null, tz?: string) {
   return useReport<ReliabilityTrendView>('reliability-trend', query, tz);
 }
 

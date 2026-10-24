@@ -14367,7 +14367,7 @@
     },
     "/api/v2/reports/reliability-trend": {
       "get": {
-        "description": "The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed while its unit runs). Assets: at most 30, those with the most eligible failures. fallingMtbf: MTBF fell in each of the last three months that have a value. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.",
+        "description": "The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed while its unit runs). Assets: at most 30, those with the most eligible failures, plus every assetIds asset. total: the selected scope as one series — the terms of every unit summed per month, or with assetIds those assets (a unit’s exposure counted once however many of its assets are listed). fallingMtbf: MTBF fell in each of the last three months that have a value. assetIds must be assets of the tenant on those units (422 INVALID_REFERENCE). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.",
         "operationId": "OpsReportsV2Controller_reliabilityTrend_v2",
         "parameters": [
           {
@@ -14408,6 +14408,18 @@
             "schema": {
               "default": false,
               "type": "boolean"
+            }
+          },
+          {
+            "name": "assetIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several assets; assets of the tenant on units of the caller’s scope (422 INVALID_REFERENCE)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           }
         ],
@@ -18723,7 +18735,7 @@
             "bearer": []
           }
         ],
-        "summary": "Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)",
+        "summary": "Unaccounted, over-accounted and overproduction quantity, plan, actual, shortfall, explained and unexplained loss per site-local shift, day, week or month, with window totals per unit of measure (plan ledger, after decisions)",
         "tags": [
           "v2 · PLA analytics"
         ]
@@ -21545,6 +21557,27 @@
           }
         ],
         "summary": "Create a unit in the acting plant",
+        "tags": [
+          "v2 · Units"
+        ]
+      }
+    },
+    "/api/v2/units/asset-presence": {
+      "get": {
+        "description": "One row per visible unit (`hasAssets` = at least one non-retired asset); drives the hierarchy chevrons.",
+        "operationId": "UnitsV2Controller_assetPresence_v2",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Whether each unit of the caller scope has an active asset",
         "tags": [
           "v2 · Units"
         ]

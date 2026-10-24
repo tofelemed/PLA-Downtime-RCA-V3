@@ -148,8 +148,11 @@ export class OpsReportsV2Controller {
     description:
       'The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the ' +
       'definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed ' +
-      'while its unit runs). Assets: at most 30, those with the most eligible failures. fallingMtbf: MTBF fell ' +
-      `in each of the last three months that have a value. ${SCOPE_NOTE}`,
+      'while its unit runs). Assets: at most 30, those with the most eligible failures, plus every assetIds ' +
+      'asset. total: the selected scope as one series — the terms of every unit summed per month, or with ' +
+      'assetIds those assets (a unit’s exposure counted once however many of its assets are listed). ' +
+      'fallingMtbf: MTBF fell in each of the last three months that have a value. assetIds must be assets ' +
+      `of the tenant on those units (422 INVALID_REFERENCE). ${SCOPE_NOTE}`,
   })
   reliabilityTrend(
     @Ctx() ctx: RequestContext,

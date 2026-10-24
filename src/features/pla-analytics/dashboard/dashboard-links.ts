@@ -1,6 +1,7 @@
 import { withAnalysisContext, type AnalysisContext } from '@/features/analysis-navigation/analysis-context';
 import { relativeWindowOf } from '@/features/event-hub/model/relative-window';
 import type { AnalyticsScope } from '../model/analytics-scope';
+import { presetOfLabel } from '../model/dashboard-scope';
 
 /**
  * Deep links of the dashboard tiles (UX audit G-6 / B-8): every analysis target opens with the
@@ -8,12 +9,13 @@ import type { AnalyticsScope } from '../model/analytics-scope';
  */
 
 /**
- * The dashboard's analysis context: its window is always a rolling preset, so links carry the preset
- * key and the target resolves it at its own "now"; `units` when the scope names any. Approved-only is
+ * The dashboard's analysis context: a window every page shares (24 h, 7 and 30 days) travels as its rolling
+ * key and the target resolves it at its own "now"; longer periods (3 months to 1 year) travel as explicit
+ * `from` / `to`, since the other pages know no such key. `units` when the scope names any. Approved-only is
  * not carried (the dashboard has no such choice), so each target keeps its own default.
  */
 export function dashboardContext(scope: AnalyticsScope): AnalysisContext {
-  const rolling = relativeWindowOf(scope.windowLabel);
+  const rolling = relativeWindowOf(presetOfLabel(scope.windowLabel)?.key);
   const window = rolling ? { relativeWindow: rolling.key } : { from: scope.from, to: scope.to, windowLabel: scope.windowLabel };
   return scope.unitIds.length > 0 ? { ...window, unitIds: scope.unitIds } : window;
 }

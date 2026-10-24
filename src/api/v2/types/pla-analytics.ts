@@ -62,15 +62,20 @@ export interface LossTreeView {
 export type TrendGroup = 'shift' | 'day' | 'week' | 'month';
 
 export interface ReconciliationTrendBucketView {
+  /** site-local bucket, or 'total' for a window-total row */
   key: string;
   uom: string | null;
   unaccounted: string | null;
   overAccounted: string | null;
   overproduction: string | null;
   plan: string | null;
+  /** Σ actual output of the computable slices */
+  actual: string | null;
   shortfall: string | null;
   /** SME R7: positive residual, tolerance adjustments and classified Unaccounted lines */
   unexplained: string | null;
+  /** shortfall − unexplained, floored at 0 */
+  explained: string | null;
   unexplainedOfPlan: string | null;
   /** null when nothing fell short */
   unexplainedOfShortfall: string | null;
@@ -85,6 +90,8 @@ export interface ReconciliationTrendView {
   groupBy: TrendGroup;
   ledger: 'plan';
   buckets: ReconciliationTrendBucketView[];
+  /** window total per unit of measure (key 'total'); ratios and target from the totals; units never summed */
+  totals: ReconciliationTrendBucketView[];
   calculationRunIds: string[];
 }
 

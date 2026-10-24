@@ -22,6 +22,7 @@ import { PeriodDraftBoundary } from "./features/plan-dashboard/period-draft-boun
 import { RcaDraftBoundary } from "./features/rca/rca-draft-boundary";
 import { RouteErrorBoundary } from "@/features/ux-kit/errors/route-error-boundary";
 import { GlobalErrorListeners } from "@/features/ux-kit/errors/global-error-listeners";
+import { AppThemeProvider } from "@/features/shell/theme-provider";
 
 const queryClient = createAppQueryClient();
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -113,33 +114,35 @@ const AppRouteBoundary = ({ children }: { children: ReactNode }) => {
 const App = () => (
   // outermost: a crash in the providers above the router (no router link possible there)
   <RouteErrorBoundary resetKey="app" fullPage navigation="document">
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <UnsavedChangesDialogHost />
-        <AuthProvider>
-          <PlantSelectionProvider>
-            <DisplayCurrencyProvider>
-              <CalendarPreferenceProvider>
-                <GlobalErrorListeners />
-                <V2SessionBridge />
-                <PeriodDraftBoundary />
-                <RcaDraftBoundary />
-                <RealtimeBridge />
-                <BrowserRouter>
-                  <AppRouteBoundary>
-                    <CrumbReachFromRoutes routes={PROTECTED_ROUTES}>
-                      <AppRoutes />
-                    </CrumbReachFromRoutes>
-                  </AppRouteBoundary>
-                </BrowserRouter>
-              </CalendarPreferenceProvider>
-            </DisplayCurrencyProvider>
-          </PlantSelectionProvider>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <AppThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <UnsavedChangesDialogHost />
+          <AuthProvider>
+            <PlantSelectionProvider>
+              <DisplayCurrencyProvider>
+                <CalendarPreferenceProvider>
+                  <GlobalErrorListeners />
+                  <V2SessionBridge />
+                  <PeriodDraftBoundary />
+                  <RcaDraftBoundary />
+                  <RealtimeBridge />
+                  <BrowserRouter>
+                    <AppRouteBoundary>
+                      <CrumbReachFromRoutes routes={PROTECTED_ROUTES}>
+                        <AppRoutes />
+                      </CrumbReachFromRoutes>
+                    </AppRouteBoundary>
+                  </BrowserRouter>
+                </CalendarPreferenceProvider>
+              </DisplayCurrencyProvider>
+            </PlantSelectionProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </AppThemeProvider>
   </RouteErrorBoundary>
 );
 

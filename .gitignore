@@ -32,3 +32,5 @@ playwright-report/
 
 # RCA attachments stored by the backend (UPLOAD_ROOT = <cwd>/uploads)
 uploads/
+
+.superpowers/

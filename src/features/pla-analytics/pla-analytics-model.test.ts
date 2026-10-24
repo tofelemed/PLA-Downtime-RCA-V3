@@ -110,7 +110,7 @@ describe('PLA analytics display (plan 3.6, T41)', () => {
   it('chart rows copy server values per series (null stays null)', () => {
     const rows = oeeRows({ policy: 'operational', label: 'L', groupBy: 'day', calculationRunIds: [], total: [], groups: [{ key: '2026-10-01', label: null, metrics: [kpi({ value: '0.5' }), kpi({ metric: 'quality' })] }] });
     expect(rows).toEqual([{ label: '2026-10-01', values: { oee: '0.5', quality: null } }]);
-    const trend = { groupBy: 'day' as const, ledger: 'plan' as const, calculationRunIds: [], buckets: [{ key: 'd', uom: 't', unaccounted: '10', overAccounted: '0', overproduction: '0', plan: '100', shortfall: '10', unexplained: '10', unexplainedOfPlan: '0.1', unexplainedOfShortfall: '1', unexplainedTarget: '0.02', unexplainedAboveTarget: true, periods: 1, excludedSlices: 0 }] };
+    const trend = { groupBy: 'day' as const, ledger: 'plan' as const, calculationRunIds: [], totals: [], buckets: [{ key: 'd', uom: 't', unaccounted: '10', overAccounted: '0', overproduction: '0', plan: '100', actual: '90', shortfall: '10', unexplained: '10', explained: '0', unexplainedOfPlan: '0.1', unexplainedOfShortfall: '1', unexplainedTarget: '0.02', unexplainedAboveTarget: true, periods: 1, excludedSlices: 0 }] };
     expect(trendUnits(trend)).toEqual(['t']);
     expect(residualRows(trend, 't')[0].values.unaccounted).toBe('10');
   });
@@ -125,13 +125,13 @@ describe('PLA analytics views and dashboard window (UI guidelines §2, §8)', ()
   });
 
   it('the dashboard window rolls with the clock but is minute-stable (one cache entry per minute)', () => {
-    const a = dashboardScope('7d', Date.parse('2026-10-12T10:00:05Z'));
-    const b = dashboardScope('7d', Date.parse('2026-10-12T10:00:50Z'));
-    const later = dashboardScope('7d', Date.parse('2026-10-13T10:00:05Z'));
+    const a = dashboardScope('7d', {}, Date.parse('2026-10-12T10:00:05Z'));
+    const b = dashboardScope('7d', {}, Date.parse('2026-10-12T10:00:50Z'));
+    const later = dashboardScope('7d', {}, Date.parse('2026-10-13T10:00:05Z'));
     expect([a.from, a.to]).toEqual([b.from, b.to]);
     expect(a.to).toBe('2026-10-12T10:01:00.000Z');
     expect(later.to > a.to).toBe(true);
-    expect(dashboardScope('24h', 0).windowLabel).toBe('Last 24 h');
+    expect(dashboardScope('24h', {}, 0).windowLabel).toBe('24 h');
     expect(presetKeyOf('90d')).toBe('7d');
   });
 

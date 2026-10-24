@@ -1378,3 +1378,13 @@ Engineering defaults; change any of them on request.
 - **Site level is exposed:** a Site selector on the unit form and a way to manage a plant's sites (API change, flagged; OpenAPI snapshot updated).
 - **Save feedback:** creates, new versions and imports end in a result dialog (View · Add another · Back to list · Next: <next tab>); small edits and approvals use a toast; failures always show a red alert with the offending fields marked, input kept.
 - **Next links** appear only in that result dialog and through the area tab bar, which stays visible on sub-pages; no bar on top of pages.
+
+## 2026-10-24 — Dashboard and shell redesign (owner answers; `docs/superpowers/specs/2026-10-24-dashboard-shell-redesign-design.md`)
+
+- **Sidebar sections renamed:** Production → **Daily operations**, Reliability → **Asset reliability**, Setup → **Configuration**. Section keys and routes are unchanged.
+- **USD/IRR display switch is hidden for now;** amounts show in USD.
+- **The dashboard follows the header hierarchy selection** (organisation, plant, unit, asset) and every KPI follows it. Selecting an organisation only keeps the acting plant; cross-plant figures are not available yet.
+- **KPI tiles show no change or previous-period line.**
+- **Plant-level MTBF and MTTR** over the visible units/assets: MTBF = total run time ÷ number of failures; MTTR = total repair time ÷ number of repairs. Awaiting confirmation from the reliability engineers.
+- **Explained loss = shortfall − unexplained loss, floored at 0.** Implemented by the server (Task 5).
+- **`GET /v2/units/asset-presence` is unpaginated by design:** it answers `{ data: { items } }` with one row per visible unit of the plant (bounded by the plant's units), so the hierarchy chevrons need one request.

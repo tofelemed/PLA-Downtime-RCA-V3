@@ -100,6 +100,33 @@ describe('v2 units (plan 3.2)', () => {
     expect(second.nextCursor).toBeNull();
   });
 
+  it('reports asset presence per unit, counting only active assets', async () => {
+    await harness.dataSource.query(
+      `INSERT INTO assets (code, name, unit_id, tenant_id, organization_id, retired_at) SELECT 'RET-' || $1::text, 'Retired asset', $2::text, $3::uuid, organization_id, now() FROM units WHERE id = $2::uuid`,
+      [world.unitA2.slice(0, 8), world.unitA2, world.tenantA],
+    );
+    const read = async (token: string) =>
+      (
+        await http()
+          .get('/api/v2/units/asset-presence')
+          .set(bearer(token))
+          .expect(200)
+      ).body as {
+        data: { items: Array<{ unitId: string; hasAssets: boolean }> };
+      };
+    const presence = new Map(
+      (await read(analystA)).data.items.map((row) => [
+        row.unitId,
+        row.hasAssets,
+      ]),
+    );
+    expect(presence.get(world.unitA1)).toBe(true);
+    expect(presence.get(world.unitA2)).toBe(false);
+    expect(presence.has(world.unitB1)).toBe(false);
+    const limited = (await read(unitOperator)).data.items;
+    expect(limited.map((row) => row.unitId)).toEqual([world.unitA1]);
+  });
+
   it('rejects tenantId in the query (400) and anonymous calls (401)', async () => {
     await http()
       .get(`/api/v2/units?tenantId=${world.tenantB}`)

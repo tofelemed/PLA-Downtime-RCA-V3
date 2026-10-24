@@ -10,6 +10,7 @@ const data: ReliabilityTrendView = {
   months: ['2027-01', '2027-02'],
   units: [{ unitId: 'u1', assetId: null, label: null, fallingMtbf: true, months: [{ month: '2027-01', row: row('7200') }, { month: '2027-02', row: row('3600') }] }],
   assets: [],
+  total: { fallingMtbf: false, months: [] },
   failureDefinition: 'A failure is …',
   calculationRunIds: [],
 };

@@ -170,6 +170,12 @@ export interface ReliabilityRowView {
   mttr: KpiAggregateView;
 }
 
+/** A reliability row's figures without the unit / asset it belongs to (a total over several). */
+export type ReliabilityTermsView = Omit<
+  ReliabilityRowView,
+  'unitId' | 'assetId' | 'label'
+>;
+
 export interface ReliabilityReportView {
   units: ReliabilityRowView[];
   assets: ReliabilityRowView[];

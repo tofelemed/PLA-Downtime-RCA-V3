@@ -337,12 +337,6 @@ test.describe('Reliability engineer — RCA case journeys (RCA01–03)', () => {
     const approved = page.getByTestId('outcome-panel').locator('section').first();
     if (outcome.body.approvedHistoricalLoss.lines === 0) await expect(approved.getByTestId('approved-impact-none')).toBeVisible();
 
-    const toggle = page.getByTestId('display-currency-toggle').first();
-    await toggle.getByTestId('display-currency-IRR').click();
-    await expect(claimed).toContainText(money(irr!.amount, 'IRR'));
-    await expect(claimed).toContainText(money(usd!.amount, 'USD'));
-    await toggle.getByTestId('display-currency-USD').click();
-    await expect(claimed).toContainText(money(usd!.amount, 'USD'));
     expect(conversions, 'the browser asked no conversion endpoint').toEqual([]);
     await page.screenshot({ path: test.info().outputPath('j4-outcome-currency.png'), fullPage: true });
   });

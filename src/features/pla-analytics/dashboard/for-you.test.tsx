@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { actAs } from '@/test/acting-user';
 import { jsonResponse, listPage, stubV2Fetch, type V2Call } from '@/test/v2-fetch';
 import { dashboardScope } from '../model/dashboard-scope';
-import { forYouTilesOf, pageCountText } from './for-you-model';
+import { pageCountText } from '@/features/ux-kit/use-page-count';
+import { forYouTilesOf } from './for-you-model';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
@@ -29,9 +32,11 @@ function renderRow() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <ForYouRow scope={dashboardScope('7d', NOW)} />
-      </MemoryRouter>
+      <TooltipProvider>
+        <MemoryRouter>
+          <ForYouRow scope={dashboardScope('7d', {}, NOW)} />
+        </MemoryRouter>
+      </TooltipProvider>
     </QueryClientProvider>,
   );
 }
@@ -42,7 +47,7 @@ describe('dashboard "For you" row (UX audit §5.6)', () => {
   it('picks the tiles from the effective roles, each once and in a fixed order', () => {
     expect(forYouTilesOf(['operator'])).toEqual(['currentStops', 'stopsToCode']);
     expect(forYouTilesOf(['production_engineer', 'Operator'])).toEqual(['currentStops', 'stopsToCode']);
-    expect(forYouTilesOf(['manager_approver', 'production_accountant'])).toEqual(['periodsDue', 'approvals']);
+    expect(forYouTilesOf(['manager_approver', 'production_accountant'])).toEqual(['approvals', 'periodsDue']);
     expect(forYouTilesOf(['reliability_engineer'])).toEqual(['recommended', 'myOverdueActions']);
     expect(forYouTilesOf(['viewer'])).toEqual([]);
   });
@@ -62,6 +67,35 @@ describe('dashboard "For you" row (UX audit §5.6)', () => {
     expect(await screen.findByRole('link', { name: /Pending approvals: 5/ })).toBeInTheDocument();
     const inbox = calls.find((call) => call.url.pathname.endsWith('/approval-inbox'));
     expect(inbox?.url.searchParams.get('decidable')).toBe('true');
+  });
+
+  it('Pending approvals comes first and carries the attention edge while something waits', async () => {
+    actAs('manager_approver');
+    stubV2Fetch(reply);
+    renderRow();
+    await screen.findByRole('link', { name: /Pending approvals: 5/ });
+    const tiles = within(screen.getByTestId('dashboard-for-you')).getAllByTestId(/^for-you-/);
+    expect(tiles[0]).toHaveAttribute('data-testid', 'for-you-approvals');
+    expect(tiles[0].className).toContain('for-you-attention');
+  });
+
+  it('no attention edge on an empty approvals inbox', async () => {
+    actAs('manager_approver');
+    stubV2Fetch((call) => (call.url.pathname.endsWith('/approval-inbox') ? jsonResponse(200, listPage([])) : reply(call)));
+    renderRow();
+    await screen.findByRole('link', { name: /Pending approvals: 0/ });
+    expect(screen.getByTestId('for-you-approvals').className).not.toContain('for-you-attention');
+  });
+
+  it('tile notes appear only in the info tooltip', async () => {
+    actAs('manager_approver');
+    stubV2Fetch(reply);
+    renderRow();
+    await screen.findByRole('link', { name: /Pending approvals: 5/ });
+    expect(screen.queryByText('Waiting for your decision')).toBeNull();
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: 'About Pending approvals' })).toHaveFocus();
+    expect((await screen.findAllByText('Waiting for your decision')).length).toBeGreaterThan(0);
   });
 
   it('shows a page count with "+" when the server has a further page', () => {

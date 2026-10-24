@@ -10,6 +10,12 @@ export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
 /** Owner decision (2026-10-10): money is shown in US dollars unless the user picks IRR. */
 export const DEFAULT_DISPLAY_CURRENCY: DisplayCurrency = 'USD';
 
+/**
+ * The USD/IRR switch is hidden for now: while false, money is always shown in USD and the user's saved
+ * choice is left untouched in storage (it applies again when this is turned back on).
+ */
+export const DISPLAY_CURRENCY_SWITCH_ENABLED = false;
+
 export function isDisplayCurrency(value: unknown): value is DisplayCurrency {
   return typeof value === 'string' && (DISPLAY_CURRENCIES as readonly string[]).includes(value);
 }
@@ -19,7 +25,7 @@ export function isDisplayCurrency(value: unknown): value is DisplayCurrency {
  * plant selection); without a user, or with an unreadable value, it is the default.
  */
 export function loadDisplayCurrency(userId: string | null): DisplayCurrency {
-  if (!userId) return DEFAULT_DISPLAY_CURRENCY;
+  if (!userId || !DISPLAY_CURRENCY_SWITCH_ENABLED) return DEFAULT_DISPLAY_CURRENCY;
   try {
     const saved = window.localStorage.getItem(KEY_PREFIX + userId);
     return isDisplayCurrency(saved) ? saved : DEFAULT_DISPLAY_CURRENCY;

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { Section } from '@/features/ux-kit/page-layout';
 import type { AnalyticsScope } from '../model/analytics-scope';
+import { KpiSection } from './kpi-section';
 import { forYouTilesOf, type ForYouTileKey } from './for-you-model';
 import { ApprovalsTile, CurrentStopsTile, MyOverdueActionsTile, PeriodsDueTile, RecommendedTile, StopsToCodeTile } from './for-you-tiles';
 
@@ -33,10 +33,10 @@ export function ForYouRow({ scope }: { scope: AnalyticsScope }) {
   const keys = forYouTilesOf(roles);
   if (keys.length === 0) return null;
   return (
-    <Section title="For you">
+    <KpiSection title="For you">
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-for-you">
         {keys.map((key) => tileOf(key, scope))}
       </dl>
-    </Section>
+    </KpiSection>
   );
 }

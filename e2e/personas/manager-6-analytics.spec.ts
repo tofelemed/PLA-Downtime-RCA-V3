@@ -174,7 +174,7 @@ test.describe('Manager persona — Downtime Analysis and PLA analytics', () => {
     const writes = trackWrites(page);
     await page.goto('/dashboard');
     await expect(page.getByTestId('analytics-dashboard')).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId('dashboard-oee-operational')).toContainText('Operational OEE (ISO 22400)');
+    await expect(page.getByTestId('dashboard-oee-operational-tile')).toContainText('Operational OEE');
     await expect(page.getByTestId('dashboard-overdue')).toHaveAttribute('data-count', /^\d+$/);
     expect(writes).toEqual([]);
   });

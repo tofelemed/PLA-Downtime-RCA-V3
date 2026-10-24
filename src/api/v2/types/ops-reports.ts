@@ -201,10 +201,25 @@ export interface ReliabilitySeriesView {
   fallingMtbf: boolean;
 }
 
+/** A reliability row's figures without the unit / asset it belongs to (a total over several). */
+export type ReliabilityTermsView = Omit<ReliabilityRowView, 'unitId' | 'assetId' | 'label'>;
+
+export interface ReliabilityTotalMonthView {
+  month: string;
+  row: ReliabilityTermsView;
+}
+
+/** The selected scope as one series: every unit in scope, or the `assetIds` assets. */
+export interface ReliabilityTotalView {
+  months: ReliabilityTotalMonthView[];
+  fallingMtbf: boolean;
+}
+
 export interface ReliabilityTrendView {
   months: string[];
   units: ReliabilitySeriesView[];
   assets: ReliabilitySeriesView[];
+  total: ReliabilityTotalView;
   failureDefinition: string;
   calculationRunIds: string[];
 }

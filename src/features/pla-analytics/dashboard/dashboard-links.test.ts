@@ -7,7 +7,7 @@ import { dashboardScope } from '../model/dashboard-scope';
 import { assetStopsHref, dashboardContext, downtimeHref, eventsHref, plaHref, RCA_LIST_LINKS, reportsHref, stopsToCodeHref } from './dashboard-links';
 
 const NOW = Date.parse('2026-10-18T08:00:00Z');
-const scope = dashboardScope('30d', NOW);
+const scope = dashboardScope('30d', {}, NOW);
 const paramsOf = (href: string) => new URL(href, 'http://app').searchParams;
 
 describe('dashboard deep links (UX audit G-6 / B-8)', () => {
@@ -18,7 +18,7 @@ describe('dashboard deep links (UX audit G-6 / B-8)', () => {
 
   it('downtime opens with the dashboard window', () => {
     const filters = parseDowntimeFilters(paramsOf(downtimeHref(scope)), NOW);
-    expect([filters.from, filters.to, filters.windowLabel, filters.relativeWindow]).toEqual([scope.from, scope.to, scope.windowLabel, '30d']);
+    expect([filters.from, filters.to, filters.windowLabel, filters.relativeWindow]).toEqual([scope.from, scope.to, 'Last 30 days', '30d']);
   });
 
   it('a most-stopped asset opens its downtime stops in the Event Hub over the same window', () => {
@@ -27,7 +27,7 @@ describe('dashboard deep links (UX audit G-6 / B-8)', () => {
     const filters = parseEventFilters(paramsOf(href), NOW);
     expect(filters.assetIds).toEqual(['asset-7']);
     expect(filters.physicalTypes).toEqual(['downtime']);
-    expect([filters.windowLabel, filters.relativeWindow]).toEqual([scope.windowLabel, '30d']);
+    expect([filters.windowLabel, filters.relativeWindow]).toEqual(['Last 30 days', '30d']);
     expect(parseEventFilters(paramsOf(eventsHref(scope)), NOW).assetIds).toEqual([]);
   });
 
@@ -42,9 +42,18 @@ describe('dashboard deep links (UX audit G-6 / B-8)', () => {
     expect(href).not.toContain('#');
     expect(paramsOf(href).get('breakdown')).toBe('repeat-causes');
     const pla = parseScope(paramsOf(href), NOW);
-    expect([pla.from, pla.to, pla.windowLabel]).toEqual([scope.from, scope.to, scope.windowLabel]);
+    expect([pla.from, pla.to, pla.windowLabel]).toEqual([scope.from, scope.to, 'Last 30 days']);
     expect(paramsOf(href).get('tab')).toBeNull();
     expect(reportsHref(scope, 'production')).toBe('/reports?view=production&window=30d');
+  });
+
+  it('a period no other page knows (6 months) links with explicit dates, never an unknown window key', () => {
+    const long = dashboardScope('6m', {}, NOW);
+    expect(dashboardContext(long)).toEqual({ from: long.from, to: long.to, windowLabel: '6 months' });
+    const params = paramsOf(downtimeHref(long));
+    expect([params.get('from'), params.get('to')]).toEqual([long.from, long.to]);
+    expect(params.get('window')).not.toBe('6m');
+    expect(paramsOf(reportsHref(long, 'production')).get('window')).not.toBe('6m');
   });
 
   it('RCA tiles open the list with filters it supports', () => {

@@ -4166,7 +4166,7 @@ export interface paths {
         };
         /**
          * MTBF, mean time to restore and MTTR per plant month for each unit and its most-failing assets
-         * @description The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed while its unit runs). Assets: at most 30, those with the most eligible failures. fallingMtbf: MTBF fell in each of the last three months that have a value. unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
+         * @description The stored terms of the shown runs summed per plant month (YYYY-MM of the period date), with the definitions of /reports/reliability (unknown state time left out of unit exposure; an asset is exposed while its unit runs). Assets: at most 30, those with the most eligible failures, plus every assetIds asset. total: the selected scope as one series — the terms of every unit summed per month, or with assetIds those assets (a unit’s exposure counted once however many of its assets are listed). fallingMtbf: MTBF fell in each of the last three months that have a value. assetIds must be assets of the tenant on those units (422 INVALID_REFERENCE). unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE); omitted, a unit-limited caller gets its own units only. Window ≤ 400 days.
          */
         get: operations["OpsReportsV2Controller_reliabilityTrend_v2"];
         put?: never;
@@ -5556,7 +5556,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Unaccounted, over-accounted and overproduction quantity per site-local shift, day, week or month (plan ledger, after decisions)
+         * Unaccounted, over-accounted and overproduction quantity, plan, actual, shortfall, explained and unexplained loss per site-local shift, day, week or month, with window totals per unit of measure (plan ledger, after decisions)
          * @description Read-only, never computes on read from anything but the stored runs, ledgers, decisions and actuals. Periods starting in [from, to) (≤ 400 days, no period cap: read in keyset pages, aggregates only); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. Shows the approved revision, else the open draft (provisional); approvedOnly = approved revisions only.
          */
         get: operations["PlaReportsV2Controller_reconciliationTrend_v2"];
@@ -6256,6 +6256,26 @@ export interface paths {
          * @description Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED). 409 MASTER_DATA_CODE_EXISTS when another unit of the plant has the code (case-insensitive).
          */
         post: operations["UnitsV2Controller_create_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/units/asset-presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether each unit of the caller scope has an active asset
+         * @description One row per visible unit (`hasAssets` = at least one non-retired asset); drives the hierarchy chevrons.
+         */
+        get: operations["UnitsV2Controller_assetPresence_v2"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -17500,6 +17520,8 @@ export interface operations {
                 unitIds?: string[];
                 /** @description Only approved (published) revisions; default: approved when one exists, else the open draft (provisional) */
                 approvedOnly?: boolean;
+                /** @description Repeat for several assets; assets of the tenant on units of the caller’s scope (422 INVALID_REFERENCE) */
+                assetIds?: string[];
             };
             header?: never;
             path?: never;
@@ -20744,6 +20766,23 @@ export interface operations {
         };
         responses: {
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UnitsV2Controller_assetPresence_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

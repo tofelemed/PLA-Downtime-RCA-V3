@@ -249,8 +249,20 @@ describe('Operating reports (R1)', () => {
           row: { mtbf: { value: string | null } };
         }>;
       }>;
+      total: {
+        months: Array<{
+          month: string;
+          row: { unitId?: string; mtbf: { value: string | null } };
+        }>;
+      };
     }>;
     expect(trend.data.months).toEqual(['2027-03']);
+    // one unit in scope: the month-only total query gives the unit's own figures, with no unit id
+    expect(trend.data.total.months.map((m) => m.month)).toEqual(['2027-03']);
+    expect(trend.data.total.months[0].row.mtbf).toEqual(
+      trend.data.units[0].months[0].row.mtbf,
+    );
+    expect(trend.data.total.months[0].row.unitId).toBeUndefined();
     expect(trend.data.units).toHaveLength(1);
     const single = (await env.get(`reports/reliability?${scope}`).expect(200))
       .body as Envelope<{ units: Array<{ mtbf: { value: string | null } }> }>;
@@ -258,6 +270,12 @@ describe('Operating reports (R1)', () => {
       single.data.units[0].mtbf.value,
     );
     expect(trend.data.units[0].fallingMtbf).toBe(false);
+    const foreign = await env
+      .get(
+        `reports/reliability-trend?${scope}&assetIds=00000000-0000-4000-8000-000000000001`,
+      )
+      .expect(422);
+    expect((foreign.body as { code: string }).code).toBe('INVALID_REFERENCE');
   });
 
   it('chronic vs sporadic: the FEED stop with its count, seconds and quadrant', async () => {

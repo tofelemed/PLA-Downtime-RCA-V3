@@ -12,11 +12,12 @@ vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => capa
 vi.mock('@/api/v2/queries/feature-flags', () => ({ useFeatureFlags: () => ({ data: { items: [] } }) }));
 vi.mock('@/app/routes', () => ({ preloadRoute: vi.fn() }));
 vi.mock('@/features/shell/use-branding', () => ({ useBranding: () => undefined }));
+vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
+vi.mock('@/api/v2/queries/approvals', () => ({ useApprovalInbox: () => ({ query: { data: undefined } }) }));
 vi.mock('@/features/plant-selector/plant-selector', () => ({ PlantSelector: () => <span>Plant</span> }));
-vi.mock('@/features/display-currency/display-currency-toggle', () => ({ DisplayCurrencyToggle: () => null }));
+vi.mock('@/features/shell/plant-timezone-readout', () => ({ PlantTimezoneReadout: () => null }));
 vi.mock('@/features/notifications/notification-bell', () => ({ NotificationBell: () => null }));
 vi.mock('@/features/shell/user-badge', () => ({ UserBadge: () => null }));
-vi.mock('@/features/shell/live-indicator', () => ({ LiveIndicator: () => null }));
 vi.mock('@/features/v2-foundation/plant-access-guard', () => ({ PlantAccessGuard: passThrough }));
 
 const { Layout } = await import('@/components/Layout');
@@ -71,7 +72,7 @@ describe('responsive shell (UX audit H-1)', () => {
     expect(within(nav).queryByRole('button', { name: /sidebar/ })).toBeNull();
     // the drawer opens the current page's section (Overview) and closes the others, like the sidebar
     expect(within(nav).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
-    expect(within(nav).getByRole('button', { name: 'Production' })).toHaveAttribute('aria-expanded', 'false');
+    expect(within(nav).getByRole('button', { name: 'Daily operations' })).toHaveAttribute('aria-expanded', 'false');
     await userEvent.click(within(nav).getByRole('link', { name: 'Reports' }));
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull());
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveAttribute('aria-expanded', 'false');
