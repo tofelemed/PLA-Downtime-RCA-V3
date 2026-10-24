@@ -103,6 +103,22 @@ describe('Page layout', () => {
     expect(document.title).toBe('Before');
   });
 
+  const withoutIds = (html: string) => html.replace(/:r[0-9a-z]+:/g, ':id:');
+
+  it('Section.titleAside renders next to the heading; without it the output is unchanged', () => {
+    const plain = render(<Section title="Details">rows</Section>);
+    const plainHtml = withoutIds(plain.container.innerHTML);
+    plain.unmount();
+    const withAside = render(<Section title="Details" titleAside={<button type="button">About details</button>}>rows</Section>);
+    const heading = screen.getByRole('heading', { level: 2, name: 'Details' });
+    expect(heading.nextElementSibling).toBe(screen.getByRole('button', { name: 'About details' }));
+    expect(withoutIds(withAside.container.innerHTML)).not.toBe(plainHtml);
+    withAside.unmount();
+    const again = render(<Section title="Details">rows</Section>);
+    expect(withoutIds(again.container.innerHTML)).toBe(plainHtml);
+    expect(screen.queryByRole('button', { name: 'About details' })).toBeNull();
+  });
+
   it('a collapsible Section is a disclosure with aria-expanded', async () => {
     const user = userEvent.setup();
     render(
