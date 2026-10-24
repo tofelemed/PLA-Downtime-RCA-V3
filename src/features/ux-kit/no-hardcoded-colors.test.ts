@@ -7,10 +7,11 @@ import { describe, expect, it } from 'vitest';
  * `success / warning / info / neutral / danger`, `chart-1..8` and `state-*`. A hard-coded Tailwind palette
  * class, a raw `hsl()` / `rgb()` or a hex colour in feature code drifts from the tokens and breaks the
  * warning-vs-alarm rule (§5.8), so this scan fails on any new one. Generated shadcn files and tests are not
- * scanned; `hsl(var(--token))` is allowed.
+ * scanned; `hsl(var(--token))` is allowed. `bg-white` / `text-black` and friends are banned too: they do not follow
+ * the light / dark theme (`.dark` tokens in src/index.css).
  */
 const ROOT = join(process.cwd(), 'src');
-const SCANNED = ['features/', 'components/'];
+const SCANNED = ['features/', 'components/', 'pages/', 'app/', 'contexts/', 'hooks/', 'lib/'];
 const SKIPPED = ['components/ui/'];
 /** User-chosen colours stored as data (an `<input type="color">` default), not UI styling. */
 const ALLOWLIST = new Set([
@@ -24,6 +25,10 @@ const RAW = [
   {
     name: 'Tailwind palette colour class (use a semantic token)',
     pattern: new RegExp(`\\b(?:bg|text|border|fill|stroke|ring|from|via|to|divide|outline|decoration|accent|caret|placeholder|shadow)-(?:${PALETTE})-\\d{2,3}\\b`),
+  },
+  {
+    name: 'fixed white / black class (use background / foreground tokens)',
+    pattern: /\b(?:bg|text|border|fill|stroke|ring|divide|outline|from|via|to)-(?:white|black)\b/,
   },
   { name: 'raw hsl() / rgb() colour (use hsl(var(--token)))', pattern: /\b(?:hsla?|rgba?)\(\s*\d/ },
   { name: 'hex colour', pattern: /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b/ },
@@ -39,7 +44,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe('colours come from the semantic tokens', () => {
-  it('no palette classes, raw hsl()/rgb() or hex colours in src/features and src/components', () => {
+  it('no palette or white / black classes, raw hsl()/rgb() or hex colours in app source', () => {
     const offenders = sourceFiles(ROOT)
       .map((path) => relative(ROOT, path).replace(/\\/g, '/'))
       .filter((file) => SCANNED.some((dir) => file.startsWith(dir)))

@@ -62,7 +62,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
   if (!session) return <div>{children}</div>;
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-canvas">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-toast focus:rounded focus:bg-background focus:px-3 focus:py-2 focus:shadow"
@@ -75,7 +75,7 @@ export const Layout = ({ children }: LayoutProps) => {
         {mode !== 'drawer' && (
           <aside
             className={cn(
-              'sticky top-14 z-sidebar h-[calc(100vh-3.5rem)] shrink-0 border-r bg-background transition-[width] duration-200 print:hidden',
+              'sticky top-14 z-sidebar h-[calc(100vh-3.5rem)] shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-200 print:hidden',
               nav.collapsed ? 'w-16' : 'w-60',
             )}
           >

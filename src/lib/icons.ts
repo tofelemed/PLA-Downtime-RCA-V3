@@ -113,6 +113,8 @@ import {
   CalendarDays,
   Hammer,
   SlidersHorizontal,
+  Sun,
+  Moon,
   X,
 } from 'lucide-react';
 
@@ -258,6 +260,9 @@ export const UiIcon = {
   chevronRight: ChevronRight,
   /** the header's in-app notifications */
   notifications: Bell,
+  /** the header's theme switch: the icon of the theme it switches to */
+  lightTheme: Sun,
+  darkTheme: Moon,
 } as const satisfies Record<string, AppIcon>;
 
 export type ActionIconKey = keyof typeof ActionIcon;

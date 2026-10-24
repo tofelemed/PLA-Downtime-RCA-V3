@@ -6,6 +6,7 @@ import { APP_TITLE } from '@/features/ux-kit/page-layout/use-document-title';
 import { UiIcon } from '@/lib/icons';
 import { BrandMark } from './brand-mark';
 import { LiveIndicator } from './live-indicator';
+import { ThemeToggle } from './theme-toggle';
 import { UserBadge } from './user-badge';
 
 const DEFAULT_NAME = APP_TITLE;
@@ -57,6 +58,7 @@ export function AppHeader({ branding, navigation }: AppHeaderProps) {
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         <LiveIndicator className="hidden lg:flex" />
         <DisplayCurrencyToggle />
+        <ThemeToggle />
         <NotificationBell />
         <UserBadge />
       </div>

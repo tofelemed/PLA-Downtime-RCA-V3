@@ -44,7 +44,9 @@ export function SidebarLink({ item, collapsed, active, onNavigate }: SidebarLink
       className={cn(
         'flex items-center gap-3 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         collapsed ? 'mx-auto h-10 w-10 justify-center' : 'px-3 py-2',
-        active ? 'bg-primary text-primary-foreground' : 'text-foreground/80 hover:bg-muted hover:text-foreground',
+        active
+          ? 'relative bg-sidebar-active-bg text-sidebar-active-fg before:absolute before:inset-y-1 before:left-0 before:w-[3px] before:rounded-full before:bg-sidebar-active-bar'
+          : 'text-foreground/80 hover:bg-sidebar-accent hover:text-foreground',
       )}
     >
       <Icon className="h-5 w-5 shrink-0" aria-hidden />

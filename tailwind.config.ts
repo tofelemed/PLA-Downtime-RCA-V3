@@ -32,6 +32,9 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				// page canvas behind cards and the colour of page / section titles (light and dark, src/index.css)
+				canvas: 'hsl(var(--canvas))',
+				heading: 'hsl(var(--heading))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'
@@ -89,7 +92,9 @@ export default {
 					'5': 'hsl(var(--chart-5))',
 					'6': 'hsl(var(--chart-6))',
 					'7': 'hsl(var(--chart-7))',
-					'8': 'hsl(var(--chart-8))'
+					'8': 'hsl(var(--chart-8))',
+					grid: 'hsl(var(--chart-grid))',
+					axis: 'hsl(var(--chart-axis))'
 				},
 				state: {
 					running: 'hsl(var(--state-running))',
@@ -111,7 +116,11 @@ export default {
 					accent: 'hsl(var(--sidebar-accent))',
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
-					ring: 'hsl(var(--sidebar-ring))'
+					ring: 'hsl(var(--sidebar-ring))',
+					'section-label': 'hsl(var(--sidebar-section-label))',
+					'active-bg': 'hsl(var(--sidebar-active-bg))',
+					'active-fg': 'hsl(var(--sidebar-active-fg))',
+					'active-bar': 'hsl(var(--sidebar-active-bar))'
 				}
 			},
 			borderRadius: {
