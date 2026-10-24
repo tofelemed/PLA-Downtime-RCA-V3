@@ -9,5 +9,5 @@ export function approvalStateText(item: Pick<ApprovalItem, 'state' | 'requiredRo
 
 /** The inbox shows the workflow state only; the required role and SuperAdmin note are on the approval page. */
 export function ApprovalStateCell({ item }: { item: ApprovalItem }) {
-  return <Badge variant="secondary">{approvalStateText(item).state}</Badge>;
+  return <Badge variant="secondary" className="whitespace-nowrap">{approvalStateText(item).state}</Badge>;
 }
