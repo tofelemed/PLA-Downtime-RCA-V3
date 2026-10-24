@@ -1,6 +1,7 @@
 import type { RcaDiagramNode } from '@/api/v2/types/rca';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/features/ux-kit/confirm-dialog';
+import { ActionIcon, UiIcon } from '@/lib/icons';
 
 export interface DiagramToolbarProps {
   eventCount: number;
@@ -11,22 +12,26 @@ export interface DiagramToolbarProps {
   onDelete: (id: string) => void;
 }
 
-/** Add, connect (the keyboard alternative to dragging, F-10), edit and delete events of the diagram. */
+/** Add, connect (the keyboard alternative to dragging, F-10), edit and delete events of the diagram (h-9, icon + words). */
 export function DiagramToolbar({ eventCount, selected, onAdd, onConnect, onEdit, onDelete }: DiagramToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" onClick={onAdd} data-testid="add-event">
+    <>
+      <Button className="h-9" onClick={onAdd} data-testid="add-event">
+        <ActionIcon.add aria-hidden="true" className="h-4 w-4" />
         Add event
       </Button>
-      <Button size="sm" variant="outline" disabled={eventCount < 2} onClick={onConnect} data-testid="add-connection">
+      <Button variant="outline" className="h-9" disabled={eventCount < 2} onClick={onConnect} data-testid="add-connection">
+        <UiIcon.next aria-hidden="true" className="h-4 w-4" />
         Add connection
       </Button>
-      <Button size="sm" variant="outline" disabled={!selected} onClick={() => selected && onEdit(selected.id)}>
+      <Button variant="outline" className="h-9" disabled={!selected} onClick={() => selected && onEdit(selected.id)}>
+        <ActionIcon.edit aria-hidden="true" className="h-4 w-4" />
         Edit selected event
       </Button>
       <ConfirmDialog
         trigger={
-          <Button size="sm" variant="outline" disabled={!selected}>
+          <Button variant="outline" className="h-9" disabled={!selected}>
+            <ActionIcon.delete aria-hidden="true" className="h-4 w-4" />
             Delete selected event
           </Button>
         }
@@ -36,6 +41,6 @@ export function DiagramToolbar({ eventCount, selected, onAdd, onConnect, onEdit,
         destructive
         onConfirm={() => selected && onDelete(selected.id)}
       />
-    </div>
+    </>
   );
 }
