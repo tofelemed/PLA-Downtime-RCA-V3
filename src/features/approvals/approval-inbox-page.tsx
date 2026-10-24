@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { pageNameOf } from '@/features/auth/navigation-items';
-import { useCapabilities } from '@/features/auth/use-capabilities';
 import { ListPager } from '@/features/ux-kit/data-table';
 import { DataState } from '@/features/ux-kit/data-state';
 import { Page, PageHeader } from '@/features/ux-kit/page-layout';
@@ -67,7 +66,6 @@ function useKindParam(): [string, (kind: string) => void] {
 }
 
 function ApprovalInboxScreen() {
-  const { isSuperAdmin } = useCapabilities();
   const [kind, setKind] = useKindParam();
   const [decidable, setDecidable] = useState(false);
   const inbox = useApprovalInbox(kind || undefined, decidable);
@@ -77,10 +75,7 @@ function ApprovalInboxScreen() {
   return (
     <Page width="wide">
       <div className="space-y-4" data-testid="approval-inbox">
-        <PageHeader title={pageNameOf('/approvals')} description="Pending records for your approval roles in this plant, oldest first, grouped by workflow. Each row says what changes; open it to decide in place." />
-        <p className="text-sm text-muted-foreground">
-          {isSuperAdmin ? 'You are acting as SuperAdmin. You can decide for every workflow role, including your own requests.' : 'Approvals follow your assigned roles. A different approver must decide your own requests.'} Retire is offered only where that workflow supports it; Reject and Return keep their own meaning.
-        </p>
+        <PageHeader title={pageNameOf('/approvals')} />
         <div className="flex flex-wrap items-end gap-4">
           <InboxFilters kind={kind} setKind={setKind} decidable={decidable} setDecidable={setDecidable} />
           <Button variant="outline" disabled={Boolean(status.isRefreshing)} onClick={() => void inbox.query.refetch()}>Refresh</Button>

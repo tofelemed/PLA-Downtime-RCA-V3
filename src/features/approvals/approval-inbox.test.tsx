@@ -36,7 +36,7 @@ beforeEach(() => {
 afterEach(() => { client.clear(); vi.unstubAllGlobals(); });
 const posts = () => calls.filter((call) => call.method === 'POST');
 describe('pending approvals UI', () => {
-  it('reads on render, shows roles and routes to the existing workspace', async () => { mount(); expect(await screen.findByText('Extruder HDPE')).toBeTruthy(); expect(screen.getByText('Manager (approver)')).toBeTruthy(); expect(screen.getByRole('link', { name: 'Open workspace' }).getAttribute('href')).toBe('/planning/profiles/profile-1'); expect(posts()).toHaveLength(0); });
+  it('reads on render without extra text and routes to the existing workspace', async () => { mount(); expect(await screen.findByText('Extruder HDPE')).toBeTruthy(); expect(screen.queryByText('Manager (approver)')).toBeNull(); expect(screen.queryByText(/Approvals follow your assigned roles|grouped by workflow/)).toBeNull(); expect(screen.getByRole('link', { name: 'Open workspace' }).getAttribute('href')).toBe('/planning/profiles/profile-1'); expect(posts()).toHaveLength(0); });
   it('approves its own SuperAdmin draft with an idempotency key and refreshes the inbox', async () => { mount(); await screen.findByText('Extruder HDPE'); fireEvent.click(screen.getByRole('button', { name: 'Approve' })); const dialog = await screen.findByRole('alertdialog'); await within(dialog).findByText('Current record details'); fireEvent.click(within(dialog).getByRole('button', { name: 'Approve' })); await waitFor(() => expect(posts()).toHaveLength(1)); expect(posts()[0].url.pathname).toMatch(/profiles\/profile-1\/approve$/); expect(posts()[0].body).toEqual({ supersede: false }); expect(posts()[0].headers.get('Idempotency-Key')).toBeTruthy(); expect(await screen.findByText('No pending approvals for your roles')).toBeTruthy(); });
   it('removes a retired draft and keeps the other pending record visible', async () => { rows = [item(), item({ id: 'profile-2', commandId: 'profile-2', title: 'Another pending profile' })]; mount(); await screen.findByText('Extruder HDPE'); fireEvent.click(screen.getAllByRole('button', { name: 'Retire' })[0]); const dialog = await screen.findByRole('alertdialog'); await within(dialog).findByText('Current record details'); fireEvent.click(within(dialog).getByRole('button', { name: 'Retire' })); await waitFor(() => expect(posts()).toHaveLength(1)); expect(posts()[0].url.pathname).toMatch(/profiles\/profile-1\/retire$/); await waitFor(() => expect(screen.queryByText('Extruder HDPE')).toBeNull()); expect(screen.getByText('Another pending profile')).toBeTruthy(); });
   it('removes the approved row immediately even while the follow-up read is waiting', async () => {
@@ -64,17 +64,16 @@ describe('pending approvals UI', () => {
   it('requires a reason before rejecting a proposed quality disposition', async () => { rows = [item({ kind: 'disposition', resource: 'lot-dispositions', supersede: false, actions: [{ action: 'reject', disabledReason: null }] })]; mount(); await screen.findByText('Extruder HDPE'); fireEvent.click(screen.getByRole('button', { name: 'Reject' })); const dialog = await screen.findByRole('alertdialog'); await within(dialog).findByText('Current record details'); const button = within(dialog).getByRole('button', { name: 'Reject' }); expect(button.hasAttribute('disabled')).toBe(true); fireEvent.change(within(dialog).getByLabelText(/^Reason/), { target: { value: 'Lab certificate is missing' } }); fireEvent.click(button); await waitFor(() => expect(posts()).toHaveLength(1)); expect(posts()[0].body).toEqual({ reason: 'Lab certificate is missing' }); });
   it('keeps a failed decision visible and does not retry automatically', async () => { reject = true; mount(); await screen.findByText('Extruder HDPE'); fireEvent.click(screen.getByRole('button', { name: 'Approve' })); const dialog = await screen.findByRole('alertdialog'); await within(dialog).findByText('Current record details'); fireEvent.click(within(dialog).getByRole('button', { name: 'Approve' })); expect(await within(dialog).findByText('Decision could not be saved')).toBeTruthy(); expect(posts()).toHaveLength(1); expect(screen.getByRole('alertdialog')).toBeTruthy(); });
   it('blocks a decision when current details differ from the inbox revision', async () => { recordVersion = 4; mount(); await screen.findByText('Extruder HDPE'); fireEvent.click(screen.getByRole('button', { name: 'Approve' })); const dialog = await screen.findByRole('alertdialog'); expect(await within(dialog).findByText('This record changed. Close this dialog and refresh the inbox before deciding.')).toBeTruthy(); expect(within(dialog).getByRole('button', { name: 'Approve' }).hasAttribute('disabled')).toBe(true); expect(posts()).toHaveLength(0); });
-  it('makes SuperAdmin authority clear for finance, quality and source-owner roles', async () => {
+  it('lets SuperAdmin decide for finance, quality and source-owner roles', async () => {
     rows = ['finance_approver', 'quality_approver', 'production_accountant'].map((role, index) => item({ id: `role-${index}`, commandId: `role-${index}`, title: `Request for ${role}`, requiredRoles: [role] }));
     mount(); await screen.findByText('Request for finance_approver');
-    expect(screen.getByRole('columnheader', { name: 'State / required approval role' })).toBeTruthy();
-    expect(screen.getAllByText('SuperAdmin can act for every approval role')).toHaveLength(3);
+    expect(screen.getByRole('columnheader', { name: 'State' })).toBeTruthy();
+    expect(screen.queryByText('SuperAdmin can act for every approval role')).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Approve' })).toHaveLength(3);
   });
   it('lets SuperAdmin continue a review-stage decision in the existing workspace', async () => {
     rows = [item({ id: 'rev-1', kind: 'period-review', kindLabel: 'Period reconciliation', state: 'in_review', resource: null, actions: [], reviewHref: '/plans/plan-1/periods/period-1/review#period-review' })];
     mount(); await screen.findByText('In review');
-    expect(screen.getByText('SuperAdmin can act for every approval role')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Review & decide Extruder HDPE' }).getAttribute('href')).toBe('/approvals/period-review/rev-1');
     expect(screen.getByRole('link', { name: 'Open workspace' }).getAttribute('href')).toBe('/plans/plan-1/periods/period-1/review#period-review');
   });
@@ -95,10 +94,10 @@ describe('pending approvals UI', () => {
     await waitFor(() => expect(calls.some((call) => call.url.searchParams.get('decidable') === 'true')).toBe(true));
     expect(await screen.findByText(/Nothing waits for your decision/)).toBeTruthy();
   });
-  it('states and required roles read in sentence case, like other badges', async () => {
+  it('states read in sentence case, like other badges; required roles stay on the approval page', async () => {
     rows = [item({ id: 'post-1', kind: 'finance-posting', kindLabel: 'Restatement posting', state: 'awaiting_posting', resource: null, actions: [], requiredRoles: ['finance_approver'] })];
     mount(); expect(await screen.findByText('Awaiting posting')).toBeTruthy();
-    expect(screen.getByText('Finance approver')).toBeTruthy();
+    expect(screen.queryByText('Finance approver')).toBeNull();
   });
   it('the Workflow filter comes from the address (?kind=), so a reload keeps it', async () => {
     mount('/approvals?kind=fx-rate'); await screen.findByText('Extruder HDPE');
