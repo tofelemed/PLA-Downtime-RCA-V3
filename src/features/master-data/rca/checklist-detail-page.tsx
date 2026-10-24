@@ -16,6 +16,7 @@ import { TextField } from '../components/text-field';
 import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { useRecordEditor } from '../hooks/use-record-editor';
 import { requiredText, textOrNull } from '../model/field-errors';
+import { ChecklistFacts } from './checklist-facts';
 import { ChecklistItemsEditor } from './checklist-items-editor';
 
 const BACK = { to: '/master-data/rca/checklists', label: 'Verification checklists' };
@@ -72,6 +73,7 @@ function ChecklistEditor({ checklist }: { checklist: VerificationChecklistView |
     event.preventDefault();
     void editor.save();
   };
+  if (readOnly && checklist) return <ChecklistFacts checklist={checklist} />;
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4" noValidate aria-label={checklist ? 'Edit checklist' : 'Create checklist'}>
       {editor.alert}

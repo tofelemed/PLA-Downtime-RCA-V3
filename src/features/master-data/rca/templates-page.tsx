@@ -1,14 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/features/ux-kit/data-table';
-import { Section } from '@/features/ux-kit/page-layout';
+import { RcaCard } from '@/features/rca/components/rca-card';
 import { ActionIcon } from '@/lib/icons';
 import type { RcaTemplateView } from '../api/master-data-types';
 import { RCA_TEMPLATES } from '../api/record-resource';
 import { usePrefetchRecord, useRecordPage } from '../api/use-record-queries';
 import { BulkRetireButton } from '../components/bulk-retire-button';
 import { ImportExportButtons } from '../components/import-export-buttons';
-import { ListToolbar } from '../components/list-toolbar';
 import { MasterDataLayout } from '../components/master-data-layout';
 import { RecordLink } from '../components/record-link';
 import { RecordStatusBadge } from '../components/record-status-badge';
@@ -17,6 +16,7 @@ import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { useRefreshRcaSettings } from '../hooks/use-refresh-rca-settings';
 import { useRowSelection } from '../hooks/use-row-selection';
 import { exportTemplates, importTemplates } from './rca-transfer';
+import { RcaListToolbar } from './rca-list-toolbar';
 
 const SORTS = { name: 'Name (A–Z)', '-createdAt': 'Newest first' } as const;
 
@@ -71,9 +71,9 @@ export function RcaTemplatesPage() {
     <BulkRetireButton source={RCA_TEMPLATES} ids={selection.selected} what="templates" onDone={async () => (selection.clear(), refresh())} />
   ) : undefined;
   return (
-    <MasterDataLayout title="RCA templates" description="Logic trees and verification checklists an RCA can start from." actions={actions}>
-      <Section title="Templates" actions={bulk}>
-        <ListToolbar filters={filters} onChange={update} searchLabel="Search templates" sortLabels={SORTS} />
+    <MasterDataLayout title="RCA templates" actions={actions}>
+      <RcaListToolbar filters={filters} onChange={update} searchLabel="Search templates" sortLabels={SORTS} />
+      <RcaCard title="Templates" info="Logic trees and verification checklists an RCA can start from." actions={bulk} testId="rca-templates">
         <DataTable
           caption="RCA templates"
           columns={columns}
@@ -85,7 +85,7 @@ export function RcaTemplatesPage() {
           status={templates.status}
           empty={{ title: 'No templates', text: filters.q ? 'No template matches the search.' : 'No RCA template with this status yet.' }}
         />
-      </Section>
+      </RcaCard>
     </MasterDataLayout>
   );
 }

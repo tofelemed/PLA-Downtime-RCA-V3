@@ -1,5 +1,6 @@
 import type { FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DataState } from '@/features/ux-kit/data-state';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { Section } from '@/features/ux-kit/page-layout';
@@ -15,6 +16,7 @@ import { useMasterDataWriter } from '../hooks/use-master-data-writer';
 import { useRecordEditor } from '../hooks/use-record-editor';
 import { ChecklistPicker } from './checklist-picker';
 import { LogicTreeEditor } from './logic-tree-editor';
+import { TemplateFacts } from './template-facts';
 import { templateBodyOf, templateChangeOf, templateDraftOf, validateTemplate, type TemplateBody, type TemplateDraft } from './template-form-model';
 
 const BACK = { to: '/master-data/rca/templates', label: 'RCA templates' };
@@ -42,22 +44,34 @@ function TemplateEditor({ template }: { template: RcaTemplateView | null }) {
     <form onSubmit={submit} className="space-y-6" noValidate aria-label={template ? 'Edit RCA template' : 'Create RCA template'}>
       {editor.alert}
       <Section title="Details">
-        <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
-          <TextField id="name" label="Name" value={draft.name} onChange={(name) => patch({ name })} error={errors.name} required disabled={readOnly} />
-          <TextField id="category" label="Category" value={draft.category} onChange={(category) => patch({ category })} error={errors.category} hint="e.g. Equipment failure" required disabled={readOnly} />
-        </div>
-        <div className="max-w-2xl">
-          <TextField id="description" label="Description" value={draft.description} onChange={(description) => patch({ description })} multiline disabled={readOnly} />
-        </div>
-        <ChecklistPicker value={draft.checklistIds} onChange={(checklistIds) => patch({ checklistIds })} disabled={readOnly} />
+        {readOnly && template ? <TemplateFacts template={template} /> : <TemplateFields editor={editor} />}
       </Section>
-      <Section title="Logic tree" description="Possible causes, from the failure down to root causes.">
+      <Section title="Logic tree" titleAside={<KpiInfo label="Logic tree" text="Possible causes, from the failure down to root causes." />}>
         <LogicTreeEditor tree={draft.logicTree} onChange={(logicTree) => patch({ logicTree })} editable={!readOnly} />
         {errors.logicTree && <p className="text-sm text-destructive">{errors.logicTree}</p>}
       </Section>
       {!readOnly && <FormActions isNew={template === null} saving={editor.saving} dirty={editor.dirty} cancelTo={BACK.to} />}
       {editor.dialog}
     </form>
+  );
+}
+
+type TemplateEditorState = ReturnType<typeof useRecordEditor<TemplateDraft, RcaTemplateView, TemplateBody, Partial<TemplateBody>>>;
+
+/** The editable details of a template (writers, active or new templates). */
+function TemplateFields({ editor }: { editor: TemplateEditorState }) {
+  const { draft, errors, patch } = editor;
+  return (
+    <>
+      <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
+        <TextField id="name" label="Name" value={draft.name} onChange={(name) => patch({ name })} error={errors.name} required />
+        <TextField id="category" label="Category" value={draft.category} onChange={(category) => patch({ category })} error={errors.category} hint="e.g. Equipment failure" required />
+      </div>
+      <div className="max-w-2xl">
+        <TextField id="description" label="Description" value={draft.description} onChange={(description) => patch({ description })} multiline />
+      </div>
+      <ChecklistPicker value={draft.checklistIds} onChange={(checklistIds) => patch({ checklistIds })} disabled={false} />
+    </>
   );
 }
 

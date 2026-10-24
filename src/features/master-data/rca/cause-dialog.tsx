@@ -1,11 +1,14 @@
-import type { FormEvent } from 'react';
+import { useRef, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { focusFirstField } from '@/features/ux-kit/focus-first-field';
 import { CAUSE_CATEGORY_LABELS } from '@/features/ux-kit/labels';
 import type { CauseCategory, RcaCauseView } from '../api/master-data-types';
 import { RCA_CAUSES } from '../api/record-resource';
 import { useRecordEditor } from '../hooks/use-record-editor';
 import { ChoiceField } from '../components/choice-field';
+import { COMPACT_FIELDS } from '../components/compact-fields';
 import { TextField } from '../components/text-field';
 import { requiredText, textOrNull } from '../model/field-errors';
 
@@ -43,6 +46,7 @@ const draftOf = (cause: RcaCauseView | null): CauseDraft => ({
 
 /** Add or edit one cause of the library (4 fields: a short dialog). Duplicate codes are refused on the field. */
 export function CauseDialog({ cause, parent, onClose }: CauseDialogProps) {
+  const body = useRef<HTMLFormElement>(null);
   const bodyOf = (draft: CauseDraft): CauseBody => ({
     code: draft.code.trim(),
     name: draft.name.trim(),
@@ -66,22 +70,24 @@ export function CauseDialog({ cause, parent, onClose }: CauseDialogProps) {
   const { draft, errors, patch } = editor;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto" aria-describedby={undefined} onOpenAutoFocus={(event) => focusFirstField(body.current, event)}>
         <DialogHeader>
-          <DialogTitle>{cause ? `Edit ${cause.name}` : parent ? `Add a sub-cause to ${parent.name}` : 'Add cause'}</DialogTitle>
-          <DialogDescription>Causes are grouped by category; codes are unique.</DialogDescription>
+          <div className="flex items-center gap-1.5">
+            <DialogTitle>{cause ? `Edit ${cause.name}` : parent ? `Add a sub-cause to ${parent.name}` : 'Add cause'}</DialogTitle>
+            <KpiInfo label="causes" text="Causes are grouped by category; codes are unique." />
+          </div>
         </DialogHeader>
-        <form onSubmit={(event) => void submit(event)} className="space-y-4" noValidate>
+        <form ref={body} onSubmit={(event) => void submit(event)} className={`space-y-4 ${COMPACT_FIELDS}`} noValidate>
           {editor.alert}
           <TextField id="cause-code" label="Code" value={draft.code} onChange={(code) => patch({ code })} error={errors.code} required />
           <TextField id="cause-name" label="Name" value={draft.name} onChange={(name) => patch({ name })} error={errors.name} required />
           <ChoiceField id="cause-category" label="Category" value={draft.category} onChange={(category) => patch({ category: category as CauseCategory })} options={CATEGORY_OPTIONS} />
           <TextField id="cause-description" label="Description" value={draft.description} onChange={(description) => patch({ description })} multiline />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" className="h-9" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={editor.saving}>
+            <Button type="submit" className="h-9" disabled={editor.saving}>
               {cause ? 'Save changes' : 'Create'}
             </Button>
           </DialogFooter>

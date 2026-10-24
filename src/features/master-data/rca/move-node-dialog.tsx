@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+import { focusFirstField } from '@/features/ux-kit/focus-first-field';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors/friendly-error-alert';
@@ -30,6 +32,7 @@ export function MoveNodeDialog({ name, targets, currentParentId, onMove, onClose
   const [parent, setParent] = useState(currentParentId ?? TOP);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const body = useRef<HTMLDivElement>(null);
   const move = async () => {
     setBusy(true);
     setError(null);
@@ -43,15 +46,17 @@ export function MoveNodeDialog({ name, targets, currentParentId, onMove, onClose
   };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto" aria-describedby={undefined} onOpenAutoFocus={(event) => focusFirstField(body.current, event)}>
         <DialogHeader>
-          <DialogTitle>Move {name}</DialogTitle>
-          <DialogDescription>Its sub-items move with it.</DialogDescription>
+          <div className="flex items-center gap-1.5">
+            <DialogTitle>Move {name}</DialogTitle>
+            <KpiInfo label="moving" text="Its sub-items move with it." />
+          </div>
         </DialogHeader>
-        <div className="space-y-1.5">
+        <div ref={body} className="space-y-1.5">
           <Label htmlFor="move-parent">Move under</Label>
           <Select value={parent} onValueChange={setParent}>
-            <SelectTrigger id="move-parent">
+            <SelectTrigger id="move-parent" className="h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -66,10 +71,10 @@ export function MoveNodeDialog({ name, targets, currentParentId, onMove, onClose
         </div>
         {error !== null && <FriendlyErrorAlert error={error} title={`Could not move ${name}`} />}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" className="h-9" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={busy || parent === (currentParentId ?? TOP)} onClick={() => void move()}>
+          <Button className="h-9" disabled={busy || parent === (currentParentId ?? TOP)} onClick={() => void move()}>
             Move
           </Button>
         </DialogFooter>
