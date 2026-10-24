@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { SeriesChartProps } from '../charts/series-chart';
 
-const state = vi.hoisted(() => ({ canViewAnalysis: true, trendGroups: [] as unknown[], lossGroups: [] as unknown[], chartProps: [] as unknown[] }));
+const state = vi.hoisted(() => ({ canViewAnalysis: true, trendGroups: [] as unknown[], lossGroups: [] as unknown[], chartProps: [] as unknown[], failOee: false, refetch: vi.fn() }));
 
 vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canViewAnalysis: state.canViewAnalysis }) }));
 vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () => ({ timezone: 'UTC' }) }));
@@ -21,6 +21,7 @@ const result = (data: unknown) => ({ data: { data, isProvisional: false }, isLoa
 vi.mock('@/api/v2/queries/reports', async (original) => ({
   ...(await original<typeof import('@/api/v2/queries/reports')>()),
   useOeeReport: (query: { groupBy: string; policy: string }) => {
+    if (state.failOee && query.groupBy === 'unit' && query.policy === 'operational') return { data: undefined, isLoading: false, isError: true, error: new Error('boom'), refetch: state.refetch };
     if (query.groupBy !== 'unit') return result({ label: 'Operational OEE (ISO 22400)', groups: state.trendGroups, total: [] });
     if (query.policy === 'reconciled') return result({ label: 'Reconciled PLA OEE', groups: [], total: [kpi('reconciled_oee', null, 'no_scheduled_time')] });
     return result({ label: 'Operational OEE (ISO 22400)', groups: [], total: [kpi('oee', '0.924'), kpi('availability', '0.938'), kpi('performance', '0.99'), kpi('quality', '0.99')] });
@@ -134,5 +135,17 @@ describe('OeeSection charts', () => {
     expect(units.map((unit) => unit.getAttribute('data-uom'))).toEqual(['t', 'm']);
     expect(units[0]).toHaveTextContent('Availability 10.00, Quality 2.00');
     expect(units[1]).toHaveTextContent('Availability 5.00');
+  });
+});
+
+describe('OeeSection failed request', () => {
+  it('shows an error with Retry instead of a plain "—"', async () => {
+    state.failOee = true;
+    renderSection();
+    expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByTestId('oee-tile-value')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(state.refetch).toHaveBeenCalled();
+    state.failOee = false;
   });
 });

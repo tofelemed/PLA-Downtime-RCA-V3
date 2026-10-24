@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { useOeeReport } from '@/api/v2/queries/reports';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DataState } from '@/features/ux-kit/data-state';
+import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { useCalendarPreference } from '@/lib/dates';
@@ -19,13 +21,15 @@ export const ASSET_UNIT_NOTE = "OEE is calculated per unit — showing the selec
 function useOeeFigures(scope: AnalyticsScope, policy: OeePolicy) {
   const env = useEventHubEnv();
   const query = useOeeReport(oeeQuery(scope, 'unit', policy), env.timezone);
-  return { isLoading: query.isLoading, label: query.data?.data.label, total: query.data?.data.total };
+  return { query, isLoading: query.isLoading, label: query.data?.data.label, total: query.data?.data.total };
 }
 
 export function OeeTiles({ scope }: { scope: AnalyticsScope }) {
   const { digits } = useCalendarPreference();
   const operational = useOeeFigures(scope, 'operational');
   const reconciled = useOeeFigures(scope, 'reconciled');
+  const failed = [operational, reconciled].find((figures) => figures.query.isError);
+  if (failed) return <DataState state={dataStateOf(failed.query)} error={failed.query.error} onRetry={() => { operational.query.refetch(); reconciled.query.refetch(); }} />;
   const labels = { operational: operational.label ?? OPERATIONAL_LABEL, reconciled: reconciled.label ?? RECONCILED_LABEL };
   return (
     <KpiTileRow>
