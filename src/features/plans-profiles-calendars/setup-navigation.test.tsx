@@ -25,6 +25,7 @@ vi.mock('./hooks/use-profile-reads', async (original) => ({
 }));
 
 const { ProfilesTab } = await import('./profiles/profiles-tab');
+const { ProfilesHeaderActions } = await import('./profiles/profiles-header-actions');
 const { ProfilePage } = await import('./profiles/profile-page');
 const { CalendarsTab } = await import('./calendars/calendars-tab');
 const { CalendarsHeaderActions } = await import('./calendars/calendars-header-actions');
@@ -60,7 +61,7 @@ describe('Setup sub-pages keep the list context', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('profiles: the unit and product filters are in the URL and the sub-page links carry the list address', () => {
-    wrap(<ProfilesTab />, '/setup/profiles?unitId=u1', '/setup/profiles');
+    wrap(<><ProfilesHeaderActions tab="profiles" /><ProfilesTab /></>, '/setup/profiles?unitId=u1', '/setup/profiles');
     expect((screen.getByLabelText('Unit') as HTMLSelectElement).value).toBe('u1');
     fireEvent.change(screen.getByLabelText('Product'), { target: { value: 'p1' } });
     expect(screen.getByTestId('where')).toHaveTextContent('/setup/profiles?unitId=u1&productId=p1');

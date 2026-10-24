@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCreateStreamRun } from '@/api/v2/queries/plant-model';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { FormButtons } from '../components/form-buttons';
 import { FormField } from '../components/form-field';
 import { NativeSelect, type Option } from '../components/native-select';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
@@ -51,17 +51,10 @@ export function StreamRunForm({ unitId, streamOptions, productOptions, timezone,
         </FormField>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <PlantDateTimeField id="runStart" label="Start" value={values.startTime} timezone={timezone} error={fieldError('startTime')} onChange={(v) => set('startTime', v)} />
-        <PlantDateTimeField id="runEnd" label="End (optional, blank = still running)" value={values.endTime} timezone={timezone} error={fieldError('endTime')} onChange={(v) => set('endTime', v)} />
+        <PlantDateTimeField compact id="runStart" label="Start" value={values.startTime} timezone={timezone} error={fieldError('startTime')} onChange={(v) => set('startTime', v)} />
+        <PlantDateTimeField compact id="runEnd" label="End (optional, blank = still running)" value={values.endTime} timezone={timezone} error={fieldError('endTime')} onChange={(v) => set('endTime', v)} />
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={create.isPending}>
-          Record run
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      <FormButtons label="Record run" busy={create.isPending} onSave={() => void save()} onCancel={onDone} testId="stream-run-save" />
     </div>
   );
 }

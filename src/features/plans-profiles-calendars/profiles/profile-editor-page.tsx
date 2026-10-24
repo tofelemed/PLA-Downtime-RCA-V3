@@ -7,6 +7,10 @@ import { usePlanningRefs } from '../hooks/use-planning-refs';
 import { useProfile } from '../hooks/use-profile-reads';
 import { useProfilesBack } from '../hooks/use-profiles-back';
 import { ProfileEditor } from './profile-editor';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
+
+const NEW_INFO =
+  'Saved as a draft; a manager approver approves it. The quantity unit (e.g. t) is the unit of every rate of this profile; shared or independent streams matter only when products run at the same time.';
 
 /** `/planning/profiles/new`: a new draft profile version; Back and Cancel return to the list as it was left. */
 export function NewProfilePage() {
@@ -16,7 +20,7 @@ export function NewProfilePage() {
   const back = useProfilesBack();
   return (
     <Page>
-      <PageHeader title="New profile version" description="Saved as a draft; a manager approver approves it." back={back} />
+      <PageHeader title="New profile version" titleAside={<KpiInfo label="New profile version" text={NEW_INFO} />} back={back} />
       <ProfilesAreaTabs current="profiles" unitId={back.unitId} />
       <ProfileEditor profile={null} refs={refs} cancelTo={back.to} onSaved={(saved) => navigate(`/planning/profiles/${saved.id}${search}`)} />
     </Page>

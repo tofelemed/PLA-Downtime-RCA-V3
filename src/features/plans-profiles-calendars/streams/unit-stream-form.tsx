@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCreateUnitStream } from '@/api/v2/queries/plant-model';
 import { DecimalInput } from '@/features/ux-kit/decimal-input';
 import { useSaveFeedback } from '@/features/ux-kit/save-result';
+import { FormButtons } from '../components/form-buttons';
 import { FormField } from '../components/form-field';
 import { PlantDateTimeField } from '../components/plant-date-time-field';
 import { SaveRefusalAlert } from '../components/save-refusal-alert';
@@ -49,17 +49,10 @@ export function UnitStreamForm({ unitId, timezone, onDone }: UnitStreamFormProps
         </FormField>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <PlantDateTimeField id="streamFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
-        <PlantDateTimeField id="streamTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
+        <PlantDateTimeField compact id="streamFrom" label="Effective from" value={values.effectiveFrom} timezone={timezone} error={fieldError('effectiveFrom')} onChange={(v) => set('effectiveFrom', v)} />
+        <PlantDateTimeField compact id="streamTo" label="Effective to (optional)" value={values.effectiveTo} timezone={timezone} error={fieldError('effectiveTo')} onChange={(v) => set('effectiveTo', v)} />
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={save} disabled={create.isPending}>
-          Add draft stream
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDone}>
-          Cancel
-        </Button>
-      </div>
+      <FormButtons label="Add draft stream" busy={create.isPending} onSave={() => void save()} onCancel={onDone} testId="unit-stream-save" />
     </div>
   );
 }

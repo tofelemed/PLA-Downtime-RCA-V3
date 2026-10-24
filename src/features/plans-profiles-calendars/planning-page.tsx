@@ -7,6 +7,7 @@ import { Page, PageHeader } from '@/features/ux-kit/page-layout';
 import { DecisionInfo } from './components/decision-info';
 import { decisionNoteOf } from './model/decision-notes';
 import { CalendarsHeaderActions } from './calendars/calendars-header-actions';
+import { ProfilesHeaderActions } from './profiles/profiles-header-actions';
 import { ProfilesAreaTabs } from './components/profiles-area-tabs';
 import { PlansHeaderActions } from './plans/plans-header-actions';
 import { useUnitParam } from './hooks/use-unit-param';
@@ -48,10 +49,10 @@ function viewOfTab(tab: string | null): PlanningView | null {
 }
 
 /** The page's add / import buttons and the Read-only note, at the right of the title. */
-function HeaderActions({ view }: { view: PlanningView }) {
+function HeaderActions({ view, tab }: { view: PlanningView; tab: TabValue }) {
   if (view === 'plans') return <PlansHeaderActions />;
   if (view === 'calendars') return <CalendarsHeaderActions />;
-  return null;
+  return <ProfilesHeaderActions tab={tab as ProfilesAreaTab} />;
 }
 
 /**
@@ -84,7 +85,7 @@ export function PlanningPage({ view = 'plans' }: { view?: PlanningView }) {
         <PageHeader
           title={page.title}
           titleAside={note ? <DecisionInfo note={note} /> : undefined}
-          actions={<HeaderActions view={view} />}
+          actions={<HeaderActions view={view} tab={tab} />}
         />
         {view === 'profiles' && <ProfilesAreaTabs current={tab as ProfilesAreaTab} unitId={unitId} />}
         <div data-testid={`panel-${active.value}`}>

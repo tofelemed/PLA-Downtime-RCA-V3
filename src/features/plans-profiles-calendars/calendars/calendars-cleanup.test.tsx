@@ -100,7 +100,9 @@ describe('Calendars & crews cleanup', () => {
     fireEvent.click(screen.getByTestId('crew-add'));
     const dialog = await screen.findByRole('dialog', { name: 'Add crew' });
     expect(within(dialog).queryByText(/only label shift instances/)).toBeNull();
-    expect(within(dialog).getByRole('button', { name: 'About Add crew' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'About this entry' })).toBeInTheDocument();
+    // one button whose name contains the title (e2e finds the primary by a substring of its name)
+    expect(within(dialog).getAllByRole('button').filter((b) => /add crew/i.test(b.getAttribute('aria-label') ?? b.textContent ?? ''))).toHaveLength(1);
     await waitFor(() => expect(document.activeElement).toBe(within(dialog).getByLabelText(/Crew name/)));
     expect(footerLabels(dialog)).toEqual(['Cancel', 'Add crew']);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Add crew' }));

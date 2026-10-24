@@ -23,8 +23,8 @@ const REFS = {
 vi.mock('../hooks/use-planning-refs', () => ({ usePlanningRefs: () => REFS }));
 
 const { StreamRunsPanel } = await import('./stream-runs-panel');
-const { UnitStreamsTab } = await import('./unit-streams-tab');
-const { TransitionStandardsTab } = await import('../profiles/transition-standards-tab');
+const { AddTransitionStandard } = await import('../profiles/add-transition-standard');
+const { AddUnitStream } = await import('./add-unit-stream');
 
 const wrap = (node: ReactNode) =>
   render(
@@ -40,8 +40,8 @@ describe('Add buttons open dialogs, never inline forms (SETUP_UX_FIXES Phase 4)'
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it('Add transition standard opens the form in a dialog; Cancel closes it', async () => {
-    wrap(<TransitionStandardsTab />);
+  it('Add transition standard (beside the page title) opens the form in a dialog; Cancel closes it', async () => {
+    wrap(<AddTransitionStandard />);
     expect(screen.queryByTestId('transition-standard-form')).toBeNull();
     fireEvent.click(screen.getByTestId('transition-standard-new'));
     const dialog = await screen.findByRole('dialog');
@@ -50,8 +50,8 @@ describe('Add buttons open dialogs, never inline forms (SETUP_UX_FIXES Phase 4)'
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('Add stream opens the form in a dialog', async () => {
-    wrap(<UnitStreamsTab />);
+  it('Add stream (beside the page title) opens the form in a dialog', async () => {
+    wrap(<AddUnitStream />);
     expect(screen.queryByTestId('unit-stream-form')).toBeNull();
     fireEvent.click(screen.getByTestId('unit-stream-new'));
     expect(within(await screen.findByRole('dialog')).getByTestId('unit-stream-form')).toBeInTheDocument();

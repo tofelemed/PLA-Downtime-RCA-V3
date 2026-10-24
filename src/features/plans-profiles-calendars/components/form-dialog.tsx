@@ -21,7 +21,7 @@ const FIELD = 'input:not([disabled]):not([type="hidden"]), select:not([disabled]
 
 /**
  * The entry dialog of the Setup › Calendars, Profiles and Valuation pages: title with an optional ⓘ, the
- * first field focused on open (not the ⓘ), Esc closes, the body scrolls while the buttons stay reachable.
+ * first field focused on open (not the ⓘ), h-9 inputs and selects, Esc closes, the body scrolls.
  */
 export function FormDialog({ open, onOpenChange, title, info, wide, testId, children }: FormDialogProps) {
   const body = useRef<HTMLDivElement>(null);
@@ -37,10 +37,10 @@ export function FormDialog({ open, onOpenChange, title, info, wide, testId, chil
         <DialogHeader>
           <div className="flex items-center gap-1.5">
             <DialogTitle>{title}</DialogTitle>
-            {info && <KpiInfo label={title} text={info} />}
+            {info && <KpiInfo label="this entry" text={info} />}
           </div>
         </DialogHeader>
-        <div ref={body} className="min-h-0 flex-1 overflow-y-auto px-1 pb-1">
+        <div ref={body} className="min-h-0 flex-1 overflow-y-auto px-1 pb-1 [&_input]:h-9 [&_select]:h-9">
           {children}
         </div>
       </DialogContent>

@@ -13,6 +13,7 @@ import { usePlanningRefs } from '../hooks/use-planning-refs';
 import { useProfilesBack } from '../hooks/use-profiles-back';
 import { useRateImportForm, type ImportKind } from '../hooks/use-rate-import-form';
 import { refusalOf } from '../model/refusal';
+import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { RateImportStatus } from './rate-import-status';
 
 const KINDS = [
@@ -21,6 +22,7 @@ const KINDS = [
   { value: 'mpc', label: 'MPC (becomes sustained)' },
 ];
 const HEADER = 'unitCode,productCode,operatingMode,rate,timebase,effectiveFrom,effectiveTo';
+const FILE_INFO = `Budget, forecast or MPC rates from a CSV file. First line: ${HEADER}; times with their UTC offset. A later file with the same document reference is a correction (next revision).`;
 
 /**
  * `/planning/profiles/import`: budget / forecast / MPC rates from a CSV file. The file is sent as text;
@@ -37,20 +39,20 @@ export function RateImportPage() {
   const fieldError = (key: string) => refusalOf(form.failure)?.fieldErrors[key];
   return (
     <Page>
-      <PageHeader title="Import rates" description="Budget, forecast or MPC rates from a CSV file." back={back} />
+      <PageHeader title="Import rates" back={back} />
       <ProfilesAreaTabs current="profiles" unitId={back.unitId} />
-      <Section title="File">
+      <Section title="File" titleAside={<KpiInfo label="the rate file" text={FILE_INFO} />} className="rounded-lg border bg-card p-4">
         <div className="space-y-3" data-testid="rate-import-dialog">
           <SaveRefusalAlert error={form.failure} timezone={refs.timezone} />
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField id="importKind" label="Kind">
               <NativeSelect id="importKind" value={fields.kind} options={KINDS} onChange={(v) => form.set({ kind: v as ImportKind })} />
             </FormField>
-            <FormField id="externalId" label="Document reference" required error={fieldError('externalId')} hint="A later file with the same reference is a correction (next revision)">
+            <FormField id="externalId" label="Document reference" required error={fieldError('externalId')}>
               <Input id="externalId" value={fields.externalId} onChange={(e) => form.set({ externalId: e.target.value })} />
             </FormField>
           </div>
-          <FormField id="csv" label="CSV" required error={fieldError('csv')} hint={`First line: ${HEADER}. Times with their UTC offset.`}>
+          <FormField id="csv" label="CSV" required error={fieldError('csv')}>
             <Input key={form.fileKey} id="csvFile" type="file" accept=".csv,text/csv" aria-label="CSV file" onChange={(e) => void form.readFile(e.target.files?.[0])} />
             <Textarea id="csv" rows={8} value={fields.csv} onChange={(e) => form.set({ csv: e.target.value })} placeholder={HEADER} />
           </FormField>
