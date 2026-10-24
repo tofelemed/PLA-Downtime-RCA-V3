@@ -25,6 +25,7 @@ export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onN
   const shown = collapsed || open;
   const visible = railItems(group, activeHref, collapsed);
   const listId = `nav-section-${section.key}`;
+  const holdsActive = group.items.some((item) => item.href === activeHref);
   const Chevron = shown ? UiIcon.chevronDown : UiIcon.chevronRight;
   return (
     <li className={cn(collapsed && 'border-t pt-2 first:border-t-0 first:pt-0')}>
@@ -34,7 +35,10 @@ export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onN
           aria-expanded={shown}
           aria-controls={listId}
           onClick={onToggle}
-          className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn(
+            'flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            holdsActive ? 'bg-sidebar-active-bg text-sidebar-active-fg' : 'text-muted-foreground hover:text-sidebar-foreground',
+          )}
         >
           <span className="flex-1 text-left">{section.label}</span>
           <Chevron className="h-3.5 w-3.5" aria-hidden />

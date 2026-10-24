@@ -1,18 +1,21 @@
+import type { BrandingView } from '@/api/v2/types/administration';
 import { PlantSelector } from '@/features/plant-selector/plant-selector';
 import { NotificationBell } from '@/features/notifications/notification-bell';
 import { UiIcon } from '@/lib/icons';
+import { HeaderBrand } from './header-brand';
 import { PlantTimezoneReadout } from './plant-timezone-readout';
 import { ThemeToggle } from './theme-toggle';
 import { UserBadge } from './user-badge';
 
 /**
- * The one-row app header (h-14, sticky): plant scope, plant timezone,
+ * The one-row app header (h-14, sticky): brand, plant scope, plant timezone,
  * in-app notifications (SLA escalations) and the user. No dead controls: search and settings return only when they work.
  * The app name is not a heading — every page owns its single `<h1>` (PageHeader).
  */
 export interface AppHeaderProps {
   /** below 1024 px: the button that opens the navigation drawer (UX audit H-1) */
   navigation?: { open: boolean; onOpen: () => void };
+  branding?: BrandingView;
 }
 
 function MenuButton({ open, onOpen }: { open: boolean; onOpen: () => void }) {
@@ -30,7 +33,7 @@ function MenuButton({ open, onOpen }: { open: boolean; onOpen: () => void }) {
   );
 }
 
-export function AppHeader({ navigation }: AppHeaderProps) {
+export function AppHeader({ navigation, branding }: AppHeaderProps) {
   return (
     // the branding's secondary colour accents the header (the built-in border colour while none is stored)
     <header
@@ -38,6 +41,8 @@ export function AppHeader({ navigation }: AppHeaderProps) {
       style={{ borderBottomColor: 'hsl(var(--brand-secondary, var(--border)))' }}
     >
       {navigation && <MenuButton open={navigation.open} onOpen={navigation.onOpen} />}
+      <HeaderBrand branding={branding} />
+      <span className="h-6 w-px shrink-0 bg-border" aria-hidden />
       <div className="min-w-0">
         <PlantSelector />
       </div>
