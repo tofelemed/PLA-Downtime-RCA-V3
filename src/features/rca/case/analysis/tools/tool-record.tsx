@@ -24,11 +24,10 @@ export interface ToolFrameProps<K extends RcaRecordTool> {
 /**
  * Loads the tool's record and renders the editor with it (F-6): the editor is keyed on the record version
  * it works on, leaving with unsaved changes asks first, and a concurrent save offers "Reload latest" while
- * the user's own text stays visible.
+ * the user's own text stays visible. On a read-only case each editor renders its values as text.
  */
 export function ToolFrame<K extends RcaRecordTool>({ tool, children }: ToolFrameProps<K>) {
   const frame = useToolFrame(tool);
-  const { readOnly } = useCaseWorkspace();
   const analyses = frame.query.analyses;
   return (
     <DataState state={dataStateOf(analyses)} error={analyses.error} onRetry={() => analyses.refetch()}>
@@ -36,9 +35,9 @@ export function ToolFrame<K extends RcaRecordTool>({ tool, children }: ToolFrame
         <ToolDraftContext.Provider value={frame.context}>
           <div className="space-y-3">
             <ToolConflict conflict={frame.conflict} keptText={frame.keptText} reloading={frame.reloading} onReload={() => void frame.reload()} onDismissKept={frame.dismissKept} />
-            <fieldset key={frame.view.key} disabled={readOnly} className="min-w-0 border-0 p-0">
+            <div key={frame.view.key} className="min-w-0">
               {children(frame.view.record, frame.save)}
-            </fieldset>
+            </div>
           </div>
         </ToolDraftContext.Provider>
       ) : null}
@@ -117,7 +116,7 @@ export function SaveBar({ onSave, disabled, hint, label = 'Save', updatedAt, dir
     <div className="space-y-2">
       {save.error ? <FriendlyErrorAlert error={save.error} /> : null}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" disabled={disabled || save.busy} onClick={() => void save.run()} data-testid="save-tool">
+        <Button type="button" className="h-9" disabled={disabled || save.busy} onClick={() => void save.run()} data-testid="save-tool">
           {save.busy ? 'Saving…' : label}
         </Button>
         <SaveState dirty={unsaved} justSaved={save.saved} updatedAt={updatedAt} />
