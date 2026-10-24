@@ -15,6 +15,8 @@ export interface DebouncedSearchInputProps {
   placeholder?: string;
   delayMs?: number;
   className?: string;
+  /** id of the input, so a visible <label htmlFor> names it */
+  id?: string;
 }
 
 /** Typed text, debounced emission and the outside `value` kept in step without echoing it back. */
@@ -52,7 +54,7 @@ function useDebouncedText(value: string, onChange: (text: string) => void, delay
  *
  * @example <DebouncedSearchInput label="Search codes" value={filters.q} onChange={(q) => setFilters({ ...filters, q })} />
  */
-export function DebouncedSearchInput({ value, onChange, label, placeholder, delayMs = 300, className }: DebouncedSearchInputProps) {
+export function DebouncedSearchInput({ value, onChange, label, placeholder, delayMs = 300, className, id }: DebouncedSearchInputProps) {
   const { text, setText, clear } = useDebouncedText(value, onChange, delayMs);
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key !== 'Escape' || text === '') return;
@@ -63,6 +65,7 @@ export function DebouncedSearchInput({ value, onChange, label, placeholder, dela
     <div className={cn('relative w-full max-w-sm', className)}>
       <ActionIcon.search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
+        id={id}
         type="search"
         aria-label={label}
         placeholder={placeholder ?? label}

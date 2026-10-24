@@ -13,16 +13,18 @@ export interface FilterSelectProps {
   options: readonly FilterOption[];
   onChange: (value: string) => void;
   className?: string;
+  /** id of the trigger, so a visible <label htmlFor> names it */
+  id?: string;
 }
 
 /** Value of the "all" choice of a filter (Radix Select needs a non-empty value). */
 export const ALL = 'all';
 
 /** A labelled single-choice filter for list pages (the change drives a server query). */
-export function FilterSelect({ label, value, options, onChange, className }: FilterSelectProps) {
+export function FilterSelect({ label, value, options, onChange, className, id }: FilterSelectProps) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className={cn('w-full sm:w-48', className)}>
+      <SelectTrigger id={id} aria-label={label} className={cn('w-full sm:w-48', className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
