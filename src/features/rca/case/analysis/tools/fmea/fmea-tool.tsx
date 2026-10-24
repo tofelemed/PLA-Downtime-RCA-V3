@@ -34,24 +34,34 @@ function AddRowButton({ label, onClick }: { label: string; onClick: () => void }
   );
 }
 
-function Editor({ record, save }: { record: ToolRecord<'fmea'>; save: (body: FmeaContent) => Promise<unknown> }) {
-  const { rca, readOnly } = useCaseWorkspace();
-  const [content, setContent] = useToolDraft<FmeaContent>(() => contentOf(record, rca.title.slice(0, 255)));
-  const scored = (id: string) => record?.causes.find((cause) => cause.id === id);
+interface SectionProps {
+  content: FmeaContent;
+  setContent: (next: FmeaContent) => void;
+  readOnly: boolean;
+}
+
+function EffectsSection({ content, setContent, readOnly }: SectionProps) {
   const setEffects = (effects: FmeaEffect[]) => setContent({ ...content, effects });
-  const setCauses = (causes: FmeaCause[]) => setContent({ ...content, causes });
   const addEffect = () => setEffects([...content.effects, { id: rowId('effect', content.effects), description: '', severity: null, currentControls: '' }]);
-  const addCause = () =>
-    setCauses([...content.causes, { id: rowId('cause', content.causes), description: '', occurrence: null, detection: null, detectionControl: null, recommendedActions: [] }]);
   return (
-    <div className="space-y-5" data-testid="fmea-tool">
-      <ToolTextField id="fmea-mode" label="Failure mode" value={content.failureMode} maxLength={255} onChange={(failureMode) => setContent({ ...content, failureMode })} />
+    <>
       <FmeaTable title="Effects" info="Severity 1–10 of each effect; the worst one counts for every cause." columns={EFFECT_COLUMNS} editable={!readOnly} empty={content.effects.length === 0}>
         {content.effects.map((effect, index) => (
           <EffectRow key={effect.id} item={effect} index={index} readOnly={readOnly} onChange={(next) => setEffects(replaced(content.effects, next))} onRemove={() => setEffects(without(content.effects, effect.id))} />
         ))}
       </FmeaTable>
       {!readOnly && <AddRowButton label="Add effect" onClick={addEffect} />}
+    </>
+  );
+}
+
+function CausesSection({ content, setContent, readOnly, record }: SectionProps & { record: ToolRecord<'fmea'> }) {
+  const scored = (id: string) => record?.causes.find((cause) => cause.id === id);
+  const setCauses = (causes: FmeaCause[]) => setContent({ ...content, causes });
+  const addCause = () =>
+    setCauses([...content.causes, { id: rowId('cause', content.causes), description: '', occurrence: null, detection: null, detectionControl: null, recommendedActions: [] }]);
+  return (
+    <>
       <FmeaTable title="Causes" info={`Occurrence and detection 1–10, detection by the cause's own control. ${rulesText(record)}`} columns={CAUSE_COLUMNS} editable={!readOnly} empty={content.causes.length === 0}>
         {content.causes.map((cause, index) => (
           <CauseRow
@@ -73,6 +83,19 @@ function Editor({ record, save }: { record: ToolRecord<'fmea'>; save: (body: Fme
         </p>
       )}
       {!readOnly && <AddRowButton label="Add cause" onClick={addCause} />}
+    </>
+  );
+}
+
+function Editor({ record, save }: { record: ToolRecord<'fmea'>; save: (body: FmeaContent) => Promise<unknown> }) {
+  const { rca, readOnly } = useCaseWorkspace();
+  const [content, setContent] = useToolDraft<FmeaContent>(() => contentOf(record, rca.title.slice(0, 255)));
+  const section = { content, setContent, readOnly };
+  return (
+    <div className="space-y-5" data-testid="fmea-tool">
+      <ToolTextField id="fmea-mode" label="Failure mode" value={content.failureMode} maxLength={255} onChange={(failureMode) => setContent({ ...content, failureMode })} />
+      <EffectsSection {...section} />
+      <CausesSection {...section} record={record} />
       <div className="border-t pt-3">
         <SaveBar
           onSave={() => save(content)}

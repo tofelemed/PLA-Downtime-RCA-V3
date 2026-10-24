@@ -83,14 +83,41 @@ function Toolbar({ tree, onAdd }: { tree: TreeNode[]; onAdd: () => void }) {
   );
 }
 
+const dialogTitle = (editing: Exclude<Editing, null>): string => {
+  if (editing.mode === 'edit') return `Edit "${editing.node.label}"`;
+  return editing.parent ? `Add a node below "${editing.parent.label}"` : 'Add a top-level node';
+};
+
+function TreeList({ tree, actions }: { tree: TreeNode[]; actions: LogicTreeActions }) {
+  if (tree.length === 0) {
+    return <p className="py-6 text-center text-sm text-muted-foreground">{actions.readOnly ? 'No nodes recorded.' : 'No nodes yet. Start with the failure you are investigating.'}</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {tree.map((item) => (
+        <LogicNodeItem key={item.node.id} item={item} actions={actions} depth={0} />
+      ))}
+    </ul>
+  );
+}
+
+function TreeCounts() {
+  const { rca } = useCaseWorkspace();
+  const counts = treeCounts(rca.logicTree, rca.evidence);
+  return (
+    <p className="text-sm text-muted-foreground" data-testid="logic-tree-counts">
+      {plural(counts.nodes, 'node', 'nodes')} · {counts.verified} verified · {plural(counts.rootCauses, 'root cause', 'root causes')} · {plural(counts.linkedEvidence, 'evidence item', 'evidence items')} linked
+    </p>
+  );
+}
+
 /** Logic tree: failure → modes → hypotheses → verified causes, each change saved with the case. */
 export function LogicTreeTool() {
-  const { rca, readOnly } = useCaseWorkspace();
+  const { rca } = useCaseWorkspace();
   const patch = useCasePatch();
   const [editing, setEditing] = useState<Editing>(null);
   const actions = useTreeActions(setEditing);
   const tree = useMemo(() => buildTree(rca.logicTree), [rca.logicTree]);
-  const counts = treeCounts(rca.logicTree, rca.evidence);
   const save = async (fields: NodeFields) => {
     const next =
       editing?.mode === 'edit'
@@ -100,31 +127,13 @@ export function LogicTreeTool() {
   };
   return (
     <div className="space-y-3" data-testid="logic-tree">
-      <p className="text-sm text-muted-foreground" data-testid="logic-tree-counts">
-        {plural(counts.nodes, 'node', 'nodes')} · {counts.verified} verified · {plural(counts.rootCauses, 'root cause', 'root causes')} · {plural(counts.linkedEvidence, 'evidence item', 'evidence items')} linked
-      </p>
+      <TreeCounts />
       {patch.error ? <FriendlyErrorAlert error={patch.error} /> : null}
-      <ToolCanvas
-        label="Logic tree"
-        toolbar={<Toolbar tree={tree} onAdd={() => setEditing({ mode: 'add', parent: null })} />}
-      >
-        {tree.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">{readOnly ? 'No nodes recorded.' : 'No nodes yet. Start with the failure you are investigating.'}</p>
-        ) : (
-          <ul className="space-y-2">
-            {tree.map((item) => (
-              <LogicNodeItem key={item.node.id} item={item} actions={actions} depth={0} />
-            ))}
-          </ul>
-        )}
+      <ToolCanvas label="Logic tree" toolbar={<Toolbar tree={tree} onAdd={() => setEditing({ mode: 'add', parent: null })} />}>
+        <TreeList tree={tree} actions={actions} />
       </ToolCanvas>
       {editing && (
-        <NodeDialog
-          title={editing.mode === 'edit' ? `Edit "${editing.node.label}"` : editing.parent ? `Add a node below "${editing.parent.label}"` : 'Add a top-level node'}
-          initial={editing.mode === 'edit' ? editing.node : undefined}
-          onSave={(fields) => void save(fields)}
-          onClose={() => setEditing(null)}
-        />
+        <NodeDialog title={dialogTitle(editing)} initial={editing.mode === 'edit' ? editing.node : undefined} onSave={(fields) => void save(fields)} onClose={() => setEditing(null)} />
       )}
     </div>
   );

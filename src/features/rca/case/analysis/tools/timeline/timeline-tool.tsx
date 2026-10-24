@@ -75,6 +75,32 @@ function TimelineRow({ entry, readOnly, onEdit }: { entry: TimelineEntry; readOn
   );
 }
 
+function TimelineList({ entries, readOnly, onEdit }: { entries: readonly TimelineEntry[]; readOnly: boolean; onEdit: (id: string) => void }) {
+  if (entries.length === 0) {
+    return (
+      <p className="py-6 text-center text-sm text-muted-foreground">
+        {readOnly ? 'No events recorded.' : 'No events yet: add one here or on the event diagram, or link production events to the investigation.'}
+      </p>
+    );
+  }
+  return (
+    <ol className="space-y-2">
+      {entries.map((entry) => (
+        <TimelineRow key={entry.id} entry={entry} readOnly={readOnly} onEdit={() => onEdit(entry.id)} />
+      ))}
+    </ol>
+  );
+}
+
+function AddEventButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button className="h-9" onClick={onClick}>
+      <ActionIcon.add aria-hidden="true" className="h-4 w-4" />
+      Add event
+    </Button>
+  );
+}
+
 /** Event timeline: diagram events and the production events linked to the case, in time order. */
 export function TimelineTool() {
   const { rca, readOnly } = useCaseWorkspace();
@@ -89,28 +115,8 @@ export function TimelineTool() {
   return (
     <div className="space-y-3" data-testid="event-timeline">
       {patch.error ? <FriendlyErrorAlert error={patch.error} /> : null}
-      <ToolCanvas
-        label="Event timeline"
-        toolbar={
-          readOnly ? undefined : (
-            <Button className="h-9" onClick={() => setEditing({ mode: 'add' })}>
-              <ActionIcon.add aria-hidden="true" className="h-4 w-4" />
-              Add event
-            </Button>
-          )
-        }
-      >
-        {entries.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {readOnly ? 'No events recorded.' : 'No events yet: add one here or on the event diagram, or link production events to the investigation.'}
-          </p>
-        ) : (
-          <ol className="space-y-2">
-            {entries.map((entry) => (
-              <TimelineRow key={entry.id} entry={entry} readOnly={readOnly} onEdit={() => setEditing({ mode: 'edit', id: entry.id })} />
-            ))}
-          </ol>
-        )}
+      <ToolCanvas label="Event timeline" toolbar={readOnly ? undefined : <AddEventButton onClick={() => setEditing({ mode: 'add' })} />}>
+        <TimelineList entries={entries} readOnly={readOnly} onEdit={(id) => setEditing({ mode: 'edit', id })} />
       </ToolCanvas>
       {editing && (
         <EventDialog

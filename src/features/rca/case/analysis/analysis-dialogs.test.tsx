@@ -15,6 +15,9 @@ const { FishboneTool } = await import('./tools/fishbone/fishbone-tool');
 const { LogicTreeTool } = await import('./tools/logic-tree/logic-tree-tool');
 const { TimelineTool } = await import('./tools/timeline/timeline-tool');
 const { EventDiagramTool } = await import('./tools/event-diagram/event-diagram-tool');
+const { DiagramToolbar } = await import('./tools/event-diagram/diagram-toolbar');
+
+const postsOf = () => vi.mocked(globalThis.fetch).mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'POST');
 
 /** Cancel sits left of the primary action in the footer, both h-9. */
 function expectFooter(dialog: HTMLElement, primary: string) {
@@ -70,6 +73,7 @@ describe('analysis dialogs: title, labelled fields, Cancel / primary, Esc', () =
     expect(submit).toHaveAttribute('data-testid', 'save-node');
     fireEvent.submit(dialog.querySelector('form') as HTMLFormElement);
     expect(screen.getByTestId('field-error-node-label')).toHaveTextContent('Enter a name.');
+    expect(onSave).not.toHaveBeenCalled();
     fireEvent.change(within(dialog).getByLabelText(/^Name/), { target: { value: 'Pump trips' } });
     fireEvent.submit(dialog.querySelector('form') as HTMLFormElement);
     expect(onSave).toHaveBeenCalledWith({ label: 'Pump trips', code: null, kind: 'Equipment', description: null, notes: null });
@@ -140,6 +144,44 @@ describe('analysis dialogs: title, labelled fields, Cancel / primary, Esc', () =
     expect(within(confirm).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
     fireEvent.keyDown(confirm, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+  });
+
+  it('logic tree "Reset to template": destructive confirm, Cancel focused and keeps the tree; confirming posts the reset', async () => {
+    renderInCase(<LogicTreeTool />, false, { ...KIT_CASE, status: 'Analysis', templateId: 'tpl-1' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to template' }));
+    const confirm = await screen.findByRole('alertdialog', { name: 'Reset the logic tree to its template?' });
+    expect(within(confirm).getByRole('button', { name: 'Reset logic tree' }).className).toMatch(/destructive/);
+    await waitFor(() => expect(within(confirm).getByRole('button', { name: 'Cancel' })).toHaveFocus());
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(postsOf()).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to template' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Reset logic tree' }));
+    await waitFor(() => expect(postsOf()).toHaveLength(1));
+    expect(new URL(String(postsOf()[0][0])).pathname).toBe('/api/v2/rcas/c1/logic-tree/reset');
+  });
+
+  it('logic tree: no "Reset to template" without a template', () => {
+    renderInCase(<LogicTreeTool />, false, { ...KIT_CASE, status: 'Analysis' });
+    expect(screen.queryByRole('button', { name: 'Reset to template' })).toBeNull();
+  });
+
+  it('event diagram "Delete selected event": disabled without a selection; the destructive confirm names the event and deletes only on confirm', async () => {
+    const onDelete = vi.fn();
+    const props = { eventCount: 2, onAdd: vi.fn(), onConnect: vi.fn(), onEdit: vi.fn(), onDelete };
+    const view = renderInCase(<DiagramToolbar {...props} selected={undefined} />, false);
+    expect(screen.getByRole('button', { name: 'Delete selected event' })).toBeDisabled();
+    view.unmount();
+    renderInCase(<DiagramToolbar {...props} selected={KIT_CASE.eventDiagram.nodes[0]} />, false);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected event' }));
+    const confirm = await screen.findByRole('alertdialog', { name: 'Delete "Trip alarm"?' });
+    expect(within(confirm).getByRole('button', { name: 'Delete event' }).className).toMatch(/destructive/);
+    fireEvent.keyDown(confirm, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(onDelete).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete selected event' }));
+    fireEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete event' }));
+    expect(onDelete).toHaveBeenCalledWith('event-1');
   });
 
   it('timeline: add / edit open the event dialog; delete is confirmed', async () => {

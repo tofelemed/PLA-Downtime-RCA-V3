@@ -24,46 +24,69 @@ export interface LogicTreeActions {
   onLinkEvidence: (node: RcaLogicNode, evidenceId: string, linked: boolean) => void;
 }
 
-function NodeCard({ node, actions, childCount }: { node: RcaLogicNode; actions: LogicTreeActions; childCount: number }) {
+const isCauseNode = (node: RcaLogicNode) => node.kind === 'Cause' || node.kind === 'root_cause';
+
+/** Kind, code and root-cause badges; a verified node says so ("Confirmed root cause" for a cause). */
+function NodeBadges({ node }: { node: RcaLogicNode }) {
+  const isCause = isCauseNode(node);
+  return (
+    <div className="flex flex-wrap gap-1">
+      {node.kind && <Badge variant="secondary" className="whitespace-nowrap">{node.kind}</Badge>}
+      {node.code && <Badge variant="outline" className="whitespace-nowrap">{node.code}</Badge>}
+      {isCause && !node.verified && <Badge variant="destructive" className="whitespace-nowrap">Root cause</Badge>}
+      {node.verified && <Badge className="whitespace-nowrap">{isCause ? 'Confirmed root cause' : 'Verified'}</Badge>}
+    </div>
+  );
+}
+
+/** Evidence link, add below, edit and delete (with its confirm) of one node. */
+function NodeTools({ node, actions, childCount }: { node: RcaLogicNode; actions: LogicTreeActions; childCount: number }) {
   const { number } = useNumberFormat();
-  const isCause = node.kind === 'Cause' || node.kind === 'root_cause';
+  const below = `The ${plural(childCount, 'node', 'nodes', number)} below it ${childCount === 1 ? 'is' : 'are'} deleted too.`;
+  return (
+    <div className="flex items-center gap-1">
+      <EvidenceLinkPopover targetId={node.id} targetName={node.label} evidence={actions.evidence} disabled={actions.busy} onToggle={(id, linked) => actions.onLinkEvidence(node, id, linked)} />
+      <IconButton icon={ActionIcon.add} label={`Add a node below ${node.label}`} disabled={actions.busy} onClick={() => actions.onAddChild(node)} />
+      <IconButton icon={ActionIcon.edit} label={`Edit ${node.label}`} disabled={actions.busy} onClick={() => actions.onEdit(node)} />
+      <ConfirmDialog
+        trigger={<IconButton icon={ActionIcon.delete} label={`Delete ${node.label}`} tooltip={false} disabled={actions.busy} />}
+        title={`Delete "${node.label}"?`}
+        description={childCount > 0 ? below : 'The node is removed from the logic tree.'}
+        confirmLabel="Delete node"
+        destructive
+        onConfirm={() => actions.onDelete(node)}
+      />
+    </div>
+  );
+}
+
+/** Editable: the verify checkbox. Read-only: a muted "Not verified" (a verified node shows its badge). */
+function NodeVerification({ node, actions }: { node: RcaLogicNode; actions: LogicTreeActions }) {
   const verifyId = `verify-${node.id}`;
+  if (actions.readOnly) {
+    return node.verified ? null : <p className="text-sm text-muted-foreground" data-testid="node-not-verified">Not verified</p>;
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <Checkbox id={verifyId} checked={node.verified === true} disabled={actions.busy} onCheckedChange={(value) => actions.onVerify(node, value === true)} />
+      <Label htmlFor={verifyId}>{isCauseNode(node) ? 'Confirmed root cause' : 'Verified'}</Label>
+    </div>
+  );
+}
+
+function NodeCard({ node, actions, childCount }: { node: RcaLogicNode; actions: LogicTreeActions; childCount: number }) {
   return (
     <div className="space-y-2 rounded-md border bg-card p-3" data-testid="logic-node">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-1">
           <p className="font-medium">{node.label}</p>
-          <div className="flex flex-wrap gap-1">
-            {node.kind && <Badge variant="secondary" className="whitespace-nowrap">{node.kind}</Badge>}
-            {node.code && <Badge variant="outline" className="whitespace-nowrap">{node.code}</Badge>}
-            {isCause && <Badge variant="destructive" className="whitespace-nowrap">Root cause</Badge>}
-            {node.verified && <Badge className="whitespace-nowrap">Verified</Badge>}
-          </div>
+          <NodeBadges node={node} />
         </div>
-        {!actions.readOnly && (
-          <div className="flex items-center gap-1">
-            <EvidenceLinkPopover targetId={node.id} targetName={node.label} evidence={actions.evidence} disabled={actions.busy} onToggle={(id, linked) => actions.onLinkEvidence(node, id, linked)} />
-            <IconButton icon={ActionIcon.add} label={`Add a node below ${node.label}`} disabled={actions.busy} onClick={() => actions.onAddChild(node)} />
-            <IconButton icon={ActionIcon.edit} label={`Edit ${node.label}`} disabled={actions.busy} onClick={() => actions.onEdit(node)} />
-            <ConfirmDialog
-              trigger={<IconButton icon={ActionIcon.delete} label={`Delete ${node.label}`} tooltip={false} disabled={actions.busy} />}
-              title={`Delete "${node.label}"?`}
-              description={childCount > 0 ? `The ${plural(childCount, 'node', 'nodes', number)} below it ${childCount === 1 ? 'is' : 'are'} deleted too.` : 'The node is removed from the logic tree.'}
-              confirmLabel="Delete node"
-              destructive
-              onConfirm={() => actions.onDelete(node)}
-            />
-          </div>
-        )}
+        {!actions.readOnly && <NodeTools node={node} actions={actions} childCount={childCount} />}
       </div>
       {node.description && <p className="max-w-[75ch] text-sm">{node.description}</p>}
       {node.notes && <p className="text-sm text-muted-foreground">Note: {node.notes}</p>}
-      {!actions.readOnly && (
-        <div className="flex items-center gap-2">
-          <Checkbox id={verifyId} checked={node.verified === true} disabled={actions.busy} onCheckedChange={(value) => actions.onVerify(node, value === true)} />
-          <Label htmlFor={verifyId}>{isCause ? 'Confirmed root cause' : 'Verified'}</Label>
-        </div>
-      )}
+      <NodeVerification node={node} actions={actions} />
     </div>
   );
 }
