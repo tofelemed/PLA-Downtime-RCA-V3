@@ -2,6 +2,7 @@ import type { LedgerKind } from '@/api/v2/types/period-overview';
 import { Label } from '@/components/ui/label';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { REVISION_OPTIONS } from '../reports/revision-options';
+import { FIELD_CLASS, SELECT_CLASS } from './filter-classes';
 
 export interface LedgerApprovedTogglesProps {
   ledger: LedgerKind;
@@ -11,8 +12,6 @@ export interface LedgerApprovedTogglesProps {
   onChange: (patch: { ledger?: LedgerKind; approvedOnly?: boolean }) => void;
 }
 
-const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
-const FIELD_CLASS = 'flex flex-col gap-1.5';
 
 /**
  * The ledger (plan / capacity, a segmented control) and the revision (approved only, or approved else the

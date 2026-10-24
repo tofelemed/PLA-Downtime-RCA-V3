@@ -2,8 +2,8 @@ import { useSites } from '@/api/v2/queries/reference-data';
 import { Label } from '@/components/ui/label';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { siteOfSelection, unitsOfSite } from '../model/site-units';
+import { FIELD_CLASS, SELECT_CLASS } from './filter-classes';
 
-const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
 
 /**
  * Site filter of PLA analytics: choosing a site selects its units (the reports keep receiving named
@@ -16,7 +16,7 @@ export function SiteFilter({ unitIds, onChange }: { unitIds: readonly string[]; 
   const current = siteOfSelection(unitIds, env.units, sites);
   const choose = (siteId: string) => onChange(siteId ? unitsOfSite(siteId, env.units, sites) : []);
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={FIELD_CLASS}>
       <Label htmlFor="pla-site">Site</Label>
       <select id="pla-site" data-testid="pla-site" className={SELECT_CLASS} value={current} onChange={(event) => choose(event.target.value)}>
         <option value="">{unitIds.length > 0 && !current ? 'Chosen units' : 'All sites'}</option>

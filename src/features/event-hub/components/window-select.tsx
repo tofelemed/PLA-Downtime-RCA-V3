@@ -1,5 +1,5 @@
 import { Label } from '@/components/ui/label';
-import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import type { ShiftInstanceView } from '@/api/v2/types/units';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';

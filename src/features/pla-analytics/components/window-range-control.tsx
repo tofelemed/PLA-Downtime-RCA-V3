@@ -7,6 +7,7 @@ import { useCalendarPreference } from '@/lib/dates';
 import { UiIcon } from '@/lib/icons';
 import { CHOSEN_DATES, presetWindowOf, type AnalyticsScope } from '../model/analytics-scope';
 import { windowRangeText } from '../model/window-range';
+import { FIELD_CLASS } from './filter-classes';
 import { PlantDaysInput } from './plant-days-input';
 import { useProductionDayStart } from '../hooks/use-production-day-start';
 
@@ -30,7 +31,7 @@ export function WindowRangeControl({ scope, timeZone, onChange }: WindowRangeCon
     setOpen(false);
   };
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className={FIELD_CLASS}>
       <Label htmlFor="pla-window">Window</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>

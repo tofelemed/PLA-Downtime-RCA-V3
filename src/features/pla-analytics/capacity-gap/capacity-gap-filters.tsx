@@ -5,7 +5,7 @@ import { MultiCheckSelect } from '@/features/event-hub/components/multi-check-se
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { Label } from '@/components/ui/label';
 import { DateInput } from '@/features/ux-kit/date-inputs';
-import { FIELD_CLASS } from '../components/analytics-filters';
+import { FIELD_CLASS } from '../components/filter-classes';
 import { KpiInfo } from '../dashboard/kpi-info';
 import type { CapacityGapFilters as Filters } from './capacity-gap-model';
 

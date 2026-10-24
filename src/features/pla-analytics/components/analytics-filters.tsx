@@ -15,9 +15,6 @@ export interface AnalyticsFiltersProps {
   picker?: ReactNode;
 }
 
-export const SELECT_CLASS = 'h-9 rounded-md border border-input bg-background px-2 text-sm';
-/** A labelled filter control: its label stacked above it. */
-export const FIELD_CLASS = 'flex flex-col gap-1.5';
 
 /**
  * Scope filters of the PLA analysis pages (server-side), one bottom-aligned row in the owner's order: site

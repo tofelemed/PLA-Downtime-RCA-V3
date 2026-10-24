@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { Label } from '@/components/ui/label';
 import type { ViewMode } from '../model/view-modes';
-import { FIELD_CLASS, SELECT_CLASS } from './analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from './filter-classes';
 
 export interface ModeFieldProps {
   param: string;

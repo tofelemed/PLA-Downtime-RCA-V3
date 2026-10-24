@@ -1,5 +1,5 @@
 import { Label } from '@/components/ui/label';
-import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from '@/features/pla-analytics/components/filter-classes';
 import type { OpenFilter } from '../model/event-filters';
 
 const OPTIONS: ReadonlyArray<{ value: OpenFilter; label: string }> = [

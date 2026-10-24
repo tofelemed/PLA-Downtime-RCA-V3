@@ -7,7 +7,7 @@ import { TREND_GROUPS, type AnalyticsScope, type OeePolicy } from '../model/anal
 import { TREND_LABELS } from '../model/display';
 import { breakdownModesFor } from '../model/money-access';
 import { BREAKDOWN_MODES, INSPECTION_MODES, SERIES_MODES, TREND_POLICY_LABELS, VALUATION_MODES } from '../model/view-modes';
-import { FIELD_CLASS, SELECT_CLASS } from './analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from './filter-classes';
 import { LossBreakdownFields } from './loss-breakdown-fields';
 import { ModeField } from './mode-field';
 

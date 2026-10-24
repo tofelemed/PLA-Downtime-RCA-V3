@@ -4,7 +4,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { LOSS_EVENT_TYPES, LOSS_GROUPS, VALUE_METRICS, type AnalyticsScope, type LossEventType } from '../model/analytics-scope';
 import { LOSS_EVENT_TYPE_LABELS, LOSS_GROUP_LABELS, METRIC_LABELS } from '../model/display';
 import { lossMetricsFor, scopeForMoneyAccess } from '../model/money-access';
-import { FIELD_CLASS, SELECT_CLASS } from './analytics-filters';
+import { FIELD_CLASS, SELECT_CLASS } from './filter-classes';
 
 export interface LossBreakdownFieldsProps {
   /** the shown breakdown (`tree`, `opportunities`, `repeat-causes`, `loss-events`) */

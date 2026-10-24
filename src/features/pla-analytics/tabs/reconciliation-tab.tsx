@@ -28,9 +28,9 @@ function useStatusTexts(data: StatusData | undefined) {
   const onPla = useContext(AnalysisSnapshotContext) !== null;
   const title = 'Reconciliation status and age';
   if (!data) return { onPla, title, note: undefined, info: undefined };
-  const rule = `overdue = not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted)`;
-  const note = `${number(data.periods)} periods · ${rule} · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`;
-  if (onPla) return { onPla, title: `${title} (${number(data.periods)} periods)`, note, info: `O${rule.slice(1)}.` };
+  const limits = `not submitted ${number(data.sla.submitWithinHours)} h or not approved ${number(data.sla.approveWithinHours)} h after the production day ended (time waiting for data not counted)`;
+  const note = `${number(data.periods)} periods · overdue = ${limits} · ${number(data.waitingForData)} waiting for data · ${number(data.rejectionEscalated)} escalated after repeated rejections.`;
+  if (onPla) return { onPla, title: `${title} (${number(data.periods)} periods)`, note, info: `Overdue = ${limits}.` };
   return { onPla, title, note, info: report ? note : undefined };
 }
 
