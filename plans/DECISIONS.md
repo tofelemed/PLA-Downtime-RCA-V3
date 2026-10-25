@@ -1394,3 +1394,9 @@ Engineering defaults; change any of them on request.
 
 - **Dashboard shows approved revisions only:** no draft figures, so no Provisional label is needed there.
 - **Reports, Revision = Provisional:** every report whose figures can include draft revisions and has no per-row flag shows one Provisional marker beside its card title; reports whose data does not come from period revisions (RCA actions, lot dispositions, restatements, event status) get none.
+
+## 2026-10-25 — Default revision per page (owner)
+
+- **Downtime and PLA open on Provisional:** the working pages for operators and engineers show the latest figures, drafts included, with the Provisional marker.
+- **Reports and Dashboard open on Approved only:** the management pages show signed-off revisions; unapproved periods are left out and the "Incomplete data" note says so.
+- The Revision control on each page still switches the view; the split is intentional, so a gap between the PLA and Dashboard totals for one day means unapproved shifts, not an error.
