@@ -44,7 +44,7 @@ export function SidebarGroup({ group, activeHref, collapsed, open, onToggle, onN
           <Chevron className="h-3.5 w-3.5" aria-hidden />
         </button>
       )}
-      <ul id={listId} hidden={!shown} aria-label={collapsed ? section.label : undefined} className="space-y-1">
+      <ul id={listId} hidden={!shown} aria-label={collapsed ? section.label : undefined} className={cn('space-y-1', !collapsed && 'mt-1')}>
         {visible.map((item) => (
           <li key={item.href}>
             <SidebarLink item={item} collapsed={collapsed} active={item.href === activeHref} onNavigate={onNavigate} />

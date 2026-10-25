@@ -3,8 +3,8 @@ import type { RelativeWindow } from './relative-window';
 
 export type WindowPreset = RelativeWindow;
 
-/** The Event Hub list opens on the last 7 days unless the user picked another preset before. */
-export const DEFAULT_WINDOW_PRESET: WindowPreset = WINDOW_PRESETS.find((preset) => preset.hours === 24 * 7) ?? WINDOW_PRESETS[0];
+/** The Event Hub list opens on the last 30 days unless the user picked another preset before. */
+export const DEFAULT_WINDOW_PRESET: WindowPreset = WINDOW_PRESETS.find((preset) => preset.hours === 24 * 30) ?? WINDOW_PRESETS[0];
 
 const keyOf = (userId: string, tenantId: string) => `proact.eventHub.window.${userId}.${tenantId}`;
 

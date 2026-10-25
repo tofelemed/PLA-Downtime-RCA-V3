@@ -23,9 +23,9 @@ describe('dashboard scope', () => {
     expect(dashboardScope('30d', {}, NOW).windowLabel).toBe('30 days');
   });
 
-  it('falls back to 7 days for an unknown key', () => {
-    expect(presetKeyOf('90d')).toBe('7d');
-    expect(presetKeyOf(null)).toBe('7d');
+  it('falls back to 30 days for an unknown key', () => {
+    expect(presetKeyOf('90d')).toBe('30d');
+    expect(presetKeyOf(null)).toBe('30d');
     expect(presetKeyOf('6m')).toBe('6m');
   });
 

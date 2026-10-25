@@ -25,7 +25,7 @@ export const WINDOW_PRESETS = [
   { key: '30d', label: 'Last 30 days', hours: 24 * 30 },
   { key: '90d', label: 'Last 90 days', hours: 24 * 90 },
 ] as const;
-export const DEFAULT_PRESET = WINDOW_PRESETS[1];
+export const DEFAULT_PRESET = WINDOW_PRESETS[2];
 
 /** Everything the page is filtered by; it lives in the URL so a view can be shared (plan 3.3 step 1). */
 export interface DowntimeFilters {

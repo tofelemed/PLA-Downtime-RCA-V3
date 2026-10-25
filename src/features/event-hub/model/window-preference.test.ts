@@ -10,8 +10,8 @@ describe('Event Hub window preference (per user and plant, localStorage)', () =>
     vi.restoreAllMocks();
   });
 
-  it('defaults to the last 7 days', () => {
-    expect(DEFAULT_WINDOW_PRESET.label).toBe('Last 7 days');
+  it('defaults to the last 30 days', () => {
+    expect(DEFAULT_WINDOW_PRESET.label).toBe('Last 30 days');
     expect(readWindowPreference('user-1', 'plant-a')).toBe(DEFAULT_WINDOW_PRESET);
     expect(readWindowPreference(null, 'plant-a')).toBe(DEFAULT_WINDOW_PRESET);
   });

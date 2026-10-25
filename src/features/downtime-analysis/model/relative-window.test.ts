@@ -16,7 +16,7 @@ describe('A-5 rolling windows on the Downtime pages', () => {
 
   it('a missing window is the default preset, kept relative; explicit dates stay absolute', () => {
     const fallback = parseFilters(new URLSearchParams(), NOW);
-    expect(fallback.relativeWindow).toBe('7d');
+    expect(fallback.relativeWindow).toBe('30d');
     expect(hasWindowParams(new URLSearchParams())).toBe(false);
     const chosen = parseFilters(new URLSearchParams('from=2026-10-01T00:00:00.000Z&to=2026-10-08T00:00:00.000Z&window=Chosen+dates'), NOW);
     expect(chosen).toMatchObject({ relativeWindow: null, windowLabel: 'Chosen dates', from: '2026-10-01T00:00:00.000Z' });

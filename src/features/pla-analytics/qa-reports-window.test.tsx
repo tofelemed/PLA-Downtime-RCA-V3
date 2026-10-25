@@ -23,10 +23,10 @@ const REPORTS = { approvedByDefault: true, productionDays: { timeZone: TEHRAN, d
 const wrap = (node: ReactNode) => render(<MemoryRouter>{node}</MemoryRouter>);
 
 describe('QA Reports N1: production days and machine URL values', () => {
-  it('the Reports default "Last 7 days" is the 7 complete production days, 06:00–06:00, and the URL says window=7d', () => {
+  it('the Reports default "Last 30 days" is the 30 complete production days, 06:00–06:00, and the URL says window=30d', () => {
     const scope = parseScope(new URLSearchParams(), NOW, REPORTS);
-    expect(scope).toMatchObject({ from: '2026-10-12T02:30:00.000Z', to: '2026-10-19T02:30:00.000Z', windowLabel: 'Last 7 days' });
-    expect(scopeToParams(scope, REPORTS).get('window')).toBe('7d');
+    expect(scope).toMatchObject({ from: '2026-09-19T02:30:00.000Z', to: '2026-10-19T02:30:00.000Z', windowLabel: 'Last 30 days' });
+    expect(scopeToParams(scope, REPORTS).get('window')).toBe('30d');
   });
 
   it('chosen dates are written as window=dates; links with the old label text still read', () => {

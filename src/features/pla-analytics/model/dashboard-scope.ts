@@ -10,7 +10,7 @@ export const DASHBOARD_PRESETS = [
   { key: '1y', label: '1 year', hours: 8760 },
 ] as const;
 export type DashboardPresetKey = (typeof DASHBOARD_PRESETS)[number]['key'];
-const DEFAULT_KEY: DashboardPresetKey = '7d';
+const DEFAULT_KEY: DashboardPresetKey = '30d';
 
 /** The hierarchy node the dashboard is scoped to: a unit, an asset, or neither (the whole plant). */
 export interface DashboardNode {
@@ -31,7 +31,7 @@ export const stepOf = (key: DashboardPresetKey): TrendGroup => STEPS[key];
 
 /**
  * The dashboard scope: the units under the selected hierarchy node (all units in the caller's scope when none)
- * over a rolling preset (`?window=`, default 7 days) that ends now, with minute-stable bounds so the tiles
+ * over a rolling preset (`?window=`, default 30 days) that ends now, with minute-stable bounds so the tiles
  * share one cached snapshot. It shows approved revisions only (owner, 24 Oct 2026), so no figure is a draft.
  */
 export function dashboardScope(key: DashboardPresetKey, node: DashboardNode, now: number = Date.now()): AnalyticsScope {

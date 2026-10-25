@@ -34,8 +34,8 @@ describe('A-5 rolling windows in the Event Hub URL', () => {
 
   it('a missing window is the remembered preset, kept relative', () => {
     const filters = parseEventFilters(new URLSearchParams(), NOW);
-    expect(filters.relativeWindow).toBe('7d');
-    expect(toEventSearchParams(filters).toString()).toBe('window=7d');
+    expect(filters.relativeWindow).toBe('30d');
+    expect(toEventSearchParams(filters).toString()).toBe('window=30d');
     expect(hasWindowParams(new URLSearchParams())).toBe(false);
     expect(hasWindowParams(new URLSearchParams('window=8h'))).toBe(true);
   });

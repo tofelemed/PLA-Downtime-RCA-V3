@@ -29,10 +29,10 @@ describe('Downtime Analysis filters in the URL (plan 3.3 step 1)', () => {
     expect(toSearchParams(filters).has('metric')).toBe(false);
   });
 
-  it('a missing or reversed window falls back to the last 7 days ending when the page opened', () => {
+  it('a missing or reversed window falls back to the last 30 days ending when the page opened', () => {
     const filters = parseFilters(new URLSearchParams('from=2026-10-08T00:00:00Z&to=2026-10-01T00:00:00Z&metric=cost'), NOW);
     expect(filters.to).toBe(new Date(NOW).toISOString());
-    expect(Date.parse(filters.to) - Date.parse(filters.from)).toBe(7 * 86_400_000);
+    expect(Date.parse(filters.to) - Date.parse(filters.from)).toBe(30 * 86_400_000);
     expect(filters.metric).toBe('duration');
   });
 

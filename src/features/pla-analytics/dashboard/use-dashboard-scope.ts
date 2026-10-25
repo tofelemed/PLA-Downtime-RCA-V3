@@ -6,7 +6,7 @@ import { useWindowClock } from '@/features/event-hub/hooks/use-window-clock';
 import type { AnalyticsScope } from '../model/analytics-scope';
 import { dashboardScope, presetKeyOf, type DashboardNode, type DashboardPresetKey } from '../model/dashboard-scope';
 
-const DEFAULT_KEY: DashboardPresetKey = '7d';
+const DEFAULT_KEY: DashboardPresetKey = '30d';
 
 export interface DashboardScopeState {
   key: DashboardPresetKey;
