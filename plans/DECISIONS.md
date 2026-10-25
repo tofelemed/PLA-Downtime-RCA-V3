@@ -1400,3 +1400,11 @@ Engineering defaults; change any of them on request.
 - **Downtime and PLA open on Provisional:** the working pages for operators and engineers show the latest figures, drafts included, with the Provisional marker.
 - **Reports and Dashboard open on Approved only:** the management pages show signed-off revisions; unapproved periods are left out and the "Incomplete data" note says so.
 - The Revision control on each page still switches the view; the split is intentional, so a gap between the PLA and Dashboard totals for one day means unapproved shifts, not an error.
+
+## 2026-10-25 — Remaining open items settled by standards (owner: "do according to standards and common practice")
+
+- **Explained loss (replaces the 2026-10-24 "shortfall − unexplained, floored at 0"):** loss-accounting closure per slice. A slice's unexplained loss is capped at its own shortfall and explained = shortfall − unexplained, both summed over slices, so Explained + Unexplained = Shortfall in every bucket and total and the unexplained share never exceeds 100 %. A slice that met its plan adds no unexplained loss. Values change, the response shape does not.
+- **MTBF / MTTR confirmed:** SMRP 3.5.1 / 3.5.2 and ISO 14224 practice. MTBF = total operating time ÷ number of failures, MTTR = total repair time ÷ number of repairs, pooled over the units in view (never an average of unit averages). Time without state data stays out of operating time.
+- **PLA waterfall ⓘ texts reworded** in plain terms (no "ledger" or "calculated periods" jargon): Plan target, Sustained capacity, Actual good output (off-grade is a quality loss, not good output).
+- **No row counts on keyset-paged lists:** the server has no total, so the pager shows the range instead of a misleading page count (common practice for cursor paging).
+- **Refresh rates kept:** dashboard figures once a minute; current stops every 30 s; approval inbox and equipment readiness every 60 s; Event Hub gets new stops by realtime push and re-resolves its rolling window every 5 min (a faster re-resolve would reset paging). Polling stops while the tab is hidden. These suit an analysis/accounting screen; they are not control-room HMI rates.

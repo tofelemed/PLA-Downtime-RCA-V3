@@ -74,11 +74,11 @@ describe('ProductionPlanSection', () => {
     });
   });
 
-  it('explains in the Unexplained tooltip that it can exceed the shortfall', async () => {
+  it('explains in the Unexplained tooltip that the two loss tiles add up to the shortfall', async () => {
     state.totals = [row('total', 't')];
     renderSection();
     await userEvent.hover(screen.getByRole('button', { name: 'About Unexplained' }));
-    const tips = await screen.findAllByText(/Can exceed the shortfall when periods that met their plan still carry unexplained quantities\./);
+    const tips = await screen.findAllByText(/Explained loss \+ Unexplained = Shortfall\./);
     expect(tips.length).toBeGreaterThan(0);
   });
 

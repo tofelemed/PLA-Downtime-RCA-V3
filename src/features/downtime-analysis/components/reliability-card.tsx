@@ -37,7 +37,7 @@ function MtbfCell({ row }: { row: ReliabilityRowView }) {
 function columnsFor(unitName: (id: string) => string, digits: DigitSystem): DataTableColumn<ReliabilityRowView>[] {
   return [
     { id: 'unit', header: 'Unit', cell: (row) => <span data-testid="reliability-row" data-unit-id={row.unitId}>{unitName(row.unitId)}</span> },
-    { id: 'mtbf', header: <InfoHeader title="MTBF" info="Mean time between failures: exposure ÷ failures" />, headerLabel: 'MTBF', cell: (row) => <MtbfCell row={row} /> },
+    { id: 'mtbf', header: <InfoHeader title="MTBF" info="Mean time between failures: operating time ÷ number of failures (SMRP 3.5.1)" />, headerLabel: 'MTBF', cell: (row) => <MtbfCell row={row} /> },
     { id: 'failures', header: 'Failures', align: 'right', nowrap: true, cell: (row) => formatCount(row.failures, digits) },
     ...REPAIR_COLUMNS.map((column) => ({
       id: column.testId,

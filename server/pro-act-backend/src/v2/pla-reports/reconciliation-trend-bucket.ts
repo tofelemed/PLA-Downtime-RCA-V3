@@ -26,10 +26,10 @@ export interface ReconciliationTrendBucketView {
   shortfall: string | null;
   /**
    * SME R7: loss nobody explained — the positive residual, tolerance adjustments and classified Unaccounted
-   * lines (a label is not proof)
+   * lines (a label is not proof), capped per slice at that slice's shortfall
    */
   unexplained: string | null;
-  /** explained loss: shortfall − unexplained, floored at 0 */
+  /** explained loss: Σ per slice (shortfall − unexplained); explained + unexplained = shortfall */
   explained: string | null;
   /** unexplained / plan; null when the plan is 0 */
   unexplainedOfPlan: string | null;
@@ -55,6 +55,7 @@ export interface Bucket {
   actual: Dec;
   shortfall: Dec;
   unexplained: Dec;
+  explained: Dec;
   /** formatted targets of the included periods ('' = none) */
   targets: Set<string>;
   periods: Set<string>;
@@ -81,6 +82,7 @@ export function bucketFor(
     actual: ZERO,
     shortfall: ZERO,
     unexplained: ZERO,
+    explained: ZERO,
     targets: new Set(),
     periods: new Set(),
     included: 0,
@@ -114,8 +116,13 @@ function addFigures(
 ): void {
   bucket.plan = bucket.plan.plus(slice.target ?? ZERO);
   bucket.actual = bucket.actual.plus(slice.actual ?? ZERO);
-  bucket.shortfall = bucket.shortfall.plus(positive(slice.gap));
-  bucket.unexplained = bucket.unexplained.plus(unexplainedOf(state, slice));
+  const shortfall = positive(slice.gap);
+  // loss accounting closure: a slice's unexplained loss is part of its own shortfall, so a slice that met its
+  // plan adds none and explained + unexplained = shortfall in every bucket (owner decision, 25 Oct 2026)
+  const unexplained = Dec.min(unexplainedOf(state, slice), shortfall);
+  bucket.shortfall = bucket.shortfall.plus(shortfall);
+  bucket.unexplained = bucket.unexplained.plus(unexplained);
+  bucket.explained = bucket.explained.plus(shortfall.minus(unexplained));
   const target = state.rule?.unaccountedTarget;
   bucket.targets.add(target ? formatDec(target) : '');
 }
@@ -187,7 +194,7 @@ export function bucketView(b: Bucket): ReconciliationTrendBucketView {
     actual: figure(b, b.actual),
     shortfall: figure(b, b.shortfall),
     unexplained: figure(b, b.unexplained),
-    explained: figure(b, positive(b.shortfall.minus(b.unexplained))),
+    explained: figure(b, b.explained),
     unexplainedOfPlan: ratio(b, b.unexplained, b.plan),
     unexplainedOfShortfall: ratio(b, b.unexplained, b.shortfall),
     ...targetFigures(b),

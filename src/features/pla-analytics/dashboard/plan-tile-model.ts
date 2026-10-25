@@ -33,6 +33,6 @@ export const PLAN_TILES: readonly PlanTileDef[] = [
   {
     id: 'unexplained',
     title: 'Unexplained',
-    info: 'Part of the shortfall no cause has been given for yet. Can exceed the shortfall when periods that met their plan still carry unexplained quantities.',
+    info: 'Part of the shortfall no cause has been given for yet. Explained loss + Unexplained = Shortfall.',
   },
 ];

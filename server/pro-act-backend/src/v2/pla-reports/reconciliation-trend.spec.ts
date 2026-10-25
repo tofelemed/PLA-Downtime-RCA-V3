@@ -200,7 +200,7 @@ describe('reconciliation trend: actual, explained and window totals', () => {
     ]);
   });
 
-  it('explained never goes below zero', () => {
+  it('caps unexplained loss at the slice shortfall, so explained never goes below zero', () => {
     const bucket = bucketOfStates([
       state('p1', [slice({ target: d(100), actual: d(90) })], {
         lines: [unaccountedLine(6)],
@@ -208,8 +208,29 @@ describe('reconciliation trend: actual, explained and window totals', () => {
     ]);
     expect(bucket).toMatchObject({
       shortfall: '10',
-      unexplained: '16',
+      unexplained: '10',
       explained: '0',
+      unexplainedOfShortfall: '1',
+    });
+  });
+
+  it('a slice that met its plan adds no unexplained loss: explained + unexplained = shortfall', () => {
+    const bucket = bucketOfStates([
+      state('p1', [
+        slice({ target: d(100), actual: d(80), attributed: d(15) }),
+        slice({
+          sliceId: 's2',
+          target: d(100),
+          actual: d(100),
+          toleranceAdjustment: d(5),
+        }),
+      ]),
+    ]);
+    expect(bucket).toMatchObject({
+      shortfall: '20',
+      unexplained: '5',
+      explained: '15',
+      unexplainedOfShortfall: '0.25',
     });
   });
 
