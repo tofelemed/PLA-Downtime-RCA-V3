@@ -186,7 +186,7 @@ describe('Code dialog: production loss split by tonnes (declared mode)', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Tonnes' }));
     fireEvent.change(values()[0], { target: { value: '4' } });
     fireEvent.change(values()[1], { target: { value: '3' } });
-    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('0.5 t still to place.');
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('0.500 t still to place.');
     expect(screen.getByRole('button', { name: 'Save reason' })).toBeDisabled();
     fireEvent.change(values()[1], { target: { value: '3.5' } });
     expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('add up to the shortfall');

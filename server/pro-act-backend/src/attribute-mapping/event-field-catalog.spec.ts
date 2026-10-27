@@ -29,6 +29,7 @@ const NOT_MAPPABLE = new Set([
   'planId',
   'mappingDiagnostics',
   'quantityUom', // metadata of the chosen quantity attribute, not a separate mapping rule
+  'declaredFigures', // set by the MQTT PLA feed handler, never by a PI mapping rule
 ]);
 
 /** Plan 1.3 step 4 (I10): backend validation, the event fact sets and the UI catalog cannot drift. */

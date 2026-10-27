@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ReasonSplitState } from '../hooks/use-reason-split';
-import { tonnesSplitMessage } from '../model/declared-split';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { tonnesSplitGap } from '../model/declared-split';
 import type { SplitMode, SplitRow } from '../model/reason-split';
 import { ReasonCodeSelect } from './reason-code-select';
 
@@ -64,7 +65,9 @@ function hintOf(split: ReasonSplitState): string {
 }
 
 function TonnesRemaining({ split, shortfall }: { split: ReasonSplitState; shortfall: number }) {
-  const message = tonnesSplitMessage(split.rows, shortfall);
+  const numbers = useNumberFormat();
+  const gap = tonnesSplitGap(split.rows, shortfall);
+  const message = gap ? `${numbers.number(gap.tonnes, 3)} t ${gap.side === 'remaining' ? 'still to place.' : 'over the shortfall.'}` : null;
   return (
     <p className={message ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'} data-testid="split-tonnes-remaining" role="status">
       {message ?? 'The tonnes add up to the shortfall.'}

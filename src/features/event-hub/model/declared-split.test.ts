@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tonnesEntriesValid, tonnesRemaining, tonnesSplitFits, tonnesSplitMessage, tonnesTolerance } from './declared-split';
+import { tonnesEntriesValid, tonnesRemaining, tonnesSplitFits, tonnesSplitGap, tonnesTolerance } from './declared-split';
 import { reasonWeightsBody, type SplitRow } from './reason-split';
 
 const rows = (...values: string[]): SplitRow[] => values.map((value, key) => ({ key, reasonCodeId: `r${key}`, value }));
@@ -15,9 +15,9 @@ describe('declared tonnes split', () => {
   it('refuses tonnes that do not add up and says what is left', () => {
     expect(tonnesSplitFits(rows('4', '3'), 7.5)).toBe(false);
     expect(tonnesRemaining(rows('4', '3'), 7.5)).toBe(0.5);
-    expect(tonnesSplitMessage(rows('4', '3'), 7.5)).toBe('0.5 t still to place.');
-    expect(tonnesSplitMessage(rows('5', '3'), 7.5)).toBe('0.5 t over the shortfall.');
-    expect(tonnesSplitMessage(rows('4', '3.5'), 7.5)).toBeNull();
+    expect(tonnesSplitGap(rows('4', '3'), 7.5)).toEqual({ side: 'remaining', tonnes: 0.5 });
+    expect(tonnesSplitGap(rows('5', '3'), 7.5)).toEqual({ side: 'over', tonnes: 0.5 });
+    expect(tonnesSplitGap(rows('4', '3.5'), 7.5)).toBeNull();
   });
 
   it('needs a non-negative number in every row', () => {
