@@ -23,7 +23,6 @@ export interface RecalculateRequest {
   to: string;
 }
 
-
 /**
  * Window recalculation (plan 2.5 step 5, `PeriodRecalculateRequested` on demand): queues one leased
  * calculation job per period of the named units overlapping `[from, to)`. Body unit ids must be units of

@@ -64,7 +64,7 @@ describe('PiFrameIngestService', () => {
   const context = (): FrameContext => ({
     tenantId: TENANT,
     profile: new MappingProfile(parseTenantMappingRules(null), new Map()),
-    resolver: { resolve: () => placement } as unknown as TenantMappingResolver,
+    resolver: { resolve: () => placement },
   });
   const ingest = (attributes: Record<string, unknown> = {}) =>
     service.ingest(
