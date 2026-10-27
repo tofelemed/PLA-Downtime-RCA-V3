@@ -74,6 +74,8 @@ describe('QA planning: period page wording, chips, reasons and operator links', 
     expect(periodTitle({ unitName: 'HDPE Extruder 1', localDate: '2026-10-17', shiftName: null })).toBe('HDPE Extruder 1 — 2026-10-17');
     expect(periodTitle({ unitName: 'U', localDate: '2026-10-17', shiftName: 'A' }, { calendar: 'persian' })).toBe('U — 1405/07/25 · Shift A');
     expect(shiftLabel('Night shift')).toBe('Night shift');
+    expect(shiftLabel('Day')).toBe('Day');
+    expect(periodTitle({ unitName: 'HDPE Extruder 1', localDate: '2026-10-29', shiftName: 'Day' })).toBe('HDPE Extruder 1 — 2026-10-29 · Day');
   });
 
   it('re-test N5: the grid page has one label, used by its h1 and by the period page back link', () => {

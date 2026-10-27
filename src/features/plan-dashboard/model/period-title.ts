@@ -8,8 +8,9 @@ export interface PeriodTitleParts {
   shiftName: string | null;
 }
 
-/** "Shift A" for a bare shift name; a name that already says "shift" stays as it is. */
+/** "Shift A" for a bare shift name; a name that already says "shift" stays as it is; the day-grain period "Day" is not a shift. */
 export function shiftLabel(shiftName: string): string {
+  if (/^day$/i.test(shiftName)) return shiftName;
   return /shift/i.test(shiftName) ? shiftName : `Shift ${shiftName}`;
 }
 

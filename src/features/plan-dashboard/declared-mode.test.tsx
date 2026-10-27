@@ -140,7 +140,7 @@ describe('coding gate in declared mode', () => {
     wrap(<CodingGatePanel view={view(GATE)} declared />);
     const panel = screen.getByTestId('coding-gate');
     expect(panel).toHaveTextContent('Production loss coding incomplete — submission is blocked');
-    expect(panel).toHaveTextContent('1 loss events: 0 with a reason');
+    expect(panel).toHaveTextContent('1 loss event: 0 with a reason');
     expect(panel).toHaveTextContent('coded share of the shortfall 0 %');
     const link = screen.getByTestId('coding-gate-uncoded-link');
     expect(link).toHaveTextContent('The day’s loss event has no reason');

@@ -100,7 +100,7 @@ export function CodingGatePanel({ view, declared = false }: { view: Reconciliati
     <section className="space-y-2 rounded-md border p-3 text-sm" data-testid="coding-gate" data-passes={gate.passes} data-mode={gate.mode}>
       <p className="font-medium">{gateVerdictText(gate, declared)}</p>
       <p>
-        {number(gate.stops)} {declared ? gateWording(true).unit.many : 'stops'}: {number(gate.coded)} with a reason, {number(gate.investigationPending)} investigation pending, {number(gate.uncoded)} uncoded ·{' '}
+        {declared ? plural(gate.stops, gateWording(true).unit.one, gateWording(true).unit.many, number) : plural(gate.stops, 'stop', 'stops', number)}: {number(gate.coded)} with a reason, {number(gate.investigationPending)} investigation pending, {number(gate.uncoded)} uncoded ·{' '}
         {declared ? 'coded share of the shortfall' : 'coded stop time'} {formatRatioPercent(gate.codedRatio, digits)} (target {formatRatioPercent(gate.target, digits)})
       </p>
       {!gate.passes && <GateIssues gate={gate} view={view} declared={declared} />}
