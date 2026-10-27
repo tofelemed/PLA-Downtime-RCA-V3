@@ -3344,7 +3344,7 @@ export interface paths {
         put?: never;
         /**
          * Submit the draft for approval (gates, tolerance adjustments, submitted hash)
-         * @description Requires `Idempotency-Key`. 409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, BASELINE_CHANGED, OPEN_REVIEW_ITEMS; declared mode: DECLARED_LOSS_MISSING, DECLARED_IDENTITY_MISMATCH; a block coding gate: CODING_INCOMPLETE with LOSS_EVENT_UNCODED / CODING_COVERAGE_LOW (details.issues lists all).
+         * @description Requires `Idempotency-Key`. 409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, BASELINE_CHANGED, OPEN_REVIEW_ITEMS; declared mode: DECLARED_LOSS_MISSING, DECLARED_DUPLICATE, DECLARED_IDENTITY_MISMATCH; a block coding gate: CODING_INCOMPLETE with LOSS_EVENT_UNCODED / CODING_COVERAGE_LOW (details.issues lists all).
          */
         post: operations["ReconciliationV2Controller_submit_v2"];
         delete?: never;

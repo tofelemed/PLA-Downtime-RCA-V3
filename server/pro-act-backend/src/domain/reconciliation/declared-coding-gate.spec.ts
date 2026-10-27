@@ -80,4 +80,20 @@ describe('declaredCodingGate (declared mode)', () => {
     expect(result.uncoded).toBe(0);
     expect(result.issues.map((i) => i.code)).toEqual(['CODING_COVERAGE_LOW']);
   });
+
+  it('reports the real verification of the production loss events (information only)', () => {
+    const result = declaredCodingGate(
+      {
+        events: 3,
+        coded: 3,
+        investigationPending: 0,
+        verified: 2,
+        shortfall: d(30),
+        codedShortfall: d(30),
+      },
+      warn,
+    );
+    expect(result.passes).toBe(true);
+    expect(result.verification).toMatchObject({ verified: 2, unverified: 1 });
+  });
 });

@@ -38,6 +38,7 @@ export interface EventRow {
   /** declared mode: the OT figures of a production loss (jsonb); null for every other event */
   declared_figures: unknown;
   investigation_pending: boolean;
+  created_at: Date;
   row_version: number;
   revision_id: string | null;
   revision: number | null;
@@ -49,7 +50,7 @@ const EVENT_SELECT = `SELECT e."id", e."unit_id", e."occurrence_id", e."physical
        e."reason_code_id", e."reason_weights", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
        e."from_product_id", e."to_product_id", e."catalyst_family", e."operating_mode", e."stream_code", e."recovery_of_event_id",
        e."failure_severity", e."disposition_class", a."asset_type", rc."code" AS "reason_code",
-       e."declared_figures", e."investigation_pending",
+       e."declared_figures", e."investigation_pending", e."created_at",
        r."id" AS "revision_id", r."revision"
   FROM "production_events" e
   LEFT JOIN "assets" a ON a."id" = e."asset_id"
@@ -146,6 +147,7 @@ export function toEvent(
       ? {
           declaredFigures: parseDeclaredFigures(row.declared_figures),
           investigationPending: row.investigation_pending,
+          createdAt: new Date(row.created_at),
         }
       : {}),
   };

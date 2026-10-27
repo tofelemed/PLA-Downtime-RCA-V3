@@ -204,6 +204,8 @@ export interface LossEvent {
   /** declared mode: the figures of a `production_loss` event; absent / null for every other event */
   declaredFigures?: DeclaredFigures | null;
   investigationPending?: boolean;
+  /** declared mode: when the event was recorded (the tie-break between duplicate declarations) */
+  createdAt?: Date;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */

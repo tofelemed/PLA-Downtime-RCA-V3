@@ -85,6 +85,20 @@ describe('submissionIssues in declared mode', () => {
     );
   });
 
+  it('refuses a period two production loss events declare with DECLARED_DUPLICATE', () => {
+    const duplicate = reconciliationOf(
+      slice({
+        flags: ['duplicate_declared_loss', 'declared_loss_chosen:e1'],
+      }),
+    );
+    expect(codes(submissionIssues(duplicate, [], rule, declared))).toEqual([
+      'DECLARED_DUPLICATE',
+    ]);
+    expect(
+      codes(submissionIssues(duplicate, [toleranceLine], rule, declared)),
+    ).toEqual(['DECLARED_DUPLICATE']);
+  });
+
   it('keeps RESIDUAL_UNEXPLAINED beside the declared gates', () => {
     const found = submissionIssues(
       reconciliationOf(

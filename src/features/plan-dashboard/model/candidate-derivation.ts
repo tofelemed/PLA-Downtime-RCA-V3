@@ -25,6 +25,8 @@ export function derivationFlagLabel(flag: string): string {
 
 const DECLARED_SHORTFALL_PREFIX = 'declared_shortfall:';
 const STOPS_CROSS_CHECK_PREFIX = 'stops_cross_check:';
+/** beside `duplicate_declared_loss`: the event the declared figures come from (data, never a status label) */
+const DECLARED_LOSS_CHOSEN_PREFIX = 'declared_loss_chosen:';
 
 /** The shortfall the declared line was booked from (`declared_shortfall:<q>`); the flag value is data, not a label. */
 export function declaredShortfallOf(flags: readonly string[]): string | null {
@@ -42,7 +44,7 @@ export function stopsCrossCheckOf(flags: readonly string[]): { quantity: string;
 
 /** Value-carrying flags are shown as data elsewhere, so they are not repeated as labels. */
 export function isDataFlag(flag: string): boolean {
-  return flag.startsWith(DECLARED_SHORTFALL_PREFIX) || flag.startsWith(STOPS_CROSS_CHECK_PREFIX);
+  return [DECLARED_SHORTFALL_PREFIX, STOPS_CROSS_CHECK_PREFIX, DECLARED_LOSS_CHOSEN_PREFIX].some((prefix) => flag.startsWith(prefix));
 }
 
 /** Both quantities are the server's; the effective one is shown only when its text differs. */

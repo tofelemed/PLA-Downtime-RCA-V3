@@ -134,6 +134,38 @@ describe('chooseDeclaredEvent', () => {
     expect(chosen.event?.eventId).toBe('a');
     expect(chosen.duplicate).toBe(true);
   });
+
+  it('of the same window, the earliest recorded wins before the id', () => {
+    const at = (iso: string) => new Date(iso);
+    const chosen = chooseDeclaredEvent(
+      input([
+        {
+          ...productionLoss('a', { shortfall: 2 }),
+          createdAt: at('2027-03-04T09:00:00Z'),
+        },
+        {
+          ...productionLoss('b', { shortfall: 1 }),
+          createdAt: at('2027-03-04T08:00:00Z'),
+        },
+      ]),
+    );
+    expect(chosen.event?.eventId).toBe('b');
+  });
+
+  it('the duplicate flag names the event the figures come from', () => {
+    const result = computeDeclaredAccounting(
+      input([
+        productionLoss('b', { shortfall: 1 }),
+        productionLoss('a', { shortfall: 2 }),
+      ]),
+    );
+    expect(result.totals[0].flags).toEqual(
+      expect.arrayContaining([
+        'duplicate_declared_loss',
+        'declared_loss_chosen:a',
+      ]),
+    );
+  });
 });
 
 describe('computeDeclaredAccounting', () => {

@@ -25,6 +25,8 @@ export const DECLARED_IDENTITY_MISMATCH = 'declared_identity_mismatch';
 export const DECLARED_TARGET_MISSING = 'declared_target_missing';
 export const DECLARED_ACTUAL_MISSING = 'declared_actual_missing';
 export const DUPLICATE_DECLARED_LOSS = 'duplicate_declared_loss';
+/** Data flag beside `duplicate_declared_loss`: `declared_loss_chosen:<event id>`, the event the figures come from. */
+export const DECLARED_LOSS_CHOSEN_PREFIX = 'declared_loss_chosen:';
 export const DECLARED_SINGLE_SLICE = 'declared_single_slice';
 export const CAPACITY_NOT_APPLICABLE = 'capacity_not_applicable';
 
@@ -33,9 +35,24 @@ interface Chosen {
   duplicate: boolean;
 }
 
+const byId = (a: LossEvent, b: LossEvent) =>
+  a.eventId < b.eventId ? -1 : a.eventId > b.eventId ? 1 : 0;
+
+/** Earliest start, then the earliest recorded (`createdAt`; unknown last), then the lowest id. */
+function declaredOrder(a: LossEvent, b: LossEvent): number {
+  const created = (e: LossEvent) =>
+    e.createdAt ? e.createdAt.getTime() : Number.MAX_SAFE_INTEGER;
+  return (
+    a.start.getTime() - b.start.getTime() ||
+    created(a) - created(b) ||
+    byId(a, b)
+  );
+}
+
 /**
  * The period's production loss: the events with declared figures whose `[start, end)` equals the period
- * window; of several, the earliest start then the lowest id (flagged `duplicate_declared_loss`).
+ * window; of several, deterministically the earliest start, then the earliest recorded, then the lowest id
+ * (flagged `duplicate_declared_loss` with `declared_loss_chosen:<id>` naming the one used).
  */
 export function chooseDeclaredEvent(input: PeriodAccountingInput): Chosen {
   const { start, end } = input.window;
@@ -47,11 +64,7 @@ export function chooseDeclaredEvent(input: PeriodAccountingInput): Chosen {
         e.start.getTime() === start.getTime() &&
         e.end?.getTime() === end.getTime(),
     )
-    .sort(
-      (a, b) =>
-        a.start.getTime() - b.start.getTime() ||
-        (a.eventId < b.eventId ? -1 : a.eventId > b.eventId ? 1 : 0),
-    );
+    .sort(declaredOrder);
   return { event: matches[0] ?? null, duplicate: matches.length > 1 };
 }
 
@@ -90,7 +103,12 @@ function eventFlags(
 ): string[] {
   const flags = [CAPACITY_NOT_APPLICABLE];
   if (slices > 1) flags.push(DECLARED_SINGLE_SLICE);
-  if (chosen.duplicate) flags.push(DUPLICATE_DECLARED_LOSS);
+  if (chosen.duplicate && chosen.event) {
+    flags.push(
+      DUPLICATE_DECLARED_LOSS,
+      `${DECLARED_LOSS_CHOSEN_PREFIX}${chosen.event.eventId}`,
+    );
+  }
   const figures = chosen.event?.declaredFigures;
   if (!figures) return [...flags, DECLARED_LOSS_MISSING];
   const tolerance = input.policy.identityTolerance ?? 0;

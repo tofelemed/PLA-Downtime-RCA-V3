@@ -34,6 +34,7 @@ export const ACCOUNTING_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   RESIDUAL_UNEXPLAINED: { title: 'Part of the loss is not explained', text: 'Assign the remaining loss to reasons before submitting.' },
   DECLARED_LOSS_MISSING: { title: 'No production loss declared', text: 'The plant system has not declared a production loss for this period yet. Wait for it or ask OT to send it.' },
   DECLARED_IDENTITY_MISMATCH: { title: 'The declared figures do not add up', text: 'Planned minus actual differs from the declared shortfall. Ask OT to correct the event, or book the difference as a tolerance adjustment.' },
+  DECLARED_DUPLICATE: { title: 'The period is declared twice', text: 'More than one production loss event declares this period. Retract or correct the duplicate, then recalculate before submitting.' },
   LOSS_EVENT_UNCODED: { title: 'A production loss has no reason', text: 'Give each production loss event a reason, or mark it as under investigation, before submitting.' },
   DECLARED_NOT_CONFIRMED: { title: 'OT has not confirmed this loss', text: "OT has not confirmed this day's production loss yet. Approve once it is confirmed." },
   CLAIM_EXCEEDS_MEASUREMENT: {

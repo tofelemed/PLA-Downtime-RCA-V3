@@ -196,12 +196,12 @@ describe('production_loss events (declared mode)', () => {
     expect(json<ErrorBody>(response).code).toBe('INVALID_DECISION');
   });
 
-  it('flags a second declaration over the same window as a duplicate', async () => {
+  it('flags a second declaration over the same window as a duplicate on both events', async () => {
     const range = window();
     await addPeriod(range.start, range.end);
     const first = await declare(range);
     const second = await declare(range, { eventId: `dup-${randomUUID()}` });
-    expect(await kinds(first)).toEqual([]);
+    expect(await kinds(first)).toEqual(['duplicate_declared_loss:open']);
     expect(await kinds(second)).toEqual(['duplicate_declared_loss:open']);
   });
 

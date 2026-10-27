@@ -119,6 +119,7 @@ describe('declared candidate and slice', () => {
     expect(stopsCrossCheckOf(['stops_cross_check:7:t'])).toEqual({ quantity: '7', uom: 't' });
     expect(stopsCrossCheckOf(['declared_loss_missing'])).toBeNull();
     expect(isDataFlag('declared_shortfall:1')).toBe(true);
+    expect(isDataFlag('declared_loss_chosen:e1')).toBe(true);
     expect(isDataFlag('capacity_not_applicable')).toBe(false);
   });
 
@@ -181,7 +182,7 @@ describe('coding gate in declared mode', () => {
 });
 
 describe('declared gate and error codes in the submit / approve error UI', () => {
-  it.each(['DECLARED_LOSS_MISSING', 'DECLARED_IDENTITY_MISMATCH', 'LOSS_EVENT_UNCODED', 'DECLARED_NOT_CONFIRMED'])('%s renders as plain words, never the code', (code) => {
+  it.each(['DECLARED_LOSS_MISSING', 'DECLARED_IDENTITY_MISMATCH', 'DECLARED_DUPLICATE', 'LOSS_EVENT_UNCODED', 'DECLARED_NOT_CONFIRMED'])('%s renders as plain words, never the code', (code) => {
     const text = issueText({ code, message: null });
     expect(text.length).toBeGreaterThan(20);
     expect(text).not.toContain(code);

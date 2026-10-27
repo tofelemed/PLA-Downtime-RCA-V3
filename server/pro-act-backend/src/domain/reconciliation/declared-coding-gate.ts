@@ -10,6 +10,8 @@ export interface LossEventCodingCounts {
   coded: number;
   /** without a reason code but explicitly "investigation pending" */
   investigationPending: number;
+  /** SME D13 (information, never part of the gate): verified by a supervisor (`verified_at` set) */
+  verified?: number;
   /** Σ shortfall of all events (a negative shortfall, an overproduction, counts as nothing) */
   shortfall: Dec;
   /** Σ shortfall of the events with a reason code */
@@ -71,8 +73,8 @@ export function declaredCodingGate(
     passes: issues.length === 0,
     issues,
     verification: {
-      verified: 0,
-      unverified: counts.events,
+      verified: counts.verified ?? 0,
+      unverified: Math.max(0, counts.events - (counts.verified ?? 0)),
       failureDetailed: 0,
       validated: 0,
       unvalidated: 0,

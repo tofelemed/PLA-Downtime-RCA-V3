@@ -12,6 +12,7 @@ import { isDeclaredConfirmed } from '../domain/reconciliation/declared-confirmat
 const COUNTS_SQL = `SELECT count(*)::int AS "events",
        count(*) FILTER (WHERE e."reason_code_id" IS NOT NULL)::int AS "coded",
        count(*) FILTER (WHERE e."reason_code_id" IS NULL AND e."investigation_pending")::int AS "pending",
+       count(*) FILTER (WHERE e."verified_at" IS NOT NULL)::int AS "verified",
        coalesce(sum(greatest(e."quantity", 0)), 0)::text AS "shortfall",
        coalesce(sum(greatest(e."quantity", 0)) FILTER (WHERE e."reason_code_id" IS NOT NULL), 0)::text AS "coded_shortfall"
   FROM "production_events" e
@@ -20,14 +21,17 @@ const COUNTS_SQL = `SELECT count(*)::int AS "events",
    AND e."physical_type" = 'production_loss' AND e."physical_state" IN ('open', 'closed')
    AND e."start_time" < $4 AND (e."end_time" IS NULL OR e."end_time" > $3)`;
 
-/** The event the period accounts for: window equal to the period's, earliest start then lowest id (as the engine picks it). */
+/**
+ * The event the period accounts for: window equal to the period's, earliest start, then earliest recorded,
+ * then lowest id (as the engine picks it, `chooseDeclaredEvent`).
+ */
 const PERIOD_EVENT_SQL = `SELECT e."source_kind"::text AS "source_kind", e."declared_figures"
   FROM "production_events" e
  WHERE e."tenant_id" = $1 AND e."unit_id" = $2
    AND e."declared_figures" IS NOT NULL AND e."retracted_at" IS NULL
    AND e."physical_type" = 'production_loss' AND e."physical_state" IN ('open', 'closed')
    AND e."start_time" = $3 AND e."end_time" = $4
- ORDER BY e."start_time", e."id" LIMIT 1`;
+ ORDER BY e."start_time", e."created_at", e."id" LIMIT 1`;
 
 export interface LossWindow {
   tenantId: string;
@@ -45,6 +49,7 @@ export async function lossEventCodingCounts(
     events: number;
     coded: number;
     pending: number;
+    verified: number;
     shortfall: string;
     coded_shortfall: string;
   }> = await manager.query(COUNTS_SQL, [
@@ -57,6 +62,7 @@ export async function lossEventCodingCounts(
     events: row?.events ?? 0,
     coded: row?.coded ?? 0,
     investigationPending: row?.pending ?? 0,
+    verified: row?.verified ?? 0,
     shortfall: toDec(row?.shortfall) ?? new Dec(0),
     codedShortfall: toDec(row?.coded_shortfall) ?? ZERO,
   };
