@@ -25,6 +25,7 @@ import {
   type ArrayFilter,
   type EventFilterState,
 } from '../model/event-filters';
+import { useDeclaredScope } from '../hooks/use-declared-scope';
 import { useAssetOptions } from '../hooks/use-asset-options';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { MultiCheckSelect, type CheckOption } from './multi-check-select';
@@ -62,6 +63,7 @@ interface FilterSpec {
 export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarProps) {
   const env = useEventHubEnv();
   const assets = useAssetOptions(filters.unitIds);
+  const declared = useDeclaredScope(filters.unitIds);
   const flags = [filters.possibleDuplicate, filters.possibleRepeat, filters.minDurationSeconds !== null].filter(Boolean).length;
   const moreActive = SECONDARY.filter((field) => filters[field].length > 0).length + flags;
   const [showMore, setShowMore] = useState(moreActive > 0);
@@ -103,7 +105,7 @@ export function EventFiltersBar({ filters, onChange, onReset }: EventFiltersBarP
         <Button variant="outline" size="sm" aria-expanded={showMore} onClick={() => setShowMore((open) => !open)} data-testid="more-filters">
           More filters{moreActive > 0 ? ` (${moreActive})` : ''}
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => onChange(toCodeFilters(filters))} data-testid="filter-to-code" title="Stops in this window that still need a reason">
+        <Button variant="secondary" size="sm" onClick={() => onChange(toCodeFilters(filters, declared))} data-testid="filter-to-code" title={declared ? 'Production loss days in this window that still need a reason' : 'Stops in this window that still need a reason'}>
           To code
         </Button>
         <Button variant="ghost" size="sm" onClick={onReset}>Reset filters</Button>

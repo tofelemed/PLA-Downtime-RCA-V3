@@ -4,11 +4,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ReasonSplitState } from '../hooks/use-reason-split';
+import { tonnesSplitMessage } from '../model/declared-split';
 import type { SplitMode, SplitRow } from '../model/reason-split';
 import { ReasonCodeSelect } from './reason-code-select';
 
+const UNIT_OF: Readonly<Record<SplitMode, string>> = { percent: '%', minutes: 'min', tonnes: 't' };
+const VALUE_LABEL_OF: Readonly<Record<SplitMode, string>> = { percent: 'Percent of the stop', minutes: 'Minutes of the stop', tonnes: 'Tonnes of the shortfall' };
+
 function SplitRowFields({ row, split }: { row: SplitRow; split: ReasonSplitState }) {
-  const unit = split.mode === 'percent' ? '%' : 'min';
+  const unit = UNIT_OF[split.mode];
   return (
     <li className="flex items-end gap-2" data-testid="split-row">
       <div className="min-w-0 flex-1">
@@ -16,7 +20,7 @@ function SplitRowFields({ row, split }: { row: SplitRow; split: ReasonSplitState
       </div>
       <div className="flex w-32 items-center gap-1">
         <Input
-          aria-label={split.mode === 'percent' ? 'Percent of the stop' : 'Minutes of the stop'}
+          aria-label={VALUE_LABEL_OF[split.mode]}
           data-testid="split-value"
           inputMode="decimal"
           value={row.value}
@@ -38,11 +42,33 @@ function SplitModeChoice({ split }: { split: ReasonSplitState }) {
         <RadioGroupItem id="split-mode-percent" value="percent" />
         <Label htmlFor="split-mode-percent" className="font-normal">Percent</Label>
       </div>
-      <div className="flex items-center gap-1">
-        <RadioGroupItem id="split-mode-minutes" value="minutes" disabled={!split.minutesAllowed} />
-        <Label htmlFor="split-mode-minutes" className="font-normal">Minutes{split.minutesAllowed ? '' : ' (once the stop has ended)'}</Label>
-      </div>
+      {split.shortfall !== null ? (
+        <div className="flex items-center gap-1">
+          <RadioGroupItem id="split-mode-tonnes" value="tonnes" />
+          <Label htmlFor="split-mode-tonnes" className="font-normal">Tonnes</Label>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1">
+          <RadioGroupItem id="split-mode-minutes" value="minutes" disabled={!split.minutesAllowed} />
+          <Label htmlFor="split-mode-minutes" className="font-normal">Minutes{split.minutesAllowed ? '' : ' (once the stop has ended)'}</Label>
+        </div>
+      )}
     </RadioGroup>
+  );
+}
+
+function hintOf(split: ReasonSplitState): string {
+  if (split.mode === 'percent') return 'The percents must add up to 100.';
+  if (split.mode === 'tonnes') return `The tonnes must add up to the day's shortfall (${split.shortfall} t).`;
+  return 'The minutes must add up to the length of the stop.';
+}
+
+function TonnesRemaining({ split, shortfall }: { split: ReasonSplitState; shortfall: number }) {
+  const message = tonnesSplitMessage(split.rows, shortfall);
+  return (
+    <p className={message ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'} data-testid="split-tonnes-remaining" role="status">
+      {message ?? 'The tonnes add up to the shortfall.'}
+    </p>
   );
 }
 
@@ -71,8 +97,9 @@ export function ReasonSplitSection({ split, percentOnly = false }: { split: Reas
             Add reason
           </Button>
           <p className="text-xs text-muted-foreground">
-            {split.mode === 'percent' ? 'The percents must add up to 100.' : 'The minutes must add up to the length of the stop.'} The largest share becomes the stop’s reason.
+            {hintOf(split)} The largest share becomes the {split.shortfall !== null ? 'event’s' : 'stop’s'} reason.
           </p>
+          {split.mode === 'tonnes' && split.shortfall !== null && <TonnesRemaining split={split} shortfall={split.shortfall} />}
         </>
       )}
     </section>

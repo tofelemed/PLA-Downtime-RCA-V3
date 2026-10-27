@@ -16,7 +16,11 @@ export function SelectionToolbar({ hub }: { hub: EventHubState }) {
             <Button size="sm" variant="outline" disabled={!hub.canMerge} onClick={() => hub.openDialog({ kind: 'merge' })}>Merge</Button>
           </span>
         </TooltipTrigger>
-        {!hub.canMerge && <TooltipContent>Select two or more events of the same unit to merge them.</TooltipContent>}
+        {!hub.canMerge && (
+          <TooltipContent>
+            {hub.hasProductionLoss ? 'A production loss day cannot be merged.' : 'Select two or more events of the same unit to merge them.'}
+          </TooltipContent>
+        )}
       </Tooltip>
       <Button size="sm" variant="outline" disabled={count === 0} onClick={() => hub.openDialog({ kind: 'bulk' })}>Bulk code</Button>
       <Button size="sm" variant="ghost" onClick={() => hub.openDialog({ kind: 'select-all' })} data-testid="code-all-matching">

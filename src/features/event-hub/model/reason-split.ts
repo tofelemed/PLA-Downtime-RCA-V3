@@ -1,8 +1,8 @@
 import type { ProductionEventView, ReasonWeightInput, ReasonWeightView } from '@/api/v2/types/events';
 import { roundDecimal } from '@/features/ux-kit/format/decimal';
 
-/** How the coder enters the split: percent of the stop, or minutes of it (sent as seconds). */
-export type SplitMode = 'percent' | 'minutes';
+/** How the coder enters the split: percent of the stop, minutes of it (sent as seconds), or tonnes of a production loss. */
+export type SplitMode = 'percent' | 'minutes' | 'tonnes';
 
 /** One row of the "Split across several reasons" section, as typed. */
 export interface SplitRow {
@@ -47,11 +47,11 @@ export function splitComplete(rows: readonly SplitRow[]): boolean {
  * checked here: the server normalises the weights and refuses a sum that does not fit (422 with its reason).
  */
 export function reasonWeightsBody(rows: readonly SplitRow[], mode: SplitMode): ReasonWeightInput[] {
-  return rows.map((row) =>
-    mode === 'percent'
-      ? { reasonCodeId: row.reasonCodeId, percent: row.value.trim() }
-      : { reasonCodeId: row.reasonCodeId, seconds: Number(row.value) * 60 },
-  );
+  return rows.map((row) => {
+    if (mode === 'percent') return { reasonCodeId: row.reasonCodeId, percent: row.value.trim() };
+    if (mode === 'tonnes') return { reasonCodeId: row.reasonCodeId, quantity: row.value.trim() };
+    return { reasonCodeId: row.reasonCodeId, seconds: Number(row.value) * 60 };
+  });
 }
 
 /** True for a stored split across two or more reasons. */

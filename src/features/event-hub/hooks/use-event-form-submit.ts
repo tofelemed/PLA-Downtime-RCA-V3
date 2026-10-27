@@ -41,7 +41,7 @@ export function useEventFormSubmit({ form, event, timezone, onSaved }: UseEventF
   const send = async (baseRevision: number | null): Promise<SubmitOutcome> => {
     const { values, initial } = form.draft;
     if (!event) return finish(await create.submit(toCreateBody(values, timezone)));
-    const changes = withoutSourceInterval(toPatchBody(initial, values, timezone), sourceOwnershipOf(event));
+    const changes = withoutSourceInterval(toPatchBody(initial, values, timezone, event), sourceOwnershipOf(event));
     if (Object.keys(changes).length === 0) return 'unchanged';
     const revision = baseRevision ?? event.rowVersion;
     return finish(await patch.submit({ event: { ...event, rowVersion: revision }, changes }));

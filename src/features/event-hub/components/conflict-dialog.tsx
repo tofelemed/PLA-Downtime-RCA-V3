@@ -49,6 +49,10 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   quantity: 'Quantity',
   quantityUom: 'Unit of quantity',
   dispositionClass: 'Disposition',
+  declaredPlanned: 'Planned (t)',
+  declaredActual: 'Actual (t)',
+  declaredShortfall: 'Shortfall (t)',
+  declaredStatus: 'OT status',
 };
 
 /**

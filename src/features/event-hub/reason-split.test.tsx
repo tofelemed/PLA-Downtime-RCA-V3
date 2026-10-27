@@ -164,3 +164,34 @@ describe('event detail: weights as stored', () => {
     expect(screen.getByTestId('reason-weights')).toHaveTextContent('Motor trip 60 %Belt slip 40 %');
   });
 });
+
+describe('Code dialog: production loss split by tonnes (declared mode)', () => {
+  const LOSS = {
+    ...STOP,
+    classification: { physicalType: 'production_loss' },
+    quantity: '7.5',
+    declaredFigures: { planned: 120, actual: 112.5, shortfall: 7.5, uom: 't', measurementQuality: null, sourceStatus: null, plan: null, piSource: null },
+  } as unknown as ProductionEventView;
+
+  it('offers Percent or Tonnes, never Minutes, and says what the tonnes must add up to', () => {
+    wrap(<CodeEventDialog event={LOSS} onClose={() => undefined} onDone={() => undefined} />);
+    expect(screen.queryByRole('radio', { name: /Minutes/ })).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: 'Tonnes' }));
+    expect(screen.getByText(/The tonnes must add up to the day's shortfall \(7\.5 t\)\./)).toBeInTheDocument();
+  });
+
+  it('shows the tonnes still to place, blocks a sum that is off and sends quantity entries when it fits', async () => {
+    const onDone = vi.fn();
+    wrap(<CodeEventDialog event={LOSS} onClose={() => undefined} onDone={onDone} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Tonnes' }));
+    fireEvent.change(values()[0], { target: { value: '4' } });
+    fireEvent.change(values()[1], { target: { value: '3' } });
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('0.5 t still to place.');
+    expect(screen.getByRole('button', { name: 'Save reason' })).toBeDisabled();
+    fireEvent.change(values()[1], { target: { value: '3.5' } });
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('add up to the shortfall');
+    save();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sent).toEqual([{ reasonWeights: [{ reasonCodeId: 'r1', quantity: '4' }, { reasonCodeId: 'r2', quantity: '3.5' }] }]);
+  });
+});

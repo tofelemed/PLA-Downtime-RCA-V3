@@ -3,7 +3,7 @@ import type { EventSelectionQuery, ProductionEventFilters } from '@/api/v2/queri
 import { displayEnd, RELATIVE_WINDOWS, resolveRelativeWindow, type RelativeWindow, type RelativeWindowKey } from './relative-window';
 
 /** Enum values of the v2 list filters (backend `event-classification.ts`). */
-export const PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss', 'production_output', 'advisory'] as const;
+export const PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss', 'production_output', 'advisory', 'production_loss'] as const;
 export const SCHEDULE_CLASSES = ['planned', 'unplanned', 'external', 'unknown'] as const;
 export const OEE_COMPONENTS = ['availability', 'performance', 'quality', 'idle', 'none'] as const;
 export const PHYSICAL_STATES = ['open', 'closed', 'superseded', 'retracted'] as const;
@@ -142,9 +142,10 @@ export function toEventQuery(state: EventFilterState): ProductionEventFilters {
 
 /**
  * FE-07 "To code": the stops of the same units and window that still need a reason (open or ended,
- * uncoded); every other narrowing is dropped so nothing uncoded hides behind an old filter.
+ * uncoded); every other narrowing is dropped so nothing uncoded hides behind an old filter. In declared mode
+ * (`declared`) the uncoded production loss events instead (one per unit and day).
  */
-export function toCodeFilters(state: EventFilterState): EventFilterState {
+export function toCodeFilters(state: EventFilterState, declared = false): EventFilterState {
   const window = { from: state.from ?? '', to: state.to ?? '', label: state.windowLabel, relative: state.relativeWindow };
   return {
     ...defaultFilters(window),
@@ -152,14 +153,14 @@ export function toCodeFilters(state: EventFilterState): EventFilterState {
     to: state.to,
     sort: state.sort,
     unitIds: [...state.unitIds],
-    physicalTypes: ['downtime'],
+    physicalTypes: [declared ? 'production_loss' : 'downtime'],
     codingStates: ['uncoded'],
   };
 }
 
 /** True when the list shows exactly the "To code" preset (same server query), e.g. for its empty text. */
-export function isToCodeFilters(state: EventFilterState): boolean {
-  return JSON.stringify(toEventQuery(toCodeFilters(state))) === JSON.stringify(toEventQuery(state));
+export function isToCodeFilters(state: EventFilterState, declared = false): boolean {
+  return JSON.stringify(toEventQuery(toCodeFilters(state, declared))) === JSON.stringify(toEventQuery(state));
 }
 
 /**

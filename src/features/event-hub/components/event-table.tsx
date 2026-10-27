@@ -8,6 +8,8 @@ import { DataTable, type DataTableEmpty } from '@/features/ux-kit/data-table';
 import { EmptyMessage } from '@/features/ux-kit/data-table/data-table-states';
 import { useAssetNames } from '@/features/ux-kit/labels';
 import { useReportLook } from '@/features/ux-kit/report-look';
+import { isProductionLoss } from '../model/production-loss';
+import { useDeclaredScope } from '../hooks/use-declared-scope';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { usePrefetchEvent } from '../hooks/use-prefetch-event';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -52,13 +54,15 @@ export function EventTable({ caption, query, selection, onCode, sort, empty, tes
   const assets = useAssetNames();
   const navigate = useNavigate();
   const location = useLocation();
-  const { dateTime } = usePlantFormat();
+  const { dateTime, date } = usePlantFormat();
+  const declaredScope = useDeclaredScope(query.unitIds ?? []);
   const { prefetch, seed } = usePrefetchEvent();
   const paged = useEventPages(query, env.timezone);
+  const declared = declaredScope || paged.rows.some(isProductionLoss);
   const listSearch = `${location.pathname}${location.search}`;
   const context = useMemo<EventColumnContext>(
-    () => ({ unitName: env.unitName, reasonName: env.reasonName, assetName: assets.nameOf, dateTime, listSearch, prefetch, selection, rows: paged.rows, onCode, sort }),
-    [env.unitName, env.reasonName, assets.nameOf, dateTime, listSearch, prefetch, selection, paged.rows, onCode, sort],
+    () => ({ unitName: env.unitName, reasonName: env.reasonName, assetName: assets.nameOf, dateTime, date, declared, listSearch, prefetch, selection, rows: paged.rows, onCode, sort }),
+    [env.unitName, env.reasonName, assets.nameOf, dateTime, date, declared, listSearch, prefetch, selection, paged.rows, onCode, sort],
   );
   const columns = useMemo(() => eventColumns(context), [context]);
   const shownEmpty = empty ?? NO_EVENTS;

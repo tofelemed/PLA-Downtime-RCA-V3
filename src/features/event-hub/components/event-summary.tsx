@@ -14,6 +14,7 @@ import { usePlantFormat } from '../hooks/use-plant-format';
 import { hasSplit } from '../model/reason-split';
 import { eventSourceText, sourceNameOf } from '../model/source-ownership';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { DeclaredSummary } from './declared-summary';
 import { AccountingStateChip } from './accounting-state-chip';
 import { ReasonWeightsText } from './reason-weights-text';
 import { StateBadges } from './state-badges';
@@ -83,6 +84,7 @@ export function EventSummary({ event }: { event: ProductionEventView }) {
         {c.physicalType === 'downtime' && (
           <Row term="Failure severity" testId="failure-severity">{labelOf(FAILURE_SEVERITY_LABELS, event.failure?.severity ?? null)}</Row>
         )}
+        {event.declaredFigures && c.physicalType === 'production_loss' && <DeclaredSummary figures={event.declaredFigures} />}
         <Row term="Source" testId="event-source">{eventSourceText(event, labelOf(SOURCE_KIND_LABELS, event.sourceKind))}</Row>
       </dl>
       <div className="text-sm">

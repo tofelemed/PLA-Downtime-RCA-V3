@@ -15,6 +15,7 @@ import { QuickStats } from './components/quick-stats';
 import { RcaTriggerSettingsLink } from './components/rca-trigger-settings-link';
 import { SelectionToolbar } from './components/selection-toolbar';
 import { EventHubFrame } from './event-hub-frame';
+import { useDeclaredScope } from './hooks/use-declared-scope';
 import { useEventHubState, type EventHubState } from './hooks/use-event-hub-state';
 import { isToCodeFilters, selectionQuery, toEventQuery, type EventSort } from './model/event-filters';
 
@@ -32,6 +33,7 @@ export function EventHubPage() {
 }
 
 const TO_CODE_EMPTY = { title: 'Nothing to code', text: 'All stops in this window are coded.' };
+const TO_CODE_EMPTY_DECLARED = { title: 'Nothing to code', text: 'All production loss days in this window are coded.' };
 
 function HeaderActions({ hub }: { hub: EventHubState }) {
   const { canWriteEvents } = useCapabilities();
@@ -60,6 +62,7 @@ function EventHubScreen() {
   const hub = useEventHubState();
   const { filters, changeFilters } = hub;
   const query = useMemo(() => toEventQuery(filters), [filters]);
+  const declared = useDeclaredScope(filters.unitIds);
   const sort = useMemo(() => ({ value: filters.sort, onChange: (next: EventSort) => changeFilters({ ...filters, sort: next }) }), [filters, changeFilters]);
   const selection = useMemo(
     () => (canWriteEvents ? { selectedIds: hub.selectedIds, toggle: hub.toggle, toggleMany: hub.toggleMany } : undefined),
@@ -72,7 +75,7 @@ function EventHubScreen() {
       <div data-testid="event-hub-v2" className="space-y-6">
         <PageHeader title="Event Hub" actions={<HeaderActions hub={hub} />} />
         <EventFiltersBar filters={filters} onChange={hub.changeFilters} onReset={hub.resetFilters} />
-        <QuickStats filters={filters} />
+        <QuickStats filters={filters} declared={declared} />
         {/* ongoing stops first, as a strip: the event table below gets the full page width */}
         <CurrentStopsPanel unitIds={filters.unitIds} onClose={(event) => hub.openDialog({ kind: 'close', event })} onCode={openCode} />
         <EventListCard
@@ -80,7 +83,7 @@ function EventHubScreen() {
           selection={selection}
           onCode={canWriteEvents ? openCode : undefined}
           sort={sort}
-          empty={isToCodeFilters(filters) ? TO_CODE_EMPTY : undefined}
+          empty={isToCodeFilters(filters, declared) ? (declared ? TO_CODE_EMPTY_DECLARED : TO_CODE_EMPTY) : undefined}
           actions={canWriteEvents ? <SelectionToolbar hub={hub} /> : undefined}
         />
         <HubDialogs hub={hub} />

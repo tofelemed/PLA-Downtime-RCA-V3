@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useCodeEvent, type CodeChanges } from '../hooks/use-code-and-close';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useReasonSplit, type ReasonSplitState } from '../hooks/use-reason-split';
+import { isProductionLoss, shortfallOf } from '../model/production-loss';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { CommandError } from './command-error';
 import { ReasonCodeSelect } from './reason-code-select';
@@ -29,6 +30,11 @@ function changesOf(event: ProductionEventView, picked: { reasonCodeId: string; p
   };
 }
 
+function titleOf(event: ProductionEventView): string {
+  if (isProductionLoss(event)) return 'Code production loss';
+  return event.classification.physicalType === 'downtime' ? 'Code stop' : 'Code event';
+}
+
 /**
  * FE-06 inline "Code": pick a reason and save — the reason code brings its classification defaults. A stop can
  * instead be split across several reasons (D-T5); the server normalises the split and answers with its reason
@@ -40,7 +46,7 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
   const code = useCodeEvent(event);
   const [reasonCodeId, setReasonCodeId] = useState(event.reasonCodeId ?? '');
   const [pending, setPending] = useState(event.investigationPending === true);
-  const split = useReasonSplit(event);
+  const split = useReasonSplit(event, shortfallOf(event));
   const changes = changesOf(event, { reasonCodeId, pending }, split);
   const reasonGiven = split.enabled ? split.complete : Boolean(reasonCodeId);
   const save = async () => {
@@ -50,7 +56,7 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent data-testid="code-dialog">
         <DialogHeader>
-          <DialogTitle>{event.classification.physicalType === 'downtime' ? 'Code stop' : 'Code event'}</DialogTitle>
+          <DialogTitle>{titleOf(event)}</DialogTitle>
           <DialogDescription>
             {env.unitName(event.unitId)}, {event.endTime ? `${dateTime(event.startTime)} – ${dateTime(event.endTime)}` : `since ${dateTime(event.startTime)}`}
           </DialogDescription>

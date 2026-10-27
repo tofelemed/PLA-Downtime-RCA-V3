@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import type { ProductionEventView, ReasonWeightInput } from '@/api/v2/types/events';
+import { tonnesEntriesValid, tonnesSplitFits } from '../model/declared-split';
 import { hasSplit, initialSplitRows, reasonWeightsBody, splitComplete, type SplitMode, type SplitRow } from '../model/reason-split';
 
 /** What the split adds to a PATCH: the entered weights, `null` to remove a stored split, or nothing. */
 export type SplitChange = { reasonWeights: ReasonWeightInput[] | null } | Record<string, never>;
 
-/** State of the optional "Split across several reasons" section of the coding dialog (D-T5). */
-export function useReasonSplit(event: Pick<ProductionEventView, 'reasonCodeId' | 'reasonWeights' | 'durationSeconds'>) {
+/**
+ * State of the optional "Split across several reasons" section of the coding dialog (D-T5). `shortfall`
+ * (declared mode, a production loss event) offers tonnes instead of minutes: the tonnes must add up to it.
+ */
+export function useReasonSplit(event: Pick<ProductionEventView, 'reasonCodeId' | 'reasonWeights' | 'durationSeconds'>, shortfall: number | null = null) {
   const stored = hasSplit(event.reasonWeights);
   const [enabled, setEnabled] = useState(stored);
   const [mode, setMode] = useState<SplitMode>('percent');
@@ -31,7 +35,9 @@ export function useReasonSplit(event: Pick<ProductionEventView, 'reasonCodeId' |
     change,
     /** minutes need the stop's length: a running stop is split by percent only */
     minutesAllowed: event.durationSeconds !== null,
-    complete: !enabled || splitComplete(rows),
+    /** declared mode: the day's shortfall in tonnes (null for a stop) */
+    shortfall,
+    complete: !enabled || (splitComplete(rows) && (mode !== 'tonnes' || (shortfall !== null && tonnesEntriesValid(rows) && tonnesSplitFits(rows, shortfall)))),
   };
 }
 

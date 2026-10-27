@@ -6,7 +6,9 @@ import type { DataTableColumn } from '@/features/ux-kit/data-table';
 import { DurationText } from '@/features/ux-kit/duration-text';
 import { labelOf, PHYSICAL_TYPE_LABELS, SCHEDULE_CLASS_LABELS, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels';
 import { DurationSortHeader, StartSortHeader, type EventSortControl } from './event-sort-headers';
+import { isProductionLoss } from '../model/production-loss';
 import { sameName } from '../model/name-repeats';
+import { declaredColumns } from './declared-columns';
 import { EventStateCell } from './event-state-cell';
 import { StatesHeader } from './states-header';
 import { UnitLabel } from './unit-label';
@@ -17,6 +19,10 @@ export interface EventColumnContext {
   /** E-1: asset names (absent: "—") */
   assetName?: (id: string | null | undefined) => string;
   dateTime: (iso: string | null | undefined) => string;
+  /** plant-local date; a production loss event (one day) shows it instead of a duration */
+  date?: (iso: string | null | undefined) => string;
+  /** declared mode (the unit's policy, or a production loss event is listed): Planned / Actual / Lost columns */
+  declared?: boolean;
   /** query string of the list, so Back from the detail restores the filters */
   listSearch: string;
   prefetch: (id: string) => void;
@@ -118,7 +124,8 @@ function startCell(event: ProductionEventView, context: EventColumnContext) {
   );
 }
 
-function durationCell(event: ProductionEventView) {
+function durationCell(event: ProductionEventView, context: EventColumnContext) {
+  if (isProductionLoss(event) && context.date) return <span data-testid="event-duration">{context.date(event.startTime)}</span>;
   return (
     <span data-testid="event-duration">
       {event.isOpen ? (
@@ -170,7 +177,8 @@ export function eventColumns(context: EventColumnContext): DataTableColumn<Produ
   return [
     ...selectColumn(context),
     { id: 'start', header: <StartSortHeader sort={context.sort} />, headerLabel: 'Start', nowrap: true, cell: (event) => startCell(event, context) },
-    { id: 'duration', header: <DurationSortHeader sort={context.sort} />, headerLabel: 'Duration', nowrap: true, align: 'right', cell: durationCell },
+    { id: 'duration', header: <DurationSortHeader sort={context.sort} />, headerLabel: 'Duration', nowrap: true, align: 'right', cell: (event) => durationCell(event, context) },
+    ...(context.declared ? declaredColumns() : []),
     { id: 'unit', header: 'Unit · asset', nowrap: true, cell: (event) => unitCell(event, context) },
     { id: 'type', header: 'Type', cell: typeCell },
     { id: 'reason', header: 'Reason', cell: (event) => reasonCell(event, context) },

@@ -9,6 +9,7 @@ import { useSourceOverrides, type SourceOverrides } from '../hooks/use-source-ov
 import { useEventHubEnv } from '../use-event-hub-env';
 import { AssetField } from './asset-field';
 import { ImpactSection } from './impact-section';
+import { DeclaredFields } from './declared-fields';
 import { FailureFields } from './failure-fields';
 import { IntervalFields } from './interval-fields';
 import { OeeComponentField } from './oee-component-field';
@@ -98,6 +99,7 @@ export function EventFormFields({ form, mode, event = null }: EventFormFieldsPro
       <OriginFields form={form} />
       {owned(['failureMode'], values.physicalType === 'downtime', 'sm:col-span-2')(<FailureFields form={form} assetId={values.assetId || null} />)}
       {owned(['quantity', 'quantityUom'], QUANTITY_TYPES.includes(values.physicalType), 'sm:col-span-2')(<QualityFields form={form} />)}
+      {values.physicalType === 'production_loss' && <DeclaredFields form={form} />}
       {!reasonFirst && <ReasonFields form={form} />}
       {owned(['description'], true, 'sm:col-span-2')(
         <div className="sm:col-span-2">

@@ -6,13 +6,14 @@ import { DurationText } from '@/features/ux-kit/duration-text';
 import type { EventFilterState } from '../model/event-filters';
 import { useEventHubEnv } from '../use-event-hub-env';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { DeclaredToCodeStat } from './declared-to-code-stat';
 
 /**
  * Downtime of the current units and window from the server (union seconds of the calculated periods,
  * plan 2.7) — never summed from loaded rows; the window is the filter bar's, so the label does not repeat it.
  * The report covers calculated periods only, so it is labelled provisional/incomplete exactly as the API says.
  */
-export function QuickStats({ filters }: { filters: EventFilterState }) {
+export function QuickStats({ filters, declared = false }: { filters: EventFilterState; declared?: boolean }) {
   const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const query = useDowntimeReport(
@@ -40,6 +41,7 @@ export function QuickStats({ filters }: { filters: EventFilterState }) {
             </div>
           )}
         </DataState>
+        {declared && <DeclaredToCodeStat filters={filters} />}
       </CardContent>
     </Card>
   );

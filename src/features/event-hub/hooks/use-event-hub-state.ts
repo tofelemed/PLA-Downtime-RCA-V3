@@ -4,6 +4,7 @@ import { useV2TenantId } from '@/api/v2/queries/use-v2-tenant';
 import type { BulkTarget, ProductionEventView } from '@/api/v2/types/events';
 import { useAuth } from '@/contexts/AuthContext';
 import type { EventFilterState } from '../model/event-filters';
+import { isProductionLoss } from '../model/production-loss';
 import { hasAbsoluteWindow, hasWindowParams, parseEventFilters, toEventSearchParams } from '../model/event-url';
 import { readWindowPreference, rememberWindow } from '../model/window-preference';
 import { useWindowClock } from './use-window-clock';
@@ -88,6 +89,7 @@ export function useEventHubState() {
   const selectedEvents = useMemo(() => [...selected.values()], [selected]);
   const selectedIds = useMemo(() => new Set(selected.keys()), [selected]);
   const sameUnit = selectedEvents.length > 1 && selectedEvents.every((event) => event.unitId === selectedEvents[0].unitId);
+  const hasProductionLoss = selectedEvents.some(isProductionLoss);
 
   return {
     filters,
@@ -95,7 +97,8 @@ export function useEventHubState() {
     resetFilters,
     selectedIds,
     selectedEvents,
-    canMerge: sameUnit,
+    canMerge: sameUnit && !hasProductionLoss,
+    hasProductionLoss,
     toggle,
     toggleMany,
     clearSelection,

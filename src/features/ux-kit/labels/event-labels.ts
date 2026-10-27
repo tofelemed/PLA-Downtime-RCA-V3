@@ -102,6 +102,13 @@ export const REVIEW_ITEM_STATE_LABELS: Readonly<Record<ReviewItemState, string>>
   dismissed: 'Dismissed',
 };
 
+/** Review items of declared mode (production loss days); other kinds are shown humanized. */
+export const DECLARED_REVIEW_KIND_LABELS: Readonly<Record<string, string>> = {
+  declared_identity_mismatch: 'Planned − actual ≠ shortfall',
+  declared_window_mismatch: 'Window does not match an accounting period',
+  duplicate_declared_loss: 'Another production loss event covers this window',
+};
+
 export const BULK_JOB_STATE_LABELS: Readonly<Record<BulkJobState, string>> = {
   queued: 'Queued',
   running: 'Running',
