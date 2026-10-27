@@ -75,6 +75,24 @@ describe('ledger waterfall (plan 3.5)', () => {
     ]);
   });
 
+  it('Task 13: a declared day 23 + 11 + 6 − 8 closes at 208 with the recovery as its gain step', () => {
+    const declared = { ...slice(240, 208, 32), declaredGain: d(8) };
+    const w = plan(declared, [
+      ['availability', 23],
+      ['performance', 11],
+      ['quality', 6],
+    ]);
+    expect(w.closes).toBe(true);
+    expect(shape(w)).toEqual([
+      ['target', '240'],
+      ['availability', '-23'],
+      ['performance', '-11'],
+      ['quality', '-6'],
+      ['gain', '8'],
+      ['actual', '208'],
+    ]);
+  });
+
   it('T16: over-accounted 10 raises the running total back to actual', () => {
     const w = plan(slice(1000, 850, 160), [['availability', 160]]);
     expect(w.closes).toBe(true);

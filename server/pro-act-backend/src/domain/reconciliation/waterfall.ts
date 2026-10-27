@@ -133,7 +133,8 @@ export function planKindTotals(
 }
 
 /**
- * Plan-ledger steps of a computable slice: every kind lowers the running total by its quantity; the
+ * Plan-ledger steps of a computable slice: every kind lowers the running total by its quantity, a declared
+ * run's recovery (`declaredGain`, Task 13) raises it as the `gain` step (absent when zero); the
  * signed residual is labelled unaccounted (> 0) or over-accounted (< 0), and on an overproducing slice it
  * is split into the overproduction (−gap) and the attributed loss it offsets (T17 conflict).
  */
@@ -143,6 +144,9 @@ export function planSteps(
 ): StepTotals {
   const steps: StepTotals = new Map();
   for (const [kind, quantity] of kinds) steps.set(kind, quantity.neg());
+  if (!slice.declaredGain.isZero()) {
+    steps.set('gain', (steps.get('gain') ?? ZERO).plus(slice.declaredGain));
+  }
   const gap = slice.gap as Dec;
   const residual = slice.residual as Dec;
   const overproducing = (slice.overproduction ?? ZERO).gt(ZERO);
