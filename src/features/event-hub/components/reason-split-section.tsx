@@ -99,7 +99,8 @@ export function ReasonSplitSection({ split, percentOnly = false }: { split: Reas
             {hintOf(split, numbers)} The largest share becomes the {split.shortfall !== null ? 'event’s' : 'stop’s'} reason.
           </p>
           {split.shortfall !== null && <p className="text-xs text-muted-foreground">Tick Recovery for a share that offsets the losses: the losses less the recovery must equal the shortfall.</p>}
-          <SplitBalanceText split={split} />        </>
+          <SplitBalanceText split={split} />
+        </>
       )}
     </section>
   );
