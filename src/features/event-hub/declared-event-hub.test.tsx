@@ -10,6 +10,7 @@ import { eventColumns, type EventColumnContext } from './components/event-column
 import { defaultFilters, isToCodeFilters, toCodeFilters, toEventQuery } from './model/event-filters';
 import { EMPTY_FORM, toCreateBody, toPatchBody, validateEventForm, type EventFormValues } from './model/event-form';
 import { periodLabel } from './model/period-label';
+import { factText, type FactResolvers } from './model/fact-display';
 import { DEFAULT_CALENDAR_PREFERENCE } from '@/lib/dates/calendar-types';
 
 vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canWriteEvents: true }) }));
@@ -138,5 +139,20 @@ describe('period label', () => {
     expect(periodLabel('2026-10-29', 'Day', DEFAULT_CALENDAR_PREFERENCE)).toBe('2026-10-29 · Day');
     expect(periodLabel('2026-10-29', 'A', DEFAULT_CALENDAR_PREFERENCE)).toBe('2026-10-29 · Shift A');
     expect(periodLabel('2026-10-29', null, DEFAULT_CALENDAR_PREFERENCE)).toBe('2026-10-29');
+  });
+});
+
+describe('Values tab: declared figures', () => {
+  const resolvers = { decimal: (value: string, digits: number) => Number(value).toFixed(digits) } as unknown as FactResolvers;
+  const text = 'Planned 240.000 t · Actual 208.000 t · Shortfall 32.000 t · CONFIRMED';
+
+  it('reads the revision facts (JSON text) as words, not raw JSON', () => {
+    const stored = JSON.stringify({ planned: 240, actual: 208, shortfall: 32, uom: 't', measurementQuality: null, sourceStatus: 'CONFIRMED', plan: null, piSource: null });
+    expect(factText('declaredFigures', stored, resolvers)).toBe(text);
+  });
+
+  it('reads the event row object the same way and leaves other text alone', () => {
+    expect(factText('declaredFigures', { planned: 240, actual: 208, shortfall: 32, uom: 't', sourceStatus: 'CONFIRMED', measurementQuality: null, plan: null, piSource: null }, resolvers)).toBe(text);
+    expect(factText('declaredFigures', 'not json', resolvers)).toBe('not json');
   });
 });

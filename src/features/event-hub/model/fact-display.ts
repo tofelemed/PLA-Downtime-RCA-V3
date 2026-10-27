@@ -110,10 +110,23 @@ function isDeclaredFigures(value: unknown): value is DeclaredFigures {
   return typeof value === 'object' && value !== null && typeof (value as DeclaredFigures).shortfall === 'number' && typeof (value as DeclaredFigures).uom === 'string';
 }
 
+/** Revision facts keep the declared figures as canonical JSON text (backend `event-facts.ts`); the event row as an object. */
+function declaredFiguresOf(value: unknown): DeclaredFigures | null {
+  if (isDeclaredFigures(value)) return value;
+  if (typeof value !== 'string') return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isDeclaredFigures(parsed) ? { planned: null, actual: null, measurementQuality: null, sourceStatus: null, plan: null, piSource: null, ...parsed } : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Readable text of one fact value. */
 export function factText(field: string, value: unknown, r: FactResolvers): string {
   if (value === null || value === undefined || value === '') return '—';
-  if (field === 'declaredFigures' && isDeclaredFigures(value)) return declaredFiguresText(value, r.decimal ?? ((v) => v));
+  const figures = field === 'declaredFigures' ? declaredFiguresOf(value) : null;
+  if (figures) return declaredFiguresText(figures, r.decimal ?? ((v) => v));
   if (Array.isArray(value)) return value.length === 0 ? '—' : value.map((item) => factText(field, item, r)).join(', ');
   if (typeof value === 'object') return objectText(value, r);
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return scalarText(field, value, r);
