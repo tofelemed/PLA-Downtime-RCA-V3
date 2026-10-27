@@ -157,3 +157,37 @@ Rebuild and restart the Compose backend and worker with the devdb override (`doc
 4. Check the plant settings card, Event Hub, period page and PLA analytics as admin, reza, omid, sara, leila, farid — note what each role sees.
 5. Write a Playwright spec `e2e/pla-declared-mode.spec.ts` covering steps 1–3 through the UI where possible (policy card → MQTT publish via the sample-publish helper or API → Event Hub coding → period approve), using the `e2e/personas/support` helpers; it must be skippable when the broker is absent.
 Report every command and result verbatim; leave the test data in place (owner decides cleanup).
+
+## Task 13: Loss accounting statement (owner requirement, 27 Oct 2026)
+
+**Why:** the owner's main requirement is to see the accounting of a period as a statement, exactly in this shape, wherever a period's figures are shown:
+
+| Accounting result | t |
+|---|---|
+| Planned production | 240 |
+| Actual good production | 208 |
+| Production shortfall | 32 |
+| Equipment downtime loss (availability) | 23 |
+| Reduced throughput loss (performance) | 11 |
+| Quality loss | 6 |
+| Gross attributed loss | 40 |
+| Verified recovery | −8 |
+| Net accounted loss | 32 |
+| Unaccounted loss | 0 |
+
+Identity: `Shortfall = Net accounted + Tolerance adj. + Unaccounted`, `Net accounted = Gross attributed − Verified recovery`, `Gross attributed = availability + performance + quality (+ transition excess, unaccounted_classified)`. These are the existing plan-ledger totals (`period_ledger_totals`: target, actual, gap, availability_qty, performance_qty, quality_qty, gain_qty, attributed_qty, residual_qty) — nothing new is computed in the browser.
+
+**Backend**
+1. Confirm the period accounting / summary views (`GET /v2/production-periods/:id/accounting`, `/reconciliation`, `/period-summaries`, `/production-days/:unit/:date`) expose the plan-ledger totals per slice and per period: `target`, `actual`, `gap`, `availability`, `performance`, `quality`, `transitionExcess`, `unaccountedClassified`, `grossAttributed` (= Σ loss kinds), `gain` (verified recovery), `attributed` (net), `toleranceAdjustment`, `residual`. Add the missing ones to the view (server-side sums), the day view aggregating its periods (approved revision when it exists, else current, with the Provisional marker rule). Contract change → OpenAPI + `npm run api:types`.
+2. **Declared mode recovery share:** a split entry may be marked `recovery: true` (reason code of any kind; the entry's tonnes/percent is a recovery). Validation: Σ loss shares − Σ recovery shares = shortfall (same tolerance); percent mode: loss percents − recovery percents = 100. The engine books each recovery share as a `gain` line (`basis = 'declared'`, `cause_event_id` = the event, reason = the entry's reason) so `Gross attributed = Σ loss shares`, `Verified recovery = Σ recovery shares`, `Net = shortfall`. `reason_weights` entries gain `recovery?: boolean`; conservation and the duplicate/identity logic unchanged. Fixture: 23 + 11 + 6 − 8 = 32 → availability 23, performance 11, quality 6, gain 8, attributed 32, residual 0.
+3. Verification: a recovery share counts as "verified" only when the event's coding is verified by a supervisor (existing Verify coding); until then the statement labels the row "Recovery (unverified)" — the figures do not change, only the label (view field `recoveryVerified`).
+
+**Frontend** — new `src/features/plan-dashboard/components/loss-accounting-statement.tsx` (≤ 150 lines, pure presentation; model in `model/loss-accounting-statement.ts` with tests) rendering the table above with the plant number formatter, Provisional/Approved marker, a ⓘ per row in plain words, and the identity line under it. Shown:
+- on the period page above the loss lines (replacing the current Target/Actual/Gap/Attributed/Tolerance/Unaccounted strip, which becomes the statement; keep the "Checks" row and the stops cross-check line),
+- on the day view (Review & close / day certification panel) for the day,
+- on the production-loss event page as the day's statement (card "Day accounting"), linking to the period,
+- in the period grid a compact variant is NOT needed (the grid keeps its columns).
+- Code dialog / reason split: an entry can be toggled "Recovery"; live text: "Losses 40.000 t − recovery 8.000 t = 32.000 t ✓" or the remaining amount; percent mode likewise.
+- Event detail Summary: the reason list shows recovery entries as "Recovery · <reason> · 8 t".
+
+**Tests:** fixtures for the recovery split; int-spec on the view fields; vitest for the statement model (all rows, zero rows, provisional/approved), the dialog validation with recovery, and the event-page card. Docs: guide §5 gets the statement and the identity; GLOSSARY: Gross attributed loss, Verified recovery, Net accounted loss.
