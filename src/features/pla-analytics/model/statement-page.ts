@@ -57,9 +57,15 @@ const CSV_FIGURES: ReadonlyArray<[keyof LossStatementView, string]> = [
   ['unaccounted', 'Unaccounted loss'],
 ];
 
+const DECIMAL = /^-?\d+(\.\d+)?$/;
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+/** A CSV cell; text a spreadsheet would run as a formula (=, +, -, @, tab, CR) gets a leading quote, decimals stay as sent. */
 const cell = (value: string | number | boolean | null | undefined) => {
-  const text = value === null || value === undefined ? '' : String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  const raw = value === null || value === undefined ? '' : String(value);
+  const guarded = !DECIMAL.test(raw) && FORMULA_START.test(raw);
+  const text = guarded ? `'${raw}` : raw;
+  return guarded || /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
 /** CSV of the rows exactly as the server sent them (decimal strings, no browser arithmetic). */

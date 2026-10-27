@@ -82,6 +82,12 @@ describe('statement page model', () => {
     expect(line).toBe('2026-10-29,"Train, A",A,shift,computed,approved,240,208,32,23,11,6,0,0,40,8,32,0,0,yes,t');
   });
 
+  it('guards against formula injection; negative decimals stay numbers', () => {
+    const [, line] = statementCsv([{ ...row, unitName: '=HYPERLINK("http://x","y")', shiftName: '@B', statement: { ...OWNER, unaccounted: '-8' } }]).split('\n');
+    expect(line.startsWith('2026-10-29,"\'=HYPERLINK(""http://x"",""y"")","\'@B",')).toBe(true);
+    expect(line).toContain(',-8,yes,t');
+  });
+
   it('links an event to the statement of its period and back', () => {
     const href = statementHref({ unitId: 'u1', utcStart: '2026-10-29T02:30:00.000Z', utcEnd: '2026-10-30T02:30:00.000Z', periodId: 'p1', eventId: 'e1' });
     const params = new URL(href, 'http://x').searchParams;
