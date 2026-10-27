@@ -177,7 +177,7 @@ export async function loadRevisionState(
   const lossBasis = await lossBasisOfRun(manager, run, period.unitId);
   const declaredShortfalls =
     lossBasis === 'declared'
-      ? await declaredShortfallsOf(manager, lines)
+      ? await declaredShortfallsOf(manager, period.tenantId, lines)
       : new Map<string, Dec>();
   const partial = {
     period,

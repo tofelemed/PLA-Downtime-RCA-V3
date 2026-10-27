@@ -175,6 +175,24 @@ describe('production_loss events (declared mode)', () => {
     });
   });
 
+  it('a user PATCH of the declared figures checks the review items again', async () => {
+    const range = window();
+    await addPeriod(range.start, range.end);
+    const id = await declare(range);
+    expect(await kinds(id)).toEqual([]);
+    const etag = String(
+      (await env.get(`production-events/${id}`)).headers.etag,
+    );
+    await env
+      .patch(
+        `production-events/${id}`,
+        { declaredFigures: { ...FIGURES, actual: 100 } },
+        etag,
+      )
+      .expect(200);
+    expect(await kinds(id)).toEqual(['declared_identity_mismatch:open']);
+  });
+
   it('refuses dismiss on the other review kinds', async () => {
     const range = window();
     const stop = await env

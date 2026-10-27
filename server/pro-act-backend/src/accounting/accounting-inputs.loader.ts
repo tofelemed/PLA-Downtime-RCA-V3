@@ -253,7 +253,11 @@ export class AccountingInputsLoader {
     return {
       schedule: instances.map(toSpan),
       events: lossEvents,
-      reasonComponents: await loadReasonComponents(manager, lossEvents),
+      reasonComponents: await loadReasonComponents(
+        manager,
+        period.tenantId,
+        lossEvents,
+      ),
       slices: sliceInputs.inputs,
       asOf,
       transitionStandards: standards,

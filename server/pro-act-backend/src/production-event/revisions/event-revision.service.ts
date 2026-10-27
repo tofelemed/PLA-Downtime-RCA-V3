@@ -164,11 +164,18 @@ export class EventRevisionService {
     await this.declaredReview.reviewIn(manager, event, revision?.id ?? null);
   }
 
-  /** Central path of user edits (v1 PUT, v2 PATCH); null when the event is not found. */
+  /**
+   * Central path of user edits (v1 PUT, v2 PATCH); null when the event is not found. A changed production
+   * loss event has its declared review items checked again (identity, duplicate, window).
+   */
   async applyUserChange(change: UserChange): Promise<ProductionEvent | null> {
-    const { result, message } = await this.inTransaction((manager) =>
-      applyUserChangeIn(manager, change),
-    );
+    const { result, message } = await this.inTransaction(async (manager) => {
+      const outcome = await applyUserChangeIn(manager, change);
+      if (outcome.result) {
+        await this.declaredReview.reviewIn(manager, outcome.result, null);
+      }
+      return outcome;
+    });
     this.publish(message);
     return result;
   }

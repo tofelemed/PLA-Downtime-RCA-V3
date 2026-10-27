@@ -7,7 +7,7 @@ import {
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DeclaredFigures } from '../../../../domain/events/declared-figures';
-import { CreateProductionEventDto } from '../../../../production-event/dto/create-production-event.dto';
+import { EventCreateInput } from '../../../../production-event/dto/event-create-input';
 import { ProductionEventService } from '../../../../production-event/production-event.service';
 import { EventRevisionService } from '../../../../production-event/revisions/event-revision.service';
 import { CONNECTOR_ACTOR } from '../../../../production-event/revisions/revision-actor';
@@ -150,17 +150,15 @@ export class MqttPlaFeedHandler implements NormalizationHandler, OnModuleInit {
         outcome: result === 'revised' ? 'updated' : 'unchanged',
       };
     }
-    const created = await this.lifecycle.create(
-      {
-        ...fields,
-        tenantId: envelope.tenantId,
-        eventId,
-        source: MQTT_SOURCE_SYSTEM,
-        unitId,
-        classification: { physicalType: 'production_loss' },
-      } as unknown as CreateProductionEventDto,
-      CONNECTOR_ACTOR,
-    );
+    const input: EventCreateInput = {
+      ...fields,
+      tenantId: envelope.tenantId,
+      eventId,
+      source: MQTT_SOURCE_SYSTEM,
+      unitId,
+      classification: { physicalType: 'production_loss' },
+    };
+    const created = await this.lifecycle.create(input, CONNECTOR_ACTOR);
     return { id: created.id, outcome: 'created' };
   }
 }

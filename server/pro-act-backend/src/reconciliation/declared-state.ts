@@ -57,9 +57,10 @@ export async function lossBasesOfRuns(
   );
 }
 
-/** Shortfall (event quantity) of the `production_loss` events the lines cite, by event id. */
+/** Shortfall (event quantity) of the tenant's `production_loss` events the lines cite, by event id. */
 export async function declaredShortfallsOf(
   manager: EntityManager,
+  tenantId: string,
   lines: readonly ReconciliationLine[],
 ): Promise<Map<string, Dec>> {
   const ids = [
@@ -68,8 +69,8 @@ export async function declaredShortfallsOf(
   if (ids.length === 0) return new Map();
   const rows = await manager.query<Array<{ id: string; quantity: string }>>(
     `SELECT "id", "quantity"::text AS "quantity" FROM "production_events"
-      WHERE "id" = ANY($1::uuid[]) AND "physical_type" = 'production_loss' AND "quantity" IS NOT NULL`,
-    [ids],
+      WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[]) AND "physical_type" = 'production_loss' AND "quantity" IS NOT NULL`,
+    [tenantId, ids],
   );
   return new Map(
     rows.flatMap((r): Array<[string, Dec]> => {

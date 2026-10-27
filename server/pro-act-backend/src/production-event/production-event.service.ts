@@ -4,7 +4,7 @@ import { Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { ProductionEvent } from './production-event.entity';
 import { RealtimeGateway } from '../realtime.gateway';
-import { CreateProductionEventDto } from './dto/create-production-event.dto';
+import { EventCreateInput } from './dto/event-create-input';
 import { UpdateProductionEventDto } from './dto/update-production-event.dto';
 import { ProductionEventQueryDto } from './dto/production-event-query.dto';
 import { PagedResult } from '../common/dto/paged-result';
@@ -76,7 +76,7 @@ export class ProductionEventService {
    * typed attribute facts that have no column, plan 1.3).
    */
   async create(
-    data: CreateProductionEventDto,
+    data: EventCreateInput,
     actor: RevisionActor = actorFromContext(getRequestContext()),
     attributeFacts: EventFacts = {},
   ): Promise<ProductionEvent> {
