@@ -66,6 +66,7 @@ export function PeriodWorkspace({ planId, periodId, unitName, planLabel, planWin
   const basePath = periodPath(planId, periodId);
   const retained = useRetainedDraft(data, editor, editable, basePath);
   const actions = useWorkflowActions(data);
+  const { isDeclared } = useLossAccountingMode(data.unitId);
   return (
     <section data-testid="period-detail" data-lifecycle={data.revision.lifecycle} className="space-y-5">
       <PeriodHeader view={data} accounting={accounting} unitName={unitName} planLabel={planLabel} timezone={timezone}
@@ -80,7 +81,7 @@ export function PeriodWorkspace({ planId, periodId, unitName, planLabel, planWin
       {/* Keep the editor subtree alive too: unfinished manual-line fields and conflict dialogs are local state. */}
       <div hidden={section !== ''} className="space-y-6" data-testid="period-reconciliation-panel">
         <ReconciliationSummary view={data} ledger={ledger} />
-        <LedgerComparison accounting={accounting} ledger={ledger} />
+        <LedgerComparison accounting={accounting} ledger={ledger} declared={isDeclared} />
         <LossLineEditorContent view={data} timezone={timezone} readOnly={!editable || retained.pending !== null || retained.atCapacity} editor={editor} />
         {section === '' && <Suspense fallback={<Skeleton className="h-48 w-full" />}><WaterfallPanel periodId={periodId} ledger={ledger} view={view} /></Suspense>}
       </div>
