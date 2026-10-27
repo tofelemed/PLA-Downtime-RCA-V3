@@ -27064,7 +27064,8 @@
           "shortfall": {
             "type": "number",
             "example": 7.5,
-            "description": "planned - actual; becomes the event quantity"
+            "minimum": 0,
+            "description": "planned - actual, 0 or more; becomes the event quantity"
           },
           "uom": {
             "type": "string",

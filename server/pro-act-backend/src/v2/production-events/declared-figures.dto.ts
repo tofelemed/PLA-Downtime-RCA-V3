@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -79,9 +80,11 @@ export class DeclaredFiguresDto {
 
   @ApiProperty({
     example: 7.5,
-    description: 'planned - actual; becomes the event quantity',
+    minimum: 0,
+    description: 'planned - actual, 0 or more; becomes the event quantity',
   })
   @IsNumber(FIGURE)
+  @Min(0)
   shortfall!: number;
 
   @ApiPropertyOptional({ example: 't', description: "Default 't'" })

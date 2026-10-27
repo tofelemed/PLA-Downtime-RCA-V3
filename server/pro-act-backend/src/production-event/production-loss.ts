@@ -54,7 +54,10 @@ export function resolveLossColumns(input: {
   return { quantity: figures.shortfall, declaredFigures: figures };
 }
 
-/** A production loss has an end (so it is closed), declared figures and a quantity equal to the shortfall. */
+/**
+ * A production loss has an end (so it is closed), declared figures with a shortfall of 0 or more (a
+ * negative one is refused, whatever path wrote it) and a quantity equal to the shortfall.
+ */
 export function assertProductionLossValid(effective: {
   endTime: Date | null;
   columns: LossColumns;
@@ -66,6 +69,12 @@ export function assertProductionLossValid(effective: {
     throw invalid(
       'declaredFigures',
       'A production loss event needs declaredFigures',
+    );
+  }
+  if (effective.columns.declaredFigures.shortfall < 0) {
+    throw invalid(
+      'declaredFigures.shortfall',
+      'The declared shortfall cannot be negative',
     );
   }
   if (effective.columns.quantity === null) {

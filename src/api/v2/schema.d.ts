@@ -8100,7 +8100,7 @@ export interface components {
             /** @example 112.5 */
             actual?: number | null;
             /**
-             * @description planned - actual; becomes the event quantity
+             * @description planned - actual, 0 or more; becomes the event quantity
              * @example 7.5
              */
             shortfall: number;
