@@ -1,0 +1,135 @@
+{
+  "id": "D05",
+  "title": "No production loss event for the period",
+  "kind": "numerical",
+  "spec_ref": "PLA declared mode spec §4.4; plan Global Constraint 12; D4",
+  "owner_subphase": "pla-declared-mode",
+  "tolerance": "0.000001",
+  "window": {
+    "start": "2027-03-03T02:30:00Z",
+    "end": "2027-03-04T02:30:00Z"
+  },
+  "reasonComponents": {
+    "R1": "availability",
+    "R2": "quality",
+    "R3": "performance",
+    "RX": null
+  },
+  "cases": [
+    {
+      "name": "plan target: residual = gap",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "plan",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": []
+      },
+      "expected": {
+        "lines": [],
+        "totals": {
+          "target": "1100",
+          "actual": "968",
+          "gap": "132",
+          "attributed": "0",
+          "residual": "132"
+        },
+        "flags": [
+          "declared_loss_missing",
+          "unaccounted",
+          "capacity_not_applicable"
+        ],
+        "issues": 0
+      }
+    },
+    {
+      "name": "OT target: no target, the residual is not computable",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": []
+      },
+      "expected": {
+        "lines": [],
+        "totals": {
+          "target": null,
+          "gap": null,
+          "residual": null,
+          "attributed": "0"
+        },
+        "flags": [
+          "declared_loss_missing",
+          "declared_target_missing"
+        ],
+        "issues": 0
+      }
+    },
+    {
+      "name": "an event of another window is not the period's",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "plan",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T06:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [],
+        "totals": {
+          "gap": "132",
+          "residual": "132"
+        },
+        "flags": [
+          "declared_loss_missing"
+        ],
+        "issues": 0
+      }
+    }
+  ],
+  "notes": "Without an event the actual is the slice's measured good.",
+  "status": "authored"
+}

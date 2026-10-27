@@ -1,0 +1,204 @@
+{
+  "id": "D07",
+  "title": "Stops, slowdowns and quality events produce no lines in declared mode",
+  "kind": "numerical",
+  "spec_ref": "PLA declared mode spec §4.4; plan Global Constraint 12; D4",
+  "owner_subphase": "pla-declared-mode",
+  "tolerance": "0.000001",
+  "window": {
+    "start": "2027-03-03T02:30:00Z",
+    "end": "2027-03-04T02:30:00Z"
+  },
+  "reasonComponents": {
+    "R1": "availability",
+    "R2": "quality",
+    "R3": "performance",
+    "RX": null
+  },
+  "cases": [
+    {
+      "name": "stops recorded, cross-check off",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          },
+          {
+            "id": "E1",
+            "type": "downtime",
+            "start": "2027-03-03T06:00:00Z",
+            "end": "2027-03-03T08:00:00Z",
+            "reasonCodeId": "R1"
+          },
+          {
+            "id": "E2",
+            "type": "downtime",
+            "start": "2027-03-03T01:30:00Z",
+            "end": "2027-03-03T03:30:00Z",
+            "reasonCodeId": "R1"
+          },
+          {
+            "id": "E3",
+            "type": "slowdown",
+            "start": "2027-03-03T10:00:00Z",
+            "end": "2027-03-03T12:00:00Z",
+            "quantity": "15"
+          },
+          {
+            "id": "E4",
+            "type": "quality_loss",
+            "start": "2027-03-03T14:00:00Z",
+            "end": "2027-03-03T15:00:00Z",
+            "quantity": "7"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "kind": "availability",
+            "reasonCodeId": "R1",
+            "quantity": "32",
+            "share": "1.00000000",
+            "basis": "declared"
+          }
+        ],
+        "totals": {
+          "gap": "32",
+          "attributed": "32",
+          "residual": "0"
+        },
+        "flags": [
+          "capacity_not_applicable"
+        ],
+        "absentFlags": [
+          "unaccounted"
+        ],
+        "noCrossCheck": true,
+        "issues": 0
+      }
+    },
+    {
+      "name": "two events for the window: the lowest id is used",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL2",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "10",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R2"
+          },
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          },
+          {
+            "id": "E1",
+            "type": "downtime",
+            "start": "2027-03-03T06:00:00Z",
+            "end": "2027-03-03T08:00:00Z",
+            "reasonCodeId": "R1"
+          },
+          {
+            "id": "E2",
+            "type": "downtime",
+            "start": "2027-03-03T01:30:00Z",
+            "end": "2027-03-03T03:30:00Z",
+            "reasonCodeId": "R1"
+          },
+          {
+            "id": "E3",
+            "type": "slowdown",
+            "start": "2027-03-03T10:00:00Z",
+            "end": "2027-03-03T12:00:00Z",
+            "quantity": "15"
+          },
+          {
+            "id": "E4",
+            "type": "quality_loss",
+            "start": "2027-03-03T14:00:00Z",
+            "end": "2027-03-03T15:00:00Z",
+            "quantity": "7"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "kind": "availability",
+            "reasonCodeId": "R1",
+            "quantity": "32",
+            "share": "1.00000000",
+            "basis": "declared",
+            "causeEventId": "PL1"
+          }
+        ],
+        "totals": {
+          "gap": "32",
+          "residual": "0"
+        },
+        "flags": [
+          "duplicate_declared_loss"
+        ],
+        "issues": 0
+      }
+    }
+  ],
+  "notes": "",
+  "status": "authored"
+}

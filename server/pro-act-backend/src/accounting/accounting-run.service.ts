@@ -31,6 +31,7 @@ import {
 import { draftRevisionOf } from './accounting-revisions';
 import { AccountingRevision } from './entities/accounting-revision.entity';
 import { CalculationRun } from './entities/calculation-run.entity';
+import { declaredPolicyOf } from './declared-policy';
 import { hashOf, RUN_ENGINE_VERSION } from './run-input-hash';
 import { writeKpiResults } from './kpi-persistence';
 import { AccountingRevisionHooks } from './revision-hooks';
@@ -356,7 +357,9 @@ function engineInput(
     streamRuns: inputs.streamRuns,
     flow: inputs.flow,
     occurrences: inputs.kpi.occurrences,
+    reasonComponents: inputs.reasonComponents,
     policy: {
+      ...declaredPolicyOf(engine.lossAccounting),
       microStopSeconds: engine.oee.microStopSeconds,
       microStopSecondsByAssetClass: engine.oee.microStopSecondsByAssetClass,
       tripReasonCodes: engine.oee.tripReasonCodes,

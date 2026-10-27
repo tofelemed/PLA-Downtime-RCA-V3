@@ -1,8 +1,10 @@
 import { RateTimebase } from '../actuals/actuals.types';
 import { Dec } from '../actuals/decimal';
 import { QualityClasses } from '../actuals/period/quality-classes';
+import { DeclaredFigures } from '../events/declared-figures';
 import { ReasonWeight } from '../events/reason-weights';
 import { BoundedInterval } from '../time/interval-algebra';
+import { DeclaredEnginePolicy, ReasonComponents } from './declared.types';
 
 /** The two loss ledgers of ACC01 (distinct baselines). */
 export const LEDGERS = ['capacity', 'plan'] as const;
@@ -70,7 +72,9 @@ export type LossEventType =
   | 'downtime'
   | 'slowdown'
   | 'quality_loss'
-  | 'grade_transition';
+  | 'grade_transition'
+  /** declared mode: the OT system's shortfall over the accounting period (no stop, no rate) */
+  | 'production_loss';
 
 /** The product change a `grade_transition` event records (directional: from → to). */
 export interface GradeChange {
@@ -197,6 +201,9 @@ export interface LossEvent {
   reasonWeights?: readonly ReasonWeight[] | null;
   /** D-T5: set on the per-reason part of a weighted stop (`splitByReasons`): its reason and weight */
   weightedReason?: ReasonWeight | null;
+  /** declared mode: the figures of a `production_loss` event; absent / null for every other event */
+  declaredFigures?: DeclaredFigures | null;
+  investigationPending?: boolean;
 }
 
 /** The actuals of a slice (2.4 result of the run's actuals run). */
@@ -243,7 +250,7 @@ export type OverlapAllocation = 'equal_share' | 'first_out';
  */
 export type TransitionAllowanceInPlan = 'planned' | 'loss';
 
-export interface EnginePolicy {
+export interface EnginePolicy extends DeclaredEnginePolicy {
   /** absent = `equal_share` (the rule of every policy version written before the option existed) */
   overlapAllocation?: OverlapAllocation;
   microStopSeconds: number;
@@ -277,6 +284,8 @@ export interface PeriodAccountingInput {
   streamRuns?: readonly StreamRun[];
   /** SME E2: the material-flow map upstream of the unit; absent = no routes into it (no propagation) */
   flow?: FlowInput | null;
+  /** declared mode: default OEE component of every reason the period's events name; absent = none */
+  reasonComponents?: ReasonComponents;
   /**
    * full extent of each stop occurrence over all its events, also those outside the window (DT-09):
    * a split child inside the window is a micro-stop only if the whole occurrence is short

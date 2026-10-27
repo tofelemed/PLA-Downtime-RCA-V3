@@ -57,6 +57,10 @@ export function hashOf(
           ]),
         }
       : {}),
+    // declared mode: a reason's default OEE component sets its line kind
+    ...(Object.keys(inputs.reasonComponents).length > 0
+      ? { reasonComponents: inputs.reasonComponents }
+      : {}),
     // SME E2: the flow map, buffer levels and upstream stops this unit's starvation is derived from
     ...(inputs.flowMaterial.length > 0 ? { flow: inputs.flowMaterial } : {}),
     slices: inputs.slices.map((s) => [

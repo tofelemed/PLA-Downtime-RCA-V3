@@ -1,0 +1,194 @@
+{
+  "id": "D04",
+  "title": "Identity mismatch: planned − actual ≠ shortfall beyond the tolerance, either sign",
+  "kind": "numerical",
+  "spec_ref": "PLA declared mode spec §4.4; plan Global Constraint 12; D4",
+  "owner_subphase": "pla-declared-mode",
+  "tolerance": "0.000001",
+  "window": {
+    "start": "2027-03-03T02:30:00Z",
+    "end": "2027-03-04T02:30:00Z"
+  },
+  "reasonComponents": {
+    "R1": "availability",
+    "R2": "quality",
+    "R3": "performance",
+    "RX": null
+  },
+  "cases": [
+    {
+      "name": "+2 t: the shortfall is short of the gap",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0.5"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "30",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "kind": "availability",
+            "reasonCodeId": "R1",
+            "quantity": "30",
+            "share": "1.00000000",
+            "basis": "declared"
+          }
+        ],
+        "totals": {
+          "gap": "32",
+          "attributed": "30",
+          "residual": "2",
+          "overAccounted": "0"
+        },
+        "flags": [
+          "declared_identity_mismatch",
+          "unaccounted"
+        ],
+        "issues": 0
+      }
+    },
+    {
+      "name": "−2 t: the shortfall exceeds the gap",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0.5"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "34",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "kind": "availability",
+            "reasonCodeId": "R1",
+            "quantity": "34",
+            "share": "1.00000000",
+            "basis": "declared"
+          }
+        ],
+        "totals": {
+          "gap": "32",
+          "attributed": "34",
+          "residual": "-2",
+          "overAccounted": "2"
+        },
+        "flags": [
+          "declared_identity_mismatch",
+          "over_accounted"
+        ],
+        "absentFlags": [
+          "unaccounted"
+        ],
+        "issues": 0
+      }
+    },
+    {
+      "name": "0.4 t: within the tolerance",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0.5"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "31.6",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "kind": "availability",
+            "reasonCodeId": "R1",
+            "quantity": "31.6",
+            "share": "1.00000000",
+            "basis": "declared"
+          }
+        ],
+        "totals": {
+          "gap": "32",
+          "attributed": "31.6",
+          "residual": "0.4"
+        },
+        "flags": [
+          "unaccounted"
+        ],
+        "absentFlags": [
+          "declared_identity_mismatch"
+        ],
+        "issues": 0
+      }
+    }
+  ],
+  "notes": "",
+  "status": "authored"
+}

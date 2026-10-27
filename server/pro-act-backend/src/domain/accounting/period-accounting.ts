@@ -8,6 +8,7 @@ import {
   productRuns,
 } from './claim-pooling';
 import { checkConservation, checkShares } from './conservation';
+import { computeDeclaredAccounting } from './declared-ledger';
 import { starvationStops } from './flow-propagation';
 import { planLedger } from './plan-ledger';
 import { segmentSlice } from './segmentation';
@@ -23,7 +24,9 @@ import { segmentSlice } from './segmentation';
 //        time is an external availability loss charged to the upstream stop (recorded stops take precedence)
 // 2.8.0: D-T5 weighted multi-reason stops — the share a stop receives in a segment (after first_out /
 //        equal_share) is split across its weighted reasons, one line per (cause event, reason); unweighted = 2.7.0
-export const ACCOUNTING_ENGINE_VERSION = '2.8.0';
+// 2.9.0: declared mode (loss_accounting lossBasis = declared) — the plan ledger is the OT system's declared
+//        shortfall split by reason share; stops give no lines, no capacity ledger (computed mode = 2.8.0)
+export const ACCOUNTING_ENGINE_VERSION = '2.9.0';
 
 function computeSlices(
   input: PeriodAccountingInput,
@@ -63,12 +66,17 @@ function computeSlices(
  * apportioned by time (D05), so a cause located in one plan slice is checked against the run's total,
  * never against an arbitrary part of it (`IMPOSSIBLE_CLAIM` only when the run cannot hold it).
  *
+ * Declared mode (`policy.lossBasis = declared`) is a separate engine, `computeDeclaredAccounting`; a
+ * `production_loss` event produces no line in computed mode (no event filter selects it).
+ *
  * SME E2: with a material-flow map, upstream stops that outlast the buffer's cover add derived starvation
  * stops charged to the upstream cause; the KPI engine keeps the unit's recorded stops only.
  */
 export function computePeriodAccounting(
   given: PeriodAccountingInput,
 ): PeriodAccounting {
+  if (given.policy.lossBasis === 'declared')
+    return computeDeclaredAccounting(given);
   // SME E2: upstream stops that outlast the buffer starve this unit (derived, external availability causes)
   const derived = starvationStops(given);
   const input = derived.length

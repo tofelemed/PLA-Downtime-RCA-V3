@@ -37,7 +37,7 @@ describe('loss accounting calculation runs (plan 2.5)', () => {
     expect(body.data.run).toMatchObject({ status: 'validated' });
     expect(body.calculationRunId).toBe(body.data.run?.id);
     expect(body.policyVersion).toBe(
-      'oee_policy@1,reconciliation_tolerance@1,valuation_basis@1',
+      'oee_policy@1,reconciliation_tolerance@1,loss_accounting@1,valuation_basis@1',
     );
     expect(body.data.defaultLedgerView).toBe('plan');
     expect(body.isProvisional).toBe(true);

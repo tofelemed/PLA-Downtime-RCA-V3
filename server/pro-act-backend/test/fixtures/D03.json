@@ -1,0 +1,73 @@
+{
+  "id": "D03",
+  "title": "Uncoded production loss: no lines, the whole gap stays unaccounted",
+  "kind": "numerical",
+  "spec_ref": "PLA declared mode spec §4.4; plan Global Constraint 12; D4",
+  "owner_subphase": "pla-declared-mode",
+  "tolerance": "0.000001",
+  "window": {
+    "start": "2027-03-03T02:30:00Z",
+    "end": "2027-03-04T02:30:00Z"
+  },
+  "reasonComponents": {
+    "R1": "availability",
+    "R2": "quality",
+    "R3": "performance",
+    "RX": null
+  },
+  "cases": [
+    {
+      "name": "no reason",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "lines": [],
+        "totals": {
+          "target": "1000",
+          "actual": "968",
+          "gap": "32",
+          "attributed": "0",
+          "residual": "32"
+        },
+        "flags": [
+          "capacity_not_applicable",
+          "unaccounted"
+        ],
+        "absentFlags": [
+          "declared_loss_missing"
+        ],
+        "issues": 0
+      }
+    }
+  ],
+  "notes": "",
+  "status": "authored"
+}

@@ -1,3 +1,4 @@
+import { parseDeclaredFigures } from '../domain/events/declared-figures';
 import { storedReasonWeights } from '../domain/events/reason-weights';
 import {
   GradeChange,
@@ -34,6 +35,9 @@ export interface EventRow {
   disposition_class: string | null;
   asset_type: string | null;
   reason_code: string | null;
+  /** declared mode: the OT figures of a production loss (jsonb); null for every other event */
+  declared_figures: unknown;
+  investigation_pending: boolean;
   row_version: number;
   revision_id: string | null;
   revision: number | null;
@@ -45,6 +49,7 @@ const EVENT_SELECT = `SELECT e."id", e."unit_id", e."occurrence_id", e."physical
        e."reason_code_id", e."reason_weights", e."impact_code_id", e."failure_mode", e."asset_id", e."planned_end_time", e."row_version",
        e."from_product_id", e."to_product_id", e."catalyst_family", e."operating_mode", e."stream_code", e."recovery_of_event_id",
        e."failure_severity", e."disposition_class", a."asset_type", rc."code" AS "reason_code",
+       e."declared_figures", e."investigation_pending",
        r."id" AS "revision_id", r."revision"
   FROM "production_events" e
   LEFT JOIN "assets" a ON a."id" = e."asset_id"
@@ -57,6 +62,26 @@ export const EVENTS_SQL = `${EVENT_SELECT}
    AND e."physical_type" IN ('downtime', 'slowdown', 'quality_loss', 'grade_transition') AND e."physical_state" IN ('open', 'closed')
    AND tstzrange(e."start_time", e."end_time", '[)') && tstzrange($3, $4, '[)')
  ORDER BY e."start_time", e."id"`;
+
+/**
+ * Declared mode: the unit's production loss events overlapping ($3, $4), live and not retracted. The
+ * `declared_figures IS NOT NULL AND retracted_at IS NULL` predicate matches the partial index
+ * `IDX_production_events_declared` (tenant, unit, start_time).
+ */
+export const DECLARED_EVENTS_SQL = `${EVENT_SELECT}
+ WHERE e."tenant_id" = $1 AND e."unit_id" = $2
+   AND e."declared_figures" IS NOT NULL AND e."retracted_at" IS NULL
+   AND e."physical_type" = 'production_loss' AND e."physical_state" IN ('open', 'closed')
+   AND e."start_time" < $4 AND (e."end_time" IS NULL OR e."end_time" > $3)
+ ORDER BY e."start_time", e."id"`;
+
+/** Loss event rows of both queries in one order (start, id), as the engine and the fingerprint read them. */
+export function byStartThenId(a: EventRow, b: EventRow): number {
+  const diff =
+    new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
+  if (diff !== 0) return diff;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
 
 /**
  * SME E2: stopping downtime of upstream units ($2 unit ids) overlapping ($3, $4) — the supply outages a
@@ -117,5 +142,11 @@ export function toEvent(
     failureSeverity: row.failure_severity,
     dispositionClass: row.disposition_class,
     streamId: row.stream_code,
+    ...(row.declared_figures
+      ? {
+          declaredFigures: parseDeclaredFigures(row.declared_figures),
+          investigationPending: row.investigation_pending,
+        }
+      : {}),
   };
 }

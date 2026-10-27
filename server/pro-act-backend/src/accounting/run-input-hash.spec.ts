@@ -42,6 +42,7 @@ function inputs(
     streamRuns: [],
     flow: null,
     flowMaterial: [],
+    reasonComponents: {},
     fingerprint: {
       periodId: 'p1',
       window: { start: start.toISOString(), end: end.toISOString() },

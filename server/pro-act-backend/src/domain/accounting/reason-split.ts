@@ -8,7 +8,7 @@ import { SHARE_SCALE } from './shares';
  * The part of a weighted stop charged to one of its reasons: the event as the line's cause with that
  * reason as its reason code (`weightedReason` keeps the reason and its weight).
  */
-function reasonPart(event: LossEvent, reason: ReasonWeight): LossEvent {
+export function reasonPart(event: LossEvent, reason: ReasonWeight): LossEvent {
   return {
     ...event,
     reasonCodeId: reason.reasonCodeId,

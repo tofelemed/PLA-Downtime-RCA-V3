@@ -1,0 +1,82 @@
+{
+  "id": "D06",
+  "title": "targetSource = plan: the plan target against the OT actual",
+  "kind": "numerical",
+  "spec_ref": "PLA declared mode spec §4.4; plan Global Constraint 12; D4",
+  "owner_subphase": "pla-declared-mode",
+  "tolerance": "0.000001",
+  "window": {
+    "start": "2027-03-03T02:30:00Z",
+    "end": "2027-03-04T02:30:00Z"
+  },
+  "reasonComponents": {
+    "R1": "availability",
+    "R2": "quality",
+    "R3": "performance",
+    "RX": null
+  },
+  "cases": [
+    {
+      "name": "plan 1100, OT actual 968, shortfall 32",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "plan",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "1100",
+          "gross": "975",
+          "good": "968",
+          "planningRate": "50"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "1000",
+              "actual": "968",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1"
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          {
+            "kind": "availability",
+            "reasonCodeId": "R1",
+            "quantity": "32",
+            "share": "1.00000000",
+            "basis": "declared"
+          }
+        ],
+        "totals": {
+          "target": "1100",
+          "actual": "968",
+          "gap": "132",
+          "attributed": "32",
+          "residual": "100"
+        },
+        "flags": [
+          "unaccounted",
+          "capacity_not_applicable"
+        ],
+        "absentFlags": [
+          "declared_identity_mismatch"
+        ],
+        "issues": 0
+      }
+    }
+  ],
+  "notes": "",
+  "status": "authored"
+}

@@ -10,6 +10,7 @@ import {
   StreamRun,
   TransitionStandard,
 } from '../domain/accounting/accounting.types';
+import { ReasonComponents } from '../domain/accounting/declared.types';
 import { loadFlowInputs } from '../plant-model/flow-inputs.loader';
 import { loadStreamRuns } from '../plant-model/stream-inputs.loader';
 import { sliceTarget } from '../domain/accounting/slice-target';
@@ -19,7 +20,14 @@ import { PeriodProductSlice } from '../periods/entities/period-product-slice.ent
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { InputFingerprint } from './entities/calculation-run.entity';
 import { KpiInputs, loadKpiInputs } from './kpi-inputs.loader';
-import { EVENTS_SQL, EventRow, toEvent } from './loss-event-rows';
+import {
+  byStartThenId,
+  DECLARED_EVENTS_SQL,
+  EVENTS_SQL,
+  EventRow,
+  toEvent,
+} from './loss-event-rows';
+import { loadReasonComponents } from './reason-components.loader';
 import {
   loadContextModes,
   loadTransitionStandards,
@@ -42,6 +50,8 @@ export interface AccountingInputs {
   /** SME E2: ids and versions of the routes, levels and upstream stops read (run hash) */
   flowMaterial: string[];
   fingerprint: InputFingerprint;
+  /** declared mode: default OEE component of every reason the events name */
+  reasonComponents: ReasonComponents;
   /** occurrence extents and failure candidates of the KPI engine (plan 2.7) */
   kpi: KpiInputs;
 }
@@ -94,6 +104,18 @@ function toRate(row: RateRow): RateVersion {
 }
 
 const sorted = (values: Iterable<string>) => [...new Set(values)].sort();
+
+/** The period's loss events and (declared mode) its production loss events, in one (start, id) order. */
+async function loadEventRows(
+  manager: EntityManager,
+  params: unknown[],
+): Promise<EventRow[]> {
+  const events: EventRow[] = await manager.query(EVENTS_SQL, params);
+  const declared: EventRow[] = await manager.query(DECLARED_EVENTS_SQL, params);
+  return declared.length
+    ? [...events, ...declared].sort(byStartThenId)
+    : events;
+}
 
 /** $1 tenant, $2 unit, $3 period start, $4 period end. */
 const windowParams = (period: ProductionPeriod) => [
@@ -222,7 +244,7 @@ export class AccountingInputsLoader {
     const asOf = running ? now : period.utcEnd;
     const params = windowParams(period);
     const instances: InstanceRow[] = await manager.query(INSTANCES_SQL, params);
-    const events: EventRow[] = await manager.query(EVENTS_SQL, params);
+    const events = await loadEventRows(manager, params);
     const sliceInputs = await this.sliceInputs(
       manager,
       period,
@@ -239,9 +261,11 @@ export class AccountingInputsLoader {
       to: period.utcEnd,
     });
     const flow = await loadFlowInputs(manager, period);
+    const lossEvents = events.map((row) => toEvent(row, modes));
     return {
       schedule: instances.map(toSpan),
-      events: events.map((row) => toEvent(row, modes)),
+      events: lossEvents,
+      reasonComponents: await loadReasonComponents(manager, lossEvents),
       slices: sliceInputs.inputs,
       asOf,
       transitionStandards: standards,
