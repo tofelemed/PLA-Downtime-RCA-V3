@@ -191,3 +191,13 @@ Identity: `Shortfall = Net accounted + Tolerance adj. + Unaccounted`, `Net accou
 - Event detail Summary: the reason list shows recovery entries as "Recovery · <reason> · 8 t".
 
 **Tests:** fixtures for the recovery split; int-spec on the view fields; vitest for the statement model (all rows, zero rows, provisional/approved), the dialog validation with recovery, and the event-page card. Docs: guide §5 gets the statement and the identity; GLOSSARY: Gross attributed loss, Verified recovery, Net accounted loss.
+
+### Task 13 addendum — a page in the PLA section (owner, 27 Oct 2026)
+
+The statement must also be a page of **Production loss analysis** (sidebar section "Production loss analysis (PLA)"), not only on the period page:
+
+- New analysis page **"Accounting statement"** at `/pla-analytics/statement`, listed in `src/features/analysis-navigation/analysis-pages.ts` after "Overview" (visible in both computed and declared mode). It uses the section's existing Units / Window / Period dates / Revision (Approved only · Provisional) controls.
+- Top: the statement for the selected units and window (server-side sums of the periods' plan-ledger totals; approved revision when "Approved only", else current with the Provisional marker; incomplete-data note as on the other pages).
+- Below: a keyset-paged table, one row per **day** (per shift when the plant is on shift grain, grouped under the day) with the ten figures as columns; each row expands to the full statement and links to the period page. Export CSV like the other PLA pages (approved only).
+- Backend: `GET /v2/reports/loss-statement?from&to&unitIds&revision&cursor` returning `{ total: Statement, items: [{ periodId, unitId, localDate, shiftName, grain, basis, revisionState, statement }], nextCursor }`, computed from `period_ledger_totals` (plan ledger, slice_id null rows) and the period's revision state; no browser arithmetic. Index check with `EXPLAIN ANALYZE`; paginate. OpenAPI + `npm run api:types`.
+- Tests: int-spec for the report (mixed computed shifts + a declared day; approved-only filter), vitest for the page and the row expansion, Playwright step added to `e2e/pla-declared-mode.spec.ts` (reza opens the page, sees the 29 Oct row 240 / 208 / 32 / … / 0).
