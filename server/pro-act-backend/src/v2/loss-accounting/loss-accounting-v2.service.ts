@@ -90,6 +90,12 @@ export class LossAccountingV2Service {
       }
       if (change.accountingUnitId) {
         await this.assertUnit(context, tenantId, change.accountingUnitId);
+        await requireUnitRole(
+          manager,
+          context,
+          change.accountingUnitId,
+          LOSS_ACCOUNTING_WRITERS,
+        );
       }
       const body = checked({ ...base.body, ...policyFields(change) });
       const scopeKey = change.unitId ?? 'tenant';

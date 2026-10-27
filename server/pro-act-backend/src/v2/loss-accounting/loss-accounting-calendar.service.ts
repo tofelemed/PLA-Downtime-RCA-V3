@@ -37,6 +37,8 @@ export interface DailyCalendarPlan {
   dayStart: string;
   /** first operational date of the daily calendar */
   effectiveFrom: string;
+  /** the published daily calendar already in force (a retry after a partial failure); null = to be published */
+  existingVersionId: string | null;
 }
 
 export interface DailyCalendarResult extends RetirementResult {
@@ -59,9 +61,10 @@ export class LossAccountingCalendarService {
   ) {}
 
   /**
-   * The calendar change a day-grain approval needs, or null (shift grain, or the calendar already gives
-   * one 24 h leaf per day from that date). 422 EFFECTIVE_DATE_TOO_EARLY when a period with an approved
-   * revision starts on or after the effective date.
+   * What a day-grain approval does, or null for shift grain. When the calendar already gives one 24 h
+   * leaf per day from that date it is reused, and the period replacement still runs (idempotent), so a
+   * retry after a partial failure converges. Otherwise 422 EFFECTIVE_DATE_TOO_EARLY when a period with an
+   * approved revision starts on or after the effective date.
    */
   async plan(
     manager: EntityManager,
@@ -84,8 +87,10 @@ export class LossAccountingCalendarService {
       unitIds,
       dayStart: body.dayStart,
       effectiveFrom: date,
+      existingVersionId: null,
     };
-    if (await this.alreadyDaily(manager, found)) return null;
+    const existing = await this.dailyInForce(manager, found);
+    if (existing) return { ...found, existingVersionId: existing.id };
     await this.assertNotTooEarly(manager, found);
     return found;
   }
@@ -97,6 +102,35 @@ export class LossAccountingCalendarService {
     plan: DailyCalendarPlan,
     policyVersion: number,
   ): Promise<DailyCalendarResult> {
+    const calendarVersionId =
+      plan.existingVersionId ??
+      (await this.publishDaily(context, plan, policyVersion));
+    const retirement = await retireOpenPeriods(manager, {
+      tenantId: plan.site.tenantId,
+      unitIds: plan.unitIds,
+      calendarVersionId,
+      fromDate: plan.effectiveFrom,
+    });
+    const created = await this.periods.materialize(manager, {
+      tenantId: plan.site.tenantId,
+      unitIds: plan.unitIds,
+      // two days back covers any UTC offset and an operational day starting early
+      from: new Date(wallOfDate(addDays(plan.effectiveFrom, -2))),
+      to: new Date(),
+    });
+    return {
+      ...retirement,
+      calendarVersionId,
+      createdPeriods: created.created,
+    };
+  }
+
+  /** Creates and publishes the daily calendar (its own transactions); returns the version id. */
+  private async publishDaily(
+    context: RequestContext,
+    plan: DailyCalendarPlan,
+    policyVersion: number,
+  ): Promise<string> {
     const draft = await this.calendars.create(context, {
       siteId: plan.site.id,
       unitId: plan.scopeUnitId ?? undefined,
@@ -112,24 +146,7 @@ export class LossAccountingCalendarService {
       reason: `loss_accounting policy v${policyVersion}`,
       regenerateFrom: this.regenerateFrom(plan),
     });
-    const retirement = await retireOpenPeriods(manager, {
-      tenantId: plan.site.tenantId,
-      unitIds: plan.unitIds,
-      calendarVersionId: draft.id,
-      fromDate: plan.effectiveFrom,
-    });
-    const created = await this.periods.materialize(manager, {
-      tenantId: plan.site.tenantId,
-      unitIds: plan.unitIds,
-      // two days back covers any UTC offset and an operational day starting early
-      from: new Date(wallOfDate(addDays(plan.effectiveFrom, -2))),
-      to: new Date(),
-    });
-    return {
-      ...retirement,
-      calendarVersionId: draft.id,
-      createdPeriods: created.created,
-    };
+    return draft.id;
   }
 
   /** The effective date, but not further back than a publication generates past dates. */
@@ -144,10 +161,10 @@ export class LossAccountingCalendarService {
   }
 
   /** A published, open-ended version in force on the date that already is one 24 h shift per day. */
-  private async alreadyDaily(
+  private async dailyInForce(
     manager: EntityManager,
     plan: DailyCalendarPlan,
-  ): Promise<boolean> {
+  ): Promise<CalendarVersion | null> {
     const published = await manager.find(CalendarVersion, {
       where: {
         tenantId: plan.site.tenantId,
@@ -162,15 +179,15 @@ export class LossAccountingCalendarService {
           NO_UNIT,
           plan.effectiveFrom,
         );
-    if (!inForce || inForce.effectiveTo !== null) return false;
+    if (!inForce || inForce.effectiveTo !== null) return null;
     const [template] = inForce.shiftTemplates;
-    return (
+    const daily =
       inForce.shiftTemplates.length === 1 &&
       !template.daysOfWeek &&
       template.startLocal === template.endLocal &&
       normalizeTime(template.startLocal) === plan.dayStart &&
-      normalizeTime(inForce.operationalDayStart) === plan.dayStart
-    );
+      normalizeTime(inForce.operationalDayStart) === plan.dayStart;
+    return daily ? inForce : null;
   }
 
   private async assertNotTooEarly(

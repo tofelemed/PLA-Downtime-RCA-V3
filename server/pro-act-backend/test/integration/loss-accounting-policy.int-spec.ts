@@ -1,6 +1,8 @@
 import { randomUUID } from 'crypto';
+import { PeriodMaterializerService } from '../../src/periods/period-materializer.service';
 import { ActualsWorld, HOUR } from './support/actuals-world';
 import { ApiError } from './support/plan-world';
+import { signToken } from './support/test-app';
 
 interface VersionBody {
   id: string;
@@ -254,5 +256,101 @@ describe('loss accounting policy (declared mode, D1-D12)', () => {
     expect(next.policy.grain).toBe('day');
     await decide(next.id, 'approve', manager).expect(200);
     expect(await calendars(unitId)).toHaveLength(1);
+  });
+
+  /** A user holding a role on each of the given units (one scope row each). */
+  async function multiUnitUser(
+    grants: Array<[string, string]>,
+  ): Promise<string> {
+    const userId = randomUUID();
+    await env.rows(
+      `INSERT INTO users (id, name, email, password_hash, role, tenant_id) VALUES ($1, 'unit user', $2, 'x', 'Operator', $3)`,
+      [userId, `${userId}@test.local`, env.world.tenantA],
+    );
+    for (const [unitId, role] of grants) {
+      await env.rows(
+        `INSERT INTO user_scopes (tenant_id, user_id, scope_kind, scope_id, role, row_version) VALUES ($1, $2, 'unit', $3, $4, 1)`,
+        [env.world.tenantA, userId, unitId, role],
+      );
+    }
+    return signToken(env.app, {
+      userId,
+      tenantId: env.world.tenantA,
+      role: 'Operator',
+    });
+  }
+
+  it('needs the writer and approver role on the accounting unit as well as on the version unit', async () => {
+    const { unitA2, unitA3 } = env.world;
+    const body = { unitId: unitA3, accountingUnitId: unitA2 };
+    const viewerOnA2 = await multiUnitUser([
+      [unitA3, 'integration_admin'],
+      [unitA2, 'viewer'],
+    ]);
+    const refused = await draft(viewerOnA2, body).expect(403);
+    expect((refused.body as ApiError).code).toBe('FORBIDDEN_ROLE');
+
+    const author = await multiUnitUser([
+      [unitA3, 'integration_admin'],
+      [unitA2, 'integration_admin'],
+    ]);
+    const proposed = (await draft(author, body).expect(201))
+      .body as VersionBody;
+    const approver = await multiUnitUser([
+      [unitA3, 'production_accountant'],
+      [unitA2, 'viewer'],
+    ]);
+    const denied = await decide(proposed.id, 'approve', approver).expect(403);
+    expect((denied.body as ApiError).code).toBe('FORBIDDEN_ROLE');
+    await decide(proposed.id, 'reject', checker, {
+      reason: 'test cleanup',
+    }).expect(403);
+  });
+
+  it('a retry after a failure following the calendar publication still replaces the open periods', async () => {
+    const unitId = env.world.unitA2;
+    const now = Date.now();
+    await env.materialize(
+      [unitId],
+      new Date(now - 72 * HOUR).toISOString(),
+      new Date(now).toISOString(),
+    );
+    const author = await env.unitUser(unitId, 'integration_admin');
+    const approver = await env.unitUser(unitId, 'production_accountant');
+    const proposed = (
+      await draft(author, { unitId, grain: 'day', dayStart: '06:00' }).expect(
+        201,
+      )
+    ).body as VersionBody;
+    const failing = jest
+      .spyOn(env.app.get(PeriodMaterializerService), 'materialize')
+      .mockRejectedValueOnce(new Error('materialization failed'));
+    await decide(proposed.id, 'approve', approver).expect(500);
+    failing.mockRestore();
+
+    const after = (
+      await env
+        .get(`loss-accounting/versions/${proposed.id}`, approver)
+        .expect(200)
+    ).body as VersionBody;
+    expect(after.state).toBe('proposed');
+    expect(await calendars(unitId)).toHaveLength(1);
+    const today = new Date(now + 3.5 * HOUR - 6 * HOUR)
+      .toISOString()
+      .slice(0, 10);
+    const count = async (hours: number) =>
+      (
+        await env.rows<{ n: number }>(
+          `SELECT count(*)::int AS n FROM production_periods WHERE unit_id = $1
+              AND utc_end - utc_start = make_interval(hours => $3) AND local_date >= $2::date`,
+          [unitId, today, hours],
+        )
+      )[0].n;
+    expect(await count(8)).toBeGreaterThan(0);
+
+    await decide(proposed.id, 'approve', approver).expect(200);
+    expect(await calendars(unitId)).toHaveLength(1);
+    expect(await count(8)).toBe(0);
+    expect(await count(24)).toBe(1);
   });
 });

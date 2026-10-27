@@ -9,6 +9,7 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
+import { parseLossAccounting } from '../../periods/loss-accounting-policy';
 import { AccountingPolicy } from '../../periods/entities/accounting-policy.entity';
 import { Backdate } from '../../periods/policy-backdate';
 import { effectiveFromOf } from '../../periods/policy-backdate.guard';
@@ -212,6 +213,15 @@ export class LossAccountingDecisionsService {
       } else {
         assertTenantWideWriter(context, tenantId);
         requireTenantRole(context, LOSS_ACCOUNTING_APPROVERS);
+      }
+      const accounting = parseLossAccounting(found.body).accountingUnitId;
+      if (accounting && accounting !== found.unitId) {
+        await requireUnitRole(
+          manager,
+          context,
+          accounting,
+          LOSS_ACCOUNTING_APPROVERS,
+        );
       }
       await lockLossAccountingScope(manager, tenantId, found.scopeKey);
       const draft = await manager.findOneByOrFail(AccountingPolicy, {
