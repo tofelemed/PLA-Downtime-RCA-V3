@@ -201,3 +201,12 @@ The statement must also be a page of **Production loss analysis** (sidebar secti
 - Below: a keyset-paged table, one row per **day** (per shift when the plant is on shift grain, grouped under the day) with the ten figures as columns; each row expands to the full statement and links to the period page. Export CSV like the other PLA pages (approved only).
 - Backend: `GET /v2/reports/loss-statement?from&to&unitIds&revision&cursor` returning `{ total: Statement, items: [{ periodId, unitId, localDate, shiftName, grain, basis, revisionState, statement }], nextCursor }`, computed from `period_ledger_totals` (plan ledger, slice_id null rows) and the period's revision state; no browser arithmetic. Index check with `EXPLAIN ANALYZE`; paginate. OpenAPI + `npm run api:types`.
 - Tests: int-spec for the report (mixed computed shifts + a declared day; approved-only filter), vitest for the page and the row expansion, Playwright step added to `e2e/pla-declared-mode.spec.ts` (reza opens the page, sees the 29 Oct row 240 / 208 / 32 / … / 0).
+
+### Task 13 addendum 2 — "View accounting" from the event (owner, 27 Oct 2026)
+
+End-to-end path to close: OT event → Event Hub → reason code → accounting. Add navigation from the event to its accounting:
+- Event page header actions (`src/features/event-hub/components/event-detail-actions.tsx`): a **"View accounting"** button for every event kind (production loss and stops alike) that opens `/pla-analytics/statement?unitIds=<unit>&from=<period start>&to=<period end>&window=custom&focus=<periodId>` — the Accounting statement page scrolled to and expanded on that period's row. Hidden when the event has no period yet (shows a tooltip "No accounting period covers this event yet").
+- Event Hub list: the row menu / detail link gets the same "View accounting" entry (`event-columns.tsx` or the row actions component), and the Code dialog's success toast offers "View accounting" after a reason is saved.
+- The Attributed losses card on the event page keeps its per-kind lines and gains a link "Open the day's accounting statement" to the same URL.
+- The statement page accepts `focus=<periodId>` (expands and scrolls to the row) and shows a back link to the event when it was opened from one (`from=event:<id>`).
+- Tests: vitest for the button visibility (with/without period) and the URL; Playwright step: omid codes the event, clicks "View accounting", sees the day's statement row expanded.
