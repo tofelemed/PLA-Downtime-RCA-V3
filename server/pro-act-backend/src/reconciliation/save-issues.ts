@@ -25,6 +25,13 @@ function eventCandidatesOf(state: RevisionState): EventCandidate[] {
   }));
 }
 
+/** The shortfall cap of production loss events applies to declared runs only; a computed run is not capped by them. */
+export function shortfallCapOf(
+  state: Pick<RevisionState, 'lossBasis' | 'declaredShortfalls'>,
+): ReadonlyMap<string, Dec> | undefined {
+  return state.lossBasis === 'declared' ? state.declaredShortfalls : undefined;
+}
+
 /**
  * The arithmetic rules of a draft save, on the totals the saved set would give: the allocation budget of
  * each slice (§15.3) and the loss of each evidence event (SME R10, RC-04).
@@ -48,7 +55,7 @@ export function saveIssues(
         eventIds: line.input.eventIds ?? [],
       })),
       epsilon: state.tolerance.rule.epsilon,
-      shortfalls: state.declaredShortfalls,
+      shortfalls: shortfallCapOf(state),
     }),
   ];
 }

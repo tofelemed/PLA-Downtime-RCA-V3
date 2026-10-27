@@ -242,4 +242,37 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
       expect.objectContaining({ action: 'tolerance', quantity: '10' }),
     );
   });
+
+  it('the day coding gate counts the production loss events of the day, not stops', async () => {
+    const path = `production-days/${env.world.unitA1}/2027-03-01`;
+    const day = async () =>
+      (
+        (await env.get(path).expect(200)).body as {
+          codingGate: CodingGateBody & { codedRatio: string };
+        }
+      ).codingGate;
+    const open = await day();
+    expect(open).toMatchObject({
+      mode: 'warn',
+      passes: false,
+      stops: 3,
+      uncoded: 1,
+    });
+    expect(open.issues.map((i) => i.code)).toEqual([
+      'LOSS_EVENT_UNCODED',
+      'CODING_COVERAGE_LOW',
+    ]);
+    expect(Number(open.codedRatio)).toBeCloseTo(290 / 440, 6);
+
+    await env.rows(
+      `UPDATE production_events SET reason_code_id = $1, row_version = row_version + 1
+        WHERE unit_id = $2 AND physical_type = 'production_loss' AND start_time = $3`,
+      [reason, env.world.unitA1, B],
+    );
+    expect(await day()).toMatchObject({
+      passes: true,
+      uncoded: 0,
+      codedRatio: '1',
+    });
+  });
 });

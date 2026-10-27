@@ -111,12 +111,19 @@ export async function loadCodingGate(
   return codingGate(counts, ratio, submitGateOf(state.tolerance.body));
 }
 
+/** Declared gates have a ratio but no stop seconds (they count production loss events, not stops). */
+function gateSubject(gate: CodingGateResult): string {
+  return gate.codedRatio !== null && gate.codedSeconds === null
+    ? 'production loss coding'
+    : 'stop coding';
+}
+
 /** 422 CODING_INCOMPLETE (`details.issues`) when a `block` gate fails; a `warn` gate never refuses. */
 export function assertCodingGate(gate: CodingGateResult): void {
   if (gate.mode !== 'block' || gate.passes) return;
   throw new UnprocessableEntityException({
     code: 'CODING_INCOMPLETE',
-    message: `coding is incomplete: ${gate.issues.map((i) => i.message).join('; ')}`,
+    message: `${gateSubject(gate)} is incomplete: ${gate.issues.map((i) => i.message).join('; ')}`,
     details: { issues: gate.issues, codingGate: gate },
   });
 }

@@ -53,7 +53,7 @@ export interface RevisionState {
   tolerance: TolerancePolicy;
   /** declared mode: the basis of the run's `loss_accounting` version (gates follow the run, not today's policy) */
   lossBasis: LossBasis;
-  /** declared mode: shortfall of the `production_loss` events the lines cite, by event id */
+  /** declared mode only (empty otherwise): shortfall of the `production_loss` events the lines cite, by event id */
   declaredShortfalls: ReadonlyMap<string, Dec>;
   reconciliation: Reconciliation;
   /** SME V4: closed intervals (epoch ms) of the events manual downtime lines cite */
@@ -175,7 +175,10 @@ export async function loadRevisionState(
     lines,
   );
   const lossBasis = await lossBasisOfRun(manager, run);
-  const declaredShortfalls = await declaredShortfallsOf(manager, lines);
+  const declaredShortfalls =
+    lossBasis === 'declared'
+      ? await declaredShortfallsOf(manager, lines)
+      : new Map<string, Dec>();
   const partial = {
     period,
     revision,
