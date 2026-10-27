@@ -154,7 +154,7 @@ A **production loss event** (physical type `production_loss`) is the plant's own
 
 - There is one per unit per day. Its window is exactly the accounting period and it is always closed.
 - It comes from the MQTT PLA feed (§9) or is created by hand by an event writer.
-- In the Event Hub it is coded with one reason, marked "investigation pending", or split by percent or by **tonnes** (the parts must add up to the shortfall). Close, Split and Merge are not available for it.
+- In the Event Hub it is coded with one reason, marked "investigation pending", or has its reason share divided across several reasons by percent or by **tonnes** (the parts must add up to the shortfall). That is coding. The Event Hub operations Close stop, Split (cutting an event in time) and Merge are not available for this kind of event.
 - **Review items** are raised automatically: `declared_identity_mismatch` (planned − actual differs from the shortfall by more than the plant tolerance), `declared_window_mismatch` (the window matches no accounting period) and `duplicate_declared_loss` (a second event for the same window). An engineer can dismiss them; a revision from OT clears the identity one.
 
 ### 4.3 Sources, source layer and user layer
