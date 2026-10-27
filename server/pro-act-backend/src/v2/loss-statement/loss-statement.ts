@@ -1,3 +1,13 @@
+/*
+ * One source for Unaccounted (Task 13 fix 1): the statement's `unaccounted` (shortfall − netAccounted −
+ * toleranceAdjustment) is the reconciliation residual of the same revision (gap − attributed − tolerance
+ * adjustments, `reconcile.ts`); for a declared day the reconciliation takes the run's recovery shares off
+ * the attributed loss (`SliceBasis.declaredGain`), so both read 0 for a fully coded 23 + 11 + 6 − 8 split
+ * (proved in `test/integration/loss-statement.int-spec.ts`). The statement is built from the reconciliation
+ * outcomes, the saved decision lines and the run's other plan lines rather than from `period_ledger_totals`
+ * because decisions (accept / adjust / replace / reject / manual) and tolerance adjustments exist only at
+ * reconciliation level: the ledger totals are the engine's figures before any human decision.
+ */
 import { Dec, formatDec, ZERO } from '../../domain/actuals/decimal';
 import { LossKind } from '../../domain/accounting/accounting.types';
 import { sumOf } from '../../domain/accounting/claims';
