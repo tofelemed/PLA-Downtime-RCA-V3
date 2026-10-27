@@ -274,4 +274,20 @@ describe('production_loss events (declared mode)', () => {
     expect(() => prepareUpdate(existing, { quantity: '1' })).toThrow();
     expect(() => prepareUpdate(existing, { endTime: null })).toThrow();
   });
+
+  it('a changed legacy event type does not move it off its kind and axes', () => {
+    const existing = {
+      ...prepareCreate(loss),
+      quantity: 7.5,
+      declaredFigures: figures,
+      eventType: 'ProductionLoss',
+      source: 'PI',
+      sourceKind: 'source',
+    } as unknown as ProductionEvent;
+    expect(prepareUpdate(existing, { eventType: 'IOW' })).toMatchObject({
+      physicalType: 'production_loss',
+      impactMode: 'measured',
+      oeeComponent: 'none',
+    });
+  });
 });

@@ -1,3 +1,5 @@
+import { Dec } from '../actuals/decimal';
+
 /**
  * Declared mode: the figures an OT system declares for a production loss event (planned, actual and the
  * shortfall between them, in the event's unit of measure) with their provenance. The shortfall is the
@@ -22,6 +24,9 @@ export interface DeclaredFigures {
 
 export const DECLARED_CONFIRMED_STATUS = 'CONFIRMED';
 export const DECLARED_DEFAULT_UOM = 't';
+
+/** Scale of the declared figures (the DTO's 8 places): binary float noise below it is no gap. */
+const GAP_SCALE = 8;
 
 type Raw = Record<string, unknown>;
 
@@ -90,7 +95,11 @@ function parseJson(text: string): unknown {
 /** `planned − actual − shortfall` when both planned and actual are declared, else 0 (nothing to check). */
 export function declaredIdentityGap(figures: DeclaredFigures): number {
   if (figures.planned === null || figures.actual === null) return 0;
-  return figures.planned - figures.actual - figures.shortfall;
+  return new Dec(figures.planned)
+    .minus(figures.actual)
+    .minus(figures.shortfall)
+    .toDecimalPlaces(GAP_SCALE)
+    .toNumber();
 }
 
 /** True when the OT system confirmed the figures (the day's accounting waits for this). */

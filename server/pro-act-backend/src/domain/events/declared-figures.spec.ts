@@ -69,6 +69,13 @@ describe('declaredIdentityGap', () => {
     expect(declaredIdentityGap({ ...FIGURES, shortfall: 10 })).toBe(-2.5);
   });
 
+  it('has no binary float noise for non-dyadic decimals', () => {
+    const gap = (planned: number, actual: number, shortfall: number) =>
+      declaredIdentityGap({ ...FIGURES, planned, actual, shortfall });
+    expect(gap(100.1, 90.05, 10.05)).toBe(0);
+    expect(gap(1234.56, 1200.12, 34.44)).toBe(0);
+  });
+
   it('is 0 when planned or actual is missing (nothing to check)', () => {
     expect(declaredIdentityGap({ ...FIGURES, planned: null })).toBe(0);
     expect(declaredIdentityGap({ ...FIGURES, actual: null })).toBe(0);

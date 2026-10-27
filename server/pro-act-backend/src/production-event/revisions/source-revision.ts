@@ -194,9 +194,11 @@ export function sourceColumns(
       Object.assign(derived, { [key]: existing[key] });
     }
   }
-  const axes = retypes(existing, facts, fields)
-    ? retypedColumns(rules, existing, derived, values)
-    : {};
+  const axes =
+    existing.physicalType !== 'production_loss' &&
+    retypes(existing, facts, fields)
+      ? retypedColumns(rules, existing, derived, values)
+      : {};
   return {
     ...values,
     ...lossColumns,

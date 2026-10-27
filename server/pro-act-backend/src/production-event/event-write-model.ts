@@ -121,8 +121,11 @@ export function prepareUpdate(
   existing: ProductionEvent,
   input: EventWriteInput,
 ): IntervalModelFields {
+  // a production loss is declared, not derived from a legacy event type: its kind and axes stay
   const eventTypeChanged =
-    input.eventType !== undefined && input.eventType !== existing.eventType;
+    existing.physicalType !== 'production_loss' &&
+    input.eventType !== undefined &&
+    input.eventType !== existing.eventType;
   const stated: EventClassification = {
     ...(eventTypeChanged
       ? classifyLegacyEventType(input.eventType)

@@ -101,3 +101,39 @@ describe('sourceColumns on an event-type change', () => {
     expect('classificationBasis' in columns).toBe(false);
   });
 });
+
+describe('sourceColumns of a production loss', () => {
+  it('keeps kind and axes when the delivery changes the event type', () => {
+    const loss = {
+      ...stored(),
+      physicalType: 'production_loss',
+      impactMode: 'measured',
+      oeeComponent: 'none',
+      eventType: null,
+      quantity: 7.5,
+      declaredFigures: {
+        planned: null,
+        actual: null,
+        shortfall: 7.5,
+        uom: 't',
+        measurementQuality: null,
+        sourceStatus: null,
+        plan: null,
+        piSource: null,
+      },
+      userOverrides: {},
+      endTime: new Date('2027-03-02T00:00:00Z'),
+    } as unknown as ProductionEvent;
+    const columns = sourceColumns(
+      loss,
+      { eventType: 'ProductionLoss' },
+      ['eventType'],
+      [RULE],
+    );
+    expect(columns).toMatchObject({
+      physicalType: 'production_loss',
+      impactMode: 'measured',
+      oeeComponent: 'none',
+    });
+  });
+});
