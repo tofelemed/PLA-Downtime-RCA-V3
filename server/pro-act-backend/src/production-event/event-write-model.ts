@@ -1,4 +1,5 @@
 import { UnprocessableEntityException } from '@nestjs/common';
+import { DeclaredFigures } from '../domain/events/declared-figures';
 import {
   classifyLegacyEventType,
   EventClassification,
@@ -15,6 +16,11 @@ import {
   toLegacyStatus,
 } from '../domain/events/legacy-status';
 import { ProductionEvent } from './production-event.entity';
+import {
+  assertProductionLossValid,
+  PRODUCTION_LOSS_AXES,
+  resolveLossColumns,
+} from './production-loss';
 
 /** Fields the interval model owns; v1 and v2 writes both go through this module (DT08, DT11). */
 export type IntervalModelFields = Pick<
@@ -46,6 +52,9 @@ export interface EventWriteInput {
   /** SME D12: an uncoded stop under investigation; absent = the stored flag */
   investigationPending?: boolean;
   classification?: Partial<EventClassification>;
+  /** declared mode: the stated quantity and figures of a `production_loss` event; absent = the stored ones */
+  quantity?: string | number | null;
+  declaredFigures?: DeclaredFigures | null;
 }
 
 /**
@@ -62,14 +71,25 @@ function withStopDefault(
     : classification;
 }
 
+/** A production loss is measured tonnes with no OEE component, whatever the caller or a code default states. */
+function withLossAxes(
+  classification: EventClassification,
+): EventClassification {
+  return classification.physicalType === 'production_loss'
+    ? { ...classification, ...PRODUCTION_LOSS_AXES }
+    : classification;
+}
+
 /** Interval-model fields for a new event. */
 export function prepareCreate(input: EventWriteInput): IntervalModelFields {
-  const classification = withStopDefault(
-    {
-      ...classifyLegacyEventType(input.eventType),
-      ...definedOnly(input.classification ?? {}),
-    },
-    input,
+  const classification = withLossAxes(
+    withStopDefault(
+      {
+        ...classifyLegacyEventType(input.eventType),
+        ...definedOnly(input.classification ?? {}),
+      },
+      input,
+    ),
   );
   const interval = resolve(
     input.startTime,
@@ -77,6 +97,12 @@ export function prepareCreate(input: EventWriteInput): IntervalModelFields {
     input.durationSeconds,
     classification,
   );
+  if (classification.physicalType === 'production_loss') {
+    assertProductionLossValid({
+      endTime: interval.end,
+      columns: resolveLossColumns(input),
+    });
+  }
   const states = fromLegacyStatus(input.status, {
     hasEnd: interval.end !== null,
     hasReasonCode: Boolean(input.reasonCodeId),
@@ -97,7 +123,7 @@ export function prepareUpdate(
 ): IntervalModelFields {
   const eventTypeChanged =
     input.eventType !== undefined && input.eventType !== existing.eventType;
-  const classification: EventClassification = {
+  const stated: EventClassification = {
     ...(eventTypeChanged
       ? classifyLegacyEventType(input.eventType)
       : {
@@ -109,10 +135,10 @@ export function prepareUpdate(
     ...definedOnly(input.classification ?? {}),
   };
   const becameDowntime =
-    classification.physicalType === 'downtime' &&
-    existing.physicalType !== 'downtime';
-  if (becameDowntime)
-    Object.assign(classification, withStopDefault(classification, input));
+    stated.physicalType === 'downtime' && existing.physicalType !== 'downtime';
+  const classification = withLossAxes(
+    becameDowntime ? withStopDefault(stated, input) : stated,
+  );
   const end =
     input.endTime !== undefined || input.durationSeconds !== undefined
       ? input.endTime
@@ -123,6 +149,19 @@ export function prepareUpdate(
     input.durationSeconds,
     classification,
   );
+  if (classification.physicalType === 'production_loss') {
+    assertProductionLossValid({
+      endTime: interval.end,
+      columns: resolveLossColumns({
+        quantity:
+          input.quantity === undefined ? existing.quantity : input.quantity,
+        declaredFigures:
+          input.declaredFigures === undefined
+            ? existing.declaredFigures
+            : input.declaredFigures,
+      }),
+    });
+  }
   const context = {
     hasEnd: interval.end !== null,
     hasReasonCode:

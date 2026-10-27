@@ -18,7 +18,11 @@ import {
   writeEvent,
 } from '../production-event/revisions/revision-store';
 import { appendUserRevisions } from '../production-event/revisions/user-change';
-import { lockOperable, OperationResult } from './operation-support';
+import {
+  assertSupportedKind,
+  lockOperable,
+  OperationResult,
+} from './operation-support';
 
 export interface CloseCommand {
   context: RequestContext;
@@ -45,6 +49,7 @@ export async function closeIn(
     command.eventId,
     command.expectedVersion,
   );
+  assertSupportedKind(event, 'close');
   if (event.endTime) {
     throw new ConflictException({
       code: 'EVENT_NOT_OPEN',

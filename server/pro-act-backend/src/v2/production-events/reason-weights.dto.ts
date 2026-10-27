@@ -28,4 +28,13 @@ export class ReasonWeightInputDto {
   @IsNumber({ maxDecimalPlaces: 3 })
   @Min(0)
   seconds?: number;
+
+  @ApiPropertyOptional({
+    example: '2.5',
+    description:
+      'Tonnes of a production_loss event (the tonnes add up to the event quantity within max(0.001, quantity x 1e-6))',
+  })
+  @IsOptional()
+  @IsDecimal({ decimal_digits: '0,8' })
+  quantity?: string;
 }

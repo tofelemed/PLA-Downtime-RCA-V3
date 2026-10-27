@@ -14,12 +14,19 @@ export interface StoredReason {
   reasonWeights?: readonly ReasonWeight[] | null;
   startTime: Date;
   endTime?: Date | null;
+  /** declared mode: the stored kind and quantity; a production loss splits its tonnes */
+  physicalType?: string;
+  quantity?: number | string | null;
 }
 
 /** The reason fields of a write: the primary reason code and the entered weights (null = remove the split). */
 export interface ReasonWrite {
   reasonCodeId?: string | null;
   reasonWeights?: readonly ReasonWeightEntry[] | null;
+  /** the request's own kind, quantity and shortfall (a PATCH may retype or re-declare the event) */
+  physicalType?: string;
+  quantity?: string | null;
+  declaredFigures?: { shortfall: number };
 }
 
 /** What a write stores: the primary reason (when the weights set it) and the normalised weights. */
@@ -44,6 +51,15 @@ export function reasonWeightsError(
 /** A PATCH end time as a date (null clears it). */
 export function toDate(value: string | null): Date | null {
   return value === null ? null : new Date(value);
+}
+
+/** The tonnes a production loss is split across (the request's shortfall or quantity, else the stored one); null for other kinds. */
+function lossQuantity(stored: StoredReason, write: ReasonWrite): number | null {
+  const kind = write.physicalType ?? stored.physicalType;
+  if (kind !== 'production_loss') return null;
+  const stated = write.declaredFigures?.shortfall ?? write.quantity;
+  const quantity = stated ?? stored.quantity;
+  return quantity === null || quantity === undefined ? null : Number(quantity);
 }
 
 function durationOf(event: StoredReason, endTime?: Date | null): number | null {
@@ -85,6 +101,7 @@ export function weightedReasonColumns(
   const result = normaliseReasonWeights(write.reasonWeights, {
     durationSeconds: durationOf(stored, endTime),
     reasonCodeId: write.reasonCodeId,
+    quantity: lossQuantity(stored, write),
   });
   if (!result.ok) throw reasonWeightsError(result);
   return { reasonCodeId: result.primary, reasonWeights: result.weights };

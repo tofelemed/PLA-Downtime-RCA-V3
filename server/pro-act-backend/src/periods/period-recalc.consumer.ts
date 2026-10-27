@@ -24,6 +24,7 @@ const RECALCULATING_TYPES = new Set([
   'downtime',
   'slowdown',
   'quality_loss',
+  'production_loss',
 ]);
 
 /**

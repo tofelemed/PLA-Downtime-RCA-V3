@@ -6,6 +6,7 @@ import {
   requireTenantId,
 } from '../../common/context/request-context';
 import { scopedQuery } from '../../common/query/scoped-query';
+import { parseDeclaredFigures } from '../../domain/events/declared-figures';
 import { durationSeconds } from '../../domain/time/interval-algebra';
 import { CSV_BOM, csvRow, CsvValue } from '../../exports/csv';
 import { plantIso } from '../../exports/export-words';
@@ -55,6 +56,10 @@ export const EXPORT_COLUMNS = [
   'quantity',
   'quantity_uom',
   'cost',
+  'planned',
+  'actual',
+  'shortfall',
+  'ot_status',
   ...EXPORT_LABEL_COLUMNS,
 ] as const;
 
@@ -78,6 +83,7 @@ const SELECTED = [
   'quantity',
   'quantityUom',
   'cost',
+  'declaredFigures',
 ].map((property) => `event.${property}`);
 
 /** Names of the units, assets and reason codes of one batch (one query, tenant-guarded). */
@@ -155,6 +161,17 @@ async function namesOf(
   };
 }
 
+/** Declared mode: the OT planned / actual / shortfall and status of a production loss event (empty for other kinds). */
+function declaredCells(event: ProductionEvent): CsvValue[] {
+  const figures = parseDeclaredFigures(event.declaredFigures);
+  return [
+    toDecimalString(figures?.planned),
+    toDecimalString(figures?.actual),
+    toDecimalString(figures?.shortfall),
+    figures?.sourceStatus ?? null,
+  ];
+}
+
 function recordOf(
   event: ProductionEvent,
   names: Names,
@@ -189,6 +206,7 @@ function recordOf(
     event.quantityUom ?? null,
     // QA re-test 2026-10-19: the cost column stays in place, empty for a caller without the money capability
     showCost ? toDecimalString(event.cost) : null,
+    ...declaredCells(event),
     ...labelCells(event, timezone),
   ];
 }

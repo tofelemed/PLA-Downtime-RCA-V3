@@ -7,8 +7,21 @@ export const REVIEW_ITEM_KINDS = [
   'late_correction',
   'retraction',
   'pending_source_confirmation',
+  /** declared mode: planned - actual - shortfall of the declared figures is beyond the tolerance */
+  'declared_identity_mismatch',
+  /** declared mode: no (non-excluded) period of the unit is exactly the event's window */
+  'declared_window_mismatch',
+  /** declared mode: another production loss event of the unit overlaps this window */
+  'duplicate_declared_loss',
 ] as const;
 export type ReviewItemKind = (typeof REVIEW_ITEM_KINDS)[number];
+
+/** The declared-figures kinds: a person may dismiss them; a re-sync that fixes the identity resolves that one. */
+export const DECLARED_REVIEW_KINDS: readonly ReviewItemKind[] = [
+  'declared_identity_mismatch',
+  'declared_window_mismatch',
+  'duplicate_declared_loss',
+];
 
 export const REVIEW_ITEM_STATES = [
   'open',

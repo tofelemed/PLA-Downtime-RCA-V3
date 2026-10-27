@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { Tenant } from '../tenant/tenant.entity';
 import { ClassificationBasis } from '../code-library/classification-basis';
+import { DeclaredFigures } from '../domain/events/declared-figures';
 import { ReasonWeight } from '../domain/events/reason-weights';
 import { ProductionPlan } from '../production-plan/production-plan.entity';
 import { Unit } from '../unit/unit.entity';
@@ -127,6 +128,10 @@ export const DURATION_SECONDS_EXPRESSION =
 @Index('IDX_production_events_tenant_duration', { synchronize: false })
 @Index('IDX_production_events_open_by_unit', ['tenantId', 'unitId'], {
   where: '"end_time" IS NULL',
+})
+/** Declared mode: a unit's live production loss events by start (the declared ledger and duplicate check) */
+@Index('IDX_production_events_declared', ['tenantId', 'unitId', 'startTime'], {
+  where: `"declared_figures" IS NOT NULL AND "retracted_at" IS NULL`,
 })
 /** Open events oldest first: the RCA open-event sweep and long open stop reminders (item 6) */
 @Index('IDX_production_events_open_start', ['startTime', 'id'], {
@@ -518,6 +523,10 @@ export class ProductionEvent {
    */
   @Column({ name: 'reason_weights', type: 'jsonb', nullable: true })
   reasonWeights?: ReasonWeight[] | null;
+
+  /** declared mode: the OT-declared planned / actual / shortfall of a `production_loss` event; its quantity is the shortfall */
+  @Column({ name: 'declared_figures', type: 'jsonb', nullable: true })
+  declaredFigures?: DeclaredFigures | null;
 
   @ManyToOne(() => ReasonCode)
   @JoinColumn({ name: 'reason_code_id' })

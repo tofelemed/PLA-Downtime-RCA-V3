@@ -8019,6 +8019,11 @@ export interface components {
              * @example 1800
              */
             seconds?: number;
+            /**
+             * @description Tonnes of a production_loss event (the tonnes add up to the event quantity within max(0.001, quantity x 1e-6))
+             * @example 2.5
+             */
+            quantity?: string;
         };
         BulkCodesDto: {
             /**
@@ -8079,6 +8084,40 @@ export interface components {
              */
             periodId?: string;
         };
+        DeclaredPlanDto: {
+            source?: Record<string, never> | null;
+            planId?: Record<string, never> | null;
+            revision?: Record<string, never> | null;
+            approved?: Record<string, never> | null;
+        };
+        DeclaredPiSourceDto: {
+            actualTag?: Record<string, never> | null;
+            eventFrameId?: Record<string, never> | null;
+        };
+        DeclaredFiguresDto: {
+            /** @example 120 */
+            planned?: Record<string, never> | null;
+            /** @example 112.5 */
+            actual?: Record<string, never> | null;
+            /**
+             * @description planned - actual; becomes the event quantity
+             * @example 7.5
+             */
+            shortfall: number;
+            /**
+             * @description Default 't'
+             * @example t
+             */
+            uom?: string;
+            measurementQuality?: Record<string, never> | null;
+            /**
+             * @description OT status, e.g. DETECTED or CONFIRMED
+             * @example CONFIRMED
+             */
+            sourceStatus?: Record<string, never> | null;
+            plan?: components["schemas"]["DeclaredPlanDto"] | null;
+            piSource?: components["schemas"]["DeclaredPiSourceDto"] | null;
+        };
         CreateProductionEventV2Dto: {
             /**
              * Format: date-time
@@ -8105,7 +8144,7 @@ export interface components {
              */
             reasonCodeId?: Record<string, never> | null;
             /** @enum {string} */
-            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition";
+            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition" | "production_loss";
             /** @enum {string} */
             scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
             /** @enum {string} */
@@ -8186,6 +8225,8 @@ export interface components {
             quantityUom?: Record<string, never> | null;
             /** @example 1500.00 */
             cost?: Record<string, never> | null;
+            /** @description Declared mode: required for physicalType production_loss (which also needs an endTime). quantity is the shortfall; sending a different quantity is 422 */
+            declaredFigures?: components["schemas"]["DeclaredFiguresDto"];
             /** Format: uuid */
             unitId: string;
             /**
@@ -8226,7 +8267,7 @@ export interface components {
              */
             reasonCodeId?: Record<string, never> | null;
             /** @enum {string} */
-            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition";
+            physicalType?: "downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition" | "production_loss";
             /** @enum {string} */
             scheduleClass?: "planned" | "unplanned" | "external" | "unknown";
             /** @enum {string} */
@@ -8307,19 +8348,21 @@ export interface components {
             quantityUom?: Record<string, never> | null;
             /** @example 1500.00 */
             cost?: Record<string, never> | null;
+            /** @description Declared mode: required for physicalType production_loss (which also needs an endTime). quantity is the shortfall; sending a different quantity is 422 */
+            declaredFigures?: components["schemas"]["DeclaredFiguresDto"];
             /** Format: date-time */
             startTime?: string;
             /** @description Why the event is changed; stored on the user revision (`change_reason`) and its coding revision */
             changeReason?: string;
-            /** @description D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s duration ±1 s). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule */
+            /** @description D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s duration ±1 s); a production_loss event is split by percent or tonnes (Σ the event quantity). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule */
             reasonWeights?: components["schemas"]["ReasonWeightInputDto"][] | null;
         };
         ResolveReviewItemDto: {
             /**
-             * @description keep_override: the user value stays; accept_source: the latest source value replaces it
+             * @description keep_override: the user value stays; accept_source: the latest source value replaces it; dismiss: only for declared_identity_mismatch, declared_window_mismatch and duplicate_declared_loss items (state dismissed)
              * @enum {string}
              */
-            decision: "keep_override" | "accept_source";
+            decision: "keep_override" | "accept_source" | "dismiss";
         };
         MappingSampleDto: {
             /** @description Source id (e.g. the PI element WebId) */
@@ -11633,7 +11676,7 @@ export interface operations {
                 reasonIds?: string[];
                 eventTypes?: string[];
                 statuses?: string[];
-                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition")[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition" | "production_loss")[];
                 scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
                 oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
@@ -11707,7 +11750,7 @@ export interface operations {
                 reasonIds?: string[];
                 eventTypes?: string[];
                 statuses?: string[];
-                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition")[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition" | "production_loss")[];
                 scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
                 oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];
@@ -11758,7 +11801,7 @@ export interface operations {
                 reasonIds?: string[];
                 eventTypes?: string[];
                 statuses?: string[];
-                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition")[];
+                physicalTypes?: ("downtime" | "slowdown" | "quality_loss" | "production_output" | "advisory" | "grade_transition" | "production_loss")[];
                 scheduleClasses?: ("planned" | "unplanned" | "external" | "unknown")[];
                 oeeComponents?: ("availability" | "performance" | "quality" | "idle" | "none")[];
                 physicalStates?: ("open" | "closed" | "superseded" | "retracted")[];

@@ -10,6 +10,10 @@ import {
   SourceKind,
 } from '../../domain/events/event-classification';
 import { ClassificationBasis } from '../../code-library/classification-basis';
+import {
+  DeclaredFigures,
+  parseDeclaredFigures,
+} from '../../domain/events/declared-figures';
 import { isOpenEvent } from '../../domain/events/open-event';
 import {
   ReasonWeight,
@@ -117,6 +121,8 @@ export interface ProductionEventV2View {
   states: EventStatesView;
   quantity: string | null;
   quantityUom: string | null;
+  /** declared mode: OT planned / actual / shortfall of a production_loss event (its quantity is the shortfall); null otherwise */
+  declaredFigures: DeclaredFigures | null;
   cost: string | null;
   value: string | null;
   /** physical stop occurrence (KPI06): split children share it (plan 1.4) */
@@ -223,6 +229,7 @@ export function toProductionEventV2View(
     },
     quantity: toDecimalString(event.quantity),
     quantityUom: event.quantityUom ?? null,
+    declaredFigures: parseDeclaredFigures(event.declaredFigures),
     cost: toDecimalString(event.cost),
     value: toDecimalString(event.value),
     occurrenceId: event.occurrenceId ?? event.id,

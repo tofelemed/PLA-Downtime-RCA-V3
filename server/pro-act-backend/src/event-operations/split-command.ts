@@ -10,6 +10,7 @@ import {
 } from '../production-event/revisions/revision-actor';
 import { insertDerivedEvent, relate, supersede } from './event-lineage';
 import {
+  assertSupportedKind,
   derivedEventId,
   lockOperable,
   OperationResult,
@@ -39,6 +40,7 @@ export async function splitIn(
     command.eventId,
     command.expectedVersion,
   );
+  assertSupportedKind(parent, 'split');
   const parts = splitInterval(
     { start: parent.startTime, end: parent.endTime ?? null },
     command.splitAt,

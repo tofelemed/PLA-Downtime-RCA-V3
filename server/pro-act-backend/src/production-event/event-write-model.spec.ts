@@ -187,3 +187,91 @@ describe('prepareUpdate coding state when a reason is cleared (Marun E2E note A)
     ).toBe('reviewed');
   });
 });
+
+describe('production_loss events (declared mode)', () => {
+  const figures = {
+    planned: 120,
+    actual: 112.5,
+    shortfall: 7.5,
+    uom: 't',
+    measurementQuality: null,
+    sourceStatus: null,
+    plan: null,
+    piSource: null,
+  };
+  const loss = {
+    ...base,
+    classification: { physicalType: 'production_loss' as const },
+    declaredFigures: figures,
+  };
+
+  const refused = (input: Parameters<typeof prepareCreate>[0]): unknown => {
+    try {
+      prepareCreate(input);
+    } catch (error) {
+      return (error as { getResponse(): unknown }).getResponse();
+    }
+    return null;
+  };
+
+  it('is measured tonnes with no OEE component, closed because it has an end', () => {
+    expect(prepareCreate(loss)).toMatchObject({
+      physicalType: 'production_loss',
+      impactMode: 'measured',
+      oeeComponent: 'none',
+      scheduleClass: 'unknown',
+      physicalState: 'closed',
+    });
+  });
+
+  it('keeps the measured impact whatever the caller or a code default states', () => {
+    const fields = prepareCreate({
+      ...loss,
+      classification: {
+        physicalType: 'production_loss',
+        impactMode: 'full_stop',
+        oeeComponent: 'availability',
+        scheduleClass: 'unplanned',
+      },
+    });
+    expect(fields).toMatchObject({
+      impactMode: 'measured',
+      oeeComponent: 'none',
+      scheduleClass: 'unplanned',
+    });
+  });
+
+  it('needs an end, declared figures and a quantity equal to the shortfall', () => {
+    expect(refused({ ...loss, endTime: null })).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      fieldErrors: [{ field: 'endTime' }],
+    });
+    expect(refused({ ...loss, declaredFigures: undefined })).toMatchObject({
+      fieldErrors: [{ field: 'declaredFigures' }],
+    });
+    expect(refused({ ...loss, quantity: '9' })).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      message: [expect.stringContaining('9')],
+      fieldErrors: [{ field: 'quantity' }],
+    });
+    expect(refused({ ...loss, quantity: '7.5' })).toBeNull();
+  });
+
+  it('an update keeps the stored figures and validates the effective ones', () => {
+    const existing = {
+      ...prepareCreate(loss),
+      quantity: 7.5,
+      declaredFigures: figures,
+      reasonCodeId: null,
+      rcaId: null,
+      source: 'Manual',
+    } as unknown as ProductionEvent;
+    expect(prepareUpdate(existing, { reasonCodeId: 'r-1' })).toMatchObject({
+      physicalType: 'production_loss',
+      physicalState: 'closed',
+      codingState: 'coded',
+    });
+    expect(() => prepareUpdate(existing, { quantity: '1' })).toThrow();
+    expect(() => prepareUpdate(existing, { endTime: null })).toThrow();
+  });
+});

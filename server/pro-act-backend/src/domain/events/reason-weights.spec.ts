@@ -173,3 +173,98 @@ describe('stored reason weights', () => {
     expect(isWeighted(null)).toBe(false);
   });
 });
+
+/** Declared mode: a production loss is split across reasons by tonnes (sum = the event quantity). */
+describe('normaliseReasonWeights by quantity', () => {
+  const LOSS = { durationSeconds: 86_400, quantity: 7.5 };
+
+  it('normalises tonnes to fractions, largest first and primary', () => {
+    expect(
+      normaliseReasonWeights(
+        [
+          { reasonCodeId: 'r-small', quantity: '1.875' },
+          { reasonCodeId: 'r-large', quantity: 5.625 },
+        ],
+        LOSS,
+      ),
+    ).toEqual({
+      ok: true,
+      primary: 'r-large',
+      weights: [
+        { reasonCodeId: 'r-large', weight: '0.75000000' },
+        { reasonCodeId: 'r-small', weight: '0.25000000' },
+      ],
+    });
+  });
+
+  it('refuses tonnes that do not add up to the event quantity', () => {
+    const result = normaliseReasonWeights(
+      [
+        { reasonCodeId: 'a', quantity: 4 },
+        { reasonCodeId: 'b', quantity: 3 },
+      ],
+      LOSS,
+    );
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'REASON_WEIGHTS_SUM',
+        message: "The tonnes add up to 7 t, not the event's 7.5 t",
+      },
+    });
+  });
+
+  it('accepts a total within max(0.001, quantity x 1e-6)', () => {
+    const near = (total: number, quantity: number) =>
+      normaliseReasonWeights(
+        [
+          { reasonCodeId: 'a', quantity: total / 2 },
+          { reasonCodeId: 'b', quantity: total / 2 },
+        ],
+        { durationSeconds: null, quantity },
+      ).ok;
+    expect(near(7.5005, 7.5)).toBe(true);
+    expect(near(7.5015, 7.5)).toBe(false);
+    expect(near(10_000_005, 10_000_000)).toBe(true);
+    expect(near(10_000_015, 10_000_000)).toBe(false);
+  });
+
+  it('keeps percent working for a production loss', () => {
+    const result = normaliseReasonWeights(
+      [
+        { reasonCodeId: 'a', percent: 60 },
+        { reasonCodeId: 'b', percent: 40 },
+      ],
+      LOSS,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it('refuses seconds for a production loss, and tonnes for a stop', () => {
+    const seconds = normaliseReasonWeights(
+      [{ reasonCodeId: 'a', seconds: 86_400 }],
+      LOSS,
+    );
+    expect(seconds).toMatchObject({
+      ok: false,
+      error: { code: 'REASON_WEIGHTS_BASIS' },
+    });
+    const tonnes = normaliseReasonWeights(
+      [{ reasonCodeId: 'a', quantity: 1 }],
+      HOUR,
+    );
+    expect(tonnes).toMatchObject({
+      ok: false,
+      error: { code: 'REASON_WEIGHTS_BASIS' },
+    });
+  });
+
+  it('refuses an entry that states two bases', () => {
+    expect(
+      normaliseReasonWeights(
+        [{ reasonCodeId: 'a', percent: 100, quantity: 7.5 }],
+        LOSS,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'REASON_WEIGHTS_BASIS' } });
+  });
+});

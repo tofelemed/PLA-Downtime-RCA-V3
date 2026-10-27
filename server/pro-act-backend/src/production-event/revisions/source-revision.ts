@@ -10,7 +10,12 @@ import {
   CodingRuleSource,
 } from '../../rules/active-coding-rules';
 import { ActiveCodingRule, retypedAxes } from '../../rules/rule-defaults';
-import { IntervalModelFields, prepareUpdate } from '../event-write-model';
+import { parseDeclaredFigures } from '../../domain/events/declared-figures';
+import {
+  EventWriteInput,
+  IntervalModelFields,
+  prepareUpdate,
+} from '../event-write-model';
 import { ProductionEvent } from '../production-event.entity';
 import { EventChangeMessage, changeMessage } from './event-change.notifier';
 import { EventCoding } from './event-coding.entity';
@@ -174,12 +179,14 @@ export function sourceColumns(
         ? new Date(value)
         : value;
   }
+  const lossColumns = declaredColumns(fields, values);
   const derived = prepareUpdate(existing, {
     startTime: values.startTime as Date | undefined,
     endTime: fields.includes('endTime')
       ? ((values.endTime as Date | null) ?? null)
       : undefined,
     eventType: values.eventType as string | null | undefined,
+    ...lossColumns,
   });
   const overrides = existing.userOverrides ?? {};
   for (const key of CLASSIFICATION_KEYS) {
@@ -192,10 +199,26 @@ export function sourceColumns(
     : {};
   return {
     ...values,
+    ...lossColumns,
     ...derived,
     ...axes,
     ...uncodedVerificationReset(existing, derived),
   } as Partial<ProductionEvent>;
+}
+
+/**
+ * Declared figures delivered by the source: the column holds the parsed figures and the quantity follows the
+ * shortfall (the figures are the source of truth); nothing when the revision does not change them.
+ */
+function declaredColumns(
+  fields: readonly string[],
+  values: Readonly<Record<string, unknown>>,
+): Pick<EventWriteInput, 'quantity' | 'declaredFigures'> {
+  if (!fields.includes('declaredFigures')) return {};
+  const figures = parseDeclaredFigures(values.declaredFigures);
+  return figures
+    ? { declaredFigures: figures, quantity: figures.shortfall }
+    : { declaredFigures: null };
 }
 
 /** The code-driven axes and basis after an event-type change, as columns. */

@@ -12,11 +12,12 @@ export interface ReasonWeight {
   weight: string;
 }
 
-/** One reason as the coder enters it: a percent of the stop or a duration in seconds. */
+/** One reason as the coder enters it: a percent of the stop, a duration in seconds, or tonnes of a production loss. */
 export interface ReasonWeightEntry {
   reasonCodeId: string;
   percent?: string | number | null;
   seconds?: string | number | null;
+  quantity?: string | number | null;
 }
 
 export type ReasonWeightErrorCode =
@@ -43,6 +44,8 @@ export interface ReasonWeightContext {
   durationSeconds: number | null;
   /** the primary reason the same request names, if any */
   reasonCodeId?: string | null;
+  /** the quantity of a production loss event (declared mode); null for a stop, which splits by percent or seconds */
+  quantity?: number | null;
 }
 
 const fail = (
@@ -50,25 +53,40 @@ const fail = (
   message: string,
 ): ReasonWeightResult => ({ ok: false, error: { code, message } });
 
-type Basis = 'percent' | 'seconds';
+type Basis = 'percent' | 'seconds' | 'quantity';
 
+const BASES: readonly Basis[] = ['percent', 'seconds', 'quantity'];
+
+/** The one basis an entry states, or null when it states none or several. */
 function basisOf(entry: ReasonWeightEntry): Basis | null {
-  const hasPercent = entry.percent !== undefined && entry.percent !== null;
-  const hasSeconds = entry.seconds !== undefined && entry.seconds !== null;
-  if (hasPercent === hasSeconds) return null;
-  return hasPercent ? 'percent' : 'seconds';
+  const stated = BASES.filter(
+    (basis) => entry[basis] !== undefined && entry[basis] !== null,
+  );
+  return stated.length === 1 ? stated[0] : null;
 }
 
 /** The entered values, or the first rule they break. */
 function enteredValues(
   entries: readonly ReasonWeightEntry[],
+  context: ReasonWeightContext,
 ): { basis: Basis; values: Dec[] } | ReasonWeightError {
   const basis = basisOf(entries[0]);
+  const producedLoss =
+    context.quantity !== undefined && context.quantity !== null;
   if (!basis || entries.some((entry) => basisOf(entry) !== basis)) {
     return {
       code: 'REASON_WEIGHTS_BASIS',
-      message:
-        'Give every reason either a percent or a duration in seconds, the same for all reasons',
+      message: producedLoss
+        ? 'Give every reason either a percent or tonnes, the same for all reasons'
+        : 'Give every reason either a percent or a duration in seconds, the same for all reasons',
+    };
+  }
+  if ((basis === 'quantity') !== producedLoss && basis !== 'percent') {
+    return {
+      code: 'REASON_WEIGHTS_BASIS',
+      message: producedLoss
+        ? 'A production loss is split by percent or tonnes, not by duration'
+        : 'Tonnes split a production loss only; split a stop by percent or seconds',
     };
   }
   const ids = entries.map((entry) => entry.reasonCodeId);
@@ -92,8 +110,10 @@ function enteredValues(
 function checkTotal(
   basis: Basis,
   total: Dec,
-  durationSeconds: number | null,
+  context: ReasonWeightContext,
 ): ReasonWeightError | null {
+  const { durationSeconds } = context;
+  if (basis === 'quantity') return checkTonnes(total, context.quantity ?? 0);
   if (basis === 'percent') {
     return total.eq(100)
       ? null
@@ -113,6 +133,17 @@ function checkTotal(
     : {
         code: 'REASON_WEIGHTS_SUM',
         message: `The durations add up to ${total.toFixed()} s, not the stop's ${durationSeconds} s`,
+      };
+}
+
+/** The tonnes must add up to the event's quantity within max(0.001, quantity × 1e-6). */
+function checkTonnes(total: Dec, quantity: number): ReasonWeightError | null {
+  const tolerance = Math.max(0.001, quantity * 1e-6);
+  return total.minus(quantity).abs().lte(tolerance)
+    ? null
+    : {
+        code: 'REASON_WEIGHTS_SUM',
+        message: `The tonnes add up to ${total.toFixed()} t, not the event's ${quantity} t`,
       };
 }
 
@@ -160,10 +191,10 @@ export function normaliseReasonWeights(
       'Give at least one reason, or null to remove the split',
     );
   }
-  const entered = enteredValues(entries);
+  const entered = enteredValues(entries, context);
   if ('code' in entered) return { ok: false, error: entered };
   const total = entered.values.reduce((sum, v) => sum.plus(v), new Dec(0));
-  const totalError = checkTotal(entered.basis, total, context.durationSeconds);
+  const totalError = checkTotal(entered.basis, total, context);
   if (totalError) return { ok: false, error: totalError };
   const rank = rankOf(entries, entered.values, context.reasonCodeId);
   if (!rank) {

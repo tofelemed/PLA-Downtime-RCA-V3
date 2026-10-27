@@ -10,6 +10,8 @@ export const PHYSICAL_TYPES = [
   'advisory',
   /** LA-08: a grade change on a running unit (from / to product); its own loss kinds */
   'grade_transition',
+  /** Declared mode: a day's shortfall declared by the OT system (tonnes, no interval cause) */
+  'production_loss',
 ] as const;
 export type PhysicalType = (typeof PHYSICAL_TYPES)[number];
 

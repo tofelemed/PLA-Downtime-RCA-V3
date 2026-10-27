@@ -90,6 +90,21 @@ export function assertOperable(event: ProductionEvent): void {
   }
 }
 
+/**
+ * 409 UNSUPPORTED_FOR_KIND: a declared production loss is a figure of its window, not an interval of
+ * unit behaviour, so it cannot be closed, split or merged (retract it and declare again).
+ */
+export function assertSupportedKind(
+  event: ProductionEvent,
+  operation: 'close' | 'split' | 'merge',
+): void {
+  if (event.physicalType !== 'production_loss') return;
+  throw new ConflictException({
+    code: 'UNSUPPORTED_FOR_KIND',
+    message: `A production loss event cannot be used in a ${operation}`,
+  });
+}
+
 /** 412 STALE_REVISION listing every event whose `row_version` is not the expected one. */
 export function assertVersions(
   events: readonly ProductionEvent[],

@@ -15,6 +15,7 @@ import {
 import { insertDerivedEvent, relate, supersede } from './event-lineage';
 import {
   assertOperable,
+  assertSupportedKind,
   assertVersions,
   derivedEventId,
   lockAllOrNotFound,
@@ -87,6 +88,7 @@ async function lockContributors(
   const ids = command.events.map(({ eventId }) => eventId);
   const locked = await lockAllOrNotFound(manager, command.context, ids);
   locked.forEach(assertOperable);
+  locked.forEach((event) => assertSupportedKind(event, 'merge'));
   assertVersions(
     locked,
     new Map(command.events.map((e) => [e.eventId, e.expectedVersion])),

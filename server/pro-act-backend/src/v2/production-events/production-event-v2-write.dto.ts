@@ -19,6 +19,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { MAX_REASON_WEIGHTS } from '../../domain/events/reason-weights';
+import { DeclaredFiguresDto } from './declared-figures.dto';
 import { ReasonWeightInputDto } from './reason-weights.dto';
 import {
   IMPACT_MODES,
@@ -333,6 +334,16 @@ export class ProductionEventV2EditableDto {
   @ValidateIf((_, value) => value !== null)
   @IsDecimal(DECIMAL)
   cost?: string | null;
+
+  @ApiPropertyOptional({
+    type: DeclaredFiguresDto,
+    description:
+      'Declared mode: required for physicalType production_loss (which also needs an endTime). quantity is the shortfall; sending a different quantity is 422',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => DeclaredFiguresDto)
+  declaredFigures?: DeclaredFiguresDto;
 }
 
 /** `POST /api/v2/production-events` (DT08 manual create). The tenant comes from the identity. */
@@ -390,7 +401,7 @@ export class PatchProductionEventV2Dto extends ProductionEventV2EditableDto {
     maxItems: MAX_REASON_WEIGHTS,
     description:
       'D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s ' +
-      'duration ±1 s). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if ' +
+      'duration ±1 s); a production_loss event is split by percent or tonnes (Σ the event quantity). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if ' +
       'reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule',
   })
   @IsOptional()

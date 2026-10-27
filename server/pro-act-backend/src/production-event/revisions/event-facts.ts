@@ -1,3 +1,5 @@
+import { parseDeclaredFigures } from '../../domain/events/declared-figures';
+
 /**
  * Field sets and value normalisation for event revisions (plan 1.2, spec ING06, §14.2). A "facts"
  * object is a flat JSON snapshot of event fields with canonical values, so two deliveries of the same
@@ -58,6 +60,8 @@ export const SOURCE_FIELDS = [
   'operatorName',
   'assetId',
   'planId',
+  /** declared mode: OT planned / actual / shortfall; carried as its canonical JSON text */
+  'declaredFigures',
   ...SOURCE_ATTRIBUTE_FACTS,
 ] as const;
 
@@ -156,6 +160,7 @@ export function normalizeValue(
   if (DATE_FIELDS.has(field) && typeof raw === 'string') {
     return isoOrNull(new Date(raw)) ?? raw;
   }
+  if (field === 'declaredFigures') return declaredFiguresText(raw);
   if (STRUCTURED_FIELDS.has(field) && typeof raw === 'object') {
     return structuredOrNull(raw);
   }
@@ -171,6 +176,13 @@ export function normalizeValue(
     return raw;
   }
   return JSON.stringify(raw);
+}
+
+/** Declared figures in canonical form (fixed key order, defaults filled); unreadable values stay as text. */
+function declaredFiguresText(raw: unknown): string | null {
+  const figures = parseDeclaredFigures(raw);
+  if (figures) return JSON.stringify(figures);
+  return typeof raw === 'string' ? raw : null;
 }
 
 /** `raw` restricted to `fields`, values normalised, undefined entries dropped. */

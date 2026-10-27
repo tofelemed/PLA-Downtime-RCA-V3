@@ -16,6 +16,7 @@ import {
   SOURCE_ATTRIBUTE_FACTS,
   SOURCE_FIELDS,
 } from './event-facts';
+import { DeclaredReviewService } from './declared-review.service';
 import { EventReviewItem } from './event-review-item.entity';
 import { isUuid, RevisionActor } from './revision-actor';
 import {
@@ -23,6 +24,7 @@ import {
   appendRevision,
   codingFactsOf,
   hasRevisionTenant,
+  latestSourceRevision,
   lockEvent,
 } from './revision-store';
 import { ReviewDecision, resolveIn } from './review-resolution';
@@ -49,6 +51,7 @@ export class EventRevisionService {
     @InjectRepository(ProductionEvent)
     private readonly events: Repository<ProductionEvent>,
     private readonly notifier: EventChangeNotifier,
+    private readonly declaredReview: DeclaredReviewService,
   ) {}
 
   /**
@@ -66,15 +69,14 @@ export class EventRevisionService {
     event.currentCodingRevision = tracked ? 1 : 0;
     const { result, message } = await this.inTransaction(async (manager) => {
       const saved = await manager.save(ProductionEvent, event);
-      return {
-        result: saved,
-        message: await this.recordCreated(
-          saved,
-          actor,
-          manager,
-          attributeFacts,
-        ),
-      };
+      const message = await this.recordCreated(
+        saved,
+        actor,
+        manager,
+        attributeFacts,
+      );
+      await this.declaredReview.reviewIn(manager, saved, null);
+      return { result: saved, message };
     });
     this.publish(message);
     return result;
@@ -132,11 +134,34 @@ export class EventRevisionService {
     provenance: SourceProvenance,
     rules?: CodingRuleSource,
   ): Promise<SourceOutcome> {
-    const { result, message } = await this.inTransaction((manager) =>
-      applySourceIn(manager, eventId, rawFacts, provenance, rules),
-    );
+    const { result, message } = await this.inTransaction(async (manager) => {
+      const outcome = await applySourceIn(
+        manager,
+        eventId,
+        rawFacts,
+        provenance,
+        rules,
+      );
+      if (outcome.result === 'revised') {
+        await this.reviewDeclared(manager, eventId);
+      }
+      return outcome;
+    });
     this.publish(message, true);
     return result;
+  }
+
+  /** Declared review items of a source-revised event, tied to its newest source revision. */
+  private async reviewDeclared(
+    manager: EntityManager,
+    eventId: string,
+  ): Promise<void> {
+    const event = await manager
+      .getRepository(ProductionEvent)
+      .findOneBy({ id: eventId });
+    if (!event) return;
+    const revision = await latestSourceRevision(manager, eventId);
+    await this.declaredReview.reviewIn(manager, event, revision?.id ?? null);
   }
 
   /** Central path of user edits (v1 PUT, v2 PATCH); null when the event is not found. */

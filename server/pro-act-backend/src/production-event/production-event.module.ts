@@ -9,6 +9,8 @@ import { EventCoding } from './revisions/event-coding.entity';
 import { EventReviewItem } from './revisions/event-review-item.entity';
 import { EventRevision } from './revisions/event-revision.entity';
 import { EventChangeNotifier } from './revisions/event-change.notifier';
+import { AccountingPoliciesService } from '../periods/accounting-policies.service';
+import { DeclaredReviewService } from './revisions/declared-review.service';
 import { EventRevisionService } from './revisions/event-revision.service';
 
 @Module({
@@ -27,6 +29,8 @@ import { EventRevisionService } from './revisions/event-revision.service';
     UnitDowntimeService,
     EventRevisionService,
     EventChangeNotifier,
+    DeclaredReviewService,
+    AccountingPoliciesService,
   ],
   exports: [
     ProductionEventService,

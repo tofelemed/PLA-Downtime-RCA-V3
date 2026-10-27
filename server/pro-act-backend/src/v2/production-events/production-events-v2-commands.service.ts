@@ -58,6 +58,7 @@ import {
 import { INTERVAL_FIELDS } from './source-owned-fields';
 import { clearedReason } from './cleared-reason';
 import { reasonColumns } from './reason-columns';
+import { figuresOf, lossColumnsOf } from './production-loss-columns';
 import { patchReasonWeights } from './reason-weight-columns';
 import { EventFacts } from '../../production-event/revisions/event-facts';
 import { latestSourceRevision } from '../../production-event/revisions/revision-store';
@@ -111,6 +112,7 @@ export class ProductionEventsV2CommandService {
     const id = randomUUID();
     const event = this.events.create({
       ...editableColumns(dto),
+      ...lossColumnsOf(fields.physicalType, dto),
       ...coded.columns,
       id,
       canonicalId: id,
@@ -355,7 +357,11 @@ function patchColumns(
       ? locked.dispositionClass
       : dto.dispositionClass,
   );
-  return { ...editableColumns(dto), ...fields } as Partial<ProductionEvent>;
+  return {
+    ...editableColumns(dto),
+    ...lossColumnsOf(fields.physicalType, dto, locked),
+    ...fields,
+  } as Partial<ProductionEvent>;
 }
 
 function notFound(): NotFoundException {
@@ -378,6 +384,8 @@ function writeInput(
     reasonCodeId: dto.reasonCodeId,
     investigationPending: dto.investigationPending,
     classification,
+    quantity: dto.quantity,
+    declaredFigures: figuresOf(dto),
   };
 }
 

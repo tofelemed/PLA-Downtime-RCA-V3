@@ -9,13 +9,21 @@ import { scopedQuery } from '../../common/query/scoped-query';
 import { activeCodingRulesIn } from '../../rules/active-coding-rules';
 import { ProductionEvent } from '../production-event.entity';
 import { EventChangeMessage } from './event-change.notifier';
-import { EventReviewItem } from './event-review-item.entity';
+import {
+  DECLARED_REVIEW_KINDS,
+  EventReviewItem,
+  ReviewItemState,
+} from './event-review-item.entity';
 import { actorFromContext, RevisionActor } from './revision-actor';
 import { latestSourceRevision, lockEvent, writeEvent } from './revision-store';
 import { RevisionResult, retypes, sourceColumns } from './source-revision';
 import { appendUserRevisions } from './user-change';
 
-export const REVIEW_DECISIONS = ['keep_override', 'accept_source'] as const;
+export const REVIEW_DECISIONS = [
+  'keep_override',
+  'accept_source',
+  'dismiss',
+] as const;
 export type ReviewDecision = (typeof REVIEW_DECISIONS)[number];
 
 const ACCEPTED_SOURCE = 'accepted source value';
@@ -42,18 +50,38 @@ export async function resolveIn(
       message: `The review item is already ${item.state}`,
     });
   }
+  assertDecisionAllowed(item, decision);
   const actor = actorFromContext(context);
   const message =
     decision === 'accept_source'
       ? await acceptSource(manager, item, actor)
       : null;
-  item.state =
-    decision === 'accept_source' ? 'accepted_source' : 'kept_override';
+  item.state = STATE_OF_DECISION[decision];
   item.resolvedBy = actor.id;
   item.resolvedAt = new Date();
   item.updatedBy = actor.id;
   const result = await manager.getRepository(EventReviewItem).save(item);
   return { result, message };
+}
+
+const STATE_OF_DECISION: Record<ReviewDecision, ReviewItemState> = {
+  keep_override: 'kept_override',
+  accept_source: 'accepted_source',
+  dismiss: 'dismissed',
+};
+
+/** `dismiss` is for the declared-figures kinds only; the other kinds keep keep_override / accept_source. */
+function assertDecisionAllowed(
+  item: EventReviewItem,
+  decision: ReviewDecision,
+): void {
+  if (decision !== 'dismiss' || DECLARED_REVIEW_KINDS.includes(item.kind)) {
+    return;
+  }
+  throw new UnprocessableEntityException({
+    code: 'INVALID_DECISION',
+    message: 'Only declared-figures items can be dismissed',
+  });
 }
 
 async function lockVisibleItem(

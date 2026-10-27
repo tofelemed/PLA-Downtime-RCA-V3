@@ -708,7 +708,8 @@
                   "quality_loss",
                   "production_output",
                   "advisory",
-                  "grade_transition"
+                  "grade_transition",
+                  "production_loss"
                 ]
               }
             }
@@ -1046,7 +1047,8 @@
                   "quality_loss",
                   "production_output",
                   "advisory",
-                  "grade_transition"
+                  "grade_transition",
+                  "production_loss"
                 ]
               }
             }
@@ -1355,7 +1357,8 @@
                   "quality_loss",
                   "production_output",
                   "advisory",
-                  "grade_transition"
+                  "grade_transition",
+                  "production_loss"
                 ]
               }
             }
@@ -26849,6 +26852,11 @@
             "type": "number",
             "example": 1800,
             "description": "Share of the stop in seconds (the seconds add up to the closed stop’s duration within 1 s)"
+          },
+          "quantity": {
+            "type": "string",
+            "example": "2.5",
+            "description": "Tonnes of a production_loss event (the tonnes add up to the event quantity within max(0.001, quantity x 1e-6))"
           }
         },
         "required": [
@@ -27002,6 +27010,100 @@
           }
         }
       },
+      "DeclaredPlanDto": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 64
+          },
+          "planId": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 128
+          },
+          "revision": {
+            "type": "object",
+            "nullable": true
+          },
+          "approved": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "DeclaredPiSourceDto": {
+        "type": "object",
+        "properties": {
+          "actualTag": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 255
+          },
+          "eventFrameId": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 255
+          }
+        }
+      },
+      "DeclaredFiguresDto": {
+        "type": "object",
+        "properties": {
+          "planned": {
+            "type": "object",
+            "example": 120,
+            "nullable": true
+          },
+          "actual": {
+            "type": "object",
+            "example": 112.5,
+            "nullable": true
+          },
+          "shortfall": {
+            "type": "number",
+            "example": 7.5,
+            "description": "planned - actual; becomes the event quantity"
+          },
+          "uom": {
+            "type": "string",
+            "example": "t",
+            "description": "Default 't'"
+          },
+          "measurementQuality": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 64
+          },
+          "sourceStatus": {
+            "type": "object",
+            "nullable": true,
+            "maxLength": 64,
+            "example": "CONFIRMED",
+            "description": "OT status, e.g. DETECTED or CONFIRMED"
+          },
+          "plan": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeclaredPlanDto"
+              }
+            ]
+          },
+          "piSource": {
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeclaredPiSourceDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "shortfall"
+        ]
+      },
       "CreateProductionEventV2Dto": {
         "type": "object",
         "properties": {
@@ -27046,7 +27148,8 @@
               "quality_loss",
               "production_output",
               "advisory",
-              "grade_transition"
+              "grade_transition",
+              "production_loss"
             ]
           },
           "scheduleClass": {
@@ -27204,6 +27307,14 @@
             "type": "object",
             "example": "1500.00",
             "nullable": true
+          },
+          "declaredFigures": {
+            "description": "Declared mode: required for physicalType production_loss (which also needs an endTime). quantity is the shortfall; sending a different quantity is 422",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeclaredFiguresDto"
+              }
+            ]
           },
           "unitId": {
             "type": "string",
@@ -27276,7 +27387,8 @@
               "quality_loss",
               "production_output",
               "advisory",
-              "grade_transition"
+              "grade_transition",
+              "production_loss"
             ]
           },
           "scheduleClass": {
@@ -27435,6 +27547,14 @@
             "example": "1500.00",
             "nullable": true
           },
+          "declaredFigures": {
+            "description": "Declared mode: required for physicalType production_loss (which also needs an endTime). quantity is the shortfall; sending a different quantity is 422",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeclaredFiguresDto"
+              }
+            ]
+          },
           "startTime": {
             "type": "string",
             "format": "date-time"
@@ -27447,7 +27567,7 @@
           "reasonWeights": {
             "nullable": true,
             "maxItems": 10,
-            "description": "D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s duration ±1 s). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule",
+            "description": "D-T5: split the stop across several reasons, each by percent (Σ 100) or seconds (Σ the closed stop’s duration ±1 s); a production_loss event is split by percent or tonnes (Σ the event quantity). Normalised to 8-place weights adding up to 1; the largest becomes reasonCodeId (if reasonCodeId is sent it must be a largest one). null removes the split. 422 REASON_WEIGHTS_* on a broken rule",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReasonWeightInputDto"
@@ -27462,9 +27582,10 @@
             "type": "string",
             "enum": [
               "keep_override",
-              "accept_source"
+              "accept_source",
+              "dismiss"
             ],
-            "description": "keep_override: the user value stays; accept_source: the latest source value replaces it"
+            "description": "keep_override: the user value stays; accept_source: the latest source value replaces it; dismiss: only for declared_identity_mismatch, declared_window_mismatch and duplicate_declared_loss items (state dismissed)"
           }
         },
         "required": [
