@@ -63,18 +63,16 @@ export function lossAccountingErrors(values: LossAccountingFormValues): LossAcco
 
 /**
  * The POST body: exactly the DTO's keys; the declared-only fields keep the version in force when computed.
- * A declared version is drafted for the accounting unit (`unitId`), so that unit's version in force is the one
- * changed and the plant's other units stay computed.
+ * Drafts are plant-wide (no `unitId`): the server limits declared mode to `accountingUnitId`.
  */
 export function lossAccountingBody(values: LossAccountingFormValues, base: LossAccountingPolicyView): LossAccountingDraftBody {
   const declared = values.lossBasis === 'declared';
   return {
-    ...(declared && values.accountingUnitId ? { unitId: values.accountingUnitId } : {}),
     grain: values.grain,
     dayStart: values.grain === 'day' ? values.dayStart : base.dayStart,
     lossBasis: values.lossBasis,
     targetSource: declared ? values.targetSource : 'plan',
-    accountingUnitId: declared ? values.accountingUnitId : null,
+    accountingUnitId: values.accountingUnitId || null,
     accountingProductId: declared && values.accountingProductId ? values.accountingProductId : null,
     stopsCrossCheck: declared ? values.stopsCrossCheck : base.stopsCrossCheck,
     identityTolerance: declared ? Number(values.identityTolerance) : base.identityTolerance,
