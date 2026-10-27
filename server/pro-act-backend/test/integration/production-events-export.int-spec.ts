@@ -12,7 +12,7 @@ import { bearer, createIntegrationApp, signToken } from './support/test-app';
 const HEADER =
   'start_utc,end_utc,duration_seconds,unit,asset,event_type,physical_type,schedule_class,oee_component,' +
   'reason_code,reason,physical_state,coding_state,rca_state,severity,source_kind,description,quantity,' +
-  'quantity_uom,cost,' +
+  'quantity_uom,cost,planned,actual,shortfall,ot_status,' +
   EXPORT_LABEL_COLUMNS.join(',');
 
 /** Event Hub parity on `/v2/production-events`: source kind, severity and text filters, CSV export. */
