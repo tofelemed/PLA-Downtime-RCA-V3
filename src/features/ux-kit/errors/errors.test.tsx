@@ -29,6 +29,13 @@ describe('describeError', () => {
     expectNothingInternal(`${friendly.title} ${friendly.message}`);
   });
 
+  it('a refused grain change of a daily plant reads in plain words (loss accounting approval)', () => {
+    const friendly = describeError(v2(422, 'GRAIN_CHANGE_UNSUPPORTED', 'Changing the grain, day start or accounting unit of a plant already on daily accounting is not supported yet'));
+    expect(friendly.title).toBe('This change is not supported yet');
+    expect(friendly.message).toBe(ERROR_MESSAGES.GRAIN_CHANGE_UNSUPPORTED.text);
+    expectNothingInternal(`${friendly.title} ${friendly.message}`);
+  });
+
   it('a context map words a generic code for one kind of screen; elsewhere the generic text stays', () => {
     const refusal = v2(403, 'TENANT_SCOPE_REQUIRED', 'This change is not limited to your units; a tenant-wide grant is required');
     const inContext = describeError(refusal, PLANT_WIDE_POLICY_MESSAGES);

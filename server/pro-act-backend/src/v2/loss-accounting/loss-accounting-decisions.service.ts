@@ -26,6 +26,7 @@ import {
   DailyCalendarResult,
   LossAccountingCalendarService,
 } from './loss-accounting-calendar.service';
+import { assertSupportedGrainChange } from './loss-accounting-grain-guard';
 import { LOSS_ACCOUNTING_APPROVERS } from './loss-accounting-roles';
 import { LossAccountingVersionListQueryDto } from './loss-accounting-v2.dto';
 import {
@@ -65,7 +66,9 @@ export interface LossAccountingApproval {
  * Approval makes the draft the scope's version in force from now (or its commissioning backdate) — the open
  * approved version of the scope ends there — and refuses a draft prepared from a version that is no longer
  * in force (409 STALE_DRAFT). A day-grain version also publishes the daily calendar and replaces the open
- * periods it covers (`LossAccountingCalendarService`), in the same step.
+ * periods it covers (`LossAccountingCalendarService`), in the same step; on a plant already on daily
+ * accounting, a version changing the grain, day start or accounting unit is refused (422
+ * GRAIN_CHANGE_UNSUPPORTED, `assertSupportedGrainChange`).
  */
 @Injectable()
 export class LossAccountingDecisionsService {
@@ -176,6 +179,7 @@ export class LossAccountingDecisionsService {
       manager,
     );
     if (base.row.id !== draft.basedOnId) throw staleDraft(base.row.version);
+    await assertSupportedGrainChange(manager, draft, base);
     const now = new Date();
     const from = await effectiveFromOf(
       manager,

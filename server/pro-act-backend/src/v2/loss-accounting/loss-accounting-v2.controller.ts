@@ -131,7 +131,8 @@ export class LossAccountingV2Controller {
       '403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; ' +
       '409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning ' +
       'backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, ' +
-      '409 BACKDATE_OVERLAPS_CALCULATION (details.periods); 422 EFFECTIVE_DATE_TOO_EARLY (day grain: a period with an approved revision starts on or after the effective date). ' +
+      '409 BACKDATE_OVERLAPS_CALCULATION (details.periods); 422 EFFECTIVE_DATE_TOO_EARLY (day grain: a period with an approved revision starts on or after the effective date); ' +
+      '422 GRAIN_CHANGE_UNSUPPORTED when the plant is already on daily accounting (its daily calendar in force or pending) and the version changes the grain, day start or accounting unit. ' +
       'Day grain: the daily calendar starts at the first dayStart on or after the effective date that is not before the end of the last period with calculation history ' +
       '(calendar.effectiveFrom, plant local); old-calendar shifts from there are removed and the shift crossing it ends there; 409 SWITCH_CROSSES_CALCULATION when a period after that start gained calculation history meanwhile.',
   })

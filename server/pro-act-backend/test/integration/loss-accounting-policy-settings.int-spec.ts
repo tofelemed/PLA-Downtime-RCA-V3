@@ -16,6 +16,7 @@ interface ApprovalBody {
 }
 
 interface PolicyFields {
+  grain?: 'shift' | 'day';
   dayStart?: string;
   accountingProductId?: string;
 }
@@ -23,7 +24,8 @@ interface PolicyFields {
 /**
  * A version that follows an approved day-grain switch (3-shift site calendar, Asia/Tehran, daily
  * calendar from tomorrow because today's shifts are calculated): settings only (same grain, day start
- * and scope) adopt the published daily calendar; a different day start plans a new switch. Test data only.
+ * and scope) adopt the published daily calendar; a different grain, day start or accounting unit is refused
+ * (422 GRAIN_CHANGE_UNSUPPORTED, a follow-up). Test data only.
  */
 describe('loss accounting policy: a version after a day-grain switch', () => {
   const env = new ActualsWorld();
@@ -166,42 +168,20 @@ describe('loss accounting policy: a version after a day-grain switch', () => {
     expect(kept).toHaveLength(1);
   });
 
-  it('a version with another day start plans a new switch', async () => {
+  it('a version with another day start is refused: GRAIN_CHANGE_UNSUPPORTED', async () => {
     const unitId = await freshUnit();
-    await switchedFromTomorrow(unitId);
-    const tomorrow = await period(unitId, addDays(today, 1), 'Day');
-    await env.rows(
-      `INSERT INTO accounting_revisions (tenant_id, row_version, period_id, revision, lifecycle)
-       VALUES ($1, 1, $2, 1, 'approved')`,
-      [env.world.tenantA, tomorrow],
-    );
+    const firstId = await switchedFromTomorrow(unitId);
     const refused = await approveDay(unitId, 422, { dayStart: '06:00' });
-    expect(refused.code).toBe('EFFECTIVE_DATE_TOO_EARLY');
+    expect(refused.code).toBe('GRAIN_CHANGE_UNSUPPORTED');
+    expect(await calendarsOf(unitId)).toEqual([
+      { id: firstId, state: 'published', effective_from: addDays(today, 1) },
+    ]);
   });
 
-  it('another day start with no approved daily period publishes a second daily calendar from the same date (follow-up: gap)', async () => {
+  it('back to shifts is refused: GRAIN_CHANGE_UNSUPPORTED', async () => {
     const unitId = await freshUnit();
-    const next = addDays(today, 1);
-    const firstId = await switchedFromTomorrow(unitId);
-    const body = await approveDay(unitId, 200, { dayStart: '06:00' });
-    expect(body.calendar?.effectiveFrom).toBe(next);
-    const secondId = body.calendar?.versionId ?? '';
-    expect(secondId).not.toBe(firstId);
-    // the first daily calendar stays published and open-ended, shadowed by the higher version
-    expect(await calendarsOf(unitId)).toEqual([
-      { id: firstId, state: 'published', effective_from: next },
-      { id: secondId, state: 'published', effective_from: next },
-    ]);
-    const sixAm = new Date(`${next}T06:00:00+03:30`);
-    const [first] = await env.rows<{
-      calendar_version_id: string;
-      utc_start: Date;
-    }>(
-      `SELECT calendar_version_id, utc_start FROM shift_instances
-        WHERE unit_id = $1 AND utc_end > $2 ORDER BY utc_start LIMIT 1`,
-      [unitId, new Date(`${next}T00:00:00+03:30`)],
-    );
-    expect(first.calendar_version_id).toBe(secondId);
-    expect(new Date(first.utc_start)).toEqual(sixAm);
+    await switchedFromTomorrow(unitId);
+    const shift = await approveDay(unitId, 422, { grain: 'shift' });
+    expect(shift.code).toBe('GRAIN_CHANGE_UNSUPPORTED');
   });
 });
