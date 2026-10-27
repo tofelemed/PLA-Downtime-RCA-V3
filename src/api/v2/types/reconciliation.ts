@@ -1,4 +1,5 @@
 import type { LossBasis } from './loss-accounting';
+import type { LossStatementView } from './loss-statement';
 import type { MonthCloseState } from './month-close';
 import type { CodingGateView } from './stop-coding';
 /**
@@ -250,6 +251,8 @@ export interface ReconciliationView {
   monthClose?: MonthCloseStateView;
   /** owner, 18 Oct 2026: an approved revision's frozen valuation view vs the current policy (null otherwise) */
   approvedValuation?: ApprovedValuationView | null;
+  /** Task 13: the revision's loss accounting statement (server sums); null without a run, absent from older servers */
+  statement?: LossStatementView | null;
 }
 
 /** A valuation policy version and the default view it opens on (backend `approved-valuation-view.ts`). */

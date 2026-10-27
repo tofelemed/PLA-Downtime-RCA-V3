@@ -12,6 +12,7 @@ import { usePeriodRegime } from '../hooks/use-period-regime';
 import { WORKFLOW_LABELS } from '../model/display';
 import { CertifyDayButton } from './certify-day-button';
 import { DayCodingGate } from './day-coding-gate';
+import { DayStatement } from './day-statement';
 import type { GridWorkflowState } from '@/api/v2/types/period-overview';
 
 const STATE_LABELS: Record<DayView['state'], string> = { open: 'Shifts in progress', ready: 'Ready to certify', certified: 'Day certified' };
@@ -60,6 +61,7 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
         ))}
       </ul>
       <Rollup day={day} isDay={isDay} />
+      <DayStatement accounting={day.accounting} />
       <DayCodingGate gate={day.codingGate} declared={isDeclared} />
       {canCertifyDay && day.state === 'ready' && submitted && <p className="text-xs text-muted-foreground">You submitted a shift of this day; another manager certifies it.</p>}
       {day.certification?.state === 'reopened' && <p className="text-xs" data-testid="day-reopened">Reopened by a correction: {day.certification.reopenReason}</p>}

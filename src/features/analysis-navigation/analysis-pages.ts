@@ -11,6 +11,7 @@ export const DOWNTIME_PAGES = [
 
 export const PLA_PAGES = [
   { key: 'overview', path: '/pla-analytics', label: 'Overview', name: 'Production loss analysis', icon: EntityIcon.lossAnalysis, description: 'Trace plan or capacity through losses to actual output' },
+  { key: 'statement', path: '/pla-analytics/statement', label: 'Accounting statement', name: 'Accounting statement', icon: EntityIcon.periodAccounting, description: 'Planned, actual and the shortfall explained: losses by kind, verified recovery, net accounted and unaccounted loss' },
   { key: 'losses', path: '/pla-analytics/losses', label: 'Loss breakdown', name: 'Loss breakdown', icon: EntityIcon.lossBreakdown, description: 'Loss tree, opportunities, recurring causes and contributing events' },
   { key: 'trends', path: '/pla-analytics/trends', label: 'Trends', name: 'PLA trends', icon: EntityIcon.lossTrends, description: 'OEE and reconciliation trends across production periods' },
   { key: 'oee', path: '/pla-analytics/oee', label: 'OEE', name: 'OEE', icon: EntityIcon.oee, description: 'Operational and reconciled availability, performance, quality and OEE' },

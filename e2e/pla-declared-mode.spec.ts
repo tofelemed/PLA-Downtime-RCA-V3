@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import { loginViaUI } from './test-utils/auth-helpers';
 
 /**
@@ -17,6 +17,16 @@ const user = (name: string) => `${name}@hdpe-train.mpc`;
 test.describe.configure({ mode: 'serial', timeout: 120_000 });
 test.skip(!PASSWORD, 'Set MARUN_E2E_PASSWORD to run the declared-mode journey on the Marun HDPE plant.');
 if (BASE_URL) test.use({ baseURL: BASE_URL });
+
+/** The 29 Oct statement as the server sends it (Task 13): the declared split has no recovery share. */
+const OWNER_DAY: Record<string, string> = { planned: '240', actual: '208', shortfall: '32', grossAttributed: '32', netAccounted: '32', unaccounted: '0' };
+const DAY_WINDOW = 'from=2026-10-28T12:00:00.000Z&to=2026-10-29T12:00:00.000Z&window=dates';
+
+async function expectStatement(statement: Locator, figures: Record<string, string>): Promise<void> {
+  for (const [key, value] of Object.entries(figures)) {
+    await expect(statement.locator(`[data-testid="statement-row"][data-key="${key}"]`)).toHaveAttribute('data-value', value);
+  }
+}
 
 let blocked: string[] = [];
 let reachable = false;
@@ -104,7 +114,7 @@ test.describe('Declared mode on Marun HDPE (29 Oct 2026)', () => {
     expect(attributed.items[0].quantities[0].lines, 'declared lines (20 t + 12 t)').toBe(2);
   });
 
-  test('manager: the period of 29 Oct shows Target 240 / Actual 208 / Gap 32 / Unaccounted 0', async ({ page }) => {
+  test('manager: the period of 29 Oct shows the statement Planned 240 / Actual 208 / Shortfall 32 / Net 32 / Unaccounted 0', async ({ page }) => {
     const reza = await apiSession('reza');
     const plans = await getJson<{ items: Array<{ id: string }> }>(reza, '/v2/production-plans?limit=1');
     const days = await getJson<{ periods: Array<{ periodId: string }> }>(reza, '/v2/production-days/da0560f4-2916-450d-9d30-4012e86fa17e/2026-10-29');
@@ -114,12 +124,22 @@ test.describe('Declared mode on Marun HDPE (29 Oct 2026)', () => {
     await signInReadOnly(page, 'reza');
     await page.goto(`/plans/${plans.items[0].id}/periods/${days.periods[0].periodId}`);
     await expect(page.getByTestId('period-detail')).toBeVisible({ timeout: 60_000 });
-    const slice = page.getByTestId('slice-figures');
-    await expect(slice).toBeVisible({ timeout: 60_000 });
-    await expect(slice.getByTestId('figure-target')).toHaveAttribute('data-value', '240');
-    await expect(slice.getByTestId('figure-actual')).toHaveAttribute('data-value', '208');
-    await expect(slice.getByTestId('figure-gap')).toHaveAttribute('data-value', '32');
-    await expect(slice.getByTestId('figure-attributed')).toHaveAttribute('data-value', '32');
-    await expect(slice.getByTestId('figure-residual')).toHaveAttribute('data-value', '0');
+    const statement = page.getByTestId('loss-statement');
+    await expect(statement).toBeVisible({ timeout: 60_000 });
+    await expectStatement(statement, OWNER_DAY);
+    await expect(page.getByTestId('slice-figures')).toContainText('Checks');
+  });
+
+  test('manager: the Accounting statement page lists the 29 Oct row 240 / 208 / 32 / … / 0', async ({ page }) => {
+    await signInReadOnly(page, 'reza');
+    await page.goto(`/pla-analytics/statement?${DAY_WINDOW}`);
+    await expect(page.getByRole('link', { name: 'Accounting statement' }).first()).toBeVisible({ timeout: 60_000 });
+    const row = page.locator('[data-testid="statement-day"][data-local-date="2026-10-29"] [data-testid="statement-table-row"]').first();
+    await expect(row).toBeVisible({ timeout: 60_000 });
+    for (const [key, value] of Object.entries(OWNER_DAY)) {
+      await expect(row.getByTestId(`statement-cell-${key}`)).toHaveAttribute('data-value', value);
+    }
+    await row.getByTestId('statement-row-toggle').click();
+    await expectStatement(page.getByTestId('statement-row-statement'), OWNER_DAY);
   });
 });

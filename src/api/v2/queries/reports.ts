@@ -32,7 +32,8 @@ export type ReportKind =
   | 'coding-compliance'
   | 'rca-action-tracker'
   | 'plan-adherence'
-  | 'monthly-scorecard';
+  | 'monthly-scorecard'
+  | 'loss-statement';
 export type DowntimeReportQuery = QueryOf<'/api/v2/reports/downtime', 'get'>;
 export type OeeReportQuery = QueryOf<'/api/v2/reports/oee', 'get'>;
 export type ReliabilityReportQuery = QueryOf<'/api/v2/reports/reliability', 'get'>;

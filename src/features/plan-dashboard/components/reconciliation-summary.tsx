@@ -6,6 +6,7 @@ import { FLAG_LABELS } from '../model/display';
 import { isDataFlag, stopsCrossCheckOf } from '../model/candidate-derivation';
 import { residualStateOf } from '../model/residual-state';
 import { ResidualStateBadge } from './residual-state-badge';
+import { LossAccountingStatement } from './loss-accounting-statement';
 
 type FigureKey = keyof Pick<SliceReconciliationView, 'target' | 'actual' | 'gap' | 'attributed' | 'toleranceAdjustment' | 'residual' | 'overAccounted' | 'overproduction' | 'tolerance'>;
 
@@ -51,25 +52,32 @@ function SliceStatus({ slice }: { slice: SliceReconciliationView }) {
   );
 }
 
-function SliceFigures({ slice }: { slice: SliceReconciliationView }) {
+function SliceEquation({ slice }: { slice: SliceReconciliationView }) {
   const aboveTolerance = residualStateOf(slice.flags)?.tone === 'warning';
   return (
-    <div className="space-y-2 rounded-md border p-2" data-testid="slice-figures" data-slice-id={slice.sliceId}>
-      <div role="group" className="flex flex-wrap items-end gap-x-3 gap-y-2 text-sm" aria-label="Target minus actual equals gap equals attributed plus tolerance adjustment plus unaccounted">
-        {EQUATION.map(({ key, label, before }) => (
-          <div key={key} className="flex items-end gap-3">
-            {before && (
-              <span aria-hidden className="pb-0.5 text-lg text-muted-foreground">
-                {before}
-              </span>
-            )}
-            <Figure slice={slice} figure={key} label={label} emphasis={key === 'residual' && aboveTolerance} />
-          </div>
-        ))}
-        <div className="pb-0.5">
-          <ResidualStateBadge flags={slice.flags} />
+    <div role="group" className="flex flex-wrap items-end gap-x-3 gap-y-2 text-sm" aria-label="Target minus actual equals gap equals attributed plus tolerance adjustment plus unaccounted">
+      {EQUATION.map(({ key, label, before }) => (
+        <div key={key} className="flex items-end gap-3">
+          {before && (
+            <span aria-hidden className="pb-0.5 text-lg text-muted-foreground">
+              {before}
+            </span>
+          )}
+          <Figure slice={slice} figure={key} label={label} emphasis={key === 'residual' && aboveTolerance} />
         </div>
+      ))}
+      <div className="pb-0.5">
+        <ResidualStateBadge flags={slice.flags} />
       </div>
+    </div>
+  );
+}
+
+/** A slice's checks and status; its plan identity as an equation only when the server sent no statement (older servers). */
+function SliceFigures({ slice, equation }: { slice: SliceReconciliationView; equation: boolean }) {
+  return (
+    <div className="space-y-2 rounded-md border p-2" data-testid="slice-figures" data-slice-id={slice.sliceId}>
+      {equation ? <SliceEquation slice={slice} /> : <ResidualStateBadge flags={slice.flags} />}
       <div role="group" className="flex flex-wrap items-end gap-x-6 gap-y-1 border-t pt-2 text-xs" aria-labelledby={`checks-${slice.sliceId}`}>
         <span id={`checks-${slice.sliceId}`} className="font-medium text-muted-foreground">
           Checks
@@ -83,7 +91,11 @@ function SliceFigures({ slice }: { slice: SliceReconciliationView }) {
   );
 }
 
-/** Plan-ledger identity per slice as the server computed it (ACC07/ACC09): target − actual = gap = attributed + tolerance adj. + unaccounted. */
+/**
+ * The period's loss accounting statement (Task 13: planned, actual, shortfall, losses, gross attributed,
+ * verified recovery, net accounted, unaccounted — the server's figures), then per slice the checks and the
+ * stops cross-check. Older servers without a statement show the plan identity per slice as an equation.
+ */
 export function ReconciliationSummary({ view, ledger = 'plan' }: { view: ReconciliationView; ledger?: LedgerKind }) {
   return (
     <div className="space-y-2" data-testid="reconciliation-summary">
@@ -92,8 +104,9 @@ export function ReconciliationSummary({ view, ledger = 'plan' }: { view: Reconci
           The reconciliation and the loss lines are always on the plan ledger (against the target). The capacity ledger is shown in the comparison and the waterfall below.
         </p>
       )}
+      {view.statement && <LossAccountingStatement statement={view.statement} />}
       {view.slices.map((slice) => (
-        <SliceFigures key={slice.sliceId} slice={slice} />
+        <SliceFigures key={slice.sliceId} slice={slice} equation={!view.statement} />
       ))}
       {view.slices.length === 0 && <p className="text-sm text-muted-foreground">No calculated slices yet (recompute the period).</p>}
     </div>

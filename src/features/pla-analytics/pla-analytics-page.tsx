@@ -23,6 +23,7 @@ import { ViewPicker } from './components/view-picker';
 
 const PAGES = {
   overview: lazy(() => import('./tabs/waterfall-tab').then((module) => ({ default: module.WaterfallTab }))),
+  statement: lazy(() => import('./statement/statement-page').then((module) => ({ default: module.StatementPage }))),
   losses: lazy(() => import('./tabs/losses-tab').then((module) => ({ default: module.LossesTab }))),
   trends: lazy(() => import('./tabs/trends-tab').then((module) => ({ default: module.TrendsTab }))),
   reconciliation: lazy(() => import('./tabs/reconciliation-view').then((module) => ({ default: module.ReconciliationView }))),

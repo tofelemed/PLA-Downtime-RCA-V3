@@ -1,4 +1,5 @@
 import type { LossBasis } from './loss-accounting';
+import type { DayStatementView } from './loss-statement';
 import type { CodingGateView } from './stop-coding';
 
 /**
@@ -35,4 +36,6 @@ export interface DayView {
   codingGate: CodingGateView | null;
   /** loss basis of the day's current runs; null = no run yet (read the policy in force) */
   lossBasis: LossBasis | null;
+  /** Task 13: the day's loss accounting statement (its periods summed by the server); absent from older servers */
+  accounting?: DayStatementView;
 }
