@@ -13,6 +13,7 @@ import {
 } from '../profiles/profile-errors';
 import { ReconciliationSlaService } from '../close/reconciliation-sla.service';
 import { assertBridgeReviewed } from './bridge-review';
+import { assertDeclaredConfirmed } from './declared-events';
 import { delegateDetail } from './delegate-detail';
 import { rejectionOutcome } from './rejection-outcome';
 import { writeApprovedValuation } from '../valuation/approved-valuation';
@@ -96,6 +97,14 @@ export class ApprovalService {
         throw staleSubmission('the reviewed content changed');
       if (!context.isSuperAdmin && approvalConflictOf(approver, state))
         throw separationOfDuties();
+      if (state.lossBasis === 'declared') {
+        await assertDeclaredConfirmed(manager, {
+          tenantId: period.tenantId,
+          unitId: period.unitId,
+          from: period.utcStart,
+          to: period.utcEnd,
+        });
+      }
       await assertBridgeReviewed(
         manager,
         state,

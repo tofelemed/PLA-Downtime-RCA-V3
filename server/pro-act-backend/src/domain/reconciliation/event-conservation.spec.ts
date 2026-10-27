@@ -178,4 +178,44 @@ describe('event-level conservation (SME R10, RC-04)', () => {
       }),
     ).toEqual([]);
   });
+
+  it('declared mode: manual lines citing a production loss event stay within its shortfall', () => {
+    // the run splits a 50 t shortfall, 20 t of it availability; the event's budget per kind is 50 t
+    const candidates = [candidate('k1', 'pl1', 20)];
+    const outcomes = [proposed(candidates[0])];
+    const shortfalls = new Map([['pl1', d(50)]]);
+    expect(
+      eventConservationIssues({
+        candidates,
+        outcomes,
+        lines: [manual(30, ['pl1'])],
+        epsilon,
+        shortfalls,
+      }),
+    ).toEqual([]);
+    const beyond = eventConservationIssues({
+      candidates,
+      outcomes,
+      lines: [manual(31, ['pl1'])],
+      epsilon,
+      shortfalls,
+    });
+    expect(beyond).toEqual([
+      expect.objectContaining({
+        code: 'EVENT_OVER_ALLOCATED',
+        expectedRemainingAllocation: '30',
+      }),
+    ]);
+  });
+
+  it('declared mode: a kind the run computed nothing for is still capped at the shortfall', () => {
+    const beyond = eventConservationIssues({
+      candidates: [],
+      outcomes: [],
+      lines: [manual(51, ['pl1'])],
+      epsilon,
+      shortfalls: new Map([['pl1', d(50)]]),
+    });
+    expect(beyond.map((i) => i.code)).toEqual(['EVENT_OVER_ALLOCATED']);
+  });
 });

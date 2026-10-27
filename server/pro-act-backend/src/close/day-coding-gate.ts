@@ -11,6 +11,9 @@ import {
   reconciliationOptions,
 } from '../periods/reconciliation-options';
 import { stopCodingCounts } from '../reconciliation/coding-gate.loader';
+import { lossEventCodingCounts } from '../reconciliation/declared-events';
+import { declaredCodingGate } from '../domain/reconciliation/declared-coding-gate';
+import { dayIsDeclared } from './day-loss-basis';
 import { DayPeriodRow } from './day-periods';
 
 /**
@@ -68,8 +71,9 @@ async function dayGatePolicy(
  * version in force for the unit at the day's first period (absent option: `warn` at 99 %). The count and
  * the ratio cover the same shifts (Marun regression R2): the ratio sums the current run of every shift's
  * latest revision, whatever its workflow (a shift in review counts as its run shows it). Once every shift
- * is approved — the certification case — that is the approved runs, as before. Null = the day has no
- * period.
+ * is approved — the certification case — that is the approved runs, as before. Declared mode (the shift
+ * runs were calculated with a declared `loss_accounting` version): the gate counts the day's production loss
+ * events and the coded share of their shortfall instead of stops. Null = the day has no period.
  */
 export async function loadDayCodingGate(
   manager: EntityManager,
@@ -82,8 +86,12 @@ export async function loadDayCodingGate(
   const revisions = periods.flatMap((p) =>
     p.revisionId ? [p.revisionId] : [],
   );
+  const policy = await dayGatePolicy(manager, { ...key, at: from });
+  if (await dayIsDeclared(manager, key.tenantId, revisions)) {
+    const losses = await lossEventCodingCounts(manager, { ...key, from, to });
+    return declaredCodingGate(losses, policy);
+  }
   const counts = await stopCodingCounts(manager, { ...key, from, to });
   const ratio = await dayRatio(manager, key.tenantId, revisions);
-  const policy = await dayGatePolicy(manager, { ...key, at: from });
   return codingGate(counts, ratio, policy);
 }

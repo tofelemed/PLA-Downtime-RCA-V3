@@ -1,4 +1,5 @@
 import { formatDec } from '../actuals/decimal';
+import { declaredIssues } from './declared-gates';
 import {
   Candidate,
   DecisionLine,
@@ -101,16 +102,28 @@ function lineIssues(
  * no positive residual beyond tolerance (`RESIDUAL_UNEXPLAINED`) and no over-accounting beyond tolerance
  * (`OVER_ACCOUNTED`); per line no decision on a changed or vanished candidate, no missing code and no
  * Unaccounted classification unless the policy allows it. Evaluated after the tolerance adjustments.
+ * In declared mode (`options.declared`) the declared gates come first and a slice without its production
+ * loss event raises only `DECLARED_LOSS_MISSING`.
  */
 export function submissionIssues(
   reconciliation: Reconciliation,
   lines: readonly DecisionLine[],
   rule: ToleranceRule,
+  options: { declared?: boolean } = {},
 ): WorkflowIssue[] {
+  const declared = options.declared
+    ? declaredIssues(reconciliation, lines)
+    : [];
+  const missing = new Set(
+    declared
+      .filter((found) => found.code === 'DECLARED_LOSS_MISSING')
+      .map((found) => found.sliceId),
+  );
   const slices = reconciliation.slices
+    .filter((slice) => !missing.has(slice.sliceId))
     .map((slice) => sliceIssue(slice, rule))
     .filter((found): found is WorkflowIssue => found !== null);
-  return [...slices, ...lineIssues(reconciliation, lines, rule)];
+  return [...declared, ...slices, ...lineIssues(reconciliation, lines, rule)];
 }
 
 /** Kinds whose event claims can exceed what the measurements hold (quality events, slowdowns). */

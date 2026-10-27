@@ -105,7 +105,9 @@ async function reviewIssues(
 /**
  * Gates of submission that depend on more than the reconciliation arithmetic (ACC10, WF02): a validated
  * current run, no queued or running recalculation, actuals meeting the coverage gate without a source
- * conflict, and no open review item on an evidence event.
+ * conflict, and no open review item on an evidence event. In declared mode the actual is the production
+ * loss event's figure, not a measurement: the coverage gate does not apply (`DECLARED_LOSS_MISSING`
+ * covers a missing event).
  */
 export async function environmentIssues(
   manager: EntityManager,
@@ -115,7 +117,9 @@ export async function environmentIssues(
   return [
     ...runIssues(state),
     ...(await pendingIssues(manager, state.period.id)),
-    ...(await actualsIssues(manager, state, policies)),
+    ...(state.lossBasis === 'declared'
+      ? []
+      : await actualsIssues(manager, state, policies)),
     ...(await reviewIssues(manager, state)),
   ];
 }

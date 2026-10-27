@@ -32,6 +32,10 @@ export const ACCOUNTING_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   GATES_FAILED: { title: 'Cannot submit yet', text: 'Resolve the listed items, then submit again.' },
   RESIDUAL_UNACCOUNTED: { title: 'Part of the loss is not explained', text: 'Assign the remaining loss to reasons before submitting.' },
   RESIDUAL_UNEXPLAINED: { title: 'Part of the loss is not explained', text: 'Assign the remaining loss to reasons before submitting.' },
+  DECLARED_LOSS_MISSING: { title: 'No production loss declared', text: 'The plant system has not declared a production loss for this period yet. Wait for it or ask OT to send it.' },
+  DECLARED_IDENTITY_MISMATCH: { title: 'The declared figures do not add up', text: 'Planned minus actual differs from the declared shortfall. Ask OT to correct the event, or book the difference as a tolerance adjustment.' },
+  LOSS_EVENT_UNCODED: { title: 'A production loss has no reason', text: 'Give each production loss event a reason, or mark it as under investigation, before submitting.' },
+  DECLARED_NOT_CONFIRMED: { title: 'OT has not confirmed this loss', text: "OT has not confirmed this day's production loss yet. Approve once it is confirmed." },
   CLAIM_EXCEEDS_MEASUREMENT: {
     title: 'Some declared losses exceed what was measured',
     text: 'An off-spec or slowdown quantity is larger than the measurements allow. Adjust it (with a reason) or reject it before submitting.',

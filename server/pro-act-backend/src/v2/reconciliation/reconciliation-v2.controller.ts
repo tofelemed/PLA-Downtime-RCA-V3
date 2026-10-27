@@ -123,7 +123,8 @@ export class ReconciliationV2Controller {
       IDEMPOTENT +
       '409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, ' +
       'OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, ' +
-      'BASELINE_CHANGED, OPEN_REVIEW_ITEMS (details.issues lists all).',
+      'BASELINE_CHANGED, OPEN_REVIEW_ITEMS; declared mode: DECLARED_LOSS_MISSING, DECLARED_IDENTITY_MISMATCH; ' +
+      'a block coding gate: CODING_INCOMPLETE with LOSS_EVENT_UNCODED / CODING_COVERAGE_LOW (details.issues lists all).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async submit(
@@ -146,7 +147,8 @@ export class ReconciliationV2Controller {
       IDEMPOTENT +
       '403 SEPARATION_OF_DUTIES for the submitter (all non-SuperAdmin roles); 409 STALE_SUBMISSION when inputs changed after ' +
       'submission or the hash differs; SME R8: 409 BRIDGE_REVIEW_REQUIRED while a bridge above the unit limit ' +
-      'waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer.',
+      'waits for its second review, 403 SEPARATION_OF_DUTIES for the bridge reviewer; declared mode: 409 ' +
+      'DECLARED_NOT_CONFIRMED while OT has not confirmed the production loss of the period.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(

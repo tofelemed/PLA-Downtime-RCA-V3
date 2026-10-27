@@ -25,6 +25,8 @@ import { ReconciliationLineSet } from './entities/reconciliation-line-set.entity
 import { ReconciliationLine } from './entities/reconciliation-line.entity';
 import { ReversedLineValue } from '../domain/valuation/reversal-valuation';
 import { reversedLineValues } from './reversed-line-values';
+import { declaredShortfallsOf, lossBasisOfRun } from './declared-state';
+import { LossBasis } from '../periods/loss-accounting-policy';
 
 /** Plan-ledger kinds of automatic candidates (residual lines are recomputed, never decided on). */
 const CANDIDATE_KINDS = ['availability', 'performance', 'quality'] as const;
@@ -49,6 +51,10 @@ export interface RevisionState {
   /** active product slices of the period (profile and window: valuation of manual lines, plan 2.6) */
   slices: PeriodProductSlice[];
   tolerance: TolerancePolicy;
+  /** declared mode: the basis of the run's `loss_accounting` version (gates follow the run, not today's policy) */
+  lossBasis: LossBasis;
+  /** declared mode: shortfall of the `production_loss` events the lines cite, by event id */
+  declaredShortfalls: ReadonlyMap<string, Dec>;
   reconciliation: Reconciliation;
   /** SME V4: closed intervals (epoch ms) of the events manual downtime lines cite */
   eventSpans: ReadonlyMap<string, { from: number; to: number }>;
@@ -168,6 +174,8 @@ export async function loadRevisionState(
     period.tenantId,
     lines,
   );
+  const lossBasis = await lossBasisOfRun(manager, run);
+  const declaredShortfalls = await declaredShortfallsOf(manager, lines);
   const partial = {
     period,
     revision,
@@ -179,6 +187,8 @@ export async function loadRevisionState(
     lines,
     slices,
     tolerance,
+    lossBasis,
+    declaredShortfalls,
     eventSpans,
     reversedValues,
   };

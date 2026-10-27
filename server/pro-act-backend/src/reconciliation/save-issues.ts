@@ -48,6 +48,7 @@ export function saveIssues(
         eventIds: line.input.eventIds ?? [],
       })),
       epsilon: state.tolerance.rule.epsilon,
+      shortfalls: state.declaredShortfalls,
     }),
   ];
 }

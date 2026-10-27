@@ -7,6 +7,8 @@ import {
   CodingGateResult,
   StopCodingCounts,
 } from '../domain/reconciliation/coding-gate';
+import { declaredCodingGate } from '../domain/reconciliation/declared-coding-gate';
+import { lossEventCodingCounts } from './declared-events';
 import { submitGateOf } from '../periods/reconciliation-options';
 import { RevisionState } from './revision-state';
 
@@ -90,6 +92,15 @@ export async function loadCodingGate(
   state: RevisionState,
 ): Promise<CodingGateResult> {
   const { period } = state;
+  if (state.lossBasis === 'declared') {
+    const losses = await lossEventCodingCounts(manager, {
+      tenantId: period.tenantId,
+      unitId: period.unitId,
+      from: period.utcStart,
+      to: period.utcEnd,
+    });
+    return declaredCodingGate(losses, submitGateOf(state.tolerance.body));
+  }
   const counts = await stopCodingCounts(manager, {
     tenantId: period.tenantId,
     unitId: period.unitId,
@@ -105,7 +116,7 @@ export function assertCodingGate(gate: CodingGateResult): void {
   if (gate.mode !== 'block' || gate.passes) return;
   throw new UnprocessableEntityException({
     code: 'CODING_INCOMPLETE',
-    message: `stop coding is incomplete: ${gate.issues.map((i) => i.message).join('; ')}`,
+    message: `coding is incomplete: ${gate.issues.map((i) => i.message).join('; ')}`,
     details: { issues: gate.issues, codingGate: gate },
   });
 }

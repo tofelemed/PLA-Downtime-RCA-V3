@@ -48,10 +48,36 @@ interface EventLedger {
 const add = (map: Map<string, Dec>, key: string, amount: Dec) =>
   map.set(key, (map.get(key) ?? ZERO).plus(amount));
 
+/**
+ * Declared mode: a production loss event's loss is its shortfall (its `quantity`), not a sum of run
+ * candidates — the OT figure is the authority, the run only splits it by reason. Its budget of every
+ * claiming kind is the shortfall, whether or not the run produced a candidate of that kind.
+ */
+function capDeclared(
+  ledger: EventLedger,
+  lines: readonly ClaimLine[],
+  shortfalls: ReadonlyMap<string, Dec>,
+): void {
+  const keys = [...ledger.cap.keys()].map((key) => [eventOfKey(key), key]);
+  for (const [eventId, key] of keys) {
+    const shortfall = shortfalls.get(eventId);
+    if (shortfall) ledger.cap.set(key, shortfall);
+  }
+  for (const line of lines) {
+    if (line.action !== 'manual' || !CLAIMING_KINDS.has(line.kind ?? ''))
+      continue;
+    for (const eventId of line.eventIds) {
+      const shortfall = shortfalls.get(eventId);
+      if (shortfall) ledger.cap.set(keyOf(eventId, line.kind), shortfall);
+    }
+  }
+}
+
 function ledgerOf(
   candidates: readonly EventCandidate[],
   outcomes: readonly CandidateOutcome[],
   lines: readonly ClaimLine[],
+  shortfalls: ReadonlyMap<string, Dec>,
 ): EventLedger {
   const ledger: EventLedger = { cap: new Map(), claimed: new Map() };
   const eventOf = new Map<string, string>();
@@ -70,6 +96,7 @@ function ledgerOf(
     if (line.action === 'replace' && eventId && line.quantity)
       add(ledger.claimed, keyOf(eventId, line.kind), line.quantity);
   }
+  capDeclared(ledger, lines, shortfalls);
   return ledger;
 }
 
@@ -106,15 +133,23 @@ function groupsOf(
  * what the run's candidates of that kind still claim of it, never exceed the event's loss of that kind in this period (each period holds
  * its own segment of an event, so splits across periods stay within the event total). Lines are taken in
  * order and the first one that goes beyond is reported with what was still available. An event the run
- * computed no loss of that kind for has no authoritative total and is not capped.
+ * computed no loss of that kind for has no authoritative total and is not capped — except a declared
+ * `production_loss` event, whose total is its shortfall.
  */
 export function eventConservationIssues(input: {
   candidates: readonly EventCandidate[];
   outcomes: readonly CandidateOutcome[];
   lines: readonly ClaimLine[];
   epsilon: Dec;
+  /** declared mode: shortfall (event quantity) by `production_loss` event id; absent = none cited */
+  shortfalls?: ReadonlyMap<string, Dec>;
 }): WorkflowIssue[] {
-  const ledger = ledgerOf(input.candidates, input.outcomes, input.lines);
+  const ledger = ledgerOf(
+    input.candidates,
+    input.outcomes,
+    input.lines,
+    input.shortfalls ?? new Map(),
+  );
   const issues: WorkflowIssue[] = [];
   for (const group of groupsOf(input.lines, ledger.cap)) {
     const events = [...group.events];
