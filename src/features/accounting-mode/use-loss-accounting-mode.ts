@@ -19,21 +19,30 @@ const COMPUTED_SHIFT_DEFAULTS: Pick<LossAccountingPolicyView, 'grain' | 'lossBas
   accountingUnitId: null,
 };
 
+/** The policy's basis and daily grain apply only on its accounting unit; without a unit (plant-wide) they are reported as set. */
+function appliesTo(policy: Pick<LossAccountingPolicyView, 'accountingUnitId'>, unitId?: string): boolean {
+  return !unitId || !policy.accountingUnitId || policy.accountingUnitId.toLowerCase() === unitId.toLowerCase();
+}
+
 /**
  * The loss accounting mode in force for the acting plant (a unit's own version, else plant-wide), fresh for
- * 5 minutes. When the read fails or has no data the computed / per-shift defaults are returned and
- * `isLoading` is false, so a page never breaks on it.
+ * 5 minutes. A policy whose accounting unit is another unit than `unitId` reads computed, per shift there.
+ * When the read fails or has no data the computed / per-shift defaults are returned and `isLoading` is
+ * false, so a page never breaks on it.
  */
 export function useLossAccountingMode(unitId?: string): LossAccountingMode {
   const inForce = useLossAccountingInForce(unitId ?? null);
   const policy = inForce.data?.policy ?? COMPUTED_SHIFT_DEFAULTS;
+  const applies = appliesTo(policy, unitId);
+  const isDeclared = applies && policy.lossBasis === 'declared';
+  const isDay = applies && policy.grain === 'day';
   return {
-    grain: policy.grain,
-    lossBasis: policy.lossBasis,
-    targetSource: policy.targetSource,
+    grain: isDay ? 'day' : 'shift',
+    lossBasis: isDeclared ? 'declared' : 'computed',
+    targetSource: isDeclared ? policy.targetSource : 'plan',
     accountingUnitId: policy.accountingUnitId,
-    isDeclared: policy.lossBasis === 'declared',
-    isDay: policy.grain === 'day',
+    isDeclared,
+    isDay,
     isLoading: inForce.isLoading,
   };
 }

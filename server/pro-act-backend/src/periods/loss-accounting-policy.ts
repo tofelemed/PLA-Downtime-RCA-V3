@@ -112,3 +112,28 @@ export function parseLossAccounting(body: unknown): LossAccountingPolicy {
     identityTolerance: tolerance(value.identityTolerance),
   };
 }
+
+/**
+ * The basis the policy gives a unit: declared only on the accounting unit (`accountingUnitId`, null = the
+ * version's own unit or every unit of a tenant-wide version); any other unit is accounted computed.
+ */
+export function lossBasisForUnit(
+  policy: Pick<LossAccountingPolicy, 'lossBasis' | 'accountingUnitId'>,
+  unitId: string,
+): LossBasis {
+  if (policy.lossBasis !== 'declared') return 'computed';
+  const accounting = policy.accountingUnitId?.toLowerCase() ?? null;
+  return accounting === null || accounting === unitId.toLowerCase()
+    ? 'declared'
+    : 'computed';
+}
+
+/** The policy as it applies to one unit: a declared policy reads computed (plan target) off the accounting unit. */
+export function policyForUnit(
+  policy: LossAccountingPolicy,
+  unitId: string,
+): LossAccountingPolicy {
+  return lossBasisForUnit(policy, unitId) === policy.lossBasis
+    ? policy
+    : { ...policy, lossBasis: 'computed', targetSource: 'plan' };
+}

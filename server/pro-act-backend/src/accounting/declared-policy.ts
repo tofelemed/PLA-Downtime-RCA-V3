@@ -1,14 +1,22 @@
 import { DeclaredEnginePolicy } from '../domain/accounting/declared.types';
-import { LossAccountingPolicy } from '../periods/loss-accounting-policy';
+import {
+  LossAccountingPolicy,
+  policyForUnit,
+} from '../periods/loss-accounting-policy';
 
-/** The `loss_accounting` fields the accounting engine applies (declared mode, spec §4.4). */
+/**
+ * The `loss_accounting` fields the accounting engine applies to a unit's period (declared mode, spec §4.4):
+ * declared only on the accounting unit, computed on every other unit.
+ */
 export function declaredPolicyOf(
   policy: LossAccountingPolicy,
+  unitId: string,
 ): Required<DeclaredEnginePolicy> {
+  const applied = policyForUnit(policy, unitId);
   return {
-    lossBasis: policy.lossBasis,
-    targetSource: policy.targetSource,
-    stopsCrossCheck: policy.stopsCrossCheck,
-    identityTolerance: policy.identityTolerance,
+    lossBasis: applied.lossBasis,
+    targetSource: applied.targetSource,
+    stopsCrossCheck: applied.stopsCrossCheck,
+    identityTolerance: applied.identityTolerance,
   };
 }

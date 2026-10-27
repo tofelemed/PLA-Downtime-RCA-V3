@@ -184,3 +184,80 @@ describe('declared mode: the policy accounting product (two profiles, no plan)',
     });
   });
 });
+
+/**
+ * A tenant-wide declared policy whose accounting unit is A2: only A2's periods run the declared ledger;
+ * A1 (another unit of the plant) keeps the computed ledger, so its stop still produces a loss line and its
+ * run snapshot reads `computed` for the gates. Test data only.
+ */
+describe('declared mode is limited to the accounting unit', () => {
+  const env = new AccountingWorld();
+  let declaredPeriod = '';
+  let computedPeriod = '';
+  let stopId = '';
+  let lossId = '';
+
+  beforeAll(async () => {
+    await env.start();
+    const { unitA1, unitA2 } = env.world;
+    await env.approvedPlan(unitA1);
+    await env.approvedPlan(unitA2);
+    await env.materialize([unitA1, unitA2]);
+    declaredPeriod = await env.periodId(unitA2, A);
+    computedPeriod = await env.periodId(unitA1, A);
+    await env.rows(
+      `UPDATE reason_codes SET default_oee_component = 'availability' WHERE id = $1`,
+      [env.world.reasonR1],
+    );
+    await env.rows(
+      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
+              effective_from, approved_at)
+       VALUES ($1, 1, 'loss_accounting', NULL, 'tenant', 2, $2::jsonb, '2026-01-01T00:00:00Z', now())`,
+      [
+        env.world.tenantA,
+        JSON.stringify({ ...POLICY, accountingUnitId: unitA2 }),
+      ],
+    );
+    await env.outputEvent(unitA1, A, B, '300');
+    await env.outputEvent(unitA2, A, B, '300');
+    stopId = await env.lossEvent(unitA1, plus(A, HOUR), 1, {
+      reasonCodeId: env.world.reasonR1,
+    });
+    const created = await env
+      .post('production-events', {
+        unitId: unitA2,
+        startTime: A,
+        endTime: B,
+        physicalType: 'production_loss',
+        reasonCodeId: env.world.reasonR1,
+        declaredFigures: {
+          planned: 120,
+          actual: 112.5,
+          shortfall: 7.5,
+          sourceStatus: 'CONFIRMED',
+        },
+      })
+      .expect(201);
+    lossId = (created.body as { id: string }).id;
+    await env.settle();
+  });
+  afterAll(() => env.stop());
+
+  it('the accounting unit runs the declared ledger', async () => {
+    const body = await env.accounting(declaredPeriod);
+    expect(body.data.totals.map((t) => t.ledger)).toEqual(['plan']);
+    const lines = body.data.lines.filter((l) => l.kind !== 'residual');
+    expect(lines).toMatchObject([{ basis: 'declared', causeEventId: lossId }]);
+  });
+
+  it('another unit runs computed: its stop produces a line and no capacity_not_applicable flag', async () => {
+    const body = await env.accounting(computedPeriod);
+    expect(body.data.run).toMatchObject({ status: 'validated' });
+    const stopLines = body.data.lines.filter((l) => l.causeEventId === stopId);
+    expect(stopLines.length).toBeGreaterThan(0);
+    expect(stopLines.every((l) => l.basis !== 'declared')).toBe(true);
+    expect(env.totals(body, 'plan').flags).not.toContain(
+      'capacity_not_applicable',
+    );
+  });
+});

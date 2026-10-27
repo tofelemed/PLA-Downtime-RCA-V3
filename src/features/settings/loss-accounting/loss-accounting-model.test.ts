@@ -33,7 +33,7 @@ describe('loss accounting form model', () => {
 
   it('the declared body carries exactly the DTO keys', () => {
     const body = lossAccountingBody({ ...initialLossAccountingForm(DECLARED), identityTolerance: '2.5', stopsCrossCheck: false }, COMPUTED);
-    expect(body).toEqual({ grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1', accountingProductId: null, stopsCrossCheck: false, identityTolerance: 2.5 });
+    expect(body).toEqual({ unitId: 'u-1', grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1', accountingProductId: null, stopsCrossCheck: false, identityTolerance: 2.5 });
   });
 
   it('the declared body carries the chosen accounting product; none is sent as null', () => {

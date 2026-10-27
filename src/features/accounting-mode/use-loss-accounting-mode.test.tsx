@@ -32,11 +32,18 @@ describe('useLossAccountingMode', () => {
   });
 
   it('reports declared and day from the policy in force', async () => {
-    server.policy = policy({ grain: 'day', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-9' });
+    server.policy = policy({ grain: 'day', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1' });
     const { result } = renderHook(() => useLossAccountingMode('u-1'), { wrapper });
     await waitFor(() => expect(result.current.isDeclared).toBe(true));
-    expect(result.current).toMatchObject({ grain: 'day', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-9', isDay: true, isLoading: false });
+    expect(result.current).toMatchObject({ grain: 'day', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1', isDay: true, isLoading: false });
     expect(server.calls[0]).toMatchObject({ path: '/loss-accounting', unitId: 'u-1' });
+  });
+
+  it('a declared daily policy kept on another unit reads computed per shift for this unit', async () => {
+    server.policy = policy({ grain: 'day', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-9' });
+    const { result } = renderHook(() => useLossAccountingMode('u-1'), { wrapper });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current).toMatchObject({ grain: 'shift', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: 'u-9', isDeclared: false, isDay: false });
   });
 
   it('keeps the computed per-shift flags for the default policy', async () => {

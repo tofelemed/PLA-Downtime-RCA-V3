@@ -359,7 +359,7 @@ function engineInput(
     occurrences: inputs.kpi.occurrences,
     reasonComponents: inputs.reasonComponents,
     policy: {
-      ...declaredPolicyOf(engine.lossAccounting),
+      ...declaredPolicyOf(engine.lossAccounting, period.unitId),
       microStopSeconds: engine.oee.microStopSeconds,
       microStopSecondsByAssetClass: engine.oee.microStopSecondsByAssetClass,
       tripReasonCodes: engine.oee.tripReasonCodes,

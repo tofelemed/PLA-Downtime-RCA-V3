@@ -101,7 +101,7 @@ describe('Plant settings: Loss accounting card', () => {
     await waitFor(() => expect(screen.getByTestId('loss-in-force')).toHaveTextContent('Shift accounting · computed from measurements and stops'));
   });
 
-  it('a writer drafts a declared version; the POST carries exactly the DTO keys', async () => {
+  it('a writer drafts a declared version for the accounting unit; the POST carries exactly the DTO keys', async () => {
     current = inForce(COMPUTED);
     actAs('production_accountant', 'author-1');
     renderCard();
@@ -122,6 +122,7 @@ describe('Plant settings: Loss accounting card', () => {
     fireEvent.click(within(panel).getByTestId('loss-save'));
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+      unitId: UNIT_ID,
       grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: UNIT_ID, accountingProductId: PRODUCT_ID, stopsCrossCheck: true, identityTolerance: 0,
     });
   });

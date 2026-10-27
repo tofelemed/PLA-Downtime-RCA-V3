@@ -3,6 +3,7 @@ import { Dec, toDec } from '../domain/actuals/decimal';
 import { CalculationRun } from '../accounting/entities/calculation-run.entity';
 import {
   LossBasis,
+  lossBasisForUnit,
   parseLossAccounting,
 } from '../periods/loss-accounting-policy';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
@@ -11,16 +12,20 @@ import { ReconciliationLine } from './entities/reconciliation-line.entity';
 /**
  * The loss basis the run was calculated with, from the `loss_accounting` version its policy snapshot
  * names — never re-resolved, so a policy change after the run cannot desynchronise the gates from the
- * figures. A run without that version (older than declared mode) or without a run is `computed`.
+ * figures. A run without that version (older than declared mode) or without a run is `computed`, and so
+ * is a run of a unit that is not the version's accounting unit (the engine accounted it computed).
  */
 export async function lossBasisOfRun(
   manager: EntityManager,
   run: CalculationRun | null,
+  unitId: string,
 ): Promise<LossBasis> {
   const ref = run?.policyVersions.find((p) => p.kind === 'loss_accounting');
   if (!ref) return 'computed';
   const stored = await manager.findOneBy(AccountingPolicy, { id: ref.id });
-  return stored ? parseLossAccounting(stored.body).lossBasis : 'computed';
+  return stored
+    ? lossBasisForUnit(parseLossAccounting(stored.body), unitId)
+    : 'computed';
 }
 
 /** Shortfall (event quantity) of the `production_loss` events the lines cite, by event id. */

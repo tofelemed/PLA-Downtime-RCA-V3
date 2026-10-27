@@ -8,7 +8,10 @@ import {
   PeriodWarning,
   ProductionPeriod,
 } from './entities/production-period.entity';
-import { parseLossAccounting } from './loss-accounting-policy';
+import {
+  lossBasisForUnit,
+  parseLossAccounting,
+} from './loss-accounting-policy';
 import { policyBodiesInForce } from './policy-bodies-in-force';
 import {
   BaselinePlanRow,
@@ -207,8 +210,8 @@ export class SliceResolverService {
 }
 
 /**
- * Per period: `undefined` when the unit's `loss_accounting` in force at the period start is computed (or
- * none is stored), else the policy's `accountingProductId` (null = none) — the declared slice rule applies.
+ * Per period: `undefined` when the unit's `loss_accounting` in force at the period start is computed, the
+ * unit is not its accounting unit, or none is stored; else the policy's `accountingProductId` (null = none) — the declared slice rule applies.
  */
 async function declaredProducts(
   manager: EntityManager,
@@ -223,10 +226,10 @@ async function declaredProducts(
       at: p.utcStart,
     })),
   );
-  return bodies.map((body) => {
+  return bodies.map((body, i) => {
     if (body === undefined) return undefined;
     const policy = parseLossAccounting(body);
-    return policy.lossBasis === 'declared'
+    return lossBasisForUnit(policy, periods[i].unitId) === 'declared'
       ? policy.accountingProductId
       : undefined;
   });
