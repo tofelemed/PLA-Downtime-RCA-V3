@@ -104,8 +104,8 @@ function validatorFor(kind: string): ValidateFunction {
 }
 
 describe('contracts/policies', () => {
-  it('declares eleven policy kinds, each with exactly one schema and one default', () => {
-    expect(kinds).toHaveLength(11);
+  it('declares twelve policy kinds, each with exactly one schema and one default', () => {
+    expect(kinds).toHaveLength(12);
     expect([...schemaFiles].sort()).toEqual([...kinds].sort());
     expect([...defaultFiles].sort()).toEqual([...kinds].sort());
   });

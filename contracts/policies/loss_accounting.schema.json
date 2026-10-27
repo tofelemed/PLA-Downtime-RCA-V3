@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://proact.local/contracts/policies/loss_accounting.schema.json",
+  "title": "Loss accounting policy",
+  "description": "How production loss is accounted for a unit: the period grain (shift or plant-day), whether loss lines are computed from stops and measurements or taken from the OT-declared production loss event, where the target comes from, which accounting unit the declared event is booked against, whether stops are cross-checked against the declared shortfall, and the tolerance of the declared identity (planned - actual = shortfall). Plan: declared mode (docs/PLA_DECLARED_MODE_PLAN.md).",
+  "type": "object",
+  "required": ["policyKind", "version", "effectiveFrom", "scope", "body"],
+  "additionalProperties": false,
+  "properties": {
+    "policyKind": { "type": "string", "const": "loss_accounting" },
+    "version": { "$ref": "policy-envelope.schema.json#/$defs/version" },
+    "effectiveFrom": { "$ref": "policy-envelope.schema.json#/$defs/effectiveFrom" },
+    "effectiveTo": { "$ref": "policy-envelope.schema.json#/$defs/effectiveTo" },
+    "scope": { "$ref": "policy-envelope.schema.json#/$defs/scope" },
+    "notes": { "$ref": "policy-envelope.schema.json#/$defs/notes" },
+    "body": { "$ref": "#/$defs/body" }
+  },
+  "$defs": {
+    "body": {
+      "type": "object",
+      "required": ["grain", "dayStart", "lossBasis", "targetSource", "accountingUnitId", "stopsCrossCheck", "identityTolerance"],
+      "additionalProperties": false,
+      "properties": {
+        "grain": {
+          "type": "string",
+          "enum": ["shift", "day"],
+          "default": "shift",
+          "description": "Accounting period grain: one period per shift or per plant day."
+        },
+        "dayStart": {
+          "type": "string",
+          "pattern": "^\\d{2}:\\d{2}$",
+          "default": "06:00",
+          "description": "Plant-local HH:mm at which the plant day starts; used when grain = day."
+        },
+        "lossBasis": {
+          "type": "string",
+          "enum": ["computed", "declared"],
+          "default": "computed",
+          "description": "computed = loss lines derived from stops and measurements; declared = loss lines taken from the OT-declared production loss event."
+        },
+        "targetSource": {
+          "type": "string",
+          "enum": ["plan", "declared"],
+          "default": "plan",
+          "description": "Target of the period: the plan target, or the OT-declared planned quantity."
+        },
+        "accountingUnitId": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "default": null,
+          "description": "Unit the declared production loss event is booked against; null = the policy's own unit."
+        },
+        "stopsCrossCheck": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cross-check stop quantities against the declared shortfall and flag the difference."
+        },
+        "identityTolerance": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Allowed deviation of planned - actual - shortfall, in the event's unit of measure."
+        }
+      }
+    }
+  }
+}

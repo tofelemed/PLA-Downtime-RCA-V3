@@ -17,7 +17,8 @@
         "calendar_defaults",
         "rca_policy",
         "month_close",
-        "reconciliation_sla"
+        "reconciliation_sla",
+        "loss_accounting"
       ],
       "description": "Discriminator; equals `accounting_policies.policy_kind` and the `policyKind` const of the matching kind schema."
     },
