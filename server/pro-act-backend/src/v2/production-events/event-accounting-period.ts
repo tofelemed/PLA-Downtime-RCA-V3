@@ -11,7 +11,8 @@ export interface EventAccountingPeriodView {
 
 /**
  * Per listed event, the earliest production period of its unit it overlaps (half-open; an open event runs to
- * now) — the period whose statement the event page links to. One query per page, served by
+ * now) — the period whose statement the event page links to. Excluded periods (`is_excluded`) are skipped:
+ * they are never accounted, so "View accounting" never lands on one. One query per page, served by
  * `UQ_production_periods_unit_start`.
  */
 const PERIOD_SQL = `SELECT DISTINCT ON (e."id") e."id" AS "eventId", p."id" AS "periodId",
@@ -20,6 +21,7 @@ const PERIOD_SQL = `SELECT DISTINCT ON (e."id") e."id" AS "eventId", p."id" AS "
   JOIN "production_periods" p
     ON p."tenant_id" = e."tenant_id" AND p."unit_id" = e."unit_id"
    AND p."utc_start" < COALESCE(e."end_time", now()) AND p."utc_end" > e."start_time"
+   AND p."is_excluded" = false
  WHERE e."tenant_id" = $1 AND e."id" = ANY($2::uuid[])
  ORDER BY e."id", p."utc_start"`;
 
