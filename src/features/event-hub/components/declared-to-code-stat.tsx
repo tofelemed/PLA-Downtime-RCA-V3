@@ -1,31 +1,26 @@
 import { useProductionEvents } from '@/api/v2/queries/production-events';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
-import { toCodeFilters, toEventQuery, type EventFilterState } from '../model/event-filters';
-import { shortfallOf } from '../model/production-loss';
-import { useEventHubEnv } from '../use-event-hub-env';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { toCodeFilters, toEventQuery, type EventFilterState } from '../model/event-filters';
+import { useEventHubEnv } from '../use-event-hub-env';
 
-/** One page of days is enough for a window of a few weeks; beyond it the tile says "+" and shows no total. */
+/** One page of days is enough for a window of a few weeks; beyond it the tile says "+". */
 const PAGE_SIZE = 100;
 
 /**
- * Declared mode: the production loss days of the chosen units and window still without a reason — how many,
- * and the tonnes they hold (the sum of the days' declared shortfalls, shown only while every day is listed).
+ * Declared mode: how many production loss days of the chosen units and window are still without a reason
+ * (a count only; tonnes are a server figure and are not computed here).
  */
 export function DeclaredToCodeStat({ filters }: { filters: EventFilterState }) {
-  const { number, decimal } = useNumberFormat();
+  const { number } = useNumberFormat();
   const env = useEventHubEnv();
   const query = useProductionEvents({ ...toEventQuery(toCodeFilters(filters, true)), limit: PAGE_SIZE }, env.timezone);
-  const events = flattenPages(query.data?.pages);
-  const more = query.hasNextPage === true;
-  const tonnes = events.reduce((total, event) => total + (shortfallOf(event) ?? 0), 0);
+  const count = flattenPages(query.data?.pages).length;
+  const text = query.isLoading ? '…' : query.isError ? '—' : `${number(count)}${query.hasNextPage ? '+' : ''}`;
   return (
     <div data-testid="quick-stats-production-loss">
       <div className="text-xs text-muted-foreground">Production loss to code</div>
-      <div className="text-2xl font-semibold">
-        {query.isLoading ? '…' : `${number(events.length)}${more ? '+' : ''}`}
-        {!query.isLoading && !more && <span className="ml-2 text-base font-normal text-muted-foreground" data-testid="quick-stats-production-loss-tonnes">{decimal(String(tonnes), 3)} t</span>}
-      </div>
+      <div className="text-2xl font-semibold">{text}</div>
     </div>
   );
 }
