@@ -23,6 +23,7 @@ function slice(
     uom: 't',
     gap,
     attributed,
+    declaredGain: ZERO,
     toleranceAdjustment,
     unadjustedResidual: gap.minus(attributed),
     residual: gap.minus(attributed).minus(toleranceAdjustment),

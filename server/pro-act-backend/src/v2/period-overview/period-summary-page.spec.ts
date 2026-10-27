@@ -28,6 +28,7 @@ function slice(residual: string): SliceReconciliation {
     actual: new Dec('90'),
     gap: new Dec('10'),
     attributed: ZERO,
+    declaredGain: ZERO,
     toleranceAdjustment: ZERO,
     unadjustedResidual: new Dec(residual),
     residual: new Dec(residual),

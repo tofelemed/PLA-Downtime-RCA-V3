@@ -11,6 +11,8 @@ export interface SliceBody {
   actual: string | null;
   gap: string | null;
   attributed: string;
+  /** declared runs: the recovery shares taken off the attributed loss (absent when zero) */
+  declaredGain?: string;
   toleranceAdjustment: string;
   unadjustedResidual: string | null;
   residual: string | null;

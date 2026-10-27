@@ -37,6 +37,19 @@ function Figure({ slice, figure, label, emphasis }: { slice: SliceReconciliation
   );
 }
 
+/** Declared runs: the recovery shares the reconciliation took off the attributed loss (Task 13). */
+function RecoveryCheck({ slice }: { slice: SliceReconciliationView }) {
+  if (!slice.declaredGain || Number(slice.declaredGain) === 0) return null;
+  return (
+    <dl data-testid="figure-declaredGain" data-value={slice.declaredGain}>
+      <dt className="text-xs text-muted-foreground">Recovery</dt>
+      <dd className="font-medium">
+        −<Quantity value={slice.declaredGain} uom={slice.uom} fractionDigits={3} />
+      </dd>
+    </dl>
+  );
+}
+
 function SliceStatus({ slice }: { slice: SliceReconciliationView }) {
   const labelled = slice.flags.filter((flag) => !isDataFlag(flag));
   const check = stopsCrossCheckOf(slice.flags);
@@ -82,6 +95,7 @@ function SliceFigures({ slice, equation }: { slice: SliceReconciliationView; equ
         <span id={`checks-${slice.sliceId}`} className="font-medium text-muted-foreground">
           Checks
         </span>
+        <RecoveryCheck slice={slice} />
         {CHECKS.map(({ key, label }) => (
           <Figure key={key} slice={slice} figure={key} label={label} />
         ))}

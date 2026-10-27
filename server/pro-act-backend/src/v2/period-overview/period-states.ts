@@ -312,6 +312,7 @@ export async function loadPeriodStates(
         : [],
     );
     const rule = run ? rules.get(run.id) : undefined;
+    const lossBasis = run ? (bases.get(run.id) ?? 'computed') : null;
     return {
       period,
       revision,
@@ -325,9 +326,14 @@ export async function loadPeriodStates(
       lines,
       rule: rule ?? null,
       reconciliation: rule
-        ? reconcile({ candidates, lines, slices: slicesOf(totals), rule })
+        ? reconcile({
+            candidates,
+            lines,
+            slices: slicesOf(totals, lossBasis ?? 'computed'),
+            rule,
+          })
         : null,
-      lossBasis: run ? (bases.get(run.id) ?? 'computed') : null,
+      lossBasis,
     };
   });
 }

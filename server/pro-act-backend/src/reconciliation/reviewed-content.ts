@@ -16,9 +16,16 @@ export function sha256(value: unknown): string {
   return createHash('sha256').update(canonicalJson(value)).digest('hex');
 }
 
-/** Per-slice totals as decimal strings (view, snapshot, hash). */
+/**
+ * Per-slice totals as decimal strings (view, snapshot, hash). `declaredGain` (Task 13 fix 1: a declared
+ * run's recovery shares taken off the attributed loss) is omitted when zero, so the content hash of every
+ * computed revision is unchanged.
+ */
 export function sliceView(slice: SliceReconciliation) {
   return {
+    ...(slice.declaredGain.isZero()
+      ? {}
+      : { declaredGain: canon(slice.declaredGain) }),
     sliceId: slice.sliceId,
     uom: slice.uom,
     target: canon(slice.target),

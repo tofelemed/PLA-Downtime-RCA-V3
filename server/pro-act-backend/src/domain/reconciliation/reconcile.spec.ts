@@ -118,4 +118,56 @@ describe('reconcile (plan 2.8)', () => {
     expect(result.lineFlags).toEqual([['candidate_missing']]);
     expect(result.slices[0].attributed.toString()).toBe('0');
   });
+
+  describe('declared recovery (Task 13 fix 1)', () => {
+    const shares: Candidate[] = [
+      {
+        autoKey: 'a',
+        sliceId: 's',
+        kind: 'availability',
+        quantity: new Dec(23),
+      },
+      {
+        autoKey: 'p',
+        sliceId: 's',
+        kind: 'performance',
+        quantity: new Dec(11),
+      },
+      { autoKey: 'q', sliceId: 's', kind: 'quality', quantity: new Dec(6) },
+    ];
+    const slice = (declaredGain?: Dec) => ({
+      sliceId: 's',
+      uom: 't',
+      target: new Dec(240),
+      actual: new Dec(208),
+      flags: [],
+      ...(declaredGain ? { declaredGain } : {}),
+    });
+
+    it('23 + 11 + 6 − 8 on a 32 t shortfall: attributed 32, residual 0, not over-accounted', () => {
+      const [result] = reconcile({
+        candidates: shares,
+        lines: [],
+        slices: [slice(new Dec(8))],
+        rule: RULE,
+      }).slices;
+      expect(result.attributed.toString()).toBe('32');
+      expect(result.declaredGain.toString()).toBe('8');
+      expect(result.residual?.toString()).toBe('0');
+      expect(result.overAccounted?.toString()).toBe('0');
+      expect(result.flags).not.toContain('over_accounted');
+    });
+
+    it('without a declared gain (computed runs) the shares alone are attributed', () => {
+      const [result] = reconcile({
+        candidates: shares,
+        lines: [],
+        slices: [slice()],
+        rule: RULE,
+      }).slices;
+      expect(result.attributed.toString()).toBe('40');
+      expect(result.declaredGain.toString()).toBe('0');
+      expect(result.overAccounted?.toString()).toBe('8');
+    });
+  });
 });

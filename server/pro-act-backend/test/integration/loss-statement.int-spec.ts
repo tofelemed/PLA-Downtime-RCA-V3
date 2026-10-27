@@ -1,6 +1,9 @@
 import { randomUUID } from 'crypto';
 import { A, NEXT_DAY } from './support/actuals-world';
-import { ReconciliationWorld } from './support/reconciliation-world';
+import {
+  ReconciliationBody,
+  ReconciliationWorld,
+} from './support/reconciliation-world';
 
 /** Declared day policy of unit A2: the OT figures, accounted per day (Task 13 mixed window). */
 const DECLARED_DAY = {
@@ -279,6 +282,38 @@ describe('loss accounting statement (Task 13)', () => {
       statement: StatementBody;
     };
     expect(period.statement).toMatchObject(OWNER_STATEMENT);
+  });
+
+  it('the declared day reconciles the recovery: submitted and approved with residual 0, as the statement says (fix 1)', async () => {
+    const view = await env.view(dayPeriod);
+    expect(view.slices).toHaveLength(1);
+    expect(view.slices[0]).toMatchObject({
+      gap: '32',
+      attributed: '32',
+      declaredGain: '8',
+      residual: '0',
+      overAccounted: '0',
+    });
+    expect(view.slices[0].flags).not.toContain('over_accounted');
+    const submitted = await env.submit(view, env.admin, dayPeriod);
+    expect(submitted.status).toBe(200);
+    const approved = (
+      await env.approve(
+        submitted.body as ReconciliationBody,
+        env.approver,
+        dayPeriod,
+      )
+    ).body as ReconciliationBody;
+    expect(approved.revision.lifecycle).toBe('approved');
+
+    const body = await report(`${window()}&revision=approved`);
+    const day = body.data.items.find((row) => row.periodId === dayPeriod);
+    expect(day?.statement).toMatchObject({
+      ...OWNER_STATEMENT,
+      revisionState: 'approved',
+    });
+    expect(day?.statement?.unaccounted).toBe(approved.slices[0].residual);
+    expect(day?.statement?.netAccounted).toBe(day?.statement?.shortfall);
   });
 
   it('refuses a unit outside the tenant and an unknown revision', async () => {

@@ -45,7 +45,10 @@ export interface SliceReconciliationView {
   target: string | null;
   actual: string | null;
   gap: string | null;
+  /** Σ candidates in force + manual lines − the declared recovery (declared runs) */
   attributed: string;
+  /** declared runs only: the recovery shares taken off the attributed loss (positive); absent when zero */
+  declaredGain?: string;
   toleranceAdjustment: string;
   unadjustedResidual: string | null;
   residual: string | null;

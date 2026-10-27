@@ -101,7 +101,15 @@ export function sliceUomOf(
   return totals.find((t) => t.sliceId === sliceId && t.uom)?.uom ?? null;
 }
 
-export function slicesOf(totals: readonly PeriodLedgerTotal[]): SliceBasis[] {
+/**
+ * The plan-ledger basis of each slice. Task 13 fix 1: a declared run's plan `gain` total (its recovery
+ * shares, positive) is carried as `declaredGain` so the reconciliation takes it off the attributed loss;
+ * a computed run's gain never is (computed-mode reconciliation unchanged).
+ */
+export function slicesOf(
+  totals: readonly PeriodLedgerTotal[],
+  lossBasis: LossBasis,
+): SliceBasis[] {
   const capacityFlags = new Map(
     totals
       .filter((t) => t.ledger === 'capacity')
@@ -118,6 +126,9 @@ export function slicesOf(totals: readonly PeriodLedgerTotal[]): SliceBasis[] {
       target: decOf(t.targetQty),
       actual: decOf(t.actualQty),
       flags: [...t.flags, ...(capacityFlags.get(t.sliceId) ?? [])],
+      ...(lossBasis === 'declared'
+        ? { declaredGain: decOf(t.gainQty) ?? new Dec(0) }
+        : {}),
     }));
 }
 
@@ -141,7 +152,7 @@ export function reconcileWith(
   return reconcile({
     candidates: candidatesOf(state.candidateLines),
     lines,
-    slices: slicesOf(state.totals),
+    slices: slicesOf(state.totals, state.lossBasis),
     rule: state.tolerance.rule,
   });
 }
@@ -198,7 +209,7 @@ export async function loadRevisionState(
   const reconciliation = reconcile({
     candidates: candidatesOf(candidateLines),
     lines: decisionLinesOf(lines),
-    slices: slicesOf(totals),
+    slices: slicesOf(totals, lossBasis),
     rule: tolerance.rule,
   });
   return { ...partial, reconciliation };

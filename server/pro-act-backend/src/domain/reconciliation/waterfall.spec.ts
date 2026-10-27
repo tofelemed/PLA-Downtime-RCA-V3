@@ -25,6 +25,7 @@ function slice(
     actual: d(actual),
     gap,
     attributed: d(attributed),
+    declaredGain: ZERO,
     toleranceAdjustment: ZERO,
     unadjustedResidual: residual,
     residual,

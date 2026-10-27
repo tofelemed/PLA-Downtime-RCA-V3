@@ -137,6 +137,14 @@ describe('declared candidate and slice', () => {
     wrap(<ReconciliationSummary view={{ slices: [slice] } as unknown as ReconciliationView} />);
     expect(screen.getByText(/Status: Capacity figures not available \(declared basis\)$/)).toBeInTheDocument();
     expect(screen.getByTestId('stops-cross-check')).toHaveTextContent('Stops cross-check');
+    expect(screen.queryByTestId('figure-declaredGain')).not.toBeInTheDocument();
+  });
+
+  it('the Checks row shows the declared recovery the reconciliation took off (23 + 11 + 6 − 8)', () => {
+    const slice = { sliceId: 's1', uom: 't', target: '240', actual: '208', gap: '32', attributed: '32', declaredGain: '8', toleranceAdjustment: '0', residual: '0', overAccounted: '0', overproduction: '0', tolerance: '1', flags: [] } as unknown as SliceReconciliationView;
+    wrap(<ReconciliationSummary view={{ slices: [slice] } as unknown as ReconciliationView} />);
+    expect(screen.getByTestId('figure-declaredGain')).toHaveTextContent(/^Recovery−8\.000\s?t$/);
+    expect(screen.getByTestId('figure-overAccounted')).toHaveAttribute('data-value', '0');
   });
 });
 

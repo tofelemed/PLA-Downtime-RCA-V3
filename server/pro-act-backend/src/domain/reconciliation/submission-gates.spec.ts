@@ -23,6 +23,7 @@ function slice(over: Partial<SliceReconciliation>): SliceReconciliation {
     actual: d(60),
     gap: d(40),
     attributed: d(40),
+    declaredGain: d(0),
     toleranceAdjustment: d(0),
     unadjustedResidual: d(0),
     residual: d(0),

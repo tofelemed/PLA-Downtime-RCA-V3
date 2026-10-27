@@ -5,7 +5,10 @@ import {
   LedgerTotals,
   PeriodAccounting,
 } from '../domain/accounting/accounting.types';
+import { ZERO } from '../domain/actuals/decimal';
+import { sumOf } from '../domain/accounting/claims';
 import { reconcile } from '../domain/reconciliation/reconcile';
+import { SliceBasis } from '../domain/reconciliation/reconciliation.types';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import {
   AffectedReport,
@@ -74,6 +77,34 @@ function ledgerView(t: LedgerTotals) {
 }
 
 /**
+ * The plan slices of a preview; Task 13 fix 1: its declared recovery shares (`gain` lines, basis declared,
+ * negative) are carried as the positive `declaredGain` the reconciliation takes off the attributed loss.
+ */
+function previewSlices(preview: PeriodAccounting): SliceBasis[] {
+  return preview.totals
+    .filter((t) => t.ledger === 'plan')
+    .map((t) => {
+      const recovery = preview.lines.filter(
+        (l) =>
+          l.ledger === 'plan' &&
+          l.kind === 'gain' &&
+          l.basis === 'declared' &&
+          l.sliceId === t.sliceId,
+      );
+      return {
+        sliceId: t.sliceId,
+        uom: t.uom,
+        target: t.target,
+        actual: t.actual,
+        flags: t.flags,
+        ...(recovery.length > 0
+          ? { declaredGain: ZERO.minus(sumOf(recovery.map((l) => l.quantity))) }
+          : {}),
+      };
+    });
+}
+
+/**
  * The preview (never written as a run): both ledgers from the new inputs, and the approved decisions
  * re-applied to the new candidates so the reconciled residual before and after can be compared.
  */
@@ -93,15 +124,7 @@ export function afterOf(
         quantity: l.quantity,
       })),
     lines: decisionLinesOf(state.lines),
-    slices: preview.totals
-      .filter((t) => t.ledger === 'plan')
-      .map((t) => ({
-        sliceId: t.sliceId,
-        uom: t.uom,
-        target: t.target,
-        actual: t.actual,
-        flags: t.flags,
-      })),
+    slices: previewSlices(preview),
     rule: state.tolerance.rule,
   });
   return {

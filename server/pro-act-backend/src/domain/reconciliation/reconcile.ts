@@ -119,6 +119,21 @@ function withPlan(
   };
 }
 
+/** Σ candidates in force + lines adding their own quantity − the declared recovery of the slice. */
+function attributedOf(
+  basis: SliceBasis,
+  lines: readonly DecisionLine[],
+  outcomes: readonly CandidateOutcome[],
+  candidates: ReadonlyMap<string, Candidate>,
+): Dec {
+  return sumOf([
+    ...outcomes
+      .filter((o) => o.sliceId === basis.sliceId)
+      .map((o) => o.effectiveQuantity),
+    ...lines.map((line) => ownQuantity(line, candidates)),
+  ]).minus(basis.declaredGain ?? ZERO);
+}
+
 function sliceTotals(
   basis: SliceBasis,
   input: ReconcileInput,
@@ -131,12 +146,8 @@ function sliceTotals(
     uom: basis.uom,
     target: basis.target,
     actual: basis.actual,
-    attributed: sumOf([
-      ...outcomes
-        .filter((o) => o.sliceId === basis.sliceId)
-        .map((o) => o.effectiveQuantity),
-      ...lines.map((line) => ownQuantity(line, candidates)),
-    ]),
+    attributed: attributedOf(basis, lines, outcomes, candidates),
+    declaredGain: basis.declaredGain ?? ZERO,
     toleranceAdjustment: sumOf(
       lines
         .filter((l) => l.action === 'tolerance')
@@ -163,7 +174,8 @@ function sliceTotals(
 /**
  * The reconciliation of a revision (ACC07–ACC09): automatic candidates of the current run with the saved
  * decisions applied (accept keeps the candidate, adjust replaces its quantity, replace and reject take it
- * out — the replacement is a line of its own), manual lines added, tolerance adjustments kept apart, and
+ * out — the replacement is a line of its own), manual lines added, a declared run's recovery shares
+ * (`SliceBasis.declaredGain`, Task 13) taken off, tolerance adjustments kept apart, and
  * per slice the plan identity `target − actual = attributed + tolerance adjustment + residual` with the
  * residual signed and never clamped. Decisions whose candidate vanished or changed are flagged and never
  * counted twice. Pure and deterministic.

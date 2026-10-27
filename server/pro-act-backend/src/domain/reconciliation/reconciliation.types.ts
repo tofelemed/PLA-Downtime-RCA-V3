@@ -69,6 +69,11 @@ export interface SliceBasis {
   target: Dec | null;
   actual: Dec | null;
   flags: string[];
+  /**
+   * Task 13 fix 1: declared runs only — the verified-recovery total of the slice (Σ the run's declared
+   * `gain` lines, as a positive figure), taken off the attributed loss; absent or 0 for computed runs.
+   */
+  declaredGain?: Dec;
 }
 
 /** `reconciliation_tolerance` (D06, ACC09) as decimals. */
@@ -103,8 +108,10 @@ export interface SliceReconciliation {
   target: Dec | null;
   actual: Dec | null;
   gap: Dec | null;
-  /** Σ candidates in force + manual lines (tolerance adjustments excluded) */
+  /** Σ candidates in force + manual lines − declared recovery (tolerance adjustments excluded) */
   attributed: Dec;
+  /** declared runs: the run's recovery shares of the slice (positive); 0 for computed runs */
+  declaredGain: Dec;
   toleranceAdjustment: Dec;
   /** gap − attributed, before tolerance adjustments (always stored, ACC09) */
   unadjustedResidual: Dec | null;
