@@ -12,6 +12,8 @@ export interface LossAccountingPolicy {
   lossBasis: LossBasis;
   targetSource: LossTargetSource;
   accountingUnitId: string | null;
+  /** declared mode: product the figures are booked to when several run and no plan covers the day */
+  accountingProductId: string | null;
   stopsCrossCheck: boolean;
   /** ≥ 0, in the event's uom */
   identityTolerance: number;
@@ -23,6 +25,7 @@ export const LOSS_ACCOUNTING_DEFAULT: LossAccountingPolicy = {
   lossBasis: 'computed',
   targetSource: 'plan',
   accountingUnitId: null,
+  accountingProductId: null,
   stopsCrossCheck: true,
   identityTolerance: 0,
 };
@@ -42,10 +45,10 @@ function oneOf<T extends string>(
   return value as T;
 }
 
-function accountingUnit(value: unknown): string | null {
+function uuidOrNull(value: unknown, field: string): string | null {
   if (value === null) return null;
   if (typeof value !== 'string' || !UUID.test(value)) {
-    throw new PolicyBodyError('accountingUnitId must be a uuid or null');
+    throw new PolicyBodyError(`${field} must be a uuid or null`);
   }
   return value;
 }
@@ -64,11 +67,8 @@ function tolerance(value: unknown): number {
   return value;
 }
 
-/**
- * Parses a `loss_accounting` body. Unknown fields are refused; a missing field takes the default.
- * `targetSource` only matters in declared mode, so it is normalised to `plan` when the basis is computed.
- */
-export function parseLossAccounting(body: unknown): LossAccountingPolicy {
+/** The body over the defaults; refuses a non-object and unknown fields. */
+function withDefaults(body: unknown): Record<string, unknown> {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     throw new PolicyBodyError('policy body must be an object');
   }
@@ -76,10 +76,15 @@ export function parseLossAccounting(body: unknown): LossAccountingPolicy {
   if (extra.length > 0) {
     throw new PolicyBodyError(`unknown field(s): ${extra.join(', ')}`);
   }
-  const value: Record<string, unknown> = {
-    ...LOSS_ACCOUNTING_DEFAULT,
-    ...body,
-  };
+  return { ...LOSS_ACCOUNTING_DEFAULT, ...body };
+}
+
+/**
+ * Parses a `loss_accounting` body. Unknown fields are refused; a missing field takes the default.
+ * `targetSource` only matters in declared mode, so it is normalised to `plan` when the basis is computed.
+ */
+export function parseLossAccounting(body: unknown): LossAccountingPolicy {
+  const value = withDefaults(body);
   const lossBasis = oneOf(
     value.lossBasis,
     ['computed', 'declared'],
@@ -98,7 +103,11 @@ export function parseLossAccounting(body: unknown): LossAccountingPolicy {
     dayStart: dayStart(value.dayStart),
     lossBasis,
     targetSource: lossBasis === 'computed' ? 'plan' : targetSource,
-    accountingUnitId: accountingUnit(value.accountingUnitId),
+    accountingUnitId: uuidOrNull(value.accountingUnitId, 'accountingUnitId'),
+    accountingProductId: uuidOrNull(
+      value.accountingProductId,
+      'accountingProductId',
+    ),
     stopsCrossCheck: value.stopsCrossCheck,
     identityTolerance: tolerance(value.identityTolerance),
   };

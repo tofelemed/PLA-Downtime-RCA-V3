@@ -1,12 +1,14 @@
 import type { LossAccountingDraftBody, LossAccountingPolicyView, LossBasis, LossGrain, LossTargetSource } from '@/api/v2/types/loss-accounting';
 
-/** What the loss accounting form holds while typing (numbers as text, the unit as an id or ''). */
+/** What the loss accounting form holds while typing (numbers as text, the unit and product as an id or ''). */
 export interface LossAccountingFormValues {
   grain: LossGrain;
   dayStart: string;
   lossBasis: LossBasis;
   targetSource: LossTargetSource;
   accountingUnitId: string;
+  /** '' = no accounting product */
+  accountingProductId: string;
   stopsCrossCheck: boolean;
   identityTolerance: string;
 }
@@ -37,6 +39,7 @@ export function initialLossAccountingForm(policy: LossAccountingPolicyView): Los
     lossBasis: policy.lossBasis,
     targetSource: policy.targetSource,
     accountingUnitId: policy.accountingUnitId ?? '',
+    accountingProductId: policy.accountingProductId ?? '',
     stopsCrossCheck: policy.stopsCrossCheck,
     identityTolerance: String(policy.identityTolerance),
   };
@@ -67,6 +70,7 @@ export function lossAccountingBody(values: LossAccountingFormValues, base: LossA
     lossBasis: values.lossBasis,
     targetSource: declared ? values.targetSource : 'plan',
     accountingUnitId: declared ? values.accountingUnitId : null,
+    accountingProductId: declared && values.accountingProductId ? values.accountingProductId : null,
     stopsCrossCheck: declared ? values.stopsCrossCheck : base.stopsCrossCheck,
     identityTolerance: declared ? Number(values.identityTolerance) : base.identityTolerance,
   };

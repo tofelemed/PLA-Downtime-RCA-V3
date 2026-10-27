@@ -11,6 +11,7 @@
     "lossBasis": "computed",
     "targetSource": "plan",
     "accountingUnitId": null,
+    "accountingProductId": null,
     "stopsCrossCheck": true,
     "identityTolerance": 0
   }

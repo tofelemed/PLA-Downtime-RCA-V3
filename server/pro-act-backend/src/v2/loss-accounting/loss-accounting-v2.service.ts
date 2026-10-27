@@ -88,15 +88,7 @@ export class LossAccountingV2Service {
           LOSS_ACCOUNTING_WRITERS,
         );
       }
-      if (change.accountingUnitId) {
-        await this.assertUnit(context, tenantId, change.accountingUnitId);
-        await requireUnitRole(
-          manager,
-          context,
-          change.accountingUnitId,
-          LOSS_ACCOUNTING_WRITERS,
-        );
-      }
+      await this.assertReferences(manager, context, change);
       const body = checked({ ...base.body, ...policyFields(change) });
       const scopeKey = change.unitId ?? 'tenant';
       const version = await lockedNextVersion(manager, tenantId, scopeKey);
@@ -147,6 +139,41 @@ export class LossAccountingV2Service {
     );
     if (rows.length === 0) throw invalidReference('unitId', 'unit');
   }
+
+  /** The accounting unit (tenant's, in scope, writable) and accounting product (tenant's) a draft names. */
+  private async assertReferences(
+    manager: EntityManager,
+    context: RequestContext,
+    change: LossAccountingVersionDto,
+  ): Promise<void> {
+    const tenantId = requireTenantId(context);
+    if (change.accountingUnitId) {
+      await this.assertUnit(context, tenantId, change.accountingUnitId);
+      await requireUnitRole(
+        manager,
+        context,
+        change.accountingUnitId,
+        LOSS_ACCOUNTING_WRITERS,
+      );
+    }
+    if (change.accountingProductId) {
+      await this.assertProduct(tenantId, change.accountingProductId);
+    }
+  }
+
+  /** 422 INVALID_REFERENCE unless the product is the tenant's. */
+  private async assertProduct(
+    tenantId: string,
+    productId: string,
+  ): Promise<void> {
+    const rows = await this.manager.query<unknown[]>(
+      `SELECT 1 FROM "products" WHERE "id" = $1 AND "tenant_id" = $2`,
+      [productId, tenantId],
+    );
+    if (rows.length === 0) {
+      throw invalidReference('accountingProductId', 'product');
+    }
+  }
 }
 
 /** The policy fields a draft names; an absent field is kept from the version in force. */
@@ -159,6 +186,7 @@ function policyFields(
     lossBasis: change.lossBasis,
     targetSource: change.targetSource,
     accountingUnitId: change.accountingUnitId,
+    accountingProductId: change.accountingProductId,
     stopsCrossCheck: change.stopsCrossCheck,
     identityTolerance: change.identityTolerance,
   };

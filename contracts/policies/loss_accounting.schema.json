@@ -18,7 +18,7 @@
   "$defs": {
     "body": {
       "type": "object",
-      "required": ["grain", "dayStart", "lossBasis", "targetSource", "accountingUnitId", "stopsCrossCheck", "identityTolerance"],
+      "required": ["grain", "dayStart", "lossBasis", "targetSource", "accountingUnitId", "accountingProductId", "stopsCrossCheck", "identityTolerance"],
       "additionalProperties": false,
       "properties": {
         "grain": {
@@ -50,6 +50,12 @@
           "format": "uuid",
           "default": null,
           "description": "Unit the declared production loss event is booked against; null = the policy's own unit."
+        },
+        "accountingProductId": {
+          "type": ["string", "null"],
+          "format": "uuid",
+          "default": null,
+          "description": "Declared mode: product the declared figures are booked to when the unit runs several products and no plan covers the day; null = no fallback product."
         },
         "stopsCrossCheck": {
           "type": "boolean",

@@ -89,3 +89,98 @@ describe('declared-mode calculation run (spec §4.4)', () => {
     expect(lines[0].evidence).toMatchObject([{ eventId: lossId, share: '1' }]);
   });
 });
+
+/**
+ * Declared mode on a unit with two approved profiles and no plan (spec D4): without the policy's
+ * `accountingProductId` the period has no slice (`ambiguous_default_product`); once a version names it,
+ * re-materializing the range re-resolves the slice-less period to one slice of that product (with its
+ * approved profile) and the queued recompute books the declared figures. Test data only.
+ */
+describe('declared mode: the policy accounting product (two profiles, no plan)', () => {
+  const env = new AccountingWorld();
+  let periodId = '';
+
+  const policy = (version: number, accountingProductId: string | null) =>
+    env.rows(
+      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
+              effective_from, approved_at)
+       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, $3, $4::jsonb, '2026-01-01T00:00:00Z', now())`,
+      [
+        env.world.tenantA,
+        env.world.unitA1,
+        version,
+        JSON.stringify({ ...POLICY, accountingProductId }),
+      ],
+    );
+
+  beforeAll(async () => {
+    await env.start();
+    await env.rows(
+      `UPDATE reason_codes SET default_oee_component = 'availability' WHERE id = $1`,
+      [env.world.reasonR1],
+    );
+    await policy(1, null);
+    await env.materialize([env.world.unitA1]);
+    periodId = await env.periodId(env.world.unitA1, A);
+  });
+  afterAll(() => env.stop());
+
+  it('two profiles and no accounting product: no slice, ambiguous_default_product', async () => {
+    const detail = await env.detail(periodId);
+    expect(detail.data.slices).toEqual([]);
+    expect(detail.data.warnings.map((w) => w.code)).toContain(
+      'ambiguous_default_product',
+    );
+  });
+
+  it('the accounting product gives one slice and a validated run with the declared figures', async () => {
+    await policy(2, env.products.p2);
+    const again = await env.materialize([env.world.unitA1]);
+    expect(again.created).toBe(0);
+    const slices = await env.rows<{
+      product_id: string;
+      profile_id: string | null;
+      window_from: Date;
+      window_to: Date;
+    }>(
+      `SELECT product_id, profile_id, window_from, window_to FROM period_product_slices
+        WHERE period_id = $1 AND superseded_at IS NULL`,
+      [periodId],
+    );
+    expect(slices).toHaveLength(1);
+    expect(slices[0].product_id).toBe(env.products.p2);
+    expect(new Date(slices[0].window_from).toISOString()).toBe(A);
+    expect(new Date(slices[0].window_to).toISOString()).toBe(B);
+    const [profile] = await env.rows<{ id: string }>(
+      `SELECT id FROM production_profiles WHERE unit_id = $1 AND product_id = $2 AND state = 'approved'`,
+      [env.world.unitA1, env.products.p2],
+    );
+    expect(slices[0].profile_id).toBe(profile.id);
+
+    await env
+      .post('production-events', {
+        unitId: env.world.unitA1,
+        startTime: A,
+        endTime: B,
+        physicalType: 'production_loss',
+        reasonCodeId: env.world.reasonR1,
+        declaredFigures: {
+          planned: 240,
+          actual: 208,
+          shortfall: 32,
+          sourceStatus: 'CONFIRMED',
+        },
+      })
+      .expect(201);
+    await env.settle();
+    const body = await env.accounting(periodId);
+    expect(body.data.run).toMatchObject({ status: 'validated' });
+    expect(env.totals(body, 'plan')).toMatchObject({
+      target: '240',
+      actual: '208',
+      gap: '32',
+      attributed: '32',
+      residual: '0',
+    });
+  });
+});

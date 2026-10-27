@@ -8,13 +8,17 @@ import {
   PeriodWarning,
   ProductionPeriod,
 } from './entities/production-period.entity';
+import { parseLossAccounting } from './loss-accounting-policy';
+import { policyBodiesInForce } from './policy-bodies-in-force';
 import {
   BaselinePlanRow,
   DesiredSlice,
   planSlices,
   ProfileRow,
   sameSlice,
+  SlicePlan,
 } from './slice-plan';
+import { planDeclaredSlice } from './slice-plan-declared';
 
 /** Bounds of a group of periods (one load of plan rows and profiles for all of them). */
 interface Span {
@@ -34,10 +38,14 @@ interface Span {
 export class SliceResolverService {
   constructor(private readonly policies: AccountingPoliciesService) {}
 
-  /** Returns the ids of periods whose slice set changed. */
+  /**
+   * Returns the ids of periods whose slice set changed. `declaredOnly` leaves every period whose unit is in
+   * computed mode at its start untouched (the re-resolution of slice-less declared periods).
+   */
   async resolve(
     manager: EntityManager,
     periods: readonly ProductionPeriod[],
+    options: { declaredOnly?: boolean } = {},
   ): Promise<string[]> {
     if (periods.length === 0) return [];
     const span = spanOf(periods);
@@ -48,9 +56,15 @@ export class SliceResolverService {
     const active = await manager.find(PeriodProductSlice, {
       where: { periodId: In(periods.map((p) => p.id)), supersededAt: IsNull() },
     });
+    const declared = await declaredProducts(manager, periods);
     const changed: string[] = [];
-    for (const period of periods) {
-      const plan = planSlices(period, planRows, profiles);
+    for (const [index, period] of periods.entries()) {
+      const product = declared[index];
+      if (options.declaredOnly && product === undefined) continue;
+      const plan: SlicePlan =
+        product === undefined
+          ? planSlices(period, planRows, profiles)
+          : planDeclaredSlice(period, planRows, profiles, product);
       const current = active.filter((slice) => slice.periodId === period.id);
       if (await this.apply(manager, period, plan.slices, current)) {
         changed.push(period.id);
@@ -190,6 +204,32 @@ export class SliceResolverService {
       actualsPolicyId: (row.actuals_policy_id as string | null) ?? null,
     }));
   }
+}
+
+/**
+ * Per period: `undefined` when the unit's `loss_accounting` in force at the period start is computed (or
+ * none is stored), else the policy's `accountingProductId` (null = none) — the declared slice rule applies.
+ */
+async function declaredProducts(
+  manager: EntityManager,
+  periods: readonly ProductionPeriod[],
+): Promise<Array<string | null | undefined>> {
+  const bodies = await policyBodiesInForce(
+    manager,
+    'loss_accounting',
+    periods.map((p) => ({
+      tenantId: p.tenantId,
+      unitId: p.unitId,
+      at: p.utcStart,
+    })),
+  );
+  return bodies.map((body) => {
+    if (body === undefined) return undefined;
+    const policy = parseLossAccounting(body);
+    return policy.lossBasis === 'declared'
+      ? policy.accountingProductId
+      : undefined;
+  });
 }
 
 function spanOf(periods: readonly ProductionPeriod[]): Span {

@@ -96,7 +96,7 @@ export class LossAccountingV2Controller {
       'Draft a loss accounting version from the version in force; fields left out are kept. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).',
     description:
       'Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; ' +
-      '422 INVALID_REFERENCE (unit, accountingUnitId), INVALID_POLICY (the policy parser refuses the merged body); ' +
+      '422 INVALID_REFERENCE (unit, accountingUnitId, accountingProductId), INVALID_POLICY (the policy parser refuses the merged body); ' +
       '422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })

@@ -18,6 +18,8 @@ export interface LossAccountingPolicyView {
   lossBasis: LossBasis;
   targetSource: LossTargetSource;
   accountingUnitId: string | null;
+  /** declared mode: the product the figures are booked to when several run and no plan covers the day */
+  accountingProductId: string | null;
   stopsCrossCheck: boolean;
   /** >= 0, in the event's unit of measure */
   identityTolerance: number;
@@ -59,8 +61,9 @@ export interface LossAccountingVersionView {
 }
 
 /** `POST /loss-accounting/versions` (LossAccountingVersionDto): every field optional, a missing one is kept. */
-export type LossAccountingDraftBody = Omit<components['schemas']['LossAccountingVersionDto'], 'accountingUnitId'> & {
+export type LossAccountingDraftBody = Omit<components['schemas']['LossAccountingVersionDto'], 'accountingUnitId' | 'accountingProductId'> & {
   accountingUnitId?: string | null;
+  accountingProductId?: string | null;
 };
 
 export interface LossAccountingDecisionInput {

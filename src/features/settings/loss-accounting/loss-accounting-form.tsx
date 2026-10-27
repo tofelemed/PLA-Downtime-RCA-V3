@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useDraftLossAccountingVersion } from '@/api/v2/queries/loss-accounting';
+import { useProducts } from '@/api/v2/queries/profiles';
 import { useUnits } from '@/api/v2/queries/units';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
 import type { LossAccountingPolicyView } from '@/api/v2/types/loss-accounting';
@@ -22,6 +23,7 @@ const GRAIN_INFO = 'One accounting period per shift, or one per day starting at 
 const BASIS_INFO =
   "Computed: the loss is target − measured actual, explained by stops and quality events. Declared: the loss is the shortfall OT reports in its production loss event, coded by reason in the Event Hub; stops no longer price the loss and OEE is not available.";
 const TARGET_INFO = "Traverse Forge plan, or the planned figure in OT's event.";
+const PRODUCT_HINT = 'Product the declared figures are booked to when the unit runs several products and no plan covers the day';
 const EFFECTIVE_INFO = 'The new rules apply from this date. Approved periods before it are untouched; open ones are rebuilt.';
 
 function Labelled({ text, info }: { text: string; info: string }): ReactNode {
@@ -40,12 +42,14 @@ function Labelled({ text, info }: { text: string; info: string }): ReactNode {
 export function LossAccountingForm({ base, onDone }: { base: LossAccountingPolicyView; onDone: () => void }) {
   const draft = useDraftLossAccountingVersion();
   const units = useUnits();
+  const products = useProducts();
   const [values, setValues] = useState(() => initialLossAccountingForm(base));
   const [errors, setErrors] = useState<LossAccountingFormErrors>({});
   const [backdate, setBackdate] = useState(EMPTY_BACKDATE);
   const [backdateProblems, setBackdateProblems] = useState<BackdateErrors>({});
   const set = <K extends keyof typeof values>(key: K, value: (typeof values)[K]) => setValues((v) => ({ ...v, [key]: value }));
   const unitOptions = flattenPages(units.data?.pages).map((unit) => ({ value: unit.id, label: unit.name }));
+  const productOptions = flattenPages(products.data?.pages).map((product) => ({ value: product.id, label: `${product.code} ${product.name}` }));
   const declared = values.lossBasis === 'declared';
 
   const save = () => {
@@ -77,6 +81,9 @@ export function LossAccountingForm({ base, onDone }: { base: LossAccountingPolic
           </Field>
           <Field id="loss-unit" label="Accounting unit" required error={errors.accountingUnitId} hint="The unit whose OT production loss event is accounted">
             <NativeSelect id="loss-unit" testId="loss-unit" value={values.accountingUnitId} onChange={(v) => set('accountingUnitId', v)} options={unitOptions} placeholder="Choose a unit" />
+          </Field>
+          <Field id="loss-product" label="Accounting product" hint={PRODUCT_HINT}>
+            <NativeSelect id="loss-product" testId="loss-product" value={values.accountingProductId} onChange={(v) => set('accountingProductId', v)} options={productOptions} placeholder="None" />
           </Field>
           <Field id="loss-tolerance" label="Identity tolerance (t)" error={errors.identityTolerance} hint="How far target − actual may differ from the declared shortfall, in the event's unit">
             <Input id="loss-tolerance" type="number" min={0} step="any" value={values.identityTolerance} onChange={(e) => set('identityTolerance', e.target.value)} data-testid="loss-tolerance" />

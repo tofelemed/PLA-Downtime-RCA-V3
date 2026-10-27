@@ -20,7 +20,8 @@ interface Call {
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 const UNIT_ID = '6f1c1e0e-5b1f-4a4e-9f55-2d1d3c1b7a10';
-const COMPUTED = { grain: 'shift', dayStart: '06:00', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: null, stopsCrossCheck: true, identityTolerance: 0 } as const;
+const PRODUCT_ID = '9a3d6c1e-2b4f-4c5d-8e6f-7a8b9c0d1e2f';
+const COMPUTED = { grain: 'shift', dayStart: '06:00', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: null, accountingProductId: null, stopsCrossCheck: true, identityTolerance: 0 } as const;
 const DECLARED = { ...COMPUTED, grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: UNIT_ID } as const;
 
 const inForce = (policy: LossAccountingInForceView['policy']): LossAccountingInForceView => ({ policyId: 'p1', version: 1, unitId: null, effectiveFrom: '2026-01-01T00:00:00.000Z', notes: null, policy });
@@ -54,6 +55,7 @@ describe('Plant settings: Loss accounting card', () => {
         calls.push(call);
         if (call.method === 'POST' && call.url.pathname.endsWith('/loss-accounting/versions')) return json(201, DRAFT);
         if (call.method === 'POST') return refuseDecision ? json(403, { code: 'SEPARATION_OF_DUTIES', message: 'The author cannot approve their own version' }) : json(200, { ...DRAFT, state: 'approved', inForce: true });
+        if (call.url.pathname.endsWith('/products')) return json(200, { items: [{ id: PRODUCT_ID, code: 'HD5502', name: 'HDPE film', uom: 't', isActive: true }], nextCursor: null });
         if (call.url.pathname.endsWith('/units')) return json(200, { items: [{ id: UNIT_ID, name: 'Extruder1' }], nextCursor: null });
         if (call.url.pathname.endsWith('/loss-accounting')) return json(200, current);
         return json(200, { items: [DRAFT], nextCursor: null });
@@ -87,6 +89,7 @@ describe('Plant settings: Loss accounting card', () => {
     fireEvent.click(await screen.findByTestId('loss-change'));
     const panel = await screen.findByRole('dialog');
     expect(within(panel).queryByTestId('loss-unit')).toBeNull();
+    expect(within(panel).queryByTestId('loss-product')).toBeNull();
     fireEvent.change(within(panel).getByTestId('loss-grain'), { target: { value: 'day' } });
     fireEvent.change(within(panel).getByTestId('loss-basis'), { target: { value: 'declared' } });
     fireEvent.click(within(panel).getByTestId('loss-save'));
@@ -94,10 +97,13 @@ describe('Plant settings: Loss accounting card', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
     await waitFor(() => expect(within(panel).getByTestId('loss-unit').querySelectorAll('option')).toHaveLength(2));
     fireEvent.change(within(panel).getByTestId('loss-unit'), { target: { value: UNIT_ID } });
+    expect(within(panel).getByText(/no plan covers the day/)).toBeInTheDocument();
+    await waitFor(() => expect(within(panel).getByTestId('loss-product').querySelectorAll('option')).toHaveLength(2));
+    fireEvent.change(within(panel).getByTestId('loss-product'), { target: { value: PRODUCT_ID } });
     fireEvent.click(within(panel).getByTestId('loss-save'));
     await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
-      grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: UNIT_ID, stopsCrossCheck: true, identityTolerance: 0,
+      grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: UNIT_ID, accountingProductId: PRODUCT_ID, stopsCrossCheck: true, identityTolerance: 0,
     });
   });
 

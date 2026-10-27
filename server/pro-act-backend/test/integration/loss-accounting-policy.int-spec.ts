@@ -10,7 +10,12 @@ interface VersionBody {
   state: string;
   inForce: boolean;
   basedOnId: string | null;
-  policy: { grain: string; lossBasis: string; identityTolerance: number };
+  policy: {
+    grain: string;
+    lossBasis: string;
+    identityTolerance: number;
+    accountingProductId: string | null;
+  };
 }
 
 interface InForceBody {
@@ -86,13 +91,18 @@ describe('loss accounting policy (declared mode, D1-D12)', () => {
         lossBasis: 'declared',
         targetSource: 'declared',
         identityTolerance: 0.5,
+        accountingProductId: env.products.p1,
       }).expect(201)
     ).body as VersionBody;
     expect(proposed).toMatchObject({
       state: 'proposed',
       inForce: false,
       basedOnId: before.policyId,
-      policy: { grain: 'shift', lossBasis: 'declared' },
+      policy: {
+        grain: 'shift',
+        lossBasis: 'declared',
+        accountingProductId: env.products.p1,
+      },
     });
     expect((await inForce()).policyId).toBe(before.policyId);
 
@@ -132,6 +142,17 @@ describe('loss accounting policy (declared mode, D1-D12)', () => {
       accountingUnitId: randomUUID(),
     }).expect(422);
     expect((unit.body as ApiError).code).toBe('INVALID_REFERENCE');
+    const product = await draft(integration, {
+      unitId: env.world.unitA3,
+      accountingProductId: randomUUID(),
+    }).expect(422);
+    expect((product.body as ApiError).code).toBe('INVALID_REFERENCE');
+    expect((product.body as ApiError).message).toContain('accountingProductId');
+    const notUuid = await draft(integration, {
+      unitId: env.world.unitA3,
+      accountingProductId: 'HD5502',
+    }).expect(422);
+    expect((notUuid.body as ApiError).code).toBe('VALIDATION_FAILED');
 
     const before = await inForce();
     const proposed = (

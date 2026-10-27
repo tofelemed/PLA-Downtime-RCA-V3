@@ -161,7 +161,7 @@ function defaultSlice(
   };
 }
 
-function inForce(profile: ProfileRow, at: Date): boolean {
+export function inForce(profile: ProfileRow, at: Date): boolean {
   return (
     profile.effectiveFrom <= at &&
     (profile.effectiveTo === null || profile.effectiveTo > at)

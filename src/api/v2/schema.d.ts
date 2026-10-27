@@ -3029,7 +3029,7 @@ export interface paths {
         put?: never;
         /**
          * Draft a loss accounting version from the version in force; fields left out are kept. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).
-         * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit, accountingUnitId), INVALID_POLICY (the policy parser refuses the merged body); 422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).
+         * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit, accountingUnitId, accountingProductId), INVALID_POLICY (the policy parser refuses the merged body); 422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).
          */
         post: operations["LossAccountingV2Controller_write_v2"];
         delete?: never;
@@ -9680,6 +9680,11 @@ export interface components {
              * @description The unit the accounting is kept on; null = the version unit
              */
             accountingUnitId?: Record<string, never> | null;
+            /**
+             * Format: uuid
+             * @description Declared mode: the product the declared figures are booked to when the unit runs several products and no plan covers the day; null = none
+             */
+            accountingProductId?: Record<string, never> | null;
             /** @description Cross-check declared losses against the recorded stops */
             stopsCrossCheck?: boolean;
             /** @description Identity tolerance in the event unit of measure */

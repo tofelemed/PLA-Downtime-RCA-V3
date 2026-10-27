@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EntityManager, In } from 'typeorm';
+import { ActualsJobsService } from './actuals-jobs.service';
 import { ProductionPeriod } from './entities/production-period.entity';
 import { SliceResolverService } from './slice-resolver.service';
 
@@ -24,11 +25,16 @@ export interface MaterializeResult {
  * approved profile in that range — set-based, idempotent (an existing period of the same start is kept)
  * and serialized per tenant (advisory lock). Instances overlapping a period with other bounds are not
  * forced in (the exclusion constraint keeps periods disjoint); they are counted as skipped. New periods
- * get their product slices at once.
+ * get their product slices at once. Existing periods of the range without a slice are re-resolved when
+ * their unit is in declared mode (the policy may now name the accounting product); those that gain a
+ * slice are queued for a recompute.
  */
 @Injectable()
 export class PeriodMaterializerService {
-  constructor(private readonly slices: SliceResolverService) {}
+  constructor(
+    private readonly slices: SliceResolverService,
+    private readonly jobs: ActualsJobsService,
+  ) {}
 
   async materialize(
     manager: EntityManager,
@@ -59,11 +65,42 @@ export class PeriodMaterializerService {
         })
       : [];
     await this.slices.resolve(manager, created);
+    await this.reresolveSliceless(manager, request, unitIds);
     return {
       created: created.length,
       skipped,
       periodIds: created.map((period) => period.id),
     };
+  }
+
+  /** Open periods of the range without an active slice, re-resolved under the declared rule only. */
+  private async reresolveSliceless(
+    manager: EntityManager,
+    request: MaterializeRequest,
+    unitIds: string[],
+  ): Promise<void> {
+    const rows: Array<{ id: string }> = await manager.query(
+      `SELECT p."id" FROM "production_periods" p
+        WHERE p."tenant_id" = $1 AND p."unit_id" = ANY($2::uuid[]) AND p."utc_start" >= $3 AND p."utc_start" < $4
+          AND p."state_readiness" <> 'reconciled'
+          AND NOT EXISTS (SELECT 1 FROM "period_product_slices" s
+                           WHERE s."period_id" = p."id" AND s."superseded_at" IS NULL)`,
+      [request.tenantId, unitIds, request.from, request.to],
+    );
+    if (rows.length === 0) return;
+    const periods = await manager.find(ProductionPeriod, {
+      where: { id: In(rows.map((row) => row.id)) },
+    });
+    const changed = await this.slices.resolve(manager, periods, {
+      declaredOnly: true,
+    });
+    if (changed.length === 0) return;
+    await this.jobs.enqueueIds(
+      manager,
+      request.tenantId,
+      changed,
+      'declared_slice_resolved',
+    );
   }
 
   private async unitsWithProfile(

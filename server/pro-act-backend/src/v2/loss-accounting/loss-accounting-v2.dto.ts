@@ -85,6 +85,17 @@ export class LossAccountingVersionDto extends CommissioningBackdateDto {
   accountingUnitId?: string | null;
 
   @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Declared mode: the product the declared figures are booked to when the unit runs several products and no plan covers the day; null = none',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  accountingProductId?: string | null;
+
+  @ApiPropertyOptional({
     description: 'Cross-check declared losses against the recorded stops',
   })
   @IsOptional()

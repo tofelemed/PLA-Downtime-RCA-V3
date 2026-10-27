@@ -35,6 +35,7 @@ describe('parseLossAccounting', () => {
       lossBasis: 'declared',
       targetSource: 'declared',
       accountingUnitId: '0b5f7a52-8f0a-4a3e-9d55-3a6c2b3f1a10',
+      accountingProductId: '6f89655d-1c2b-4d3e-8f4a-5b6c7d8e9f01',
       identityTolerance: 0.5,
     };
     expect(parseLossAccounting(daily)).toEqual(daily);
@@ -59,6 +60,8 @@ describe('parseLossAccounting', () => {
     ['negative tolerance', { identityTolerance: -1 }],
     ['non-numeric tolerance', { identityTolerance: '1' }],
     ['bad accountingUnitId', { accountingUnitId: 'unit-1' }],
+    ['bad accountingProductId', { accountingProductId: 'HD5502' }],
+    ['numeric accountingProductId', { accountingProductId: 7 }],
     ['bad grain', { grain: 'week' }],
     ['bad lossBasis', { lossBasis: 'guess' }],
     ['bad targetSource', { targetSource: 'ot' }],
@@ -67,6 +70,12 @@ describe('parseLossAccounting', () => {
     expect(() =>
       parseLossAccounting({ ...LOSS_ACCOUNTING_DEFAULT, ...patch }),
     ).toThrow(PolicyBodyError);
+  });
+
+  it('defaults accountingProductId to null and keeps a stored body without it valid', () => {
+    const older: Record<string, unknown> = { ...LOSS_ACCOUNTING_DEFAULT };
+    delete older.accountingProductId;
+    expect(parseLossAccounting(older).accountingProductId).toBeNull();
   });
 
   it('rejects a body that is not an object', () => {

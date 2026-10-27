@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { LossAccountingPolicyView } from '@/api/v2/types/loss-accounting';
 import { initialLossAccountingForm, lossAccountingBody, lossAccountingErrors, lossAccountingSummary, withLossBasis } from './loss-accounting-model';
 
-const COMPUTED: LossAccountingPolicyView = { grain: 'shift', dayStart: '06:00', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: null, stopsCrossCheck: true, identityTolerance: 0 };
+const COMPUTED: LossAccountingPolicyView = { grain: 'shift', dayStart: '06:00', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: null, accountingProductId: null, stopsCrossCheck: true, identityTolerance: 0 };
 const DECLARED: LossAccountingPolicyView = { ...COMPUTED, grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1' };
 
 describe('loss accounting form model', () => {
   it('opens on the version in force; a shift policy offers the 00:00 day start', () => {
-    expect(initialLossAccountingForm(COMPUTED)).toMatchObject({ grain: 'shift', dayStart: '00:00', accountingUnitId: '', identityTolerance: '0' });
+    expect(initialLossAccountingForm(COMPUTED)).toMatchObject({ grain: 'shift', dayStart: '00:00', accountingUnitId: '', accountingProductId: '', identityTolerance: '0' });
+    expect(initialLossAccountingForm({ ...DECLARED, accountingProductId: 'prod-1' }).accountingProductId).toBe('prod-1');
     expect(initialLossAccountingForm({ ...DECLARED, dayStart: '05:30' }).dayStart).toBe('05:30');
   });
 
@@ -32,13 +33,20 @@ describe('loss accounting form model', () => {
 
   it('the declared body carries exactly the DTO keys', () => {
     const body = lossAccountingBody({ ...initialLossAccountingForm(DECLARED), identityTolerance: '2.5', stopsCrossCheck: false }, COMPUTED);
-    expect(body).toEqual({ grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1', stopsCrossCheck: false, identityTolerance: 2.5 });
+    expect(body).toEqual({ grain: 'day', dayStart: '00:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: 'u-1', accountingProductId: null, stopsCrossCheck: false, identityTolerance: 2.5 });
+  });
+
+  it('the declared body carries the chosen accounting product; none is sent as null', () => {
+    const form = { ...initialLossAccountingForm(DECLARED), accountingProductId: 'prod-1' };
+    expect(lossAccountingBody(form, COMPUTED).accountingProductId).toBe('prod-1');
+    expect(lossAccountingBody({ ...form, accountingProductId: '' }, COMPUTED).accountingProductId).toBeNull();
+    expect(lossAccountingErrors({ ...form, accountingProductId: '' })).toEqual({});
   });
 
   it('the computed body drops the declared choices and keeps the version in force for the rest', () => {
-    const form = { ...initialLossAccountingForm({ ...DECLARED, stopsCrossCheck: false }), lossBasis: 'computed' as const, grain: 'shift' as const };
+    const form = { ...initialLossAccountingForm({ ...DECLARED, stopsCrossCheck: false, accountingProductId: 'prod-1' }), lossBasis: 'computed' as const, grain: 'shift' as const };
     expect(lossAccountingBody(form, { ...COMPUTED, stopsCrossCheck: false, identityTolerance: 1 })).toEqual({
-      grain: 'shift', dayStart: '06:00', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: null, stopsCrossCheck: false, identityTolerance: 1,
+      grain: 'shift', dayStart: '06:00', lossBasis: 'computed', targetSource: 'plan', accountingUnitId: null, accountingProductId: null, stopsCrossCheck: false, identityTolerance: 1,
     });
   });
 
