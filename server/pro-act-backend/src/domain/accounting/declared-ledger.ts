@@ -139,7 +139,10 @@ function declaredTotals(
     availability: componentTotal(lines, 'availability'),
     performance: componentTotal(lines, 'performance'),
     quality: componentTotal(lines, 'quality'),
-    gain: ZERO,
+    // Task 13: recovery shares are signed gain lines; the totals carry the recovery as a positive figure
+    gain: ZERO.minus(
+      sumOf(lines.filter((l) => l.kind === 'gain').map((l) => l.quantity)),
+    ),
     good: given.actual.value,
     actual: given.actual.value,
     attributed,

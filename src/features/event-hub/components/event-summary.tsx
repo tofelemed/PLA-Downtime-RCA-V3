@@ -24,6 +24,9 @@ import { VerificationChip } from './verification-chip';
 /** A production loss event has no OEE component of its own: each reason on its loss lines carries one. */
 const PER_REASON_OEE = 'Per reason (on the loss lines)';
 
+/** Unit of a declared split's tonnes: the event's quantity unit, else the declared figures' unit. */
+const splitUomOf = (event: ProductionEventView) => event.quantityUom ?? event.declaredFigures?.uom ?? null;
+
 function Row({ term, children, testId }: { term: string; children: ReactNode; testId?: string }) {
   return (
     <>
@@ -77,7 +80,7 @@ export function EventSummary({ event }: { event: ProductionEventView }) {
           <FromSource event={event} field="assetId" />
         </Row>
         <Row term="Reason" testId="detail-reason">
-          {hasSplit(event.reasonWeights) ? <ReasonWeightsText weights={event.reasonWeights} /> : env.reasonName(event.reasonCodeId)}
+          {hasSplit(event.reasonWeights) ? <ReasonWeightsText weights={event.reasonWeights} uom={splitUomOf(event)} /> : env.reasonName(event.reasonCodeId)}
         </Row>
         <Row term="Kind">{labelOf(PHYSICAL_TYPE_LABELS, c.physicalType)}</Row>
         <Row term="Schedule class">{labelOf(SCHEDULE_CLASS_LABELS, c.scheduleClass)}</Row>

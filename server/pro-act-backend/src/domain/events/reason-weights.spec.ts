@@ -1,5 +1,6 @@
 import {
   isWeighted,
+  lossWeightTotal,
   normaliseReasonWeights,
   storedReasonWeights,
 } from './reason-weights';
@@ -266,5 +267,131 @@ describe('normaliseReasonWeights by quantity', () => {
         LOSS,
       ),
     ).toMatchObject({ ok: false, error: { code: 'REASON_WEIGHTS_BASIS' } });
+  });
+});
+
+/** Task 13: a production loss split with recovery shares — Σ loss − Σ recovery = the shortfall. */
+describe('normaliseReasonWeights with recovery shares', () => {
+  const SHORTFALL = { durationSeconds: null, quantity: 32 };
+  const split = [
+    { reasonCodeId: 'avail', quantity: '23' },
+    { reasonCodeId: 'perf', quantity: '11' },
+    { reasonCodeId: 'qual', quantity: '6' },
+    { reasonCodeId: 'recov', quantity: '8', recovery: true },
+  ];
+
+  it('normalises 23 + 11 + 6 − 8 = 32 against the net shortfall, recovery last', () => {
+    expect(normaliseReasonWeights(split, SHORTFALL)).toEqual({
+      ok: true,
+      primary: 'avail',
+      weights: [
+        { reasonCodeId: 'avail', weight: '0.71875000' },
+        { reasonCodeId: 'perf', weight: '0.34375000' },
+        { reasonCodeId: 'qual', weight: '0.18750000' },
+        { reasonCodeId: 'recov', weight: '0.25000000', recovery: true },
+      ],
+    });
+  });
+
+  it('gives the gross loss weight Σ loss = 1.25 (40 / 32)', () => {
+    const result = normaliseReasonWeights(split, SHORTFALL);
+    const weights = result.ok ? result.weights : null;
+    expect(lossWeightTotal(weights).toFixed()).toBe('1.25');
+    expect(lossWeightTotal(null).toFixed()).toBe('1');
+  });
+
+  it('refuses tonnes whose net is not the shortfall, naming the recovery', () => {
+    expect(
+      normaliseReasonWeights(
+        [
+          { reasonCodeId: 'a', quantity: '40' },
+          { reasonCodeId: 'b', quantity: '6', recovery: true },
+        ],
+        SHORTFALL,
+      ),
+    ).toEqual({
+      ok: false,
+      error: {
+        code: 'REASON_WEIGHTS_SUM',
+        message:
+          "The loss tonnes less the recovery tonnes add up to 34 t, not the event's 32 t",
+      },
+    });
+  });
+
+  it('accepts percents with loss − recovery = 100', () => {
+    const result = normaliseReasonWeights(
+      [
+        { reasonCodeId: 'a', percent: '125' },
+        { reasonCodeId: 'b', percent: '25', recovery: true },
+      ],
+      SHORTFALL,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      primary: 'a',
+      weights: [
+        { reasonCodeId: 'a', weight: '1.25000000' },
+        { reasonCodeId: 'b', weight: '0.25000000', recovery: true },
+      ],
+    });
+  });
+
+  it('a larger recovery never becomes the primary reason', () => {
+    const result = normaliseReasonWeights(
+      [
+        { reasonCodeId: 'a', quantity: '30' },
+        { reasonCodeId: 'b', quantity: '12' },
+        { reasonCodeId: 'r', quantity: '10', recovery: true },
+      ],
+      SHORTFALL,
+    );
+    expect(result).toMatchObject({ ok: true, primary: 'a' });
+    expect(
+      normaliseReasonWeights(
+        [
+          { reasonCodeId: 'a', quantity: '30' },
+          { reasonCodeId: 'r', quantity: '30', recovery: true },
+          { reasonCodeId: 'b', quantity: '32' },
+        ],
+        { ...SHORTFALL, reasonCodeId: 'r' },
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'REASON_WEIGHTS_PRIMARY' } });
+  });
+
+  it('refuses a recovery on a stop and a split of recoveries only', () => {
+    expect(
+      normaliseReasonWeights(
+        [
+          { reasonCodeId: 'a', percent: 60 },
+          { reasonCodeId: 'b', percent: 40, recovery: true },
+        ],
+        HOUR,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'REASON_WEIGHTS_RECOVERY' } });
+    expect(
+      normaliseReasonWeights(
+        [{ reasonCodeId: 'a', quantity: '32', recovery: true }],
+        SHORTFALL,
+      ),
+    ).toMatchObject({ ok: false, error: { code: 'REASON_WEIGHTS_RECOVERY' } });
+  });
+
+  it('keeps the recovery mark when reading stored weights back', () => {
+    expect(
+      storedReasonWeights([
+        { reasonCodeId: 'a', weight: '1.25000000' },
+        { reasonCodeId: 'b', weight: '0.25000000', recovery: true },
+      ]),
+    ).toEqual([
+      { reasonCodeId: 'a', weight: '1.25000000' },
+      { reasonCodeId: 'b', weight: '0.25000000', recovery: true },
+    ]);
+    expect(
+      storedReasonWeights([
+        { reasonCodeId: 'a', weight: '0.5' },
+        { reasonCodeId: 'b', weight: '0.5', recovery: 'yes' },
+      ]),
+    ).toBeNull();
   });
 });

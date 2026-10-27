@@ -79,7 +79,17 @@ interface Fixture {
   cases: FixtureCase[];
 }
 
-const FIXTURES = ['D01', 'D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08'];
+const FIXTURES = [
+  'D01',
+  'D02',
+  'D03',
+  'D04',
+  'D05',
+  'D06',
+  'D07',
+  'D08',
+  'D09',
+];
 const fixture = (id: string) =>
   JSON.parse(
     fs.readFileSync(path.join(__dirname, `${id}.json`), 'utf8'),
@@ -189,7 +199,7 @@ function expectTotals(totals: LedgerTotals, expected: FixtureCase['expected']) {
     expect(totals.flags).not.toContain(flag);
 }
 
-describe('declared-mode accounting (D01–D08)', () => {
+describe('declared-mode accounting (D01–D09)', () => {
   it('records the engine version of declared mode', () => {
     expect(ACCOUNTING_ENGINE_VERSION).toBe('2.9.0');
   });

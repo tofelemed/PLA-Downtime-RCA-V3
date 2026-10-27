@@ -9,13 +9,15 @@ export interface SplitRow {
   key: number;
   reasonCodeId: string;
   value: string;
+  /** declared mode (Task 13): the share is a recovery, offsetting the loss shares */
+  recovery?: boolean;
 }
 
 /** Rows to start from: the stored split (as percents of its weights), else the current reason and one empty row. */
 export function initialSplitRows(event: Pick<ProductionEventView, 'reasonCodeId' | 'reasonWeights'>): SplitRow[] {
   const stored = event.reasonWeights ?? [];
   if (stored.length > 1) {
-    return stored.map((w, i) => ({ key: i, reasonCodeId: w.reasonCodeId, value: percentOf(w.weight) }));
+    return stored.map((w, i) => ({ key: i, reasonCodeId: w.reasonCodeId, value: percentOf(w.weight), ...(w.recovery ? { recovery: true } : {}) }));
   }
   return [
     { key: 0, reasonCodeId: event.reasonCodeId ?? '', value: '' },
@@ -48,8 +50,9 @@ export function splitComplete(rows: readonly SplitRow[]): boolean {
  */
 export function reasonWeightsBody(rows: readonly SplitRow[], mode: SplitMode): ReasonWeightInput[] {
   return rows.map((row) => {
-    if (mode === 'percent') return { reasonCodeId: row.reasonCodeId, percent: row.value.trim() };
-    if (mode === 'tonnes') return { reasonCodeId: row.reasonCodeId, quantity: row.value.trim() };
+    const recovery = row.recovery ? { recovery: true } : {};
+    if (mode === 'percent') return { reasonCodeId: row.reasonCodeId, percent: row.value.trim(), ...recovery };
+    if (mode === 'tonnes') return { reasonCodeId: row.reasonCodeId, quantity: row.value.trim(), ...recovery };
     return { reasonCodeId: row.reasonCodeId, seconds: Number(row.value) * 60 };
   });
 }

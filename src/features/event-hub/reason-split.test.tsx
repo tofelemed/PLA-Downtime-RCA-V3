@@ -194,4 +194,46 @@ describe('Code dialog: production loss split by tonnes (declared mode)', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(sent).toEqual([{ reasonWeights: [{ reasonCodeId: 'r1', quantity: '4' }, { reasonCodeId: 'r2', quantity: '3.5' }] }]);
   });
+
+  it('Task 13: a recovery share offsets the losses — losses 40 t − recovery 8 t = 32 t', async () => {
+    const onDone = vi.fn();
+    const day = { ...LOSS, quantity: '32', declaredFigures: { ...LOSS.declaredFigures, planned: 240, actual: 208, shortfall: 32 } } as unknown as ProductionEventView;
+    wrap(<CodeEventDialog event={day} onClose={() => undefined} onDone={onDone} />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Tonnes' }));
+    fireEvent.change(values()[0], { target: { value: '40' } });
+    fireEvent.change(values()[1], { target: { value: '6' } });
+    fireEvent.click(screen.getAllByTestId('split-recovery')[1]);
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('Losses 40.000 t − recovery 6.000 t = 34.000 t · 2.000 t over the shortfall.');
+    expect(screen.getByRole('button', { name: 'Save reason' })).toBeDisabled();
+    fireEvent.change(values()[1], { target: { value: '8' } });
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('Losses 40.000 t − recovery 8.000 t = 32.000 t ✓');
+    save();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sent).toEqual([{ reasonWeights: [{ reasonCodeId: 'r1', quantity: '40' }, { reasonCodeId: 'r2', quantity: '8', recovery: true }] }]);
+  });
+
+  it('Task 13: percent mode — loss percents less recovery percents must be 100', () => {
+    wrap(<CodeEventDialog event={LOSS} onClose={() => undefined} onDone={() => undefined} />);
+    fireEvent.change(values()[0], { target: { value: '125' } });
+    fireEvent.change(values()[1], { target: { value: '20' } });
+    fireEvent.click(screen.getAllByTestId('split-recovery')[1]);
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('Losses 125.00 % − recovery 20.00 % = 105.00 % · 5.00 % over 100 %.');
+    fireEvent.change(values()[1], { target: { value: '25' } });
+    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('= 100.00 % ✓');
+  });
+});
+
+describe('event detail: a declared split with a recovery share', () => {
+  it('shows the recovery as "Recovery · <reason> · 8 t"', () => {
+    wrap(
+      <ReasonWeightsText
+        uom="t"
+        weights={[
+          { reasonCodeId: 'r1', weight: '1.25000000', quantity: '40' },
+          { reasonCodeId: 'r2', weight: '0.25000000', recovery: true, quantity: '8' },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('reason-weight-recovery')).toHaveTextContent('Recovery · Belt slip · 8.000 t');
+  });
 });

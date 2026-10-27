@@ -6,10 +6,14 @@ export const WEIGHT_SCALE = 8;
 /** Most reasons one stop may be split across. */
 export const MAX_REASON_WEIGHTS = 10;
 
-/** D-T5: one reason of a weighted stop and its fraction of the stop (8-place decimal string). */
+/**
+ * D-T5: one reason of a weighted stop and its fraction of the stop (8-place decimal string). Declared mode
+ * (Task 13): a `recovery` share of a production loss offsets the loss shares (Σ loss − Σ recovery = 1).
+ */
 export interface ReasonWeight {
   reasonCodeId: string;
   weight: string;
+  recovery?: boolean;
 }
 
 /** One reason as the coder enters it: a percent of the stop, a duration in seconds, or tonnes of a production loss. */
@@ -18,6 +22,8 @@ export interface ReasonWeightEntry {
   percent?: string | number | null;
   seconds?: string | number | null;
   quantity?: string | number | null;
+  /** declared mode: this share is a recovery (Σ loss shares − Σ recovery shares = the shortfall) */
+  recovery?: boolean | null;
 }
 
 export type ReasonWeightErrorCode =
@@ -27,7 +33,8 @@ export type ReasonWeightErrorCode =
   | 'REASON_WEIGHTS_NOT_POSITIVE'
   | 'REASON_WEIGHTS_SUM'
   | 'REASON_WEIGHTS_OPEN_EVENT'
-  | 'REASON_WEIGHTS_PRIMARY';
+  | 'REASON_WEIGHTS_PRIMARY'
+  | 'REASON_WEIGHTS_RECOVERY';
 
 export interface ReasonWeightError {
   code: ReasonWeightErrorCode;
@@ -57,6 +64,9 @@ type Basis = 'percent' | 'seconds' | 'quantity';
 
 const BASES: readonly Basis[] = ['percent', 'seconds', 'quantity'];
 
+const isRecovery = (entry: { recovery?: boolean | null }) =>
+  entry.recovery === true;
+
 /** The one basis an entry states, or null when it states none or several. */
 function basisOf(entry: ReasonWeightEntry): Basis | null {
   const stated = BASES.filter(
@@ -65,14 +75,32 @@ function basisOf(entry: ReasonWeightEntry): Basis | null {
   return stated.length === 1 ? stated[0] : null;
 }
 
-/** The entered values, or the first rule they break. */
-function enteredValues(
+/** Recovery shares split a production loss only, and never without a loss share beside them. */
+function recoveryError(
   entries: readonly ReasonWeightEntry[],
-  context: ReasonWeightContext,
-): { basis: Basis; values: Dec[] } | ReasonWeightError {
+  producedLoss: boolean,
+): ReasonWeightError | null {
+  if (!entries.some(isRecovery)) return null;
+  if (!producedLoss) {
+    return {
+      code: 'REASON_WEIGHTS_RECOVERY',
+      message: 'A recovery share applies to a production loss only',
+    };
+  }
+  return entries.every(isRecovery)
+    ? {
+        code: 'REASON_WEIGHTS_RECOVERY',
+        message: 'Give at least one loss share beside the recovery',
+      }
+    : null;
+}
+
+/** The basis of the entries, or why they do not share one the event allows. */
+function basisError(
+  entries: readonly ReasonWeightEntry[],
+  producedLoss: boolean,
+): Basis | ReasonWeightError {
   const basis = basisOf(entries[0]);
-  const producedLoss =
-    context.quantity !== undefined && context.quantity !== null;
   if (!basis || entries.some((entry) => basisOf(entry) !== basis)) {
     return {
       code: 'REASON_WEIGHTS_BASIS',
@@ -89,6 +117,20 @@ function enteredValues(
         : 'Tonnes split a production loss only; split a stop by percent or seconds',
     };
   }
+  return basis;
+}
+
+/** The entered values, or the first rule they break. */
+function enteredValues(
+  entries: readonly ReasonWeightEntry[],
+  context: ReasonWeightContext,
+): { basis: Basis; values: Dec[] } | ReasonWeightError {
+  const producedLoss =
+    context.quantity !== undefined && context.quantity !== null;
+  const basis = basisError(entries, producedLoss);
+  if (typeof basis !== 'string') return basis;
+  const recovery = recoveryError(entries, producedLoss);
+  if (recovery) return recovery;
   const ids = entries.map((entry) => entry.reasonCodeId);
   if (new Set(ids).size !== ids.length) {
     return {
@@ -110,16 +152,19 @@ function enteredValues(
 function checkTotal(
   basis: Basis,
   total: Dec,
-  context: ReasonWeightContext,
+  context: ReasonWeightContext & { recovery: boolean },
 ): ReasonWeightError | null {
   const { durationSeconds } = context;
-  if (basis === 'quantity') return checkTonnes(total, context.quantity ?? 0);
+  if (basis === 'quantity') return checkTonnes(total, context);
   if (basis === 'percent') {
+    const what = context.recovery
+      ? 'The loss percents less the recovery percents add up to'
+      : 'The percents add up to';
     return total.eq(100)
       ? null
       : {
           code: 'REASON_WEIGHTS_SUM',
-          message: `The percents add up to ${total.toFixed()} %, not 100 %`,
+          message: `${what} ${total.toFixed()} %, not 100 %`,
         };
   }
   if (durationSeconds === null) {
@@ -136,42 +181,76 @@ function checkTotal(
       };
 }
 
-/** The tonnes must add up to the event's quantity within max(0.001, quantity × 1e-6). */
-function checkTonnes(total: Dec, quantity: number): ReasonWeightError | null {
+/** The (net) tonnes must add up to the event's quantity within max(0.001, quantity × 1e-6). */
+function checkTonnes(
+  total: Dec,
+  context: ReasonWeightContext & { recovery: boolean },
+): ReasonWeightError | null {
+  const quantity = context.quantity ?? 0;
   const tolerance = Math.max(0.001, quantity * 1e-6);
+  const what = context.recovery
+    ? 'The loss tonnes less the recovery tonnes add up to'
+    : 'The tonnes add up to';
   return total.minus(quantity).abs().lte(tolerance)
     ? null
     : {
         code: 'REASON_WEIGHTS_SUM',
-        message: `The tonnes add up to ${total.toFixed()} t, not the event's ${quantity} t`,
+        message: `${what} ${total.toFixed()} t, not the event's ${quantity} t`,
       };
 }
 
-/** Entry indices by value (largest first, ties in entry order), the named primary first among equals. */
+/**
+ * Entry indices: loss shares by value (largest first, ties in entry order), the named primary first among
+ * equals, then the recovery shares by value. The primary is always a loss share.
+ */
 function rankOf(
   entries: readonly ReasonWeightEntry[],
   values: readonly Dec[],
   primary: string | null | undefined,
 ): number[] | null {
+  const recovery = (i: number) => (isRecovery(entries[i]) ? 1 : 0);
   const order = entries
     .map((_, i) => i)
-    .sort((a, b) => values[b].comparedTo(values[a]) || a - b);
+    .sort(
+      (a, b) =>
+        recovery(a) - recovery(b) || values[b].comparedTo(values[a]) || a - b,
+    );
   if (!primary) return order;
   const top = values[order[0]];
-  const named = order.find((i) => entries[i].reasonCodeId === primary);
+  const named = order.find(
+    (i) => entries[i].reasonCodeId === primary && !isRecovery(entries[i]),
+  );
   if (named === undefined || !values[named].eq(top)) return null;
   return [named, ...order.filter((i) => i !== named)];
 }
 
-/** Fractions value ÷ total truncated to 8 places; the first (largest) takes the remainder (Σ = 1 exactly). */
-export function fractionsOf(values: readonly Dec[], total: Dec): Dec[] {
+/**
+ * Fractions value ÷ total truncated to 8 places; the first (largest loss share) takes the remainder so
+ * that Σ loss fractions − Σ recovery fractions = 1 exactly (`signs[i]` = −1 for a recovery; default all +1).
+ */
+export function fractionsOf(
+  values: readonly Dec[],
+  total: Dec,
+  signs: readonly number[] = values.map(() => 1),
+): Dec[] {
   const rest = values
     .slice(1)
     .map((value) =>
       value.div(total).toDecimalPlaces(WEIGHT_SCALE, Decimal.ROUND_DOWN),
     );
-  const assigned = rest.reduce((sum, part) => sum.plus(part), new Dec(0));
+  const assigned = rest.reduce(
+    (sum, part, i) => sum.plus(part.mul(signs[i + 1] ?? 1)),
+    new Dec(0),
+  );
   return [new Dec(1).minus(assigned), ...rest];
+}
+
+/** Σ loss values − Σ recovery values. */
+function netTotal(entries: readonly ReasonWeightEntry[], values: Dec[]): Dec {
+  return values.reduce(
+    (sum, v, i) => (isRecovery(entries[i]) ? sum.minus(v) : sum.plus(v)),
+    new Dec(0),
+  );
 }
 
 /**
@@ -179,7 +258,9 @@ export function fractionsOf(values: readonly Dec[], total: Dec): Dec[] {
  * (Σ = 100) or durations (Σ = the closed stop's length within 1 s), normalised to 8-place fractions that
  * add up to exactly 1, the remainder on the largest. The largest reason is the primary (`reasonCodeId`);
  * among equal largest, the one the request names, else the first entered. One reason is no split
- * (weights null). Deterministic and pure.
+ * (weights null). Declared mode (Task 13): a production loss may carry recovery shares — Σ loss − Σ
+ * recovery = the shortfall (percent: = 100) — whose fractions are kept positive and marked `recovery`;
+ * the primary is the largest loss share. Deterministic and pure.
  */
 export function normaliseReasonWeights(
   entries: readonly ReasonWeightEntry[],
@@ -193,8 +274,9 @@ export function normaliseReasonWeights(
   }
   const entered = enteredValues(entries, context);
   if ('code' in entered) return { ok: false, error: entered };
-  const total = entered.values.reduce((sum, v) => sum.plus(v), new Dec(0));
-  const totalError = checkTotal(entered.basis, total, context);
+  const total = netTotal(entries, entered.values);
+  const recovery = entries.some(isRecovery);
+  const totalError = checkTotal(entered.basis, total, { ...context, recovery });
   if (totalError) return { ok: false, error: totalError };
   const rank = rankOf(entries, entered.values, context.reasonCodeId);
   if (!rank) {
@@ -208,6 +290,7 @@ export function normaliseReasonWeights(
   const fractions = fractionsOf(
     rank.map((i) => entered.values[i]),
     total,
+    rank.map((i) => (isRecovery(entries[i]) ? -1 : 1)),
   );
   return {
     ok: true,
@@ -215,6 +298,7 @@ export function normaliseReasonWeights(
     weights: rank.map((i, k) => ({
       reasonCodeId: entries[i].reasonCodeId,
       weight: fractions[k].toFixed(WEIGHT_SCALE),
+      ...(isRecovery(entries[i]) ? { recovery: true } : {}),
     })),
   };
 }
@@ -226,13 +310,27 @@ export function isWeighted(
   return Array.isArray(weights) && weights.length > 1;
 }
 
+/**
+ * Σ the loss weights of a split (1 without recovery shares): the event's gross loss is its shortfall times
+ * this, the recovery shares offsetting the excess over the shortfall.
+ */
+export function lossWeightTotal(
+  weights: readonly ReasonWeight[] | null | undefined,
+): Dec {
+  if (!isWeighted(weights)) return new Dec(1);
+  return weights
+    .filter((w) => !isRecovery(w))
+    .reduce((sum, w) => sum.plus(w.weight), new Dec(0));
+}
+
 function isReasonWeight(value: unknown): value is ReasonWeight {
   if (typeof value !== 'object' || value === null) return false;
   const record = value as Record<string, unknown>;
   return (
     typeof record.reasonCodeId === 'string' &&
     typeof record.weight === 'string' &&
-    toDec(record.weight) !== null
+    toDec(record.weight) !== null &&
+    (record.recovery === undefined || typeof record.recovery === 'boolean')
   );
 }
 
@@ -244,5 +342,6 @@ export function storedReasonWeights(raw: unknown): ReasonWeight[] | null {
   return items.map((item) => ({
     reasonCodeId: item.reasonCodeId,
     weight: item.weight,
+    ...(item.recovery === true ? { recovery: true } : {}),
   }));
 }

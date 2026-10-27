@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ProductionEventView, ReasonWeightInput } from '@/api/v2/types/events';
-import { tonnesEntriesValid, tonnesSplitFits } from '../model/declared-split';
+import { recoveryValid, tonnesEntriesValid, tonnesSplitFits } from '../model/declared-split';
 import { hasSplit, initialSplitRows, reasonWeightsBody, splitComplete, type SplitMode, type SplitRow } from '../model/reason-split';
 
 /** What the split adds to a PATCH: the entered weights, `null` to remove a stored split, or nothing. */
@@ -37,7 +37,7 @@ export function useReasonSplit(event: Pick<ProductionEventView, 'reasonCodeId' |
     minutesAllowed: event.durationSeconds !== null,
     /** declared mode: the day's shortfall in tonnes (null for a stop) */
     shortfall,
-    complete: !enabled || (splitComplete(rows) && (mode !== 'tonnes' || (shortfall !== null && tonnesEntriesValid(rows) && tonnesSplitFits(rows, shortfall)))),
+    complete: !enabled || (splitComplete(rows) && recoveryValid(rows) && (mode !== 'tonnes' || (shortfall !== null && tonnesEntriesValid(rows) && tonnesSplitFits(rows, shortfall)))),
   };
 }
 

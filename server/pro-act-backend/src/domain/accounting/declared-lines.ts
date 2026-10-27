@@ -21,10 +21,17 @@ export const STOPS_CROSS_CHECK_FLAG = 'stops_cross_check';
 
 const SCALE = 8;
 
-/** One reason of the declared shortfall: the cause (the event, per reason when split) and its weight. */
+/** Line flag of a recovery share of the declared shortfall (a `gain` line, Task 13). */
+export const DECLARED_RECOVERY_FLAG = 'declared_recovery';
+
+/**
+ * One reason of the declared shortfall: the cause (the event, per reason when split), its weight and
+ * whether it is a recovery share (Task 13: booked as a gain, offsetting the loss shares).
+ */
 interface ReasonShare {
   cause: LossEvent;
   weight: Dec;
+  recovery: boolean;
 }
 
 /** The reasons of a production loss: its weighted split, else its single reason (weight 1), else none. */
@@ -34,14 +41,17 @@ function sharesOf(event: LossEvent): ReasonShare[] {
     return weights.map((reason) => ({
       cause: reasonPart(event, reason),
       weight: new Dec(reason.weight),
+      recovery: reason.recovery === true,
     }));
   }
-  return event.reasonCodeId ? [{ cause: event, weight: new Dec(1) }] : [];
+  return event.reasonCodeId
+    ? [{ cause: event, weight: new Dec(1), recovery: false }]
+    : [];
 }
 
 /**
  * `shortfall × weight` rounded to 8 places; the last share takes the remainder, so the parts add up to
- * the shortfall exactly.
+ * the shortfall exactly. Weights are signed: a recovery share's negative weight gives its (negative) gain.
  */
 export function shareQuantities(
   shortfall: Dec,
@@ -66,7 +76,10 @@ function shareLine(
   share: ReasonShare & { quantity: Dec; shortfall: Dec },
 ): LossLineDraft {
   const { cause } = share;
-  const kind = kindOf(input, cause.reasonCodeId ?? '');
+  const kind = share.recovery
+    ? 'gain'
+    : kindOf(input, cause.reasonCodeId ?? '');
+  const shortfallFlag = `${DECLARED_SHORTFALL_FLAG}:${formatDec(share.shortfall)}`;
   return {
     ledger: 'plan',
     kind,
@@ -79,8 +92,11 @@ function shareLine(
     rateVersionId: null,
     cause,
     scheduleClass: cause.scheduleClass,
-    oeeComponent: kind === 'unaccounted_classified' ? null : kind,
-    flags: [`${DECLARED_SHORTFALL_FLAG}:${formatDec(share.shortfall)}`],
+    oeeComponent:
+      kind === 'unaccounted_classified' || kind === 'gain' ? null : kind,
+    flags: share.recovery
+      ? [shortfallFlag, DECLARED_RECOVERY_FLAG]
+      : [shortfallFlag],
     evidence: [
       {
         eventId: cause.eventId,
@@ -103,6 +119,8 @@ function shareLine(
  * Declared mode (spec §4, Global Constraint 12): one plan line per reason share of the declared
  * shortfall, `basis = declared`, kind = the reason's OEE component (`unaccounted_classified` without
  * one). An uncoded event has no lines (its shortfall stays in the residual); a shortfall ≤ 0 is no loss.
+ * Task 13: a recovery share is a signed `gain` line (negative quantity, the event as its cause), so
+ * Σ loss lines − recovery = the shortfall and the gross loss is Σ the loss shares.
  */
 export function declaredLines(
   input: PeriodAccountingInput,
@@ -114,7 +132,7 @@ export function declaredLines(
   const shares = sharesOf(event);
   const quantities = shareQuantities(
     shortfall,
-    shares.map((s) => s.weight),
+    shares.map((s) => (s.recovery ? s.weight.neg() : s.weight)),
   );
   return shares.map((share, i) =>
     shareLine(input, slice, { ...share, quantity: quantities[i], shortfall }),

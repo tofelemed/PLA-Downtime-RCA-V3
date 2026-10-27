@@ -35,6 +35,10 @@ export interface EventSelectionView {
 export interface ReasonWeightView {
   reasonCodeId: string;
   weight: string;
+  /** declared mode (Task 13): a recovery share of a production loss (Σ loss − Σ recovery = 1) */
+  recovery?: boolean;
+  /** declared mode: the share in the event's unit (shortfall × weight, server-computed); absent for a stop */
+  quantity?: string | null;
 }
 
 /** D-T5: a reason as the coder enters it on PATCH — a percent (decimal string) or seconds, one of the two. */
@@ -44,6 +48,8 @@ export interface ReasonWeightInput {
   seconds?: number;
   /** declared mode: tonnes of a production_loss event (they add up to the event quantity) */
   quantity?: string;
+  /** declared mode: this share is a recovery (Σ loss − Σ recovery = the shortfall; percent: = 100) */
+  recovery?: boolean;
 }
 
 /** Declared mode: the figures OT declares for a `production_loss` event (the event quantity is the shortfall). */

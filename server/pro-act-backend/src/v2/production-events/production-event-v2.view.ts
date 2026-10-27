@@ -20,6 +20,7 @@ import {
   storedReasonWeights,
 } from '../../domain/events/reason-weights';
 import { durationSeconds } from '../../domain/time/interval-algebra';
+import { formatDec, toDec } from '../../domain/actuals/decimal';
 import { ProductionEvent } from '../../production-event/production-event.entity';
 import { EventFacts } from '../../production-event/revisions/event-facts';
 import { ImpactBasis } from '../../domain/reliability/unit-impact';
@@ -86,7 +87,7 @@ export interface ProductionEventV2View {
    * D-T5: the reasons the stop is split across, largest first (the first is `reasonCodeId`), 8-place
    * weights adding up to 1; null = `reasonCodeId` alone
    */
-  reasonWeights: ReasonWeight[] | null;
+  reasonWeights: ReasonWeightV2View[] | null;
   /** SME D12: explicitly under investigation (no specific reason yet) */
   investigationPending: boolean;
   /** SME D13: supervisor verification of the coding and maintenance validation of the failure detail */
@@ -153,6 +154,22 @@ export interface ProductionEventV2View {
 const isoOrNull = (value: Date | string | null | undefined): string | null =>
   value ? new Date(value).toISOString() : null;
 
+/** A stored reason share; for a production loss also its quantity (shortfall × weight, Task 13). */
+export type ReasonWeightV2View = ReasonWeight & { quantity?: string | null };
+
+/** The stored split; a production loss's shares carry their quantity in the event's unit (server-side). */
+function reasonWeightsView(
+  event: ProductionEvent,
+): ReasonWeightV2View[] | null {
+  const weights = storedReasonWeights(event.reasonWeights);
+  if (!weights || event.physicalType !== 'production_loss') return weights;
+  const shortfall = toDec(event.quantity ?? null);
+  return weights.map((w) => ({
+    ...w,
+    quantity: shortfall ? formatDec(shortfall.mul(w.weight)) : null,
+  }));
+}
+
 export function toProductionEventV2View(
   event: ProductionEvent,
   asOf: Date,
@@ -191,7 +208,7 @@ export function toProductionEventV2View(
     },
     planId: event.planId ?? null,
     reasonCodeId: event.reasonCodeId ?? null,
-    reasonWeights: storedReasonWeights(event.reasonWeights),
+    reasonWeights: reasonWeightsView(event),
     investigationPending: event.investigationPending ?? false,
     verification: {
       verifiedBy: event.verifiedBy ?? null,

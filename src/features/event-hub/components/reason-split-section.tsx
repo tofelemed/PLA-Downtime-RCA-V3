@@ -5,9 +5,9 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ReasonSplitState } from '../hooks/use-reason-split';
 import { useNumberFormat, type NumberFormat } from '@/features/ux-kit/use-number-format';
-import { tonnesSplitGap } from '../model/declared-split';
 import type { SplitMode, SplitRow } from '../model/reason-split';
 import { ReasonCodeSelect } from './reason-code-select';
+import { SplitBalanceText } from './split-balance-text';
 
 const UNIT_OF: Readonly<Record<SplitMode, string>> = { percent: '%', minutes: 'min', tonnes: 't' };
 const VALUE_LABEL_OF: Readonly<Record<SplitMode, string>> = { percent: 'Percent of the stop', minutes: 'Minutes of the stop', tonnes: 'Tonnes of the shortfall' };
@@ -29,6 +29,12 @@ function SplitRowFields({ row, split }: { row: SplitRow; split: ReasonSplitState
         />
         <span className="text-sm text-muted-foreground">{unit}</span>
       </div>
+      {split.shortfall !== null && (
+        <div className="flex items-center gap-1 pb-2">
+          <Checkbox id={`split-recovery-${row.key}`} data-testid="split-recovery" checked={row.recovery === true} onCheckedChange={(value) => split.update(row.key, { recovery: value === true })} />
+          <Label htmlFor={`split-recovery-${row.key}`} className="text-xs font-normal">Recovery</Label>
+        </div>
+      )}
       <Button type="button" variant="ghost" size="sm" disabled={split.rows.length <= 2} onClick={() => split.remove(row.key)}>
         Remove
       </Button>
@@ -64,17 +70,6 @@ function hintOf(split: ReasonSplitState, numbers: NumberFormat): string {
   return 'The minutes must add up to the length of the stop.';
 }
 
-function TonnesRemaining({ split, shortfall }: { split: ReasonSplitState; shortfall: number }) {
-  const numbers = useNumberFormat();
-  const gap = tonnesSplitGap(split.rows, shortfall);
-  const message = gap ? `${numbers.number(gap.tonnes, 3)} t ${gap.side === 'remaining' ? 'still to place.' : 'over the shortfall.'}` : null;
-  return (
-    <p className={message ? 'text-xs text-destructive' : 'text-xs text-muted-foreground'} data-testid="split-tonnes-remaining" role="status">
-      {message ?? 'The tonnes add up to the shortfall.'}
-    </p>
-  );
-}
-
 /**
  * D-T5 "Split across several reasons": the coder gives each reason a percent of the stop or its minutes. The
  * server normalises the weights, makes the largest the stop's reason and refuses a split that does not add up
@@ -103,8 +98,8 @@ export function ReasonSplitSection({ split, percentOnly = false }: { split: Reas
           <p className="text-xs text-muted-foreground">
             {hintOf(split, numbers)} The largest share becomes the {split.shortfall !== null ? 'event’s' : 'stop’s'} reason.
           </p>
-          {split.mode === 'tonnes' && split.shortfall !== null && <TonnesRemaining split={split} shortfall={split.shortfall} />}
-        </>
+          {split.shortfall !== null && <p className="text-xs text-muted-foreground">Tick Recovery for a share that offsets the losses: the losses less the recovery must equal the shortfall.</p>}
+          <SplitBalanceText split={split} />        </>
       )}
     </section>
   );

@@ -8,6 +8,10 @@ import {
 } from '../periods/loss-accounting-policy';
 import { AccountingPolicy } from '../periods/entities/accounting-policy.entity';
 import { ReconciliationLine } from './entities/reconciliation-line.entity';
+import {
+  lossWeightTotal,
+  storedReasonWeights,
+} from '../domain/events/reason-weights';
 
 /**
  * The loss basis the run was calculated with, from the `loss_accounting` version its policy snapshot
@@ -57,7 +61,11 @@ export async function lossBasesOfRuns(
   );
 }
 
-/** Shortfall (event quantity) of the tenant's `production_loss` events the lines cite, by event id. */
+/**
+ * Loss budget of the tenant's `production_loss` events the lines cite, by event id: the shortfall (event
+ * quantity) times Σ the loss weights of its split — Task 13: recovery shares offset the losses, so the gross
+ * loss (Σ loss shares) may exceed the shortfall and is the cap of each kind's claims.
+ */
 export async function declaredShortfallsOf(
   manager: EntityManager,
   tenantId: string,
@@ -67,15 +75,19 @@ export async function declaredShortfallsOf(
     ...new Set(lines.flatMap((l) => l.evidence.map((e) => e.eventId))),
   ];
   if (ids.length === 0) return new Map();
-  const rows = await manager.query<Array<{ id: string; quantity: string }>>(
-    `SELECT "id", "quantity"::text AS "quantity" FROM "production_events"
+  const rows = await manager.query<
+    Array<{ id: string; quantity: string; reason_weights: unknown }>
+  >(
+    `SELECT "id", "quantity"::text AS "quantity", "reason_weights" FROM "production_events"
       WHERE "tenant_id" = $1 AND "id" = ANY($2::uuid[]) AND "physical_type" = 'production_loss' AND "quantity" IS NOT NULL`,
     [tenantId, ids],
   );
   return new Map(
     rows.flatMap((r): Array<[string, Dec]> => {
       const shortfall = toDec(r.quantity);
-      return shortfall ? [[r.id, shortfall]] : [];
+      if (!shortfall) return [];
+      const weights = storedReasonWeights(r.reason_weights);
+      return [[r.id, shortfall.mul(lossWeightTotal(weights))]];
     }),
   );
 }

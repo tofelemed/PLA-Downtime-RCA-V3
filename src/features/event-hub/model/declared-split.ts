@@ -8,17 +8,35 @@ export function tonnesTolerance(shortfall: number): number {
   return Math.max(ABSOLUTE_TOLERANCE, Math.abs(shortfall) * RELATIVE_TOLERANCE);
 }
 
-/** Sum of the typed tonnes; an empty or invalid entry counts as 0. */
+const valueOf = (row: SplitRow) => {
+  const value = Number(row.value.trim());
+  return Number.isFinite(value) ? value : 0;
+};
+
+const round6 = (value: number) => Math.round(value * 1e6) / 1e6;
+
+/** The typed loss shares, recovery shares and their net (loss − recovery); an empty or invalid entry counts as 0. */
+export interface SplitBalance {
+  losses: number;
+  recovery: number;
+  net: number;
+}
+
+/** Task 13: Σ loss shares − Σ recovery shares must equal the shortfall (tonnes) or 100 (percent). */
+export function splitBalance(rows: readonly SplitRow[]): SplitBalance {
+  const losses = round6(rows.filter((row) => !row.recovery).reduce((sum, row) => sum + valueOf(row), 0));
+  const recovery = round6(rows.filter((row) => row.recovery).reduce((sum, row) => sum + valueOf(row), 0));
+  return { losses, recovery, net: round6(losses - recovery) };
+}
+
+/** Net of the typed tonnes (loss shares less recovery shares). */
 export function tonnesSum(rows: readonly SplitRow[]): number {
-  return rows.reduce((total, row) => {
-    const value = Number(row.value.trim());
-    return Number.isFinite(value) ? total + value : total;
-  }, 0);
+  return splitBalance(rows).net;
 }
 
 /** Tonnes still to place (negative: over the shortfall), rounded to 6 places. */
 export function tonnesRemaining(rows: readonly SplitRow[], shortfall: number): number {
-  return Math.round((shortfall - tonnesSum(rows)) * 1e6) / 1e6;
+  return round6(shortfall - tonnesSum(rows));
 }
 
 export function tonnesSplitFits(rows: readonly SplitRow[], shortfall: number): boolean {
@@ -33,14 +51,24 @@ export function tonnesEntriesValid(rows: readonly SplitRow[]): boolean {
   });
 }
 
+/** Recovery shares need at least one loss share beside them (the server refuses a split of recoveries only). */
+export function recoveryValid(rows: readonly SplitRow[]): boolean {
+  return rows.some((row) => !row.recovery);
+}
+
 export interface TonnesSplitGap {
   side: 'remaining' | 'over';
   tonnes: number;
 }
 
+/** What is left to place, or by how much the net overshoots `target`; null when it fits. The caller formats the number. */
+export function splitGap(net: number, target: number, tolerance: number): TonnesSplitGap | null {
+  const remaining = round6(target - net);
+  if (Math.abs(remaining) <= tolerance) return null;
+  return remaining > 0 ? { side: 'remaining', tonnes: remaining } : { side: 'over', tonnes: Math.abs(remaining) };
+}
+
 /** What is left to place, or by how much the tonnes overshoot; null when they fit. The caller formats the number. */
 export function tonnesSplitGap(rows: readonly SplitRow[], shortfall: number): TonnesSplitGap | null {
-  if (tonnesSplitFits(rows, shortfall)) return null;
-  const remaining = tonnesRemaining(rows, shortfall);
-  return remaining > 0 ? { side: 'remaining', tonnes: remaining } : { side: 'over', tonnes: Math.abs(remaining) };
+  return splitGap(tonnesSum(rows), shortfall, tonnesTolerance(shortfall));
 }

@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDecimal, IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsDecimal,
+  IsNumber,
+  IsOptional,
+  IsUUID,
+  Min,
+} from 'class-validator';
 
 /**
  * D-T5: one reason of a weighted stop as the coder enters it — a percent of the stop or its duration in
@@ -37,4 +44,13 @@ export class ReasonWeightInputDto {
   @IsOptional()
   @IsDecimal({ decimal_digits: '0,8' })
   quantity?: string;
+
+  @ApiPropertyOptional({
+    example: false,
+    description:
+      'Declared mode: this share of a production_loss is a recovery (booked as a verified-recovery gain). Σ loss shares − Σ recovery shares = the event quantity (percent: = 100). 422 REASON_WEIGHTS_RECOVERY on a stop or without a loss share',
+  })
+  @IsOptional()
+  @IsBoolean()
+  recovery?: boolean;
 }

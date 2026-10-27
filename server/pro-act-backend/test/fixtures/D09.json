@@ -1,0 +1,137 @@
+{
+  "id": "D09",
+  "title": "Recovery share (Task 13): 23 + 11 + 6 − 8 = 32 — gross 40, verified recovery 8, net 32",
+  "kind": "numerical",
+  "spec_ref": "PLA declared mode Task 13 (loss accounting statement); owner requirement 27 Oct 2026",
+  "owner_subphase": "pla-declared-mode",
+  "tolerance": "0.000001",
+  "window": {
+    "start": "2027-03-03T02:30:00Z",
+    "end": "2027-03-04T02:30:00Z"
+  },
+  "reasonComponents": {
+    "R1": "availability",
+    "R2": "quality",
+    "R3": "performance",
+    "R4": "availability",
+    "RX": null
+  },
+  "cases": [
+    {
+      "name": "three loss shares and one recovery share of a 32 t shortfall",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "250",
+          "gross": "215",
+          "good": "208",
+          "planningRate": "10"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "240",
+              "actual": "208",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1",
+            "reasonWeights": [
+              { "reasonCodeId": "R1", "weight": "0.71875000" },
+              { "reasonCodeId": "R3", "weight": "0.34375000" },
+              { "reasonCodeId": "R2", "weight": "0.18750000" },
+              { "reasonCodeId": "R4", "weight": "0.25000000", "recovery": true }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          { "kind": "availability", "reasonCodeId": "R1", "quantity": "23", "share": "0.71875000", "basis": "declared" },
+          { "kind": "performance", "reasonCodeId": "R3", "quantity": "11", "share": "0.34375000", "basis": "declared" },
+          { "kind": "quality", "reasonCodeId": "R2", "quantity": "6", "share": "0.18750000", "basis": "declared" },
+          { "kind": "gain", "reasonCodeId": "R4", "quantity": "-8", "share": "0.25000000", "basis": "declared" }
+        ],
+        "totals": {
+          "target": "240",
+          "actual": "208",
+          "gap": "32",
+          "availability": "23",
+          "performance": "11",
+          "quality": "6",
+          "gain": "8",
+          "attributed": "32",
+          "residual": "0"
+        },
+        "flags": ["capacity_not_applicable"],
+        "absentFlags": ["unaccounted", "over_accounted", "declared_identity_mismatch"],
+        "issues": 0
+      }
+    },
+    {
+      "name": "percent split 125 % − 25 % of the same shortfall gives the same lines",
+      "inputs": {
+        "policy": {
+          "lossBasis": "declared",
+          "targetSource": "declared",
+          "stopsCrossCheck": false,
+          "identityTolerance": "0"
+        },
+        "slice": {
+          "uom": "t",
+          "target": "250",
+          "gross": "215",
+          "good": "208",
+          "planningRate": "10"
+        },
+        "events": [
+          {
+            "id": "PL1",
+            "type": "production_loss",
+            "start": "2027-03-03T02:30:00Z",
+            "end": "2027-03-04T02:30:00Z",
+            "declaredFigures": {
+              "planned": "240",
+              "actual": "208",
+              "shortfall": "32",
+              "uom": "t",
+              "sourceStatus": "CONFIRMED"
+            },
+            "reasonCodeId": "R1",
+            "reasonWeights": [
+              { "reasonCodeId": "R1", "weight": "1.25000000" },
+              { "reasonCodeId": "R4", "weight": "0.25000000", "recovery": true }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "lines": [
+          { "kind": "availability", "reasonCodeId": "R1", "quantity": "40", "share": "1.25000000", "basis": "declared" },
+          { "kind": "gain", "reasonCodeId": "R4", "quantity": "-8", "share": "0.25000000", "basis": "declared" }
+        ],
+        "totals": {
+          "gap": "32",
+          "availability": "40",
+          "gain": "8",
+          "attributed": "32",
+          "residual": "0"
+        },
+        "flags": ["capacity_not_applicable"],
+        "absentFlags": ["unaccounted", "over_accounted"],
+        "issues": 0
+      }
+    }
+  ]
+}
