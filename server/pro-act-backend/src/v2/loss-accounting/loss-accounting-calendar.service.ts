@@ -33,6 +33,7 @@ import {
   DAILY_SHIFT_NAME,
   isDailyDraft,
   isDailyShape,
+  pendingDailyCalendar,
   PeriodCut,
   switchOf,
   SwitchCut,
@@ -85,8 +86,9 @@ export class LossAccountingCalendarService {
 
   /**
    * What a day-grain approval does, or null for shift grain. A daily calendar already in force (an earlier
-   * policy, or a retry after a partial failure) is reused and the period replacement still runs
-   * (idempotent), so a retry converges. Otherwise 422 EFFECTIVE_DATE_TOO_EARLY when a period with an
+   * policy, or a retry after a partial failure), or this path's own one of the scope with the same day
+   * start that starts later (a settings-only version after a switch), is reused and the period
+   * replacement still runs (idempotent), so a retry converges. Otherwise 422 EFFECTIVE_DATE_TOO_EARLY when a period with an
    * approved revision starts on or after the effective date.
    */
   async plan(
@@ -307,7 +309,10 @@ export class LossAccountingCalendarService {
     return plan.effectiveFrom > earliest ? plan.effectiveFrom : earliest;
   }
 
-  /** A published, open-ended version in force on the date that already is one 24 h shift per day. */
+  /**
+   * A published, open-ended version in force on the date that already is one 24 h shift per day, else
+   * this path's own daily calendar of the scope that starts later (`pendingDailyCalendar`).
+   */
   private async dailyInForce(
     manager: EntityManager,
     plan: DailyCalendarPlan,
@@ -326,8 +331,9 @@ export class LossAccountingCalendarService {
           NO_UNIT,
           plan.effectiveFrom,
         );
-    if (!inForce || inForce.effectiveTo !== null) return null;
-    return isDailyShape(inForce, plan.dayStart) ? inForce : null;
+    if (inForce?.effectiveTo === null && isDailyShape(inForce, plan.dayStart))
+      return inForce;
+    return pendingDailyCalendar(published, plan, plan.effectiveFrom);
   }
 
   private async assertNotTooEarly(

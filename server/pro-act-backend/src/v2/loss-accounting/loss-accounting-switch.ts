@@ -246,3 +246,26 @@ export function isDailyDraft(
     empty(version.exclusions)
   );
 }
+
+/**
+ * This path's own daily calendar (marker) for exactly the scope (unit override, or site when
+ * `scopeUnitId` is null): published, open-ended, the same day start, starting on or after `date`.
+ * A switch approved earlier can start after the next version's effective date (it is placed after the
+ * last calculated period); a version that changes neither grain, day start nor scope adopts it.
+ */
+export function pendingDailyCalendar(
+  published: CalendarVersion[],
+  scope: { scopeUnitId: string | null; dayStart: string },
+  date: string,
+): CalendarVersion | null {
+  const found = published.filter(
+    (v) =>
+      v.state === 'published' &&
+      v.unitId === scope.scopeUnitId &&
+      v.republishReason === DAILY_CALENDAR_MARKER &&
+      v.effectiveTo === null &&
+      v.effectiveFrom >= date &&
+      isDailyShape(v, scope.dayStart),
+  );
+  return found.sort((a, b) => b.version - a.version)[0] ?? null;
+}
