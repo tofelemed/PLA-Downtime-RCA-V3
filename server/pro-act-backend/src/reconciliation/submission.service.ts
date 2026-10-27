@@ -107,7 +107,10 @@ export class SubmissionService {
           final.reconciliation,
           decisionLinesOf(final.lines),
           final.tolerance.rule,
-          { declared: final.lossBasis === 'declared' },
+          {
+            declared: final.lossBasis === 'declared',
+            activeSlices: final.slices.length,
+          },
         ),
         ...claimIssues(
           final.reconciliation,

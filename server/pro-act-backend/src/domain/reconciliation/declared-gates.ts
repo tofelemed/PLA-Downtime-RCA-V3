@@ -50,16 +50,37 @@ function sliceIssue(
   return null;
 }
 
+/** A declared period with no slice, or whose run has no slice totals, has no figures to review. */
+export const NO_DECLARED_FIGURES: WorkflowIssue = {
+  code: 'DECLARED_LOSS_MISSING',
+  message: 'No declared production loss figures for this period',
+  sliceId: null,
+};
+
+/** True when the period has no active slice or the run's reconciliation has no slice. */
+export function declaredFiguresMissing(
+  reconciliation: Reconciliation,
+  activeSlices: number,
+): boolean {
+  return activeSlices === 0 || reconciliation.slices.length === 0;
+}
+
 /**
  * Declared-mode content gates of a submission (spec §4.4): the period needs its production loss event
  * (`DECLARED_LOSS_MISSING`) and the event's figures must add up (`DECLARED_IDENTITY_MISMATCH`) unless the
  * difference is booked as a tolerance adjustment line (evaluated after the tolerance adjustments).
- * A slice without the event raises only the first.
+ * A slice without the event raises only the first; a period without any slice or slice totals raises
+ * the period-level `DECLARED_LOSS_MISSING` (`activeSlices` = the period's active slices; default: the
+ * reconciliation's slices).
  */
 export function declaredIssues(
   reconciliation: Reconciliation,
   lines: readonly DecisionLine[],
+  activeSlices: number = reconciliation.slices.length,
 ): WorkflowIssue[] {
+  if (declaredFiguresMissing(reconciliation, activeSlices)) {
+    return [NO_DECLARED_FIGURES];
+  }
   return reconciliation.slices
     .map((s) => sliceIssue(s, lines))
     .filter((found): found is WorkflowIssue => found !== null);

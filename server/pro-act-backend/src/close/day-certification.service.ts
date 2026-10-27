@@ -32,6 +32,7 @@ import { planFigures } from '../v2/period-overview/period-summary.view';
 import { CodingGateResult } from '../domain/reconciliation/coding-gate';
 import { assertCodingGate } from '../reconciliation/coding-gate.loader';
 import { loadDayCodingGate } from './day-coding-gate';
+import { declaredEmptyRevisions } from './day-loss-basis';
 import { dayPeriods, DayPeriodRow } from './day-periods';
 import { DayCertification } from './entities/day-certification.entity';
 
@@ -140,6 +141,7 @@ export class DayCertificationService {
         context.isSuperAdmin,
       );
       if (refusal) throw refusalError(refusal, before);
+      await assertDeclaredFigures(manager, tenantId, before);
       if (before.codingGate) assertCodingGate(before.codingGate);
       const row = await manager.save(
         manager.create(DayCertification, {
@@ -238,6 +240,37 @@ function assertDate(localDate: string): void {
   if (!isLocalDate(localDate)) {
     throw invalid('INVALID_DATE', 'localDate is not a date');
   }
+}
+
+/** 422 DAY_NOT_READY when a declared shift of the day was approved without production loss figures. */
+async function assertDeclaredFigures(
+  manager: EntityManager,
+  tenantId: string,
+  day: DaySnapshot,
+): Promise<void> {
+  const required = day.periods.filter(needsApproval);
+  const empty = new Set(
+    await declaredEmptyRevisions(
+      manager,
+      tenantId,
+      required.flatMap((p) => (p.revisionId ? [p.revisionId] : [])),
+    ),
+  );
+  if (empty.size === 0) return;
+  throw new UnprocessableEntityException({
+    code: 'DAY_NOT_READY',
+    message: 'No declared production loss figures for a period of the day',
+    details: {
+      pending: required
+        .filter((p) => p.revisionId !== null && empty.has(p.revisionId))
+        .map((p) => ({
+          periodId: p.periodId,
+          shiftName: p.shiftName,
+          workflow: p.workflow,
+          reason: 'DECLARED_LOSS_MISSING',
+        })),
+    },
+  });
 }
 
 function refusalError(

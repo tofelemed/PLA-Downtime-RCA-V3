@@ -103,16 +103,17 @@ function lineIssues(
  * (`OVER_ACCOUNTED`); per line no decision on a changed or vanished candidate, no missing code and no
  * Unaccounted classification unless the policy allows it. Evaluated after the tolerance adjustments.
  * In declared mode (`options.declared`) the declared gates come first and a slice without its production
- * loss event raises only `DECLARED_LOSS_MISSING`.
+ * loss event raises only `DECLARED_LOSS_MISSING`, as does a period without slices (`options.activeSlices`
+ * = its active slice count) or slice totals.
  */
 export function submissionIssues(
   reconciliation: Reconciliation,
   lines: readonly DecisionLine[],
   rule: ToleranceRule,
-  options: { declared?: boolean } = {},
+  options: { declared?: boolean; activeSlices?: number } = {},
 ): WorkflowIssue[] {
   const declared = options.declared
-    ? declaredIssues(reconciliation, lines)
+    ? declaredIssues(reconciliation, lines, options.activeSlices)
     : [];
   const missing = new Set(
     declared

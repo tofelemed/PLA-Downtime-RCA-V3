@@ -275,4 +275,36 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
       codedRatio: '1',
     });
   });
+
+  it('an empty declared period (no slice) is not submittable, approvable or certifiable', async () => {
+    const unit = env.world.unitA2;
+    await env.rows(
+      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
+              effective_from, approved_at)
+       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, 1, $3::jsonb, '2026-01-01T00:00:00Z', now())`,
+      [env.world.tenantA, unit, JSON.stringify(POLICY)],
+    );
+    await env.materialize([unit], A, NEXT_DAY);
+    const periods = [A, B, C];
+    const ids = await Promise.all(periods.map((at) => env.periodId(unit, at)));
+    for (const id of ids) await env.recompute(id);
+    const empty = await env.view(ids[0]);
+    expect(empty.slices).toEqual([]);
+    const refused = await env.submit(empty, env.admin, ids[0]).expect(422);
+    expect(refused.body).toMatchObject({
+      code: 'DECLARED_LOSS_MISSING',
+      message: 'No declared production loss figures for this period',
+    });
+
+    // approved before the gate existed: the day still cannot be certified
+    await env.rows(
+      `UPDATE accounting_revisions SET lifecycle = 'approved' WHERE period_id = ANY($1::uuid[])`,
+      [ids],
+    );
+    const day = await env
+      .post(`production-days/${unit}/2027-03-01/certify`, {}, env.approver)
+      .expect(422);
+    expect(day.body).toMatchObject({ code: 'DAY_NOT_READY' });
+    expect(JSON.stringify(day.body)).toContain('DECLARED_LOSS_MISSING');
+  });
 });

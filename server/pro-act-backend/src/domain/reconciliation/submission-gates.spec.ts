@@ -127,4 +127,30 @@ describe('submissionIssues in declared mode', () => {
       submissionIssues(reconciliationOf(slice({})), [line], rule, declared),
     ).toEqual([]);
   });
+
+  it('a period without slices raises the period-level DECLARED_LOSS_MISSING', () => {
+    const empty = reconciliationOf();
+    expect(submissionIssues(empty, [], rule, declared)).toEqual([
+      {
+        code: 'DECLARED_LOSS_MISSING',
+        message: 'No declared production loss figures for this period',
+        sliceId: null,
+      },
+    ]);
+  });
+
+  it('a period with no active slice raises it even when the run has totals', () => {
+    const found = submissionIssues(reconciliationOf(slice({})), [], rule, {
+      declared: true,
+      activeSlices: 0,
+    });
+    expect(codes(found)).toEqual(['DECLARED_LOSS_MISSING']);
+  });
+
+  it('an empty period passes the content gates in computed mode (unchanged)', () => {
+    expect(submissionIssues(reconciliationOf(), [], rule)).toEqual([]);
+    expect(
+      submissionIssues(reconciliationOf(), [], rule, { activeSlices: 0 }),
+    ).toEqual([]);
+  });
 });

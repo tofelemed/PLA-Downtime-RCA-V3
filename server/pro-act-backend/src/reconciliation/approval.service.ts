@@ -29,7 +29,15 @@ import { loadRevisionState, RevisionState } from './revision-state';
 import { contentHashOf, reviewedContent, sha256 } from './reviewed-content';
 import { writeApprovedLedger } from './approved-ledger';
 import { approvedValueTotals } from './reviewed-valuation';
-import { separationOfDuties, staleSubmission } from './workflow-errors';
+import {
+  separationOfDuties,
+  staleSubmission,
+  workflowIssues,
+} from './workflow-errors';
+import {
+  declaredFiguresMissing,
+  NO_DECLARED_FIGURES,
+} from '../domain/reconciliation/declared-gates';
 import {
   actorOf,
   publishWorkflowEvent,
@@ -97,14 +105,8 @@ export class ApprovalService {
         throw staleSubmission('the reviewed content changed');
       if (!context.isSuperAdmin && approvalConflictOf(approver, state))
         throw separationOfDuties();
-      if (state.lossBasis === 'declared') {
-        await assertDeclaredConfirmed(manager, {
-          tenantId: period.tenantId,
-          unitId: period.unitId,
-          from: period.utcStart,
-          to: period.utcEnd,
-        });
-      }
+      if (state.lossBasis === 'declared')
+        await assertDeclaredApprovable(manager, state);
       await assertBridgeReviewed(
         manager,
         state,
@@ -317,4 +319,21 @@ async function storeSnapshot(
       createdAt: approvedAt,
     }),
   );
+}
+
+/** Declared mode: the period has declared figures (422 DECLARED_LOSS_MISSING) and its events are confirmed. */
+async function assertDeclaredApprovable(
+  manager: EntityManager,
+  state: RevisionState,
+): Promise<void> {
+  if (declaredFiguresMissing(state.reconciliation, state.slices.length)) {
+    throw workflowIssues([NO_DECLARED_FIGURES]);
+  }
+  const { period } = state;
+  await assertDeclaredConfirmed(manager, {
+    tenantId: period.tenantId,
+    unitId: period.unitId,
+    from: period.utcStart,
+    to: period.utcEnd,
+  });
 }
