@@ -112,6 +112,30 @@ describe('pending approvals UI', () => {
   });
   it('filters workflows on the server', async () => { mount(); await screen.findByText('Extruder HDPE'); fireEvent.change(screen.getByLabelText('Workflow'), { target: { value: 'fx-rate' } }); await waitFor(() => expect(calls.some((call) => call.url.searchParams.get('kind') === 'fx-rate')).toBe(true)); });
 });
+describe('loss accounting drafts in the inbox', () => {
+  const draft = () => item({ id: 'lv-1', commandId: 'lv-1', kind: 'loss-accounting', kindLabel: 'Loss accounting', title: 'Loss accounting', summary: 'day accounting · declared · target: declared', state: 'proposed', unitId: null, unitName: null, resource: 'loss-accounting/versions', reviewHref: '/approvals/loss-accounting/lv-1', supersede: false, version: null, actions: [{ action: 'approve', disabledReason: null }, { action: 'reject', disabledReason: null }] });
+  it('lists the draft with Approve and Reject; approving posts the loss accounting decision with an idempotency key', async () => {
+    rows = [draft()]; mount(); await screen.findByText('Loss accounting', { selector: 'td *, td' });
+    expect(screen.getByRole('button', { name: 'Reject' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' })); const dialog = await screen.findByRole('alertdialog'); await within(dialog).findByText('Current record details');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve' }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].url.pathname).toMatch(/\/loss-accounting\/versions\/lv-1\/approve$/); expect(posts()[0].headers.get('Idempotency-Key')).toBeTruthy();
+  });
+  it('rejecting needs a reason, which travels with the decision', async () => {
+    rows = [draft()]; mount(); await screen.findByRole('button', { name: 'Reject' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reject' })); const dialog = await screen.findByRole('alertdialog'); await within(dialog).findByText('Current record details');
+    expect((within(dialog).getByRole('button', { name: 'Reject' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: 'wrong unit' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Reject' }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].url.pathname).toMatch(/\/loss-accounting\/versions\/lv-1\/reject$/); expect(posts()[0].body).toEqual({ reason: 'wrong unit' });
+  });
+  it('is a known workflow with the reason-bearing command body', () => {
+    expect(approvalCommand({ item: draft(), action: 'reject', reason: ' wrong unit ', supersede: false })).toEqual({ path: '/loss-accounting/versions/lv-1/reject', body: { reason: 'wrong unit' } });
+    expect(() => approvalCommand({ item: draft(), action: 'reject', reason: '', supersede: false })).toThrow(/reason/);
+  });
+});
 describe('workflow command contracts', () => {
   it('uses reviewed plan version and preserves return reason', () => { const request = approvalCommand({ item: item({ resource: 'production-plans', commandId: 'plan-1', version: 7, actions: [{ action: 'return', disabledReason: null }] }), action: 'return', reason: 'Fix quantities', supersede: false }); expect(request).toEqual({ path: '/production-plans/plan-1/return', body: { expectedVersion: 7, reason: 'Fix quantities' } }); });
   it('uses If-Match for rule activation', () => { const request = approvalCommand({ item: item({ resource: 'rules', actions: [{ action: 'activate', disabledReason: null }] }), action: 'activate', reason: 'Reviewed rule', supersede: false }); expect(request.ifMatch).toBe('"3"'); expect(request.body).toEqual({ reason: 'Reviewed rule' }); });

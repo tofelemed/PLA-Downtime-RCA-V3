@@ -4,6 +4,8 @@ import {
   RequestContext,
 } from '../../common/context/request-context';
 import { POSTING_PROPOSER_REASON } from '../../reconciliation/posting-independence';
+import { LossAccountingV2Controller } from '../loss-accounting/loss-accounting-v2.controller';
+import { LOSS_ACCOUNTING_APPROVERS } from '../loss-accounting/loss-accounting-roles';
 import { StopReconciliationsV2Controller } from '../stop-events/stop-reconciliations-v2.controller';
 import { STOP_DECISION_ROLES } from '../stop-events/stop-event-roles';
 import { toApprovalItem } from './approval-inbox-query';
@@ -96,6 +98,28 @@ describe('approval inbox decision rules (owner decisions 2026-10-19)', () => {
         row({ requesterId: userId }),
       ).canDecide,
     ).toBe(true);
+  });
+
+  it('lists loss accounting drafts to the roles that approve and reject them, never the author', () => {
+    const loss = definition('loss-accounting');
+    expect(loss.roles).toBe(LOSS_ACCOUNTING_APPROVERS);
+    expect(loss.roles).toContain('production_accountant');
+    expect(loss.resource).toBe('loss-accounting/versions');
+    expect(loss.pending).toContain("r.policyKind = 'loss_accounting'");
+    expect(loss.actions).toEqual(['approve', 'reject']);
+    for (const handler of ['approve', 'reject'] as const) {
+      const method: unknown = Object.getOwnPropertyDescriptor(
+        LossAccountingV2Controller.prototype,
+        handler,
+      )?.value;
+      expect(Reflect.getMetadata(ROLES_KEY, method as object)).toEqual([
+        ...LOSS_ACCOUNTING_APPROVERS,
+      ]);
+    }
+    const own = toApprovalItem(context(), loss, row({ requesterId: userId }));
+    expect(own.kind).toBe('loss-accounting');
+    expect(own.actions.every((action) => action.disabledReason)).toBe(true);
+    expect(own.canDecide).toBe(false);
   });
 
   it('lets the revision approver post a restatement without a human proposer', () => {

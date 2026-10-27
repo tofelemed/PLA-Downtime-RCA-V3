@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { removeDecidedApproval } from './approval-inbox-cache';
 import { v2Request } from '../client';
 import type { ApprovalItem } from '../types/approvals';
+import type { ChangeNotice } from './invalidation';
 import { usePagedQuery } from './use-paged-query';
 import { useV2Command } from './use-v2-command';
 import { useV2TenantId } from './use-v2-tenant';
@@ -17,6 +18,8 @@ export function useApprovalInbox(kind?: string, decidable = false) {
   useEffect(() => { if (pageIndex > 0 && empty) first(); }, [pageIndex, empty, first]);
   return inbox;
 }
+/** A loss accounting decision also refreshes the plant settings and the periods it re-accounts (what `useDecideLossAccountingVersion` does). */
+const LOSS_ACCOUNTING_RESOURCE = 'loss-accounting/versions';
 export function useApprovalDecision() {
   const tenantId = useV2TenantId();
   const client = useQueryClient();
@@ -26,7 +29,11 @@ export function useApprovalDecision() {
       if (tenantId) await removeDecidedApproval(client, tenantId, input.item);
       return result.data;
     },
-    changes: () => tenantId ? { tenantId, entityType: 'approval_decision', window: null } : null,
+    changes: (input) => {
+      if (!tenantId) return null;
+      const decision: ChangeNotice = { tenantId, entityType: 'approval_decision', window: null };
+      return input.item.resource === LOSS_ACCOUNTING_RESOURCE ? [decision, { tenantId, entityType: 'loss_accounting' }] : decision;
+    },
     retries: 0,
   });
 }

@@ -185,6 +185,7 @@ export const WORKFLOW_CHANGE_KINDS: Readonly<Record<string, FamilyKind>> = {
   plan: PLAN,
   'valuation-policy': policyKind('Approved policy'),
   'source-authority': policyKind('Approved priority'),
+  'loss-accounting': policyKind('Approved loss accounting'),
   'source-status': SOURCE_STATUS,
   disposition: DISPOSITION,
   adjustment: ADJUSTMENT,

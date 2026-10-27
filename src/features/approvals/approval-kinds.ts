@@ -12,6 +12,7 @@ export const APPROVAL_KINDS: ReadonlyArray<readonly [string, string]> = [
   ['valuation-policy', 'Valuation policies'],
   ['demand-status', 'Demand statuses'],
   ['source-authority', 'Source priority'],
+  ['loss-accounting', 'Loss accounting'],
   ['source-status', 'Source status rules'],
   ['adjustment', 'Actuals adjustments'],
   ['disposition', 'Quality dispositions'],

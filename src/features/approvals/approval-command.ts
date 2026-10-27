@@ -2,7 +2,7 @@ import { ifMatchOf } from '@/api/v2/etag-cache';
 import type { ApprovalAction, ApprovalItem } from '@/api/v2/types/approvals';
 export interface ApprovalDecision { item: ApprovalItem; action: ApprovalAction; reason: string; supersede: boolean }
 const VERSION_RESOURCES = ['profiles', 'rates', 'valuation-rates', 'transition-standards', 'unit-streams', 'flow-routes', 'unit-impact-rules', 'fx-rates', 'demand-statuses'];
-const PROPOSAL_RESOURCES = ['actuals/adjustments', 'lot-dispositions', 'uncertainty-budgets', 'source-authority/versions'];
+const PROPOSAL_RESOURCES = ['actuals/adjustments', 'lot-dispositions', 'uncertainty-budgets', 'source-authority/versions', 'loss-accounting/versions'];
 export function needsReason(action: ApprovalAction): boolean { return ['reject', 'return', 'activate'].includes(action); }
 type CommandBody = (input: ApprovalDecision) => Record<string, unknown>;
 const withReason: CommandBody = ({ reason }) => reason.trim() ? { reason: reason.trim() } : {};

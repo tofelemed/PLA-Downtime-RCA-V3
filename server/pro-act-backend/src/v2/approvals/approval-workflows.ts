@@ -20,6 +20,7 @@ import {
 import { DISPOSITION_APPROVERS } from '../quality-dispositions/disposition-roles';
 import { BUDGET_APPROVERS } from '../uncertainty/uncertainty-roles';
 import { SOURCE_AUTHORITY_APPROVERS } from '../source-authority/source-authority-roles';
+import { LOSS_ACCOUNTING_APPROVERS } from '../loss-accounting/loss-accounting-roles';
 import { FINANCE_APPROVERS } from '../valuation/valuation-roles';
 import { STOP_DECISION_ROLES } from '../stop-events/stop-event-roles';
 import { POSTING_PROPOSER_REASON } from '../../reconciliation/posting-independence';
@@ -98,6 +99,22 @@ export const WORKFLOW_APPROVALS: ApprovalDefinition[] = [
     state: "'proposed'",
     href: "'/connectivity/source-authority' || CASE WHEN r.unitId IS NOT NULL THEN '?unitId=' || r.unitId ELSE '' END || '#source-authority-version-' || r.id",
     resource: 'source-authority/versions',
+    actions: ['approve', 'reject'],
+  },
+  {
+    kind: 'loss-accounting',
+    label: 'Loss accounting',
+    entity: AccountingPolicy,
+    roles: LOSS_ACCOUNTING_APPROVERS,
+    pending:
+      "r.policyKind = 'loss_accounting' AND r.approvedAt IS NULL AND r.rejectedAt IS NULL",
+    unit: 'r.unitId',
+    title: "'Loss accounting'",
+    summary:
+      "concat(r.body->>'grain', ' accounting · ', r.body->>'lossBasis', ' · target: ', r.body->>'targetSource')",
+    state: "'proposed'",
+    href: "'/approvals/loss-accounting/' || r.id",
+    resource: 'loss-accounting/versions',
     actions: ['approve', 'reject'],
   },
   {
