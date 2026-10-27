@@ -1,4 +1,4 @@
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { Dec, toDec } from '../domain/actuals/decimal';
 import { CalculationRun } from '../accounting/entities/calculation-run.entity';
 import {
@@ -26,6 +26,35 @@ export async function lossBasisOfRun(
   return stored
     ? lossBasisForUnit(parseLossAccounting(stored.body), unitId)
     : 'computed';
+}
+
+/**
+ * The loss basis of each run (by run id) from its policy snapshot, for a page of runs in one query; a run
+ * without a `loss_accounting` version is `computed`, and so is one of a unit that is not the accounting unit.
+ */
+export async function lossBasesOfRuns(
+  manager: EntityManager,
+  runs: ReadonlyArray<Pick<CalculationRun, 'id' | 'policyVersions'>>,
+  unitOf: (runId: string) => string,
+): Promise<Map<string, LossBasis>> {
+  const refOf = (run: Pick<CalculationRun, 'policyVersions'>) =>
+    run.policyVersions.find((p) => p.kind === 'loss_accounting')?.id;
+  const ids = [...new Set(runs.flatMap((r) => refOf(r) ?? []))];
+  const stored = ids.length
+    ? await manager.find(AccountingPolicy, { where: { id: In(ids) } })
+    : [];
+  const bodies = new Map(
+    stored.map((p) => [p.id, parseLossAccounting(p.body)]),
+  );
+  return new Map(
+    runs.map((run): [string, LossBasis] => {
+      const policy = bodies.get(refOf(run) ?? '');
+      return [
+        run.id,
+        policy ? lossBasisForUnit(policy, unitOf(run.id)) : 'computed',
+      ];
+    }),
+  );
 }
 
 /** Shortfall (event quantity) of the `production_loss` events the lines cite, by event id. */

@@ -20,6 +20,8 @@ const READY: DayView = {
   unitId: 'u1',
   localDate: '2026-10-08',
   state: 'ready',
+  isDayGrain: false,
+  lossBasis: 'computed',
   periods: [shift('A'), shift('B'), shift('C')],
   certification: null,
   rollup: [{ uom: 't', periods: 3, target: '3000', actual: '300', gap: '2700', attributed: '2700', residual: '0' }],
@@ -71,6 +73,22 @@ describe('day certification panel (SME R2, owner decision 14 Oct)', () => {
     fireEvent.click(screen.getByTestId('day-certify'));
     await confirmCertify();
     await waitFor(() => expect(posts).toEqual(['/api/v2/production-days/u1/2026-10-08/certify']));
+  });
+
+  it('a historic shift day keeps its shift wording under a daily declared policy; a whole-day period reads per day', async () => {
+    const DAILY_DECLARED = { grain: 'day', dayStart: '06:00', lossBasis: 'declared', targetSource: 'declared', accountingUnitId: null, accountingProductId: null, stopsCrossCheck: true, identityTolerance: 0 };
+    let day: DayView = READY;
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      new URL(url).pathname.endsWith('/loss-accounting')
+        ? json(200, { policyId: 'p', version: 2, unitId: null, effectiveFrom: '2026-10-01T00:00:00.000Z', notes: null, policy: DAILY_DECLARED })
+        : json(200, day)));
+    actAs('manager_approver', 'manager-1');
+    const first = wrap();
+    expect((await screen.findByTestId('day-rollup')).textContent).toContain('Day total (approved shifts)');
+    first.unmount();
+    day = { ...READY, isDayGrain: true, lossBasis: 'declared', periods: [shift('Day')], rollup: [{ ...READY.rollup[0], periods: 1 }] };
+    wrap();
+    expect((await screen.findByTestId('day-rollup')).textContent).toContain('Day total (approved period)');
   });
 
   it('Marun E2E: certifying asks for confirmation with the roll-up and the coding verdict', async () => {

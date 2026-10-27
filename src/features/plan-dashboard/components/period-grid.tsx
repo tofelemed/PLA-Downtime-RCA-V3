@@ -4,12 +4,14 @@ import type { PeriodSummaryView } from '@/api/v2/types/period-overview';
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { DataTable } from '@/features/ux-kit/data-table';
 import { ReportLookContext } from '@/features/ux-kit/report-look';
-import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { useCalendarPreference } from '@/lib/dates';
 import { usePeriodGrid, type PeriodGridQuery } from '../hooks/use-period-grid';
 import { gridWindow, parseGridParams, planDateBounds, residualStatesOf, withGridParam, type GridParamKey, type ResidualFilter } from '../model/period-grid-params';
 import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
 import { periodGridColumns, type GridMode } from './period-grid-columns';
 import { gridNote } from '../model/grid-notes';
+import { listRegime } from '../model/period-regime';
+import { periodRowLabel } from '../model/period-row-label';
 import { PeriodGridFilters } from './period-grid-filters';
 
 export interface PeriodGridProps {
@@ -34,12 +36,13 @@ const GRID_LOOK = { provisional: false } as const;
 
 type ListState = Pick<ReturnType<typeof usePeriodGrid>, 'rows' | 'pager' | 'status'>;
 
+/** `mode` is the policy in force: each row reads its own run's basis and grain, the header the listed rows'. */
 function GridTable({ list, timezone, filtered, onOpen, mode }: { list: ListState; mode: GridMode } & Pick<TableProps, 'timezone' | 'filtered' | 'onOpen'>) {
   const pref = useCalendarPreference();
   return (
     <DataTable
       caption="Production periods"
-      columns={periodGridColumns(timezone, pref, mode)}
+      columns={periodGridColumns(timezone, pref, listRegime(list.rows, mode))}
       rows={list.rows}
       getRowKey={(row) => row.periodId}
       pager={list.pager}
@@ -47,7 +50,7 @@ function GridTable({ list, timezone, filtered, onOpen, mode }: { list: ListState
       density="compact"
       empty={{ title: 'No periods', text: filtered ? 'No production periods match these filters.' : 'No production periods in the plan window yet: generate and approve the plan first.' }}
       onRowClick={onOpen}
-      rowLabel={(row) => `Open period ${formatOperationalDate(row.localDate, pref)}${!mode.isDay && row.shiftName ? ` ${row.shiftName}` : ''}`}
+      rowLabel={(row) => `Open period ${periodRowLabel(row, row.isDayGrain ?? mode.isDay, pref)}`}
     />
   );
 }

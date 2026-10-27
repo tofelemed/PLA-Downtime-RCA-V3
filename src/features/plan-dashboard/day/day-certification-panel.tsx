@@ -2,13 +2,13 @@ import { Badge } from '@/components/ui/badge';
 import { useCertifyDay, useProductionDay } from '@/api/v2/queries/production-days';
 import { useProductionPeriod } from '@/api/v2/queries/production-periods';
 import type { DayView } from '@/api/v2/types/production-day';
-import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
 import { formatDecimal } from '@/features/ux-kit/format/decimal';
 import { SelfDecisionBadge } from '@/features/ux-kit/self-decision-badge';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
+import { usePeriodRegime } from '../hooks/use-period-regime';
 import { WORKFLOW_LABELS } from '../model/display';
 import { CertifyDayButton } from './certify-day-button';
 import { DayCodingGate } from './day-coding-gate';
@@ -38,8 +38,8 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
   const userId = useCurrentUserId();
   const query = useProductionDay(unitId, localDate);
   const certify = useCertifyDay();
-  const { isDay, isDeclared } = useLossAccountingMode(unitId);
   const day = query.data;
+  const { isDay, isDeclared } = usePeriodRegime({ ...day, unitId });
   if (!day) return null;
   const submitted = !isSuperAdmin && day.periods.some((p) => p.submittedBy === userId);
   return (

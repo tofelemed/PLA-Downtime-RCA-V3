@@ -5,16 +5,15 @@ import { GRID_WORKFLOW_TONES, labelOf, READINESS_LABELS } from '@/features/ux-ki
 import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { toneOf } from '@/features/ux-kit/status-tone';
 import { PlantTime } from '@/features/ux-kit/plant-time';
-import { type CalendarPreference, type DigitSystem, formatOperationalDate } from '@/lib/dates';
+import type { CalendarPreference, DigitSystem } from '@/lib/dates';
 import { BLOCKING_RESIDUALS, formatRatioPercent, QUALITY_LABELS, RESIDUAL_LABELS, WORKFLOW_LABELS } from '../model/display';
 import { SLA_STAGE_LABELS } from '../model/sla-labels';
 import { SlaBadges } from '../sla/sla-badges';
+import type { PeriodRegime } from '../model/period-regime';
+import { periodRowLabel } from '../model/period-row-label';
 
-/** The accounting mode facts the grid wording depends on. */
-export interface GridMode {
-  isDay: boolean;
-  isDeclared: boolean;
-}
+/** The accounting mode facts the grid wording depends on (the listed periods' own regime). */
+export type GridMode = PeriodRegime;
 
 export const SHIFT_COMPUTED_GRID_MODE: GridMode = { isDay: false, isDeclared: false };
 
@@ -23,12 +22,12 @@ const num = (value: string | null | undefined, uom: string | null | undefined, d
 
 const coverageText = (ratio: string | null, digits: DigitSystem) => (ratio === null ? 'no actuals' : `${formatRatioPercent(ratio, digits)} covered`);
 
+/** The period's date and its shift name, or "Day" for a period spanning the operational day (its own grain). */
 function PeriodCell({ row, timezone, pref, isDay }: { row: PeriodSummaryView; timezone: string; pref: CalendarPreference; isDay: boolean }) {
   const residualState = row.plan?.residualState ?? 'not_computable';
   return (
-    <span data-testid="period-row" data-period-id={row.periodId} data-residual-state={residualState} data-workflow={row.workflowState}>
-      {formatOperationalDate(row.localDate, pref)}
-      {!isDay && row.shiftName ? ` · ${row.shiftName}` : ''}
+    <span data-testid="period-row" data-period-id={row.periodId} data-residual-state={residualState} data-workflow={row.workflowState} data-grain={isDay ? 'day' : 'shift'}>
+      {periodRowLabel(row, isDay, pref)}
       {!isDay && (
         <span className="block text-xs text-muted-foreground">
           <PlantTime iso={row.utcStart} tz={timezone} stacked withZone={false} />
@@ -64,7 +63,7 @@ function DueCell({ row, timezone }: { row: PeriodSummaryView; timezone: string }
 /** Columns of the period grid: server figures with units, residual state in words, readiness ≠ workflow. */
 export function periodGridColumns(timezone: string, pref: CalendarPreference, mode: GridMode = SHIFT_COMPUTED_GRID_MODE): DataTableColumn<PeriodSummaryView>[] {
   return [
-    { id: 'period', header: 'Period', nowrap: true, cell: (row) => <PeriodCell row={row} timezone={timezone} pref={pref} isDay={mode.isDay} /> },
+    { id: 'period', header: 'Period', nowrap: true, cell: (row) => <PeriodCell row={row} timezone={timezone} pref={pref} isDay={row.isDayGrain ?? mode.isDay} /> },
     { id: 'target', header: 'Target', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-target">{num(row.plan?.target, row.plan?.uom, pref.digits)}</span> },
     {
       id: 'actual',

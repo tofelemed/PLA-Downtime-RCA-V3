@@ -14,6 +14,7 @@ vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({
 
 const { periodGridColumns } = await import('./components/period-grid-columns');
 const { gridNote } = await import('./model/grid-notes');
+const { listRegime, periodRegime } = await import('./model/period-regime');
 const { CandidateRow } = await import('./editor/candidate-row');
 const { ReconciliationSummary } = await import('./components/reconciliation-summary');
 const { CodingGatePanel } = await import('./coding/coding-gate-panel');
@@ -48,10 +49,29 @@ describe('period grid in declared mode', () => {
     expect(columnsOf(false, false).map((column) => column.header)).toContain('Inputs');
   });
 
-  it('the Period cell shows the date only on a day grain, with the shift name otherwise', () => {
-    const cellOf = (isDay: boolean) => render(<>{columnsOf(isDay, isDay).find((c) => c.id === 'period')?.cell(ROW, 0)}</>).container.textContent;
-    expect(cellOf(true)).not.toContain('Day A');
-    expect(cellOf(false)).toContain('Day A');
+  it('the Period cell follows the row grain: "Day" for a whole-day period, the shift name otherwise', () => {
+    const cellOf = (row: PeriodSummaryView) => render(<>{columnsOf(true, true).find((c) => c.id === 'period')?.cell(row, 0)}</>).container.textContent;
+    expect(cellOf({ ...ROW, isDayGrain: true })).toContain('2026-10-26 · Day');
+    expect(cellOf({ ...ROW, isDayGrain: false })).toContain('Day A');
+  });
+
+  it('one list shows A/B/C for the computed shift periods and Day for the declared day; the header follows every row', () => {
+    const shift = (name: string): PeriodSummaryView => ({ ...ROW, periodId: name, localDate: '2026-10-25', shiftName: name, isDayGrain: false, lossBasis: 'computed' });
+    const rows = [shift('A'), shift('B'), shift('C'), { ...ROW, periodId: 'd', shiftName: 'Day', isDayGrain: true, lossBasis: 'declared' as const }];
+    const inForce = { isDay: true, isDeclared: true };
+    const mode = listRegime(rows, inForce);
+    const period = periodGridColumns('Asia/Tehran', PREF, mode).find((c) => c.id === 'period');
+    const texts = rows.map((row) => render(<>{period?.cell(row, 0)}</>).container.textContent ?? '');
+    expect(texts.slice(0, 3).map((t) => t.split(' · ')[1]?.slice(0, 1))).toEqual(['A', 'B', 'C']);
+    expect(texts[3]).toContain('2026-10-26 · Day');
+    expect(mode).toEqual({ isDay: false, isDeclared: false });
+    expect(periodGridColumns('Asia/Tehran', PREF, mode).map((c) => c.header)).toContain('Inputs');
+  });
+
+  it('a period without a run reads the policy in force; a run reads its own basis', () => {
+    const inForce = { isDay: true, isDeclared: true };
+    expect(periodRegime({ isDayGrain: true, lossBasis: null }, inForce)).toEqual({ isDay: true, isDeclared: true });
+    expect(periodRegime({ isDayGrain: false, lossBasis: 'computed' }, inForce)).toEqual({ isDay: false, isDeclared: false });
   });
 
   it('the note under the grid follows the mode', () => {

@@ -56,6 +56,7 @@ function state(id: string, residual: string | null): PeriodState {
     reconciliation: computable
       ? { slices: [slice(residual)], candidates: [], lineFlags: [] }
       : null,
+    lossBasis: null,
   };
 }
 

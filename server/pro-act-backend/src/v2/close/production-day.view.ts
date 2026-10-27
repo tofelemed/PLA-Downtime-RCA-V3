@@ -3,6 +3,8 @@ import { DayCertification } from '../../close/entities/day-certification.entity'
 import { isSelfDecision } from '../../domain/approvals/self-decision';
 import { DayRollup } from '../../domain/close/day-certification';
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
+import { spansOperationalDay } from '../../periods/day-grain';
+import { LossBasis } from '../../periods/loss-accounting-policy';
 
 export interface DayCertificationV2View {
   id: string;
@@ -24,6 +26,8 @@ export interface DaySummaryV2View {
   localDate: string;
   /** open | ready | certified */
   state: string;
+  /** the day is one period spanning the whole operational day (daily accounting grain), else shifts */
+  isDayGrain: boolean;
   periods: Array<{
     periodId: string;
     shiftName: string | null;
@@ -41,6 +45,8 @@ export interface DayV2View extends DaySummaryV2View {
   rollup: DayRollup[];
   /** SME D12 daily target: the day's stop coding against `dayGate` (null = no period) */
   codingGate: CodingGateResult | null;
+  /** loss basis of the day's current runs (their policy snapshots); null = no run yet */
+  lossBasis: LossBasis | null;
 }
 
 function certificationView(
@@ -69,6 +75,9 @@ export function toDaySummaryView(day: DaySummary): DaySummaryV2View {
     unitId: day.unitId,
     localDate: day.localDate,
     state: day.state,
+    isDayGrain:
+      day.periods.length > 0 &&
+      day.periods.every((p) => spansOperationalDay(p.utcStart, p.utcEnd)),
     periods: day.periods.map((p) => ({
       periodId: p.periodId,
       shiftName: p.shiftName,
@@ -90,5 +99,6 @@ export function toDayView(day: DaySnapshot): DayV2View {
     ...toDaySummaryView(day),
     rollup: day.rollup,
     codingGate: day.codingGate,
+    lossBasis: day.lossBasis,
   };
 }

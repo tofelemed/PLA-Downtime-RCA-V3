@@ -39,7 +39,7 @@ const { reconciliationKey } = await import('./hooks/use-draft-editor');
 
 const BASE = '/plans/plan1/periods/period1';
 const VIEW: ReconciliationView = {
-  periodId: 'period1', unitId: 'unit100', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', rowVersion: 4,
+  periodId: 'period1', unitId: 'unit100', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', isDayGrain: false, lossBasis: 'computed', rowVersion: 4,
   revision: { id: 'rev1', revision: 2, lifecycle: 'draft', supersedesId: 'approved', currentRunId: 'run1', currentLineSetId: null, isStale: false, staleReason: null,
     submittedBy: null, submittedAt: null, submittedHash: null, submittedRunId: null, approvedBy: null, approvedAt: null, approvalSnapshotId: null,
     rejectedBy: null, rejectedAt: null, rejectReason: null, cancelledBy: null, cancelledAt: null, afterClose: false, comment: null },

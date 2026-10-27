@@ -260,4 +260,30 @@ describe('declared mode is limited to the accounting unit', () => {
       'capacity_not_applicable',
     );
   });
+
+  it('the period summaries carry the basis of each period run and the shift grain', async () => {
+    const { unitA1, unitA2 } = env.world;
+    const window = `from=${encodeURIComponent(A)}&to=${encodeURIComponent(B)}`;
+    const response = await env
+      .get(`period-summaries?unitIds=${unitA1}&unitIds=${unitA2}&${window}`)
+      .expect(200);
+    const items = (
+      response.body as {
+        items: Array<{
+          periodId: string;
+          lossBasis: string | null;
+          isDayGrain: boolean;
+        }>;
+      }
+    ).items;
+    const byId = new Map(items.map((i) => [i.periodId, i]));
+    expect(byId.get(declaredPeriod)).toMatchObject({
+      lossBasis: 'declared',
+      isDayGrain: false,
+    });
+    expect(byId.get(computedPeriod)).toMatchObject({
+      lossBasis: 'computed',
+      isDayGrain: false,
+    });
+  });
 });

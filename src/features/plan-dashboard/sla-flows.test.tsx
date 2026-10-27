@@ -22,7 +22,7 @@ interface Call {
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 const VIEW: ReconciliationView = {
-  periodId: 'p1', unitId: 'unit-1', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', rowVersion: 4,
+  periodId: 'p1', unitId: 'unit-1', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', isDayGrain: false, lossBasis: 'computed', rowVersion: 4,
   revision: {
     id: 'rev-1', revision: 1, lifecycle: 'in_review', supersedesId: null, currentRunId: 'run-1', currentLineSetId: 'set-1', isStale: false, staleReason: null,
     submittedBy: 'preparer-1', submittedAt: '2026-10-08T15:00:00.000Z', submittedHash: 'b'.repeat(64), submittedRunId: 'run-1', approvedBy: null, approvedAt: null, approvalSnapshotId: null,

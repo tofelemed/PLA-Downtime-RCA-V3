@@ -1,3 +1,4 @@
+import type { LossBasis } from './loss-accounting';
 import type { MonthCloseState } from './month-close';
 import type { CodingGateView } from './stop-coding';
 /**
@@ -227,6 +228,10 @@ export interface ReconciliationView {
   unitId: string;
   utcStart: string;
   utcEnd: string;
+  /** the period spans its whole operational day (daily accounting grain), else a shift */
+  isDayGrain: boolean;
+  /** loss basis the revision's run was calculated with; null = no run yet (read the policy in force) */
+  lossBasis: LossBasis | null;
   rowVersion: number;
   revision: RevisionWorkflowView;
   publishedRevision: number | null;

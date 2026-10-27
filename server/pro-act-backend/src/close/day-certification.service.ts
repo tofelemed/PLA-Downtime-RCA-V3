@@ -24,6 +24,7 @@ import { AccountingPoliciesService } from '../periods/accounting-policies.servic
 import { invalid } from '../profiles/profile-errors';
 import { ProductionPeriod } from '../periods/entities/production-period.entity';
 import { assertPeriodUnitInScope } from '../periods/period-scope';
+import { LossBasis } from '../periods/loss-accounting-policy';
 import { sha256 } from '../reconciliation/reviewed-content';
 import { lockPeriod, requireUser } from '../reconciliation/revision-access';
 import { separationOfDuties } from '../reconciliation/workflow-errors';
@@ -32,12 +33,15 @@ import { planFigures } from '../v2/period-overview/period-summary.view';
 import { CodingGateResult } from '../domain/reconciliation/coding-gate';
 import { assertCodingGate } from '../reconciliation/coding-gate.loader';
 import { loadDayCodingGate } from './day-coding-gate';
-import { declaredEmptyRevisions } from './day-loss-basis';
+import { dayLossBasis, declaredEmptyRevisions } from './day-loss-basis';
 import { dayPeriods, DayPeriodRow } from './day-periods';
 import { DayCertification } from './entities/day-certification.entity';
 
 /** A day of the list: its periods and state, without the roll-up. */
-export type DaySummary = Omit<DaySnapshot, 'rollup' | 'codingGate'>;
+export type DaySummary = Omit<
+  DaySnapshot,
+  'rollup' | 'codingGate' | 'lossBasis'
+>;
 
 export interface DaySnapshot {
   unitId: string;
@@ -50,6 +54,8 @@ export interface DaySnapshot {
   rollup: DayRollup[];
   /** SME D12 daily target (`dayGate`, warn at 99 % by default); null = no period */
   codingGate: CodingGateResult | null;
+  /** loss basis of the day's current runs (their policy snapshots); null = no run yet */
+  lossBasis: LossBasis | null;
 }
 
 /**
@@ -208,6 +214,11 @@ export class DayCertificationService {
       certification,
       rollup: await this.rollupOf(manager, periods),
       codingGate: await loadDayCodingGate(manager, key, periods),
+      lossBasis: await dayLossBasis(
+        manager,
+        key.tenantId,
+        periods.flatMap((p) => (p.revisionId ? [p.revisionId] : [])),
+      ),
     };
   }
 

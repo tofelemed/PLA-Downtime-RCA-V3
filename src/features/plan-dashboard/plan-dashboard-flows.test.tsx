@@ -25,7 +25,7 @@ const json = (status: number, body: unknown) => new Response(JSON.stringify(body
 const refusal = (code: string, details?: Record<string, unknown>) => ({ code, message: code, correlationId: 'corr-1', retryable: false, ...(details ? { details } : {}) });
 
 const VIEW: ReconciliationView = {
-  periodId: 'p1', unitId: 'unit-1', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', rowVersion: 4,
+  periodId: 'p1', unitId: 'unit-1', utcStart: '2026-10-08T06:00:00.000Z', utcEnd: '2026-10-08T14:00:00.000Z', isDayGrain: false, lossBasis: 'computed', rowVersion: 4,
   revision: {
     id: 'rev-1', revision: 1, lifecycle: 'draft', supersedesId: null, currentRunId: 'run-1', currentLineSetId: null, isStale: false, staleReason: null,
     submittedBy: null, submittedAt: null, submittedHash: null, submittedRunId: null, approvedBy: null, approvedAt: null, approvalSnapshotId: null,

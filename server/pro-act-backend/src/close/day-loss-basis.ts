@@ -1,41 +1,55 @@
 import { EntityManager } from 'typeorm';
 import {
+  LossBasis,
   lossBasisForUnit,
   parseLossAccounting,
 } from '../periods/loss-accounting-policy';
 
 /**
  * The `loss_accounting` body each revision's current run was calculated with (its policy snapshot, not
- * today's policy) and the period's unit. Uses the primary keys of accounting_revisions, production_periods,
+ * today's policy; null for a run older than declared mode) and the period's unit. Uses the primary keys of accounting_revisions, production_periods,
  * calculation_runs and accounting_policies.
  */
 const RUN_BASIS_SQL = `SELECT p."body", pp."unit_id"
   FROM "accounting_revisions" r
   JOIN "production_periods" pp ON pp."id" = r."period_id"
   JOIN "calculation_runs" c ON c."id" = r."current_run_id"
-  JOIN LATERAL jsonb_array_elements(c."policy_versions") v ON v->>'kind' = 'loss_accounting'
-  JOIN "accounting_policies" p ON p."id" = (v->>'id')::uuid
+  LEFT JOIN LATERAL jsonb_array_elements(c."policy_versions") v ON v->>'kind' = 'loss_accounting'
+  LEFT JOIN "accounting_policies" p ON p."id" = (v->>'id')::uuid
  WHERE r."tenant_id" = $1 AND r."id" = ANY($2::uuid[])`;
 
 /**
- * True when any of the day's runs was calculated in declared mode (the figures the gate must follow): a
- * declared snapshot counts only on its accounting unit.
+ * The loss basis of the day's current runs: `declared` when any run was calculated in declared mode (the
+ * figures the gate must follow; a declared snapshot counts only on its accounting unit), `computed` when the
+ * runs were not, null when no period of the day has a run yet.
  */
+export async function dayLossBasis(
+  manager: EntityManager,
+  tenantId: string,
+  revisionIds: readonly string[],
+): Promise<LossBasis | null> {
+  if (revisionIds.length === 0) return null;
+  const rows: Array<{ body: unknown; unit_id: string }> = await manager.query(
+    RUN_BASIS_SQL,
+    [tenantId, revisionIds],
+  );
+  if (rows.length === 0) return null;
+  const declared = rows.some(
+    (row) =>
+      row.body !== null &&
+      lossBasisForUnit(parseLossAccounting(row.body), row.unit_id) ===
+        'declared',
+  );
+  return declared ? 'declared' : 'computed';
+}
+
+/** True when any of the day's runs was calculated in declared mode (see `dayLossBasis`). */
 export async function dayIsDeclared(
   manager: EntityManager,
   tenantId: string,
   revisionIds: readonly string[],
 ): Promise<boolean> {
-  if (revisionIds.length === 0) return false;
-  const rows: Array<{ body: unknown; unit_id: string }> = await manager.query(
-    RUN_BASIS_SQL,
-    [tenantId, revisionIds],
-  );
-  return rows.some(
-    (row) =>
-      lossBasisForUnit(parseLossAccounting(row.body), row.unit_id) ===
-      'declared',
-  );
+  return (await dayLossBasis(manager, tenantId, revisionIds)) === 'declared';
 }
 
 /**

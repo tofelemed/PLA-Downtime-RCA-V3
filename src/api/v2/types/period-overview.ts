@@ -1,3 +1,4 @@
+import type { LossBasis } from './loss-accounting';
 import type { PeriodSlaView } from './period-sla';
 /**
  * Plan Dashboard read models (plan 3.5): the period grid (`GET /period-summaries`), the ledger waterfall
@@ -40,6 +41,10 @@ export interface PeriodSummaryView {
   utcEnd: string;
   localDate: string;
   shiftName: string | null;
+  /** the period spans its whole operational day (daily accounting grain), else a shift */
+  isDayGrain: boolean;
+  /** loss basis the period's current run was calculated with; null = no run yet (read the policy in force) */
+  lossBasis: LossBasis | null;
   isExcluded: boolean;
   exclusionKind: string | null;
   stateReadiness: string;

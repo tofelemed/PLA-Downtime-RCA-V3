@@ -6,13 +6,13 @@ import type { LedgerKind, PeriodAccountingView, RevisionSelector } from '@/api/v
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { AdjustmentsSection } from '../adjustments/adjustments-section';
-import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
 import { CodingGatePanel } from '../coding/coding-gate-panel';
 import { PeriodDayPanel } from '../day/day-certification-panel';
 import { DispositionsSection } from '../dispositions/dispositions-section';
 import { LossLineEditorContent } from '../editor/loss-line-editor';
 import { useDraftEditor } from '../hooks/use-draft-editor';
 import { useRetainedDraft } from '../hooks/use-retained-draft';
+import { usePeriodRegime } from '../hooks/use-period-regime';
 import { useWorkflowActions, type WorkflowActions } from '../hooks/use-workflow-actions';
 import { periodPath, PERIOD_SECTIONS } from '../model/period-navigation';
 import { stickyPlacement } from '../model/workflow-blockers';
@@ -48,7 +48,7 @@ interface Props extends PeriodDetailProps {
 }
 
 function ReviewSection({ data, view, timezone, periodId, onView, actions }: Pick<Props, 'data' | 'view' | 'timezone' | 'periodId' | 'onView'> & { actions: WorkflowActions }) {
-  const { isDeclared: declared } = useLossAccountingMode(data.unitId);
+  const { isDeclared: declared } = usePeriodRegime(data);
   return <div className="space-y-6">
     <WorkflowBar view={data} shown={view} onShowCurrent={() => onView('current')} actions={actions} />
     <ReviewCorrection view={data} />
@@ -66,7 +66,7 @@ export function PeriodWorkspace({ planId, periodId, unitName, planLabel, planWin
   const basePath = periodPath(planId, periodId);
   const retained = useRetainedDraft(data, editor, editable, basePath);
   const actions = useWorkflowActions(data);
-  const { isDeclared } = useLossAccountingMode(data.unitId);
+  const { isDeclared } = usePeriodRegime(data);
   return (
     <section data-testid="period-detail" data-lifecycle={data.revision.lifecycle} className="space-y-5">
       <PeriodHeader view={data} accounting={accounting} unitName={unitName} planLabel={planLabel} timezone={timezone}

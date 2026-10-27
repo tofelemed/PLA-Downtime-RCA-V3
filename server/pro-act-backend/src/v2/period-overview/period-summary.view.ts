@@ -1,4 +1,6 @@
 import { Dec, formatDec, ZERO } from '../../domain/actuals/decimal';
+import { spansOperationalDay } from '../../periods/day-grain';
+import { LossBasis } from '../../periods/loss-accounting-policy';
 import { SliceReconciliation } from '../../domain/reconciliation/reconciliation.types';
 import { PeriodSlaV2View } from '../close/period-sla.view';
 import { PeriodState } from './period-states';
@@ -50,6 +52,10 @@ export interface PeriodSummaryV2View {
   utcEnd: string;
   localDate: string;
   shiftName: string | null;
+  /** the period spans its whole operational day (daily accounting grain), else a shift */
+  isDayGrain: boolean;
+  /** loss basis the period's current run was calculated with; null = no run yet */
+  lossBasis: LossBasis | null;
   isExcluded: boolean;
   exclusionKind: string | null;
   /** display readiness (open / reconciled) — not the workflow state (WF01) */
@@ -185,6 +191,8 @@ export function toPeriodSummaryView(
     utcEnd: period.utcEnd.toISOString(),
     localDate: period.localDate,
     shiftName: period.shiftName,
+    isDayGrain: spansOperationalDay(period.utcStart, period.utcEnd),
+    lossBasis: state.lossBasis,
     isExcluded: period.isExcluded,
     exclusionKind: period.exclusionKind,
     stateReadiness: period.stateReadiness,

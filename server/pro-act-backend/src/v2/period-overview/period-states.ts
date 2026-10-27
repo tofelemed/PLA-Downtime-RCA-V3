@@ -20,6 +20,8 @@ import { ProductionPeriod } from '../../periods/entities/production-period.entit
 import { parseReconciliationTolerance } from '../../periods/engine-policy-bodies';
 import { policyBodiesInForce } from '../../periods/policy-bodies-in-force';
 import { ReconciliationLine } from '../../reconciliation/entities/reconciliation-line.entity';
+import { lossBasesOfRuns } from '../../reconciliation/declared-state';
+import { LossBasis } from '../../periods/loss-accounting-policy';
 import {
   candidatesOf,
   decisionLinesOf,
@@ -45,6 +47,8 @@ export interface PeriodState {
   lines: DecisionLine[];
   rule: ToleranceRule | null;
   reconciliation: Reconciliation | null;
+  /** loss basis of the run's policy snapshot (for its unit); null without a run */
+  lossBasis: LossBasis | null;
 }
 
 const PLAN_CANDIDATE_KINDS = ['availability', 'performance', 'quality'];
@@ -279,15 +283,14 @@ export async function loadPeriodStates(
       })
     : [];
   const runsById = new Map(runs.map((r) => [r.id, r]));
-  const [content, lineSets, rules] = await Promise.all([
+  const periodsById = new Map(periods.map((p) => [p.id, p]));
+  const unitOfRun = (runId: string) =>
+    periodsById.get(runsById.get(runId)?.periodId ?? '')?.unitId ?? '';
+  const [content, lineSets, rules, bases] = await Promise.all([
     runContent(manager, runs, options.actuals !== false),
     savedLines(manager, chosen),
-    toleranceRules(
-      manager,
-      runs,
-      new Map(periods.map((p) => [p.id, p])),
-      policies,
-    ),
+    toleranceRules(manager, runs, periodsById, policies),
+    lossBasesOfRuns(manager, runs, unitOfRun),
   ]);
   return periods.map((period) => {
     const revision = picked.get(period.id) ?? null;
@@ -324,6 +327,7 @@ export async function loadPeriodStates(
       reconciliation: rule
         ? reconcile({ candidates, lines, slices: slicesOf(totals), rule })
         : null,
+      lossBasis: run ? (bases.get(run.id) ?? 'computed') : null,
     };
   });
 }

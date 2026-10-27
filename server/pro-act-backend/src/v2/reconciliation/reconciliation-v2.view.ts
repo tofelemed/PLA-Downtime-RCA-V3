@@ -15,6 +15,8 @@ import { isSelfDecision } from '../../domain/approvals/self-decision';
 import { revisionSelfApproved } from '../../domain/reconciliation/self-approval';
 import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
+import { spansOperationalDay } from '../../periods/day-grain';
+import { LossBasis } from '../../periods/loss-accounting-policy';
 import { ToleranceJustification } from '../../uncertainty/tolerance-justification';
 import {
   candidatesPart,
@@ -129,6 +131,10 @@ export interface ReconciliationV2View {
   unitId: string;
   utcStart: string;
   utcEnd: string;
+  /** the period spans its whole operational day (daily accounting grain), else a shift */
+  isDayGrain: boolean;
+  /** loss basis the revision's run was calculated with; null = no run yet */
+  lossBasis: LossBasis | null;
   /** the revision's row version (ETag; If-Match of draft-lines) */
   rowVersion: number;
   revision: RevisionWorkflowV2View;
@@ -218,6 +224,8 @@ export function toReconciliationView(
     unitId: period.unitId,
     utcStart: period.utcStart.toISOString(),
     utcEnd: period.utcEnd.toISOString(),
+    isDayGrain: spansOperationalDay(period.utcStart, period.utcEnd),
+    lossBasis: state.run ? state.lossBasis : null,
     rowVersion: revision.rowVersion,
     revision: toRevisionWorkflowView(
       revision,

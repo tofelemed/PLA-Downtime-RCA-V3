@@ -1,3 +1,4 @@
+import type { LossBasis } from './loss-accounting';
 import type { CodingGateView } from './stop-coding';
 
 /**
@@ -25,9 +26,13 @@ export interface DayView {
   unitId: string;
   localDate: string;
   state: DayState;
+  /** the day is one period spanning the whole operational day (daily accounting grain), else shifts */
+  isDayGrain: boolean;
   periods: Array<{ periodId: string; shiftName: string | null; utcStart: string; isExcluded: boolean; workflow: string; revision: number | null; submittedBy: string | null }>;
   certification: DayCertificationView | null;
   rollup: Array<{ uom: string | null; periods: number; target: string | null; actual: string | null; gap: string | null; attributed: string | null; residual: string | null }>;
   /** SME D12 daily target: the server's verdict over the day's stops (`dayGate`, warn at 99 % by default) */
   codingGate: CodingGateView | null;
+  /** loss basis of the day's current runs; null = no run yet (read the policy in force) */
+  lossBasis: LossBasis | null;
 }
