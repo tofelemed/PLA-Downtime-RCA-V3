@@ -42,6 +42,21 @@ export interface ReasonWeightInput {
   reasonCodeId: string;
   percent?: string;
   seconds?: number;
+  /** declared mode: tonnes of a production_loss event (they add up to the event quantity) */
+  quantity?: string;
+}
+
+/** Declared mode: the figures OT declares for a `production_loss` event (the event quantity is the shortfall). */
+export interface DeclaredFigures {
+  planned: number | null;
+  actual: number | null;
+  shortfall: number;
+  uom: string;
+  measurementQuality: string | null;
+  /** OT status, e.g. `DETECTED` | `CONFIRMED` */
+  sourceStatus: string | null;
+  plan: { source: string | null; planId: string | null; revision: number | null; approved: boolean | null } | null;
+  piSource: { actualTag: string | null; eventFrameId: string | null } | null;
 }
 
 export interface ProductionEventView {
@@ -72,6 +87,8 @@ export interface ProductionEventView {
    * `reasonCodeId` alone
    */
   reasonWeights?: ReasonWeightView[] | null;
+  /** declared mode: present on `production_loss` events; null / absent = none */
+  declaredFigures?: DeclaredFigures | null;
   /** SME D12: explicitly under investigation (no specific reason yet) */
   investigationPending?: boolean;
   /** SME D13: supervisor verification of the coding, maintenance validation of the failure detail */

@@ -57,6 +57,9 @@ export const RELATED_RESOURCES: Readonly<Record<string, readonly V2Resource[]>> 
   source_status_mapping: ['status-mappings'],
   uncertainty_budget: ['uncertainty-budgets'],
   source_authority: ['source-authority'],
+  // declared mode: a loss accounting decision changes how periods and events are accounted
+  accounting_policy: ['loss-accounting', 'production-periods', 'period-accounting'],
+  loss_accounting: ['loss-accounting', 'production-periods', 'period-accounting'],
   // SME E4: adopting a budget writes the unit's tolerance version shown in the reconciliation view
   reconciliation_tolerance: ['uncertainty-budgets', 'period-accounting', 'production-periods'],
   user_notification: ['notifications'],
