@@ -56,10 +56,12 @@ export class CalendarPublishService {
     private readonly materializer: CalendarMaterializerService,
   ) {}
 
+  /** In `manager`'s transaction when one is given (the caller commits or rolls back), else its own. */
   async publish(
     context: RequestContext,
     id: string,
     command: PublishCommand,
+    manager?: EntityManager,
   ): Promise<PublishResult> {
     const current = await this.calendarVersions.getWritable(context, id);
     assertCommand(current, command);
@@ -72,18 +74,15 @@ export class CalendarPublishService {
     const unitIds = current.unitId
       ? [current.unitId]
       : await this.sites.unitIdsOf(site);
-    const result = await this.versions.manager.transaction(async (manager) => {
-      const version = await this.markPublished(
-        manager,
-        context,
-        current,
-        command,
-      );
+    const run = <T>(work: (m: EntityManager) => Promise<T>): Promise<T> =>
+      manager ? work(manager) : this.versions.manager.transaction(work);
+    const result = await run(async (tx) => {
+      const version = await this.markPublished(tx, context, current, command);
       const window = this.window(site, version, command);
       const materialization = window
         ? await this.materializer.materialize(
             { site, unitIds, ...window, actorId: context.userId },
-            manager,
+            tx,
           )
         : [];
       const recalc = calendarRecalcRequest({
@@ -92,7 +91,7 @@ export class CalendarPublishService {
         regenerateFrom: command.regenerateFrom,
         actorId: context.userId,
       });
-      if (recalc) await requestRecalculation(manager, recalc);
+      if (recalc) await requestRecalculation(tx, recalc);
       return { version, materialization };
     });
     this.logger.log(

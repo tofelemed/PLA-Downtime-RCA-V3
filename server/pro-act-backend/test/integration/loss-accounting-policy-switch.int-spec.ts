@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
 import { CalendarMaterializerService } from '../../src/calendar/calendar-materializer.service';
+import {
+  CalendarVersionsService,
+  NewCalendarVersion,
+} from '../../src/calendar/calendar-versions.service';
+import { RequestContext } from '../../src/common/context/request-context';
 import { SitesService } from '../../src/calendar/sites.service';
 import { addDays } from '../../src/domain/calendar/wall-clock';
 import { PeriodMaterializerService } from '../../src/periods/period-materializer.service';
@@ -21,6 +26,20 @@ interface InstanceRow {
   utc_end: Date;
   local_end: string;
 }
+
+/** Only `Date` is faked: timers stay real for the HTTP client and the database pool. */
+const REAL_TIMERS = [
+  'hrtime',
+  'nextTick',
+  'performance',
+  'queueMicrotask',
+  'setImmediate',
+  'clearImmediate',
+  'setInterval',
+  'clearInterval',
+  'setTimeout',
+  'clearTimeout',
+] as const;
 
 /** Plant-local midnight (Asia/Tehran, +03:30) of a date. */
 const midnight = (date: string): Date => new Date(`${date}T00:00:00+03:30`);
@@ -154,14 +173,14 @@ describe('loss accounting policy: day-grain switch (declared mode, D12)', () => 
     expect(new Date(daily.start)).toEqual(midnight(date));
   }
 
-  it('starts the day after the last calculated shift, clips shift C of that day and reuses an orphan draft', async () => {
+  it('starts the day after the last calculated shift, clips shift C of that day and leaves a hand-made draft alone', async () => {
     const unitId = await freshUnit();
     const next = addDays(today, 1);
     await period(unitId, today, 'A');
     const shiftB = await period(unitId, today, 'B');
     await calculated(shiftB);
     const openAfter = await period(unitId, next, 'A');
-    const orphan = await env
+    const handMade = await env
       .post('calendar-versions', {
         unitId,
         timezone: 'Asia/Tehran',
@@ -172,25 +191,27 @@ describe('loss accounting policy: day-grain switch (declared mode, D12)', () => 
         effectiveFrom: today,
       })
       .expect(201);
-    const orphanId = (orphan.body as { id: string }).id;
+    const handMadeId = (handMade.body as { id: string }).id;
 
     const { id, approver } = await approveDaily(unitId);
     const body = (await approve(id, approver).expect(200)).body as ApprovalBody;
     expect(body.state).toBe('approved');
     expect(body.calendar).toMatchObject({
-      versionId: orphanId,
       effectiveFrom: next,
       retired: 1,
       kept: 0,
     });
+    const dailyId = body.calendar?.versionId ?? '';
+    expect(dailyId).not.toBe(handMadeId);
     expect(await calendarsOf(unitId)).toEqual([
-      { id: orphanId, state: 'published', effective_from: next },
+      { id: handMadeId, state: 'draft', effective_from: today },
+      { id: dailyId, state: 'published', effective_from: next },
     ]);
 
     const shiftC = await instance(unitId, today, 'C');
     expect(new Date(shiftC.utc_end)).toEqual(midnight(next));
     expect(shiftC.local_end).toBe(`${next}T00:00:00+03:30`);
-    await expectDailyFrom(unitId, orphanId, next);
+    await expectDailyFrom(unitId, dailyId, next);
     const left = await env.rows<{ id: string }>(
       `SELECT id FROM production_periods WHERE id = ANY($1::uuid[])`,
       [[shiftB, openAfter]],
@@ -234,17 +255,18 @@ describe('loss accounting policy: day-grain switch (declared mode, D12)', () => 
       .mockRejectedValueOnce(new Error('materialization failed'));
     await approve(id, approver).expect(500);
     failing.mockRestore();
-    expect(await calendarsOf(unitId)).toHaveLength(1);
+    const [left] = await calendarsOf(unitId);
+    expect(left).toMatchObject({ state: 'draft', effective_from: today });
+    const untouched = await instance(unitId, yesterday, 'C');
+    expect(new Date(untouched.utc_end)).toEqual(
+      new Date(`${today}T06:00:00+03:30`),
+    );
 
     const body = (await approve(id, approver).expect(200)).body as ApprovalBody;
     expect(body.calendar).toMatchObject({ effectiveFrom: today, kept: 0 });
     const calendars = await calendarsOf(unitId);
     expect(calendars).toEqual([
-      {
-        id: body.calendar?.versionId,
-        state: 'published',
-        effective_from: today,
-      },
+      { id: left.id, state: 'published', effective_from: today },
     ]);
 
     const switchAt = midnight(today);
@@ -263,5 +285,99 @@ describe('loss accounting policy: day-grain switch (declared mode, D12)', () => 
       [shiftA],
     );
     expect(retired).toHaveLength(0);
+  });
+
+  it('a failed approval changes nothing but its marked draft; a retry on the next day reuses it from there', async () => {
+    const unitId = await freshUnit();
+    const next = addDays(today, 1);
+    const shiftA = await period(unitId, today, 'A');
+    const { id, approver } = await approveDaily(unitId);
+    const failing = jest
+      .spyOn(env.app.get(PeriodMaterializerService), 'materialize')
+      .mockRejectedValueOnce(new Error('materialization failed'));
+    await approve(id, approver).expect(500);
+    failing.mockRestore();
+    const [draft] = await calendarsOf(unitId);
+    expect(draft).toMatchObject({ state: 'draft', effective_from: today });
+    const yesterdayC = await instance(unitId, addDays(today, -1), 'C');
+    expect(new Date(yesterdayC.utc_end)).toEqual(
+      new Date(`${today}T06:00:00+03:30`),
+    );
+
+    jest.useFakeTimers({
+      now: new Date(`${next}T12:00:00+03:30`),
+      doNotFake: [...REAL_TIMERS],
+    });
+    let body: ApprovalBody;
+    try {
+      const nextDayApprover = await env.unitUser(unitId, 'manager_approver');
+      body = (await approve(id, nextDayApprover).expect(200))
+        .body as ApprovalBody;
+    } finally {
+      jest.useRealTimers();
+    }
+    expect(body.calendar).toMatchObject({
+      versionId: draft.id,
+      effectiveFrom: next,
+    });
+    expect(await calendarsOf(unitId)).toEqual([
+      { id: draft.id, state: 'published', effective_from: next },
+    ]);
+    const todayC = await instance(unitId, today, 'C');
+    expect(new Date(todayC.utc_end)).toEqual(midnight(next));
+    await expectDailyFrom(unitId, draft.id, next);
+    expect(
+      await env.rows(`SELECT id FROM production_periods WHERE id = $1`, [
+        shiftA,
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it('409 SWITCH_CROSSES_CALCULATION when the crossing period is calculated meanwhile; nothing changes, a retry starts after it', async () => {
+    const unitId = await freshUnit();
+    const yesterday = addDays(today, -1);
+    const shiftC = await period(unitId, yesterday, 'C');
+    const { id, approver } = await approveDaily(unitId);
+    const versions: CalendarVersionsService = env.app.get(
+      CalendarVersionsService,
+    );
+    // a calculation lands after the switch was planned, before the approval writes anything
+    const racing = jest
+      .spyOn(versions, 'create')
+      .mockImplementationOnce(
+        async (context: RequestContext, input: NewCalendarVersion) => {
+          await calculated(shiftC);
+          racing.mockRestore();
+          return versions.create(context, input);
+        },
+      );
+    const refused = await approve(id, approver).expect(409);
+    racing.mockRestore();
+    expect((refused.body as { code: string }).code).toBe(
+      'SWITCH_CROSSES_CALCULATION',
+    );
+
+    const sixAm = new Date(`${today}T06:00:00+03:30`);
+    expect(new Date((await instance(unitId, yesterday, 'C')).utc_end)).toEqual(
+      sixAm,
+    );
+    const [old] = await env.rows<{ n: number }>(
+      `SELECT count(*)::int AS n FROM shift_instances WHERE unit_id = $1 AND local_date = $2::date`,
+      [unitId, today],
+    );
+    expect(old.n).toBe(3);
+    const [periodC] = await env.rows<{ utc_end: Date }>(
+      `SELECT utc_end FROM production_periods WHERE id = $1`,
+      [shiftC],
+    );
+    expect(new Date(periodC.utc_end)).toEqual(sixAm);
+    const calendars = await calendarsOf(unitId);
+    expect(calendars.map((row) => row.state)).toEqual(['draft']);
+
+    const body = (await approve(id, approver).expect(200)).body as ApprovalBody;
+    expect(body.calendar).toMatchObject({
+      versionId: calendars[0].id,
+      effectiveFrom: addDays(today, 1),
+    });
   });
 });

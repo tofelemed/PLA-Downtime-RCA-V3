@@ -307,7 +307,7 @@ describe('loss accounting policy (declared mode, D1-D12)', () => {
     }).expect(403);
   });
 
-  it('a retry after a failure following the calendar publication still replaces the open periods', async () => {
+  it('a retry after a failure late in the approval (all rolled back but the draft) still replaces the open periods', async () => {
     const unitId = env.world.unitA2;
     const now = Date.now();
     await env.materialize(

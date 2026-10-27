@@ -29,9 +29,11 @@ import {
   boundaryOf,
   cutInstances,
   cutPeriods,
+  DAILY_CALENDAR_MARKER,
   DAILY_SHIFT_NAME,
   isDailyDraft,
   isDailyShape,
+  PeriodCut,
   switchOf,
   SwitchCut,
   unitsOnSiteCalendar,
@@ -121,7 +123,11 @@ export class LossAccountingCalendarService {
     return this.planSwitch(manager, base);
   }
 
-  /** Publishes the daily calendar (cutting the old one), retires the open periods it replaces, creates daily periods. */
+  /**
+   * All in the approval transaction, so a failure (or 409 SWITCH_CROSSES_CALCULATION) changes nothing but
+   * the marked draft: cuts the old calendar at the switch, publishes the daily calendar, retires the open
+   * periods it replaces and creates the daily periods.
+   */
   async apply(
     context: RequestContext,
     manager: EntityManager,
@@ -129,14 +135,20 @@ export class LossAccountingCalendarService {
     policyVersion: number,
   ): Promise<DailyCalendarResult> {
     const calendarVersionId =
-      plan.existingVersionId ??
-      (await this.publishDaily(context, plan, policyVersion));
+      plan.existingVersionId ?? (await this.draftFor(context, plan));
     const cut = plan.switchStart
-      ? await cutPeriods(
-          manager,
-          this.cutOf(plan, plan.switchStart, calendarVersionId),
-        )
+      ? await this.cutOldCalendar(manager, plan, calendarVersionId, context)
       : { retired: 0, clippedPeriods: 0 };
+    if (!plan.existingVersionId) {
+      const reason = `loss_accounting policy v${policyVersion}`;
+      const regenerateFrom = this.regenerateFrom(plan);
+      await this.publisher.publish(
+        context,
+        calendarVersionId,
+        { reason, regenerateFrom },
+        manager,
+      );
+    }
     const retirement = await retireOpenPeriods(manager, {
       tenantId: plan.site.tenantId,
       unitIds: plan.unitIds,
@@ -182,15 +194,16 @@ export class LossAccountingCalendarService {
   }
 
   /**
-   * Reuses a daily calendar in force. One starting on or after the policy's effective date was published by
-   * an earlier attempt of this switch: its period cut runs again (it was rolled back with that attempt).
+   * Reuses a daily calendar in force. One this path published (marker) gets its cut again from its own
+   * start (idempotent: nothing is left to cut after a completed approval); another daily calendar keeps
+   * the earlier behaviour (overlapping open periods are replaced, nothing is cut).
    */
   private adopt(
     base: DailyCalendarPlan,
     version: CalendarVersion,
   ): DailyCalendarPlan {
     const existingVersionId = version.id;
-    if (version.effectiveFrom < base.effectiveFrom)
+    if (version.republishReason !== DAILY_CALENDAR_MARKER)
       return { ...base, existingVersionId };
     const switchStart = boundaryOf(
       base.site.timezone,
@@ -205,31 +218,30 @@ export class LossAccountingCalendarService {
     };
   }
 
-  /** Ends the old calendar at the switch (committed), then publishes the daily calendar (own transactions). */
-  private async publishDaily(
-    context: RequestContext,
+  /** Periods first (lock, history check, retire, clip), then the instances: the old calendar ends at the switch. */
+  private async cutOldCalendar(
+    manager: EntityManager,
     plan: DailyCalendarPlan,
-    policyVersion: number,
-  ): Promise<string> {
-    const draftId = await this.draftFor(context, plan);
-    const switchStart = plan.switchStart;
-    if (switchStart) {
-      await this.versions.manager.transaction((manager) =>
-        cutInstances(manager, {
-          ...this.cutOf(plan, switchStart, draftId),
-          zone: plan.site.timezone,
-          actorId: context.userId,
-        }),
-      );
-    }
-    await this.publisher.publish(context, draftId, {
-      reason: `loss_accounting policy v${policyVersion}`,
-      regenerateFrom: this.regenerateFrom(plan),
+    calendarVersionId: string,
+    context: RequestContext,
+  ): Promise<PeriodCut> {
+    if (!plan.switchStart) return { retired: 0, clippedPeriods: 0 };
+    const cut: SwitchCut = {
+      tenantId: plan.site.tenantId,
+      unitIds: plan.unitIds,
+      start: plan.switchStart,
+      calendarVersionId,
+    };
+    const periods = await cutPeriods(manager, cut);
+    await cutInstances(manager, {
+      ...cut,
+      zone: plan.site.timezone,
+      actorId: context.userId,
     });
-    return draftId;
+    return periods;
   }
 
-  /** The draft a failed earlier attempt left behind (moved to the switch date), else a new draft. */
+  /** The marked draft a failed earlier attempt left behind (moved to the switch date), else a new marked draft. */
   private async draftFor(
     context: RequestContext,
     plan: DailyCalendarPlan,
@@ -277,20 +289,11 @@ export class LossAccountingCalendarService {
       effectiveFrom: plan.effectiveFrom,
       effectiveTo: null,
     });
+    // committed with the draft's own creation, so a rolled-back approval leaves a draft it can find again
+    await this.versions.update(draft.id, {
+      republishReason: DAILY_CALENDAR_MARKER,
+    });
     return draft.id;
-  }
-
-  private cutOf(
-    plan: DailyCalendarPlan,
-    start: Date,
-    calendarVersionId: string,
-  ): SwitchCut {
-    return {
-      tenantId: plan.site.tenantId,
-      unitIds: plan.unitIds,
-      start,
-      calendarVersionId,
-    };
   }
 
   /** The effective date, but not further back than a publication generates past dates. */

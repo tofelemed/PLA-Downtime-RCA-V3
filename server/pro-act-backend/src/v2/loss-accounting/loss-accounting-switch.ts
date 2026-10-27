@@ -21,6 +21,13 @@ import {
 /** Name of the one shift of the daily calendar. */
 export const DAILY_SHIFT_NAME = 'Day';
 
+/**
+ * Written to `republish_reason` of every calendar version this path creates (the table has no notes
+ * column; publishing a draft leaves the field as it is): only versions carrying it are reused as an
+ * orphan draft or treated as this path's own daily calendar.
+ */
+export const DAILY_CALENDAR_MARKER = 'loss_accounting daily calendar';
+
 /** Where the daily calendar of a day-grain approval takes over from the old calendar. */
 export interface DailySwitch {
   /** first operational date of the daily calendar */
@@ -103,10 +110,15 @@ export async function unitsOnSiteCalendar(
   return scope.unitIds.filter((id) => !overridden.has(id));
 }
 
+/** An instance whose period has calculation history (never removed or clipped). */
+const INSTANCE_CALCULATED = `EXISTS (SELECT 1 FROM "production_periods" p
+  WHERE p."shift_instance_id" = si."id" AND ${HAS_HISTORY})`;
+
 /**
- * Before the daily calendar is published (its own committed transaction, under the materializer's
- * per-unit lock): old-calendar instances that start at or after the switch are removed, and the one
- * crossing it ends there, so the daily instances fit without overlap.
+ * In the approval transaction, after `cutPeriods` and before the daily calendar is published (under the
+ * materializer's per-unit lock): old-calendar instances that start at or after the switch are removed,
+ * and the one crossing it ends there, so the daily instances fit without overlap. An instance whose
+ * period has calculation history is never touched.
  */
 export async function cutInstances(
   manager: EntityManager,
@@ -118,16 +130,17 @@ export async function cutInstances(
     ]);
   }
   const params = [cut.tenantId, cut.unitIds, cut.start, cut.calendarVersionId];
-  const scope = `"tenant_id" = $1 AND "unit_id" = ANY($2::uuid[]) AND "calendar_version_id" <> $4`;
+  const scope = `si."tenant_id" = $1 AND si."unit_id" = ANY($2::uuid[]) AND si."calendar_version_id" <> $4
+    AND NOT ${INSTANCE_CALCULATED}`;
   const [, removed] = await manager.query<[unknown, number]>(
-    `DELETE FROM "shift_instances" WHERE ${scope} AND "utc_start" >= $3`,
+    `DELETE FROM "shift_instances" si WHERE ${scope} AND si."utc_start" >= $3`,
     params,
   );
   const offsetEnd = zoneOffsetAt(cut.zone, new Date(cut.start.getTime() - 1));
   const [, clipped] = await manager.query<[unknown, number]>(
-    `UPDATE "shift_instances" SET "utc_end" = $3, "utc_offset_end" = $5, "local_end" = $6,
+    `UPDATE "shift_instances" si SET "utc_end" = $3, "utc_offset_end" = $5, "local_end" = $6,
             "updated_by" = $7, "updated_at" = now(), "row_version" = "row_version" + 1
-      WHERE ${scope} AND "utc_start" < $3 AND "utc_end" > $3`,
+      WHERE ${scope} AND si."utc_start" < $3 AND si."utc_end" > $3`,
     [
       ...params,
       offsetEnd,
@@ -145,9 +158,11 @@ interface PeriodAtSwitch {
 }
 
 /**
- * In the approval transaction: old-calendar periods that start at or after the switch are retired (as
- * `retireOpenPeriods` does), and the period crossing it ends there with its slices. None of them can have
- * calculation history (the switch is placed after the last one); 409 when one has gained it since.
+ * First step of the switch, in the approval transaction before anything else is written: locks the
+ * old-calendar periods from the switch on (a calculation cannot start on them until the approval ends)
+ * and 409s when one has calculation history (gained since the switch was placed after the last one) —
+ * nothing has changed then. Otherwise the periods that start at or after the switch are retired (as
+ * `retireOpenPeriods` does) and the one crossing it ends there with its slices.
  */
 export async function cutPeriods(
   manager: EntityManager,
@@ -165,7 +180,7 @@ export async function cutPeriods(
     throw new ConflictException({
       code: 'SWITCH_CROSSES_CALCULATION',
       message:
-        'a period after the start of the daily calendar has calculation history; approve again',
+        'a period after the start of the daily calendar was calculated meanwhile; approve again to place the daily calendar after it',
     });
   }
   const retire = rows.filter((row) => !row.crossing).map((row) => row.id);
@@ -211,8 +226,8 @@ export function isDailyShape(
 }
 
 /**
- * A draft exactly as a day-grain approval writes it (one "Day" template, nothing else, open-ended): left
- * behind when the publication failed, it is reused instead of creating another.
+ * A draft this path created (marker) that still has the daily shape: left behind by a failed approval,
+ * it is reused instead of creating another. Hand-made drafts carry no marker and are never touched.
  */
 export function isDailyDraft(
   version: CalendarVersion,
@@ -221,6 +236,7 @@ export function isDailyDraft(
   const empty = (list: unknown[] | null | undefined) => !list?.length;
   return (
     version.state === 'draft' &&
+    version.republishReason === DAILY_CALENDAR_MARKER &&
     version.effectiveTo === null &&
     version.shiftTemplates.length === 1 &&
     version.shiftTemplates[0].name === DAILY_SHIFT_NAME &&
