@@ -9,6 +9,8 @@ import { DeclaredSummary } from './components/declared-summary';
 import { eventColumns, type EventColumnContext } from './components/event-columns';
 import { defaultFilters, isToCodeFilters, toCodeFilters, toEventQuery } from './model/event-filters';
 import { EMPTY_FORM, toCreateBody, toPatchBody, validateEventForm, type EventFormValues } from './model/event-form';
+import { periodLabel } from './model/period-label';
+import { DEFAULT_CALENDAR_PREFERENCE } from '@/lib/dates/calendar-types';
 
 vi.mock('@/features/auth/use-capabilities', () => ({ useCapabilities: () => ({ canWriteEvents: true }) }));
 vi.mock('./components/retract-event-dialog', () => ({ RetractEventDialog: () => <button type="button">Retract</button> }));
@@ -128,5 +130,13 @@ describe('production loss form', () => {
     const patch = toPatchBody(base, edited, 'UTC', lossDay);
     expect(patch.declaredFigures).toMatchObject({ planned: 120, actual: 112, shortfall: 8, uom: 't', measurementQuality: 'GOOD', plan: { planId: 'P-9' } });
     expect(toPatchBody(base, base, 'UTC', lossDay).declaredFigures).toBeUndefined();
+  });
+});
+
+describe('period label', () => {
+  it('a day-grain period reads "· Day", a shift keeps "· Shift A"', () => {
+    expect(periodLabel('2026-10-29', 'Day', DEFAULT_CALENDAR_PREFERENCE)).toBe('2026-10-29 · Day');
+    expect(periodLabel('2026-10-29', 'A', DEFAULT_CALENDAR_PREFERENCE)).toBe('2026-10-29 · Shift A');
+    expect(periodLabel('2026-10-29', null, DEFAULT_CALENDAR_PREFERENCE)).toBe('2026-10-29');
   });
 });
