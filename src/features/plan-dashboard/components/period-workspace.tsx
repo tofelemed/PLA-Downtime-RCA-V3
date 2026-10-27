@@ -6,6 +6,7 @@ import type { LedgerKind, PeriodAccountingView, RevisionSelector } from '@/api/v
 import type { ReconciliationView } from '@/api/v2/types/reconciliation';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { AdjustmentsSection } from '../adjustments/adjustments-section';
+import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
 import { CodingGatePanel } from '../coding/coding-gate-panel';
 import { PeriodDayPanel } from '../day/day-certification-panel';
 import { DispositionsSection } from '../dispositions/dispositions-section';
@@ -47,10 +48,11 @@ interface Props extends PeriodDetailProps {
 }
 
 function ReviewSection({ data, view, timezone, periodId, onView, actions }: Pick<Props, 'data' | 'view' | 'timezone' | 'periodId' | 'onView'> & { actions: WorkflowActions }) {
+  const { isDeclared: declared } = useLossAccountingMode(data.unitId);
   return <div className="space-y-6">
     <WorkflowBar view={data} shown={view} onShowCurrent={() => onView('current')} actions={actions} />
     <ReviewCorrection view={data} />
-    {view === 'current' && <><BridgeReviewPanel view={data} /><CodingGatePanel view={data} /><SlaPanel view={data} timezone={timezone} /></>}
+    {view === 'current' && <><BridgeReviewPanel view={data} /><CodingGatePanel view={data} declared={declared} /><SlaPanel view={data} timezone={timezone} /></>}
     {data.revision.supersedesId && <RestatementPanel view={data} />}
     <PeriodDayPanel periodId={periodId} />
   </div>;

@@ -7,7 +7,9 @@ import { ReportLookContext } from '@/features/ux-kit/report-look';
 import { formatOperationalDate, useCalendarPreference } from '@/lib/dates';
 import { usePeriodGrid, type PeriodGridQuery } from '../hooks/use-period-grid';
 import { gridWindow, parseGridParams, planDateBounds, residualStatesOf, withGridParam, type GridParamKey, type ResidualFilter } from '../model/period-grid-params';
-import { periodGridColumns } from './period-grid-columns';
+import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
+import { periodGridColumns, type GridMode } from './period-grid-columns';
+import { gridNote } from '../model/grid-notes';
 import { PeriodGridFilters } from './period-grid-filters';
 
 export interface PeriodGridProps {
@@ -23,22 +25,21 @@ interface TableProps {
   residual: ResidualFilter | '';
   timezone: string;
   filtered: boolean;
+  mode: GridMode;
   onOpen: (period: PeriodSummaryView) => void;
 }
 
 /** The shared report table look; the grid shows the plan ledger, never provisional figures. */
 const GRID_LOOK = { provisional: false } as const;
 
-const LEDGER_NOTE = 'Plan ledger. Attributed = losses explained by loss lines; Unaccounted = gap − attributed − tolerance adjustment (calculated by the server).';
-
 type ListState = Pick<ReturnType<typeof usePeriodGrid>, 'rows' | 'pager' | 'status'>;
 
-function GridTable({ list, timezone, filtered, onOpen }: { list: ListState } & Pick<TableProps, 'timezone' | 'filtered' | 'onOpen'>) {
+function GridTable({ list, timezone, filtered, onOpen, mode }: { list: ListState; mode: GridMode } & Pick<TableProps, 'timezone' | 'filtered' | 'onOpen'>) {
   const pref = useCalendarPreference();
   return (
     <DataTable
       caption="Production periods"
-      columns={periodGridColumns(timezone, pref)}
+      columns={periodGridColumns(timezone, pref, mode)}
       rows={list.rows}
       getRowKey={(row) => row.periodId}
       pager={list.pager}
@@ -46,7 +47,7 @@ function GridTable({ list, timezone, filtered, onOpen }: { list: ListState } & P
       density="compact"
       empty={{ title: 'No periods', text: filtered ? 'No production periods match these filters.' : 'No production periods in the plan window yet: generate and approve the plan first.' }}
       onRowClick={onOpen}
-      rowLabel={(row) => `Open period ${formatOperationalDate(row.localDate, pref)}${row.shiftName ? ` ${row.shiftName}` : ''}`}
+      rowLabel={(row) => `Open period ${formatOperationalDate(row.localDate, pref)}${!mode.isDay && row.shiftName ? ` ${row.shiftName}` : ''}`}
     />
   );
 }
@@ -80,16 +81,18 @@ function PeriodGridCard({ unitId, from, to, timezone, onOpen }: PeriodGridProps)
   const query: PeriodGridQuery = { unitId, from: window.from, to: window.to, workflow: params.workflow, view };
   const onParam = (key: GridParamKey, value: string) => setSearch((current) => withGridParam(current, key, value), { replace: true });
   const filtered = Boolean(params.workflow || params.date || params.residual);
+  const { isDay, isDeclared } = useLossAccountingMode(unitId);
+  const mode: GridMode = { isDay, isDeclared };
   return (
     <section className="min-w-0 space-y-3 rounded-lg border bg-card p-4" data-testid="period-grid" aria-labelledby="period-grid-title" data-window-from={window.from}>
       <h2 id="period-grid-title" className="flex items-center gap-1.5 text-base font-semibold text-heading">
-        Production periods <KpiInfo label="Production periods" text={LEDGER_NOTE} />
+        Production periods <KpiInfo label="Production periods" text={gridNote(mode)} />
       </h2>
       <PeriodGridFilters params={params} onParam={onParam} view={view} onView={(next) => onParam('view', next === 'approved' ? 'approved' : '')} bounds={planDateBounds(plan, timezone)} />
       {params.residual ? (
-        <ResidualTable query={query} residual={params.residual} timezone={timezone} filtered onOpen={onOpen} />
+        <ResidualTable query={query} residual={params.residual} timezone={timezone} filtered mode={mode} onOpen={onOpen} />
       ) : (
-        <PagedTable query={query} timezone={timezone} filtered={filtered} onOpen={onOpen} />
+        <PagedTable query={query} timezone={timezone} filtered={filtered} mode={mode} onOpen={onOpen} />
       )}
     </section>
   );

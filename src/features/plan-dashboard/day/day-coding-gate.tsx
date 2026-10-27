@@ -3,7 +3,8 @@ import { plural } from '@/features/ux-kit/format/plural';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { formatRatioPercent } from '../model/display';
 
-function verdict(gate: CodingGateView): string {
+function verdict(gate: CodingGateView, declared: boolean): string {
+  if (declared) return gate.passes ? 'Production loss coding complete' : gate.mode === 'block' ? 'Production loss coding incomplete — certification is blocked' : 'Production loss coding incomplete — shown as a warning';
   if (gate.passes) return 'Day stop coding complete';
   return gate.mode === 'block' ? 'Day stop coding incomplete — certification is blocked' : 'Day stop coding incomplete — shown as a warning';
 }
@@ -13,14 +14,14 @@ function verdict(gate: CodingGateView): string {
  * "investigation pending" each, coded stop time against the daily target, pilot 99 %). Nothing is computed
  * here; a day without stops shows nothing. Styled like the shift's coding card (QA: the day warning was plain grey text).
  */
-export function DayCodingGate({ gate }: { gate: CodingGateView | null }) {
+export function DayCodingGate({ gate, declared = false }: { gate: CodingGateView | null; declared?: boolean }) {
   const { number, digits } = useNumberFormat();
   if (!gate || gate.stops === 0) return null;
   return (
     <div className={`space-y-1 rounded-md border p-3 text-sm ${gate.passes ? '' : 'border-warning/40'}`} data-testid="day-coding-gate" data-passes={gate.passes} data-mode={gate.mode}>
-      <p className="font-medium">{verdict(gate)}</p>
+      <p className="font-medium">{verdict(gate, declared)}</p>
       <p>
-        {plural(gate.stops, 'stop', 'stops', number)}, {number(gate.uncoded)} uncoded · coded stop time {formatRatioPercent(gate.codedRatio, digits)} (daily target{' '}
+        {declared ? plural(gate.stops, 'loss event', 'loss events', number) : plural(gate.stops, 'stop', 'stops', number)}, {number(gate.uncoded)} uncoded · {declared ? 'coded share of the shortfall' : 'coded stop time'} {formatRatioPercent(gate.codedRatio, digits)} (daily target{' '}
         {formatRatioPercent(gate.target, digits)})
       </p>
     </div>

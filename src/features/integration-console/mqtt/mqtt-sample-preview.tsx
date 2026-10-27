@@ -12,10 +12,10 @@ import { labelOf, SIGNAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { examplePayloadText, type FeedForm } from './model/feeds';
 import { FEED_PURPOSE_LABELS } from './model/feed-templates';
 import { profileKindLabel } from './model/profile-labels';
-import { bindingStatusLabel, sampleTopicOf, type PreviewFeed } from './model/preview-figures';
+import { bindingStatusLabel, previewWarning, sampleTopicOf, type PreviewFeed } from './model/preview-figures';
 import { PreviewFigures } from './preview-figures-list';
 
-interface SampleResult { ok: boolean; code?: string; detail?: string; kind?: string; observedAt?: string; sourceKey?: string | null; bindingStatus?: string; binding?: { signalId: string; name: string; unitId: string; semanticType: string; canonicalUom: string | null } | null; feed?: PreviewFeed | null; quality?: unknown; values?: unknown }
+interface SampleResult { ok: boolean; code?: string; detail?: string; kind?: string; observedAt?: string; sourceKey?: string | null; bindingStatus?: string; binding?: { signalId: string; name: string; unitId: string; semanticType: string; canonicalUom: string | null } | null; feed?: PreviewFeed | null; quality?: unknown; values?: unknown; feedFacts?: unknown }
 const SAMPLE_INFO = 'Paste a real packet and its receive time. This checks the saved profile, time, quality, identity and effective signal binding; it writes no samples or events. Edit the payload profile first if your source uses other field paths. Sample decoding does not prove live delivery, event mappings, unit-state rules, source priority or period accounting.';
 interface Packet { topic: string; payload: string; receivedAt: string; retained: boolean }
 
@@ -60,6 +60,7 @@ function SampleResultView({ data, timezone }: { data: SampleResult; timezone: st
     {data.sourceKey && <p className="break-all">Source key: {data.sourceKey}</p>}
     {data.binding && <p>Signal: {data.binding.name} ({labelOf(SIGNAL_TYPE_LABELS, data.binding.semanticType)}, {data.binding.canonicalUom ?? 'no quantity unit'})</p>}
     {data.ok && <PreviewFigures response={data} timezone={timezone} />}
+    {data.ok && previewWarning(data) && <p className="text-warning" role="alert" data-testid="sample-declared-warning">{previewWarning(data)}</p>}
     {data.ok && <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-xs">{JSON.stringify({ observedAt: data.observedAt, quality: data.quality, values: data.values }, null, 2)}</pre>}
   </div>;
 }

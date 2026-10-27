@@ -54,7 +54,7 @@ function columnsOf(env: EventHubEnv, losses: ReadonlyMap<string, EventLoss[]>): 
   ];
 }
 
-const EVENTS_INFO = "Stops, slowdowns and quality losses of these units overlapping the window, newest first. Lost quantity is what the periods' loss lines attribute to the event (approved, else the draft).";
+const EVENTS_INFO = "Stops, slowdowns, quality losses and declared production losses of these units overlapping the window, newest first. Lost quantity is what the periods' loss lines attribute to the event (approved, else the draft).";
 
 /** The OEE component the events were opened for (a waterfall drill), with the way back to all components. */
 function OeeFilterChip({ scope, onChange }: LossEventsProps) {

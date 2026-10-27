@@ -39,7 +39,7 @@ describe('MQTT setup navigation and sample validation', () => {
     expect(screen.getByRole('button', { name: 'About Validate MQTT sample' })).toBeInTheDocument();
   });
   it('fills the topic and example from a feed and shows how the feed read it', async () => {
-    const calls = stubV2Fetch(() => jsonResponse(200, { ok: true, kind: 'output_event', bindingStatus: 'pla_report', feed: { id: 'pla', purpose: 'pla' }, values: { output: { quantity: 208, unit: 't' } }, feedFacts: { report: { planned: 240, shortfall: 32 } } }));
+    const calls = stubV2Fetch(() => jsonResponse(200, { ok: true, kind: 'output_event', bindingStatus: 'production_loss_event', feed: { id: 'pla', purpose: 'pla' }, values: {}, feedFacts: { declared: { planned: 240, actual: 208, shortfall: 32, uom: 't', status: 'DETECTED', identityGap: 0 } } }));
     const feeds = [{ ...newFeed('pla'), topic: 'marun/+/pla' }, { ...newFeed('downtime'), topic: 'marun/hdpe/downtime' }];
     show(<MqttSamplePreview connectionId="c1" timezone="Asia/Dubai" feeds={feeds} />);
     fireEvent.change(screen.getByTestId('sample-feed'), { target: { value: 'pla' } });
@@ -47,8 +47,18 @@ describe('MQTT setup navigation and sample validation', () => {
     expect((screen.getByLabelText('Payload JSON') as HTMLTextAreaElement).value).toContain('"event_id": "MARUN-HDPE-20261025"');
     fireEvent.change(screen.getByLabelText('Sample receive time'), { target: { value: '2026-10-26T00:00:00Z' } });
     fireEvent.click(screen.getByRole('button', { name: 'Validate sample (no writes)' }));
-    await waitFor(() => expect(screen.getByText('Decoded feed pla: Read as a PLA daily report')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Decoded feed pla: Read as a production loss event')).toBeInTheDocument());
     expect(screen.getByTestId('sample-figures')).toHaveTextContent('OT planned240');
     expect(calls[0].body).toMatchObject({ topic: 'marun/sample/pla' });
+    expect(screen.getByTestId('sample-figures')).toHaveTextContent('Identity gap');
+    expect(screen.queryByTestId('sample-declared-warning')).toBeNull();
+  });
+  it('warns that a PLA message without declared figures will be quarantined', async () => {
+    stubV2Fetch(() => jsonResponse(200, { ok: true, kind: 'output_event', bindingStatus: 'production_loss_event', feed: { id: 'pla', purpose: 'pla' }, values: {}, feedFacts: { declared: null } }));
+    const feeds = [{ ...newFeed('pla'), topic: 'marun/+/pla' }];
+    show(<MqttSamplePreview connectionId="c1" timezone="Asia/Dubai" feeds={feeds} />);
+    fireEvent.change(screen.getByTestId('sample-feed'), { target: { value: 'pla' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Validate sample (no writes)' }));
+    expect(await screen.findByTestId('sample-declared-warning')).toHaveTextContent('will be quarantined');
   });
 });

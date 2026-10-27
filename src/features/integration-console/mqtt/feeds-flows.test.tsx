@@ -149,36 +149,19 @@ describe('MQTT feeds (plans/MQTT_FEEDS.md)', () => {
     expect(screen.getAllByTestId('feed-topic')[0]).toHaveAttribute('readonly');
   });
 
-  it('PLA reports tab lists the reports of the connection with OT figures', async () => {
-    const report = {
-      id: 'r1', externalReportId: 'MARUN-HDPE-20261025', externalRevision: '2', siteId: 's1', localProductionDate: '2026-10-25', timezone: 'Asia/Tehran',
-      utcStart: '2026-10-24T20:30:00Z', utcEnd: '2026-10-25T20:30:00Z', basis: 'good', lines: [], sourceStatus: 'DETECTED', sourceSystem: 'MQTT', statusMappingId: null,
-      certifiedEligible: false, approvedAtSource: null, evidenceRef: null, state: 'current', supersededById: null, importedAt: '2026-10-25T21:00:00Z', connectionId: 'c1',
-      sourceFigures: { planned: 240, actual: 208, shortfall: 32, uom: 't', status: 'DETECTED', quality: 'GOOD', plant: 'MARUN_HDPE', eventType: 'PRODUCTION_LOSS_DETECTED', topic: 'marun/hdpe/pla' },
-    };
-    const calls = stubV2Fetch((call) => (call.url.pathname === '/api/v2/external-production-reports' ? jsonResponse(200, listPage([report])) : undefined));
-    show(<MqttConnectionPanel connection={FEEDS_CONNECTION} timezone="Asia/Tehran" />, '/?tab=pla-reports');
-    const table = await screen.findByRole('table', { name: 'PLA reports' });
-    await waitFor(() => expect(within(table).getByText('2026-10-25')).toBeInTheDocument());
-    const row = within(table).getByText('2026-10-25').closest('tr') as HTMLElement;
-    expect(within(row).getByText('Current')).toBeInTheDocument();
-    expect(within(row).getByText('240.00')).toBeInTheDocument();
-    expect(within(row).getByText('208.00')).toBeInTheDocument();
-    expect(within(row).getByText('32.00')).toBeInTheDocument();
-    expect(within(row).getByText('DETECTED')).toBeInTheDocument();
-    expect(within(row).getByText('No')).toBeInTheDocument();
-    expect(screen.getByText(/counts as a period actual only when its status is released/)).toBeInTheDocument();
-    const list = calls.find((call) => call.url.pathname === '/api/v2/external-production-reports');
-    expect(list?.url.searchParams.get('connectionId')).toBe('c1');
-    expect(list?.url.searchParams.get('limit')).toBe('20');
+  it('Production loss events tab links to the Event Hub list of the PLA feed unit', async () => {
+    stubV2Fetch(() => undefined);
+    show(<MqttConnectionPanel connection={FEEDS_CONNECTION} timezone="Asia/Tehran" />, '/?tab=production-loss-events');
+    const link = await screen.findByTestId('production-loss-events-link');
+    const href = link.getAttribute('href') ?? '';
+    expect(href).toMatch(/^\/events\?/);
+    expect(new URLSearchParams(href.split('?')[1]).get('kinds')).toBe('production_loss');
+    expect(screen.getByText(/becomes a production loss event in the Event Hub/i)).toBeInTheDocument();
   });
 
-  it('PLA reports tab: empty state, and no tab without a PLA feed', async () => {
+  it('Production loss events tab: no tab without a PLA feed', () => {
     stubV2Fetch(() => undefined);
-    const view = show(<MqttConnectionPanel connection={FEEDS_CONNECTION} timezone="Asia/Tehran" />, '/?tab=pla-reports');
-    expect(await screen.findAllByText('No PLA reports received yet.')).not.toHaveLength(0);
-    view.unmount();
     show(<MqttConnectionPanel connection={MQTT_CONNECTION} timezone="Asia/Tehran" />);
-    expect(screen.queryByTestId('tab-pla-reports')).toBeNull();
+    expect(screen.queryByTestId('tab-production-loss-events')).toBeNull();
   });
 });

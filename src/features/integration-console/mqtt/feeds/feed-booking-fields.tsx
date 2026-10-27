@@ -23,7 +23,7 @@ function useAllPages(list: List) {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 }
 
-/** PLA feed: the unit and product the plant-day actual is booked to. */
+/** PLA feed: the unit the production loss event is booked to (the product is optional). */
 export function FeedBookingFields({ feed, errors, readOnly, onChange }: FeedBookingFieldsProps) {
   const units = useUnits();
   const products = useProducts();
@@ -35,11 +35,11 @@ export function FeedBookingFields({ feed, errors, readOnly, onChange }: FeedBook
     .map((product) => ({ value: product.id, label: `${product.code} — ${product.name}` }));
   return (
     <>
-      <Field id={`feed-${feed.id}-unit`} label="Book to unit" required error={errors.unitId} hint="The daily actual is booked to this unit.">
+      <Field id={`feed-${feed.id}-unit`} label="Book to unit" required error={errors.unitId} hint="The production loss event of each day is booked to this unit.">
         <NativeSelect id={`feed-${feed.id}-unit`} testId="feed-unit" value={feed.unitId} placeholder={units.isLoading ? 'Loading units…' : 'Choose a unit'} options={unitOptions} disabled={readOnly} onChange={(unitId) => onChange({ unitId })} />
       </Field>
-      <Field id={`feed-${feed.id}-product`} label="Product" required error={errors.productId}>
-        <NativeSelect id={`feed-${feed.id}-product`} testId="feed-product" value={feed.productId} placeholder={products.isLoading ? 'Loading products…' : 'Choose a product'} options={productOptions} disabled={readOnly} onChange={(productId) => onChange({ productId })} />
+      <Field id={`feed-${feed.id}-product`} label="Product (optional)" error={errors.productId} hint="Not needed: the production loss event is booked to the unit and the day.">
+        <NativeSelect id={`feed-${feed.id}-product`} testId="feed-product" value={feed.productId} placeholder={products.isLoading ? 'Loading products…' : 'No product'} options={productOptions} disabled={readOnly} onChange={(productId) => onChange({ productId })} />
       </Field>
     </>
   );

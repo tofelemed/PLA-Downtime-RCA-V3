@@ -16,6 +16,8 @@ import { KpiTile, type KpiTileSpec } from '../dashboard/kpi-tile';
 import { waterfallQuery, type AnalyticsScope } from '../model/analytics-scope';
 import { waterfallBarLink } from '../model/links';
 import { waterfallBarLabel } from '@/features/plan-dashboard/model/display';
+import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
+import { DeclaredUnavailable } from '../components/declared-unavailable';
 
 const WaterfallChart = lazy(() => import('@/features/plan-dashboard/components/waterfall-chart').then((m) => ({ default: m.WaterfallChart })));
 
@@ -59,6 +61,12 @@ function columnsOf(uom: string | null, linkOf: (bar: Bar) => To | null): Array<D
  * "closes to actual" is the server's exact check, excluded slices are counted with their reasons.
  */
 export function WaterfallTab({ scope }: { scope: AnalyticsScope }) {
+  const { isDeclared } = useLossAccountingMode();
+  if (isDeclared && scope.ledger === 'capacity') return <DeclaredUnavailable />;
+  return <ScopeWaterfall scope={scope} />;
+}
+
+function ScopeWaterfall({ scope }: { scope: AnalyticsScope }) {
   const env = useEventHubEnv();
   const query = useScopeWaterfall(waterfallQuery(scope), env.timezone);
   const data = query.data?.data;

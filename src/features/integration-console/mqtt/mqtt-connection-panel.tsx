@@ -11,7 +11,7 @@ import { QuarantineInbox } from '../quarantine/quarantine-inbox';
 import { useMqttSubscription } from './hooks/use-mqtt-subscription';
 import { MqttTestPanel } from './mqtt-test-panel';
 import { feedsOfEndpoint } from './model/feeds';
-import { PlaReportsTab } from './pla-reports-tab';
+import { ProductionLossEventsTab } from './production-loss-events-tab';
 import { ProfileEditor } from './profile-editor';
 import { SubscriptionActions } from './subscription-actions';
 import { SubscriptionCounters } from './subscription-counters';
@@ -22,9 +22,9 @@ export interface MqttConnectionPanelProps {
   timezone: string;
 }
 
-const TABS = ['subscription', 'signals', 'profile', 'quarantine', 'setup', 'pla-reports'] as const;
+const TABS = ['subscription', 'signals', 'profile', 'quarantine', 'setup', 'production-loss-events'] as const;
 type MqttTab = (typeof TABS)[number];
-const TABS_WITHOUT_PLA = TABS.filter((tab) => tab !== 'pla-reports');
+const TABS_WITHOUT_PLA = TABS.filter((tab) => tab !== 'production-loss-events');
 
 /**
  * MQTT panel of one connection (plan 1.8 WP3 step 5, design §8): the subscription's live health from
@@ -47,7 +47,7 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
         <TabsTrigger value="setup" data-testid="tab-setup">Setup readiness</TabsTrigger>
         <TabsTrigger value="profile" data-testid="tab-profile">Payload profile</TabsTrigger>
         <TabsTrigger value="quarantine" data-testid="tab-mqtt-quarantine">Quarantine</TabsTrigger>
-        {hasPlaFeed && <TabsTrigger value="pla-reports" data-testid="tab-pla-reports">PLA reports</TabsTrigger>}
+        {hasPlaFeed && <TabsTrigger value="production-loss-events" data-testid="tab-production-loss-events">Production loss events</TabsTrigger>}
       </TabsList>
       <TabsContent value="subscription" className="mt-4 space-y-4">
         <DataState state={dataStateOf(subscription)} error={subscription.error}>
@@ -66,8 +66,8 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
         <QuarantineInbox timezone={timezone} connectionId={connection.id} />
       </TabsContent>
       {hasPlaFeed && (
-        <TabsContent value="pla-reports" className="mt-4">
-          <PlaReportsTab connectionId={connection.id} timezone={timezone} />
+        <TabsContent value="production-loss-events" className="mt-4">
+          <ProductionLossEventsTab feeds={feeds} />
         </TabsContent>
       )}
     </Tabs>

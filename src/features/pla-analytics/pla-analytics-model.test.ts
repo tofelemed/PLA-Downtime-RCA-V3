@@ -136,7 +136,7 @@ describe('PLA analytics views and dashboard window (UI guidelines §2, §8)', ()
   });
 
   it('loss events are the loss types of the scope, never superseded or retracted rows', () => {
-    expect(lossEventsQuery({ ...scope(), eventType: 'all' })).toMatchObject({ physicalTypes: ['downtime', 'slowdown', 'quality_loss'], physicalStates: ['open', 'closed'], unitIds: ['u1', 'u2'], sort: '-startTime' });
+    expect(lossEventsQuery({ ...scope(), eventType: 'all' })).toMatchObject({ physicalTypes: ['downtime', 'slowdown', 'quality_loss', 'production_loss'], physicalStates: ['open', 'closed'], unitIds: ['u1', 'u2'], sort: '-startTime' });
     expect(lossEventsQuery({ ...scope(), eventType: 'slowdown' }).physicalTypes).toEqual(['slowdown']);
     expect(SCOPE_PARAMS.has('events')).toBe(true);
     expect(SCOPE_PARAMS.has('view')).toBe(false);

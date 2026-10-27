@@ -42,7 +42,7 @@ describe('candidate derivation and month lock (UX D-2, D-7)', () => {
     pages = {};
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       const parsed = new URL(url);
-      urls.push(parsed);
+      if (!parsed.pathname.endsWith('/loss-accounting')) urls.push(parsed);
       const page = pages[parsed.searchParams.get('cursor') ?? ''] ?? { items: [], nextCursor: null };
       return new Response(JSON.stringify(page), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }));

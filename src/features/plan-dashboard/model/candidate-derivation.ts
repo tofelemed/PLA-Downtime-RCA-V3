@@ -23,6 +23,28 @@ export function derivationFlagLabel(flag: string): string {
   return humanize(name);
 }
 
+const DECLARED_SHORTFALL_PREFIX = 'declared_shortfall:';
+const STOPS_CROSS_CHECK_PREFIX = 'stops_cross_check:';
+
+/** The shortfall the declared line was booked from (`declared_shortfall:<q>`); the flag value is data, not a label. */
+export function declaredShortfallOf(flags: readonly string[]): string | null {
+  const flag = flags.find((f) => f.startsWith(DECLARED_SHORTFALL_PREFIX));
+  return flag ? flag.slice(DECLARED_SHORTFALL_PREFIX.length) || null : null;
+}
+
+/** The recorded stops' quantity next to the declared loss (`stops_cross_check:<qty>:<uom>`), when the slice carries it. */
+export function stopsCrossCheckOf(flags: readonly string[]): { quantity: string; uom: string | null } | null {
+  const flag = flags.find((f) => f.startsWith(STOPS_CROSS_CHECK_PREFIX));
+  if (!flag) return null;
+  const [quantity, uom] = flag.slice(STOPS_CROSS_CHECK_PREFIX.length).split(':');
+  return quantity ? { quantity, uom: uom || null } : null;
+}
+
+/** Value-carrying flags are shown as data elsewhere, so they are not repeated as labels. */
+export function isDataFlag(flag: string): boolean {
+  return flag.startsWith(DECLARED_SHORTFALL_PREFIX) || flag.startsWith(STOPS_CROSS_CHECK_PREFIX);
+}
+
 /** Both quantities are the server's; the effective one is shown only when its text differs. */
 export function effectiveDiffers(candidate: Pick<CandidateView, 'quantity' | 'effectiveQuantity'>): boolean {
   return candidate.effectiveQuantity !== null && candidate.effectiveQuantity !== candidate.quantity;

@@ -9,6 +9,7 @@ import {
   newFeed,
   PLA_EXAMPLE_PAYLOAD,
   PLA_FIELD_TEMPLATE,
+  storedFeedOf,
   withPurpose,
   type FeedForm,
 } from './feeds';
@@ -17,7 +18,7 @@ import { formFieldOf } from './mqtt-steps';
 import { mqttFormErrors } from './mqtt-validation';
 import type { ConnectionView } from '@/api/v2/types/integrations';
 import { endpointSummary } from '../../model/endpoint-summary';
-import { bindingStatusLabel, previewFigures, sampleTopicOf } from './preview-figures';
+import { bindingStatusLabel, previewFigures, previewWarning, sampleTopicOf } from './preview-figures';
 
 const pla = (patch: Partial<FeedForm> = {}): FeedForm => ({ ...newFeed('pla'), topic: 'marun/hdpe/pla', unitId: 'u1', productId: 'p1', ...patch });
 const downtime = (patch: Partial<FeedForm> = {}): FeedForm => ({ ...newFeed('downtime'), topic: 'marun/hdpe/downtime', ...patch });
@@ -28,9 +29,13 @@ describe('feed templates (plans/MQTT_FEEDS.md)', () => {
     expect(paths).toEqual({
       eventId: 'event_id', revision: 'event_revision', productionDate: 'production_date', periodStart: 'period_start', periodEnd: 'period_end',
       actual: 'production.actual_good_production_t', planned: 'plan.planned_production_t', shortfall: 'production.shortfall_t', status: 'status',
-      quality: 'production.measurement_quality', plant: 'plant', eventType: 'event_type', uom: '',
+      quality: 'production.measurement_quality', plant: 'plant', eventType: 'event_type', uom: 'uom',
+      planSource: 'plan.source', planId: 'plan.plan_id', planRevision: 'plan.revision', planApproved: 'plan.approved',
+      piActualTag: 'pi_source.actual_tag', piEventFrameId: 'pi_source.event_frame_id',
     });
-    expect(PLA_FIELD_TEMPLATE.filter((field) => field.required).map((field) => field.key)).toEqual(['eventId', 'productionDate', 'periodStart', 'periodEnd', 'actual']);
+    expect(PLA_FIELD_TEMPLATE.filter((field) => field.required).map((field) => field.key)).toEqual(['eventId', 'productionDate', 'periodStart', 'periodEnd', 'actual', 'shortfall']);
+    expect(DOWNTIME_FIELD_TEMPLATE.map((field) => field.key)).not.toContain('lostQuantity');
+    expect(PLA_FIELD_TEMPLATE.find((field) => field.key === 'shortfall')?.help).toContain('production loss event');
     expect(DOWNTIME_FIELD_TEMPLATE.filter((field) => field.required).map((field) => field.key)).toEqual(['eventId', 'start']);
     expect(DOWNTIME_FIELD_TEMPLATE.find((field) => field.key === 'duration')?.path).toBe('duration_min');
   });
@@ -66,7 +71,8 @@ describe('feed rules mirror the server', () => {
       downtime({ id: 'pla', topic: 'marun/#', fields: { ...downtime().fields, start: 'bad path', eventId: '' } }),
       downtime({ id: 'x', topic: 'a/#/b', durationUnit: 'd' as FeedForm['durationUnit'] }),
     ]);
-    expect(errors.byFeed[0]).toEqual({ unitId: expect.any(String), productId: 'Choose the product' });
+    expect(errors.byFeed[0]).toEqual({ unitId: expect.any(String) });
+    expect(storedFeedOf(pla({ productId: '' }))).not.toHaveProperty('productId');
     expect(errors.byFeed[1].topic).toBe('Same topic as feed 1');
     expect(errors.byFeed[2]).toMatchObject({ id: 'Feed id is used by another feed', topic: 'Overlaps the topic of feed 1' });
     expect(Object.keys(errors.byFeed[2].fields ?? {})).toEqual(['eventId', 'start']);
@@ -126,12 +132,15 @@ describe('feeds profile', () => {
 
 describe('sample preview of a feed message', () => {
   it('labels the feed binding statuses, builds a publishable topic and lists the decoded figures', () => {
-    expect(bindingStatusLabel('pla_report')).toBe('Read as a PLA daily report');
+    expect(bindingStatusLabel('production_loss_event')).toBe('Read as a production loss event');
     expect(bindingStatusLabel('downtime_event')).toBe('Read as a downtime stop');
     expect(bindingStatusLabel('unknown_signal')).toBe('unknown signal');
     expect(sampleTopicOf('marun/+/pla/#')).toBe('marun/sample/pla/sample');
-    const plaRows = previewFigures({ feed: { id: 'pla', purpose: 'pla' }, values: { output: { quantity: 208, unit: 't' } }, feedFacts: { report: { planned: 240, shortfall: 32, status: 'DETECTED' } } });
-    expect(plaRows.map((row) => [row.label, row.value])).toEqual([['Actual (reported)', 208], ['Quantity unit', 't'], ['OT planned', 240], ['OT shortfall', 32], ['OT status', 'DETECTED']]);
+    const plaRows = previewFigures({ feed: { id: 'pla', purpose: 'pla' }, bindingStatus: 'production_loss_event', feedFacts: { declared: { planned: 240, actual: 208, shortfall: 32, uom: 't', status: 'DETECTED', identityGap: 0 } } });
+    expect(plaRows.map((row) => [row.label, row.value])).toEqual([['OT planned', 240], ['OT actual', 208], ['OT shortfall', 32], ['Quantity unit', 't'], ['OT status', 'DETECTED'], ['Identity gap (planned − actual − shortfall)', 0]]);
+    expect(previewWarning({ feed: { id: 'pla', purpose: 'pla' }, bindingStatus: 'production_loss_event', feedFacts: { declared: null } })).toContain('will be quarantined');
+    expect(previewWarning({ feed: { id: 'pla', purpose: 'pla' }, bindingStatus: 'production_loss_event', feedFacts: { declared: { shortfall: 1 } } })).toBeNull();
+    expect(previewWarning({ feed: { id: 'downtime', purpose: 'downtime' }, bindingStatus: 'downtime_event' })).toBeNull();
     const stopRows = previewFigures({ feed: { id: 'downtime', purpose: 'downtime' }, startTime: '2026-10-25T02:42:00Z', endTime: null, feedFacts: { unit: 'Extruder1', equipment: 'EXT1-Main' }, values: { attributes: [{ name: 'ReasonCode', type: 'string', value: 'MECH-GEARBOX' }, { name: 'Duration', type: 'number', value: 2100, unit: 's' }, { name: 'Equipment', type: 'string', value: 'EXT1-Main' }] } });
     expect(stopRows.map((row) => [row.label, row.value])).toEqual([['Start', '2026-10-25T02:42:00Z'], ['End', 'ongoing'], ['Unit code', 'Extruder1'], ['Equipment code', 'EXT1-Main'], ['Reason', 'MECH-GEARBOX'], ['Duration', '2100 s']]);
     expect(previewFigures({ feed: null, values: {} })).toEqual([]);

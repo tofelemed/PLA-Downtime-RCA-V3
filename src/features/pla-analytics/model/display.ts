@@ -21,6 +21,7 @@ export const LOSS_EVENT_TYPE_LABELS = {
   downtime: 'Stops',
   slowdown: 'Slowdowns',
   quality_loss: 'Quality losses',
+  production_loss: 'Production losses (declared)',
 } as const;
 
 /** Actuals quality states and KPI quality flags (server tokens → words). */

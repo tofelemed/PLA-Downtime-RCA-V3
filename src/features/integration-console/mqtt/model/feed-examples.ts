@@ -29,7 +29,6 @@ export const DOWNTIME_EXAMPLE_PAYLOAD: Readonly<Record<string, unknown>> = {
   duration_min: 35,
   reason_code: 'MECH-GEARBOX',
   description: 'Gearbox high vibration trip',
-  lost_production_t: 7.3,
   status: 'CLOSED',
   pi_source: { event_frame_id: 'PI_EVENT_ID_TBD' },
 };

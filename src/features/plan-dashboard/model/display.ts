@@ -38,6 +38,12 @@ export const FLAG_LABELS: Readonly<Record<string, string>> = {
   no_transition_standard: 'No approved transition standard for this grade change',
   trip_recovery: 'Ramp-up / start-up after a trip (charged to the trip)',
   'quality_class:transition_off_grade': 'Transition off-grade',
+  declared_loss_missing: 'OT has not sent this day’s production loss',
+  declared_identity_mismatch: 'Planned − actual ≠ shortfall (review)',
+  declared_actual_missing: 'OT actual missing — measured good used',
+  capacity_not_applicable: 'Capacity figures not available (declared basis)',
+  duplicate_declared_loss: 'Two production loss events cover this period',
+  declared_single_slice: 'Several product slices — the declared figure is booked to the first',
   transition_allowance_planned: 'Grade transition within standard is planned time (in the plan target)',
 };
 

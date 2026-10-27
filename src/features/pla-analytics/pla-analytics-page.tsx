@@ -15,6 +15,9 @@ import { AnalyticsHeader } from './components/analytics-header';
 import { useAnalyticsScope } from './hooks/use-analytics-scope';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { plaPagesFor } from './model/money-access';
+import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
+import { DeclaredUnavailable } from './components/declared-unavailable';
+import { declaredPagesFor, isCapacityBasedPage } from './model/declared-access';
 import { ReportChrome } from './components/report-chrome';
 import { ViewPicker } from './components/view-picker';
 
@@ -59,16 +62,18 @@ function PlaAnalyticsScreen({ view }: { view: PlaView }) {
   const { canViewMoney } = useCapabilities();
   const page = PLA_PAGES.find((entry) => entry.key === view) ?? PLA_PAGES[0];
   const Content = PAGES[view];
+  const { isDeclared } = useLossAccountingMode();
+  const unavailable = isDeclared && isCapacityBasedPage(view);
   return (
     <Page width="wide">
       <div className="space-y-5" data-testid="pla-analytics-v2" data-view={view}>
         <AnalyticsHeader scope={scope} title={`Production loss analysis · ${page.label}`} overview={view === 'overview'} />
-        <AnalysisPageNav label="Production loss analysis pages" pages={plaPagesFor(PLA_PAGES, canViewMoney)} />
+        <AnalysisPageNav label="Production loss analysis pages" pages={declaredPagesFor(plaPagesFor(PLA_PAGES, canViewMoney), isDeclared)} />
         {/* capacity gap: no window or ledger, it has its own unit / product / as-of filters */}
-        {view !== 'capacity' && <AnalyticsFilters scope={scope} onChange={change} picker={<ViewPicker view={view} scope={scope} onChange={change} />} showLedger={view === 'overview' || quantifiedLosses || view === 'valuation'} showApproved={!lossRecords} />}
+        {view !== 'capacity' && !unavailable && <AnalyticsFilters scope={scope} onChange={change} picker={<ViewPicker view={view} scope={scope} onChange={change} />} showLedger={!isDeclared && (view === 'overview' || quantifiedLosses || view === 'valuation')} showApproved={!lossRecords} />}
         <AnalysisSnapshotContext.Provider value={view === 'overview' ? null : { scopeLabel: `${unitsLabel(scope.unitIds, env.unitName)} · ${scope.windowLabel}`, timezone: env.timezone, timezoneIsFallback: env.timezoneIsFallback }}>
           <ReportChrome approvedOnly={scope.approvedOnly} ownEmpty>
-            <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>
+            {unavailable ? <DeclaredUnavailable /> : <Suspense fallback={<Skeleton className="h-64 w-full" />}><Content scope={scope} onChange={change} /></Suspense>}
           </ReportChrome>
         </AnalysisSnapshotContext.Provider>
       </div>

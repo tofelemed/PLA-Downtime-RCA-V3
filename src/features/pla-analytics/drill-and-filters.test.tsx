@@ -10,6 +10,8 @@ vi.mock('@/features/event-hub/use-event-hub-env', () => ({ useEventHubEnv: () =>
 vi.mock('@/features/pla-analytics/hooks/use-production-day-start', () => ({ useProductionDayStart: () => ({ dayStart: '06:00', loading: false }) }));
 vi.mock('@/features/plan-dashboard/components/waterfall-chart', () => ({ WaterfallChart: () => <div>chart</div> }));
 const waterfall = vi.hoisted(() => ({ data: null as ScopeWaterfallView | null }));
+const mode = vi.hoisted(() => ({ isDeclared: false }));
+vi.mock('@/features/accounting-mode/use-loss-accounting-mode', () => ({ useLossAccountingMode: () => ({ isDeclared: mode.isDeclared, isDay: mode.isDeclared, isLoading: false }) }));
 vi.mock('@/api/v2/queries/pla-analytics', async (original) => ({
   ...await original<typeof import('@/api/v2/queries/pla-analytics')>(),
   useScopeWaterfall: () => ({ data: { data: waterfall.data, isProvisional: false }, isLoading: false, isError: false, error: null, refetch: () => undefined }),
@@ -46,6 +48,15 @@ describe('PLA drill-downs and the filter bar (UX audit D-6, D-13)', () => {
     expect(drills[0].getAttribute('href')).toContain('breakdown=loss-events');
     expect(drills[1].getAttribute('href')).toMatch(/^\/pla-analytics\/reconciliation\?.*periods=quality/);
     expect(drills[2].getAttribute('href')).toMatch(/^\/pla-analytics\/reconciliation\?/);
+  });
+
+  it('declared mode: the capacity waterfall (Sustained capacity step) is replaced by the not-available note', () => {
+    mode.isDeclared = true;
+    waterfall.data = { ledger: 'capacity', bars: [], excluded: [], closes: true, opening: '100', closing: '95', uom: 't' } as unknown as ScopeWaterfallView;
+    wrap(<WaterfallTab scope={{ ...SCOPE, ledger: 'capacity' }} />);
+    expect(screen.getByTestId('declared-unavailable')).toHaveTextContent('Not available: this plant accounts declared losses');
+    expect(screen.queryByTestId('waterfall')).toBeNull();
+    mode.isDeclared = false;
   });
 
   it('the window is a preset select plus From / To fields, with no dates inside the select', () => {

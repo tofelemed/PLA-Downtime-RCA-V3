@@ -31,7 +31,7 @@ describe('Dashboard latest loss events', () => {
       to: scope.to,
       limit: 5,
       sort: '-startTime',
-      physicalTypes: ['downtime', 'slowdown', 'quality_loss'],
+      physicalTypes: ['downtime', 'slowdown', 'quality_loss', 'production_loss'],
       physicalStates: ['open', 'closed'],
     });
   });

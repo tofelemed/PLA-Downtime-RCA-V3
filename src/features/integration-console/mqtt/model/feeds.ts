@@ -91,7 +91,6 @@ function purposeProblems(feed: FeedForm): FeedProblems {
   const problems: FeedProblems = {};
   if (feed.purpose === 'pla') {
     if (!feed.unitId) problems.unitId = 'Choose the unit the daily actual is booked to';
-    if (!feed.productId) problems.productId = 'Choose the product';
   } else if (!DURATION_UNITS.includes(feed.durationUnit)) {
     problems.durationUnit = 'Choose s, min or h';
   }
@@ -136,7 +135,7 @@ export function fieldOverrides(feed: Pick<FeedForm, 'purpose' | 'fields'>): Reco
 
 export function storedFeedOf(feed: FeedForm): Record<string, unknown> {
   const base = { id: feed.id, purpose: feed.purpose, topic: feed.topic.trim() };
-  const purposeKeys = feed.purpose === 'pla' ? { unitId: feed.unitId, productId: feed.productId } : { durationUnit: feed.durationUnit };
+  const purposeKeys = feed.purpose === 'pla' ? { unitId: feed.unitId, ...(feed.productId ? { productId: feed.productId } : {}) } : { durationUnit: feed.durationUnit };
   return { ...base, ...purposeKeys, fields: fieldOverrides(feed) };
 }
 

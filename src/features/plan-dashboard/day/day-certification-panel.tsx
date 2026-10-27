@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { useCertifyDay, useProductionDay } from '@/api/v2/queries/production-days';
 import { useProductionPeriod } from '@/api/v2/queries/production-periods';
 import type { DayView } from '@/api/v2/types/production-day';
+import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useCurrentUserId } from '@/features/auth/use-current-user-id';
 import { FriendlyErrorAlert } from '@/features/ux-kit/errors';
@@ -15,13 +16,13 @@ import type { GridWorkflowState } from '@/api/v2/types/period-overview';
 
 const STATE_LABELS: Record<DayView['state'], string> = { open: 'Shifts in progress', ready: 'Ready to certify', certified: 'Day certified' };
 
-function Rollup({ day }: { day: DayView }) {
+function Rollup({ day, isDay }: { day: DayView; isDay: boolean }) {
   const { digits } = useCalendarPreference();
   if (day.rollup.length === 0) return null;
   return (
     <p className="text-sm" data-testid="day-rollup">
-      Day total (approved shifts):{' '}
-      {day.rollup.map((r) => `${r.actual === null ? '—' : formatDecimal(r.actual, 2, digits)} of ${r.target === null ? '—' : formatDecimal(r.target, 2, digits)}${r.uom ? ` ${r.uom}` : ''} (${r.periods} shifts)`).join('; ')}
+      {isDay ? 'Day total (approved period):' : 'Day total (approved shifts):'}{' '}
+      {day.rollup.map((r) => `${r.actual === null ? '—' : formatDecimal(r.actual, 2, digits)} of ${r.target === null ? '—' : formatDecimal(r.target, 2, digits)}${r.uom ? ` ${r.uom}` : ''}${isDay ? '' : ` (${r.periods} shifts)`}`).join('; ')}
     </p>
   );
 }
@@ -37,6 +38,7 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
   const userId = useCurrentUserId();
   const query = useProductionDay(unitId, localDate);
   const certify = useCertifyDay();
+  const { isDay, isDeclared } = useLossAccountingMode(unitId);
   const day = query.data;
   if (!day) return null;
   const submitted = !isSuperAdmin && day.periods.some((p) => p.submittedBy === userId);
@@ -47,7 +49,7 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
         <Badge variant={day.state === 'certified' ? 'default' : 'secondary'}>{STATE_LABELS[day.state]}</Badge>
         <SelfDecisionBadge selfDecided={day.certification?.selfDecided} kind="decided" />
         {canCertifyDay && day.state === 'ready' && (
-          <CertifyDayButton day={day} disabled={certify.isPending || submitted} onCertify={() => certify.submit({ unitId, localDate })} />
+          <CertifyDayButton day={day} disabled={certify.isPending || submitted} onCertify={() => certify.submit({ unitId, localDate })} isDay={isDay} declared={isDeclared} />
         )}
       </div>
       <ul className="flex flex-wrap gap-3 text-xs">
@@ -57,8 +59,8 @@ export function DayCertificationPanel({ unitId, localDate }: { unitId: string; l
           </li>
         ))}
       </ul>
-      <Rollup day={day} />
-      <DayCodingGate gate={day.codingGate} />
+      <Rollup day={day} isDay={isDay} />
+      <DayCodingGate gate={day.codingGate} declared={isDeclared} />
       {canCertifyDay && day.state === 'ready' && submitted && <p className="text-xs text-muted-foreground">You submitted a shift of this day; another manager certifies it.</p>}
       {day.certification?.state === 'reopened' && <p className="text-xs" data-testid="day-reopened">Reopened by a correction: {day.certification.reopenReason}</p>}
       {certify.error ? <FriendlyErrorAlert error={certify.error} /> : null}

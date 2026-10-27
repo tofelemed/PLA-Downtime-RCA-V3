@@ -16,19 +16,25 @@ export interface FeedFieldTemplate {
 }
 
 export const PLA_FIELD_TEMPLATE: readonly FeedFieldTemplate[] = [
-  { key: 'eventId', path: 'event_id', required: true, label: 'Event id', help: 'Report identity.' },
+  { key: 'eventId', path: 'event_id', required: true, label: 'Event id', help: 'Report identity. Becomes a production loss event in the Event Hub.' },
   { key: 'revision', path: 'event_revision', required: false, label: 'Revision', help: 'Default 1. A later revision supersedes an earlier one.' },
   { key: 'productionDate', path: 'production_date', required: true, label: 'Production date', help: 'Plant production day, YYYY-MM-DD.' },
   { key: 'periodStart', path: 'period_start', required: true, label: 'Period start', help: 'ISO time with offset.' },
   { key: 'periodEnd', path: 'period_end', required: true, label: 'Period end', help: 'ISO time with offset.' },
-  { key: 'actual', path: 'production.actual_good_production_t', required: true, label: 'Actual good production', help: 'Good production (t). Becomes the reported actual.' },
-  { key: 'planned', path: 'plan.planned_production_t', required: false, label: 'OT planned', help: 'OT plan (t), kept for comparison. Target comes from the approved plan.' },
-  { key: 'shortfall', path: 'production.shortfall_t', required: false, label: 'OT shortfall', help: 'OT shortfall (t), kept for comparison.' },
-  { key: 'status', path: 'status', required: false, label: 'Status', help: 'Default REPORTED. Release is decided by the source status rules of source system MQTT.' },
-  { key: 'quality', path: 'production.measurement_quality', required: false, label: 'Measurement quality', help: 'Kept with the report.' },
-  { key: 'plant', path: 'plant', required: false, label: 'Plant', help: 'Kept with the report.' },
-  { key: 'eventType', path: 'event_type', required: false, label: 'Event type', help: 'Kept with the report.' },
-  { key: 'uom', path: '', required: false, label: 'Quantity unit', help: 'Default t (not read from the payload unless a path is set).' },
+  { key: 'actual', path: 'production.actual_good_production_t', required: true, label: 'OT actual', help: 'Good production (t) as OT declares it. Kept on the production loss event.' },
+  { key: 'planned', path: 'plan.planned_production_t', required: false, label: 'OT planned', help: 'OT plan (t). Used as the target when the plant accounts against the declared plan.' },
+  { key: 'shortfall', path: 'production.shortfall_t', required: true, label: 'OT shortfall', help: 'Shortfall (t). Becomes the quantity of the production loss event in the Event Hub.' },
+  { key: 'status', path: 'status', required: false, label: 'Status', help: 'OT status, e.g. DETECTED or CONFIRMED. Approval waits for CONFIRMED.' },
+  { key: 'quality', path: 'production.measurement_quality', required: false, label: 'Measurement quality', help: 'Kept with the production loss event.' },
+  { key: 'plant', path: 'plant', required: false, label: 'Plant', help: 'Kept with the event.' },
+  { key: 'eventType', path: 'event_type', required: false, label: 'Event type', help: 'Kept with the event.' },
+  { key: 'uom', path: 'uom', required: false, label: 'Quantity unit', help: 'Default t when the payload has none.' },
+  { key: 'planSource', path: 'plan.source', required: false, label: 'Plan source', help: 'Which system the plan comes from. Kept with the event.' },
+  { key: 'planId', path: 'plan.plan_id', required: false, label: 'Plan id', help: 'Kept with the event.' },
+  { key: 'planRevision', path: 'plan.revision', required: false, label: 'Plan revision', help: 'Kept with the event.' },
+  { key: 'planApproved', path: 'plan.approved', required: false, label: 'Plan approved', help: 'Whether OT marks the plan approved. Kept with the event.' },
+  { key: 'piActualTag', path: 'pi_source.actual_tag', required: false, label: 'PI actual tag', help: 'The PI tag the actual was read from. Kept with the event.' },
+  { key: 'piEventFrameId', path: 'pi_source.event_frame_id', required: false, label: 'PI event frame id', help: 'Kept with the event.' },
 ];
 
 export const DOWNTIME_FIELD_TEMPLATE: readonly FeedFieldTemplate[] = [
@@ -41,7 +47,6 @@ export const DOWNTIME_FIELD_TEMPLATE: readonly FeedFieldTemplate[] = [
   { key: 'duration', path: 'duration_min', required: false, label: 'Duration', help: 'In the duration unit; gives the end when End is absent and the stop is closed.' },
   { key: 'reason', path: 'reason_code', required: false, label: 'Reason', help: 'Reason code or name; an unknown one leaves the stop uncoded (unknown_code in quarantine).' },
   { key: 'description', path: 'description', required: false, label: 'Description', help: '' },
-  { key: 'lostQuantity', path: 'lost_production_t', required: false, label: 'Lost quantity', help: 'Lost tonnes.' },
   { key: 'status', path: 'status', required: false, label: 'Status', help: '' },
   { key: 'plant', path: 'plant', required: false, label: 'Plant', help: '' },
   { key: 'eventType', path: 'event_type', required: false, label: 'Event type', help: '' },
@@ -57,7 +62,7 @@ export function defaultFields(purpose: FeedPurpose): Record<string, string> {
 }
 
 export const FEED_PURPOSE_LABELS: Readonly<Record<FeedPurpose, string>> = {
-  pla: 'PLA (daily production report)',
+  pla: 'PLA (daily production loss)',
   downtime: 'Downtime (stops)',
 };
 

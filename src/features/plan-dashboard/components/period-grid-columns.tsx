@@ -10,20 +10,30 @@ import { BLOCKING_RESIDUALS, formatRatioPercent, QUALITY_LABELS, RESIDUAL_LABELS
 import { SLA_STAGE_LABELS } from '../model/sla-labels';
 import { SlaBadges } from '../sla/sla-badges';
 
+/** The accounting mode facts the grid wording depends on. */
+export interface GridMode {
+  isDay: boolean;
+  isDeclared: boolean;
+}
+
+export const SHIFT_COMPUTED_GRID_MODE: GridMode = { isDay: false, isDeclared: false };
+
 const num = (value: string | null | undefined, uom: string | null | undefined, digits: DigitSystem) =>
   value === null || value === undefined ? '—' : `${formatDecimal(value, 2, digits)}${uom ? ` ${uom}` : ''}`;
 
 const coverageText = (ratio: string | null, digits: DigitSystem) => (ratio === null ? 'no actuals' : `${formatRatioPercent(ratio, digits)} covered`);
 
-function PeriodCell({ row, timezone, pref }: { row: PeriodSummaryView; timezone: string; pref: CalendarPreference }) {
+function PeriodCell({ row, timezone, pref, isDay }: { row: PeriodSummaryView; timezone: string; pref: CalendarPreference; isDay: boolean }) {
   const residualState = row.plan?.residualState ?? 'not_computable';
   return (
     <span data-testid="period-row" data-period-id={row.periodId} data-residual-state={residualState} data-workflow={row.workflowState}>
       {formatOperationalDate(row.localDate, pref)}
-      {row.shiftName ? ` · ${row.shiftName}` : ''}
-      <span className="block text-xs text-muted-foreground">
-        <PlantTime iso={row.utcStart} tz={timezone} stacked withZone={false} />
-      </span>
+      {!isDay && row.shiftName ? ` · ${row.shiftName}` : ''}
+      {!isDay && (
+        <span className="block text-xs text-muted-foreground">
+          <PlantTime iso={row.utcStart} tz={timezone} stacked withZone={false} />
+        </span>
+      )}
     </span>
   );
 }
@@ -52,9 +62,9 @@ function DueCell({ row, timezone }: { row: PeriodSummaryView; timezone: string }
 }
 
 /** Columns of the period grid: server figures with units, residual state in words, readiness ≠ workflow. */
-export function periodGridColumns(timezone: string, pref: CalendarPreference): DataTableColumn<PeriodSummaryView>[] {
+export function periodGridColumns(timezone: string, pref: CalendarPreference, mode: GridMode = SHIFT_COMPUTED_GRID_MODE): DataTableColumn<PeriodSummaryView>[] {
   return [
-    { id: 'period', header: 'Period', nowrap: true, cell: (row) => <PeriodCell row={row} timezone={timezone} pref={pref} /> },
+    { id: 'period', header: 'Period', nowrap: true, cell: (row) => <PeriodCell row={row} timezone={timezone} pref={pref} isDay={mode.isDay} /> },
     { id: 'target', header: 'Target', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-target">{num(row.plan?.target, row.plan?.uom, pref.digits)}</span> },
     {
       id: 'actual',
@@ -72,7 +82,7 @@ export function periodGridColumns(timezone: string, pref: CalendarPreference): D
     { id: 'attributed', header: 'Attributed', align: 'right', nowrap: true, cell: (row) => <span data-testid="cell-attributed">{num(row.plan?.attributed, row.plan?.uom, pref.digits)}</span> },
     { id: 'residual', header: 'Unaccounted', align: 'right', nowrap: true, cell: (row) => <ResidualCell row={row} digits={pref.digits} /> },
     { id: 'quality', header: 'Data quality', cell: (row) => <span className="text-xs">{row.qualityStates.map((q) => labelOf(QUALITY_LABELS, q)).join(', ') || '—'}</span> },
-    { id: 'readiness', header: 'Inputs', cell: (row) => <span className="text-xs">{labelOf(READINESS_LABELS, row.stateReadiness)}</span> },
+    { id: 'readiness', header: mode.isDeclared ? 'Declared (OT)' : 'Inputs', cell: (row) => <span className="text-xs">{labelOf(READINESS_LABELS, row.stateReadiness)}</span> },
     {
       id: 'workflow',
       header: 'Workflow',

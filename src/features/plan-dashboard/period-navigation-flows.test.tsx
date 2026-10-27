@@ -42,7 +42,7 @@ describe('period navigation, sticky workflow and month-lock wording (UX audit D-
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     vi.stubGlobal('fetch', vi.fn(async (url: string) => {
       const parsed = new URL(url);
-      urls.push(parsed);
+      if (!parsed.pathname.endsWith('/loss-accounting')) urls.push(parsed);
       return new Response(JSON.stringify(listReply(parsed)), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }));
     configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });

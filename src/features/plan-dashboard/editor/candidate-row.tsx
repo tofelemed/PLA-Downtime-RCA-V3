@@ -47,8 +47,8 @@ export function CandidateRow({ candidate, uom, saved, decision, setDraft, issues
           </span>
         )}
         <span className="text-xs text-muted-foreground">
-          Automatic ({lossBasisLabel(candidate.basis).toLowerCase()}) ·{' '}
-          {candidate.causeEventId ? <EventLink eventId={candidate.causeEventId}>from a recorded event</EventLink> : 'no cause event'}
+          {candidate.basis === 'declared' ? 'Declared' : `Automatic (${lossBasisLabel(candidate.basis).toLowerCase()})`} ·{' '}
+          {candidate.causeEventId ? <EventLink eventId={candidate.causeEventId}>{candidate.basis === 'declared' ? 'from production loss event' : 'from a recorded event'}</EventLink> : 'no cause event'}
         </span>
         {candidate.causeEventRca && <EventRcaChip rcaState={candidate.causeEventRca.state} caseId={candidate.causeEventRca.caseId} />}
         <LineCodes reasonCodeId={saved?.reasonCodeId ?? candidate.reasonCodeId} impactCodeId={saved?.impactCodeId ?? candidate.impactCodeId} showImpact flagUncoded={candidate.causeEventId !== null} />

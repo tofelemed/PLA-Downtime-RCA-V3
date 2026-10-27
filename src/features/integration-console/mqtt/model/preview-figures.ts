@@ -1,6 +1,6 @@
 /**
  * What an MQTT sample preview decoded, as plain rows (plans/MQTT_FEEDS.md "Runtime"): for a PLA feed
- * the output and the OT report figures, for a downtime feed the start, end and attributes.
+ * the declared production loss figures, for a downtime feed the start, end and attributes.
  */
 export interface PreviewFeed {
   id: string;
@@ -18,7 +18,7 @@ const record = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
 const BINDING_STATUS_LABELS: Readonly<Record<string, string>> = {
-  pla_report: 'Read as a PLA daily report',
+  production_loss_event: 'Read as a production loss event',
   downtime_event: 'Read as a downtime stop',
 };
 
@@ -36,25 +36,35 @@ export function sampleTopicOf(filter: string): string {
     .join('/');
 }
 
-const REPORT_LABELS: ReadonlyArray<[string, string]> = [
-  ['productionDate', 'Production date'],
+const DECLARED_LABELS: ReadonlyArray<[string, string]> = [
   ['planned', 'OT planned'],
+  ['actual', 'OT actual'],
   ['shortfall', 'OT shortfall'],
+  ['uom', 'Quantity unit'],
   ['status', 'OT status'],
-  ['quality', 'Measurement quality'],
-  ['plant', 'Plant'],
-  ['eventType', 'Event type'],
+  ['identityGap', 'Identity gap (planned − actual − shortfall)'],
 ];
 
-function plaFigures(result: Record<string, unknown>, values: Record<string, unknown>): PreviewFigure[] {
-  const output = record(values.output);
-  const rows: PreviewFigure[] = [];
-  if ('quantity' in output) rows.push({ label: 'Actual (reported)', value: output.quantity });
-  if ('unit' in output) rows.push({ label: 'Quantity unit', value: output.unit });
-  // the preview answers what the feed read in `feedFacts` (report = OT's own figures)
-  const report = record(record(result.feedFacts).report);
-  for (const [key, label] of REPORT_LABELS) if (report[key] !== undefined && report[key] !== null) rows.push({ label, value: report[key] });
-  return rows;
+/** The declared figures the preview read (`feedFacts.declared`), or null when the message has none. */
+function declaredOf(result: Record<string, unknown>): Record<string, unknown> | null {
+  const declared = record(result.feedFacts).declared;
+  return typeof declared === 'object' && declared !== null && !Array.isArray(declared) ? (declared as Record<string, unknown>) : null;
+}
+
+function plaFigures(result: Record<string, unknown>): PreviewFigure[] {
+  const declared = declaredOf(result);
+  if (!declared) return [];
+  return DECLARED_LABELS.flatMap(([key, label]) => (declared[key] !== undefined && declared[key] !== null ? [{ label, value: declared[key] }] : []));
+}
+
+/**
+ * A PLA message the preview binds to a production loss event but from which no declared figures could be
+ * read: the live feed would quarantine it, so the preview says so.
+ */
+export function previewWarning(response: unknown): string | null {
+  const result = record(response);
+  if (result.bindingStatus !== 'production_loss_event' || declaredOf(result) !== null) return null;
+  return 'The declared figures could not be read from this message (check the field paths and that the shortfall is a number). The message will be quarantined.';
 }
 
 const ATTRIBUTE_LABELS: Readonly<Record<string, string>> = {
@@ -87,7 +97,7 @@ export function previewFigures(response: unknown): PreviewFigure[] {
   const result = record(response);
   const feed = record(result.feed);
   const values = record(result.values);
-  if (feed.purpose === 'pla') return plaFigures(result, values);
+  if (feed.purpose === 'pla') return plaFigures(result);
   if (feed.purpose === 'downtime') return downtimeFigures(result, values);
   return [];
 }

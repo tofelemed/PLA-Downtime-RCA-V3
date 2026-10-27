@@ -27,7 +27,7 @@ const LEGACY_TABS: Readonly<Record<string, PlaTab>> = {
   quality: 'reconciliation',
 };
 
-export const LOSS_EVENT_TYPES = ['all', 'downtime', 'slowdown', 'quality_loss'] as const;
+export const LOSS_EVENT_TYPES = ['all', 'downtime', 'slowdown', 'quality_loss', 'production_loss'] as const;
 export type LossEventType = (typeof LOSS_EVENT_TYPES)[number];
 /** OEE component of the listed loss events (a waterfall bar or loss-tree row drills into it); `all` = no filter. */
 export const LOSS_EVENT_OEE = ['all', 'availability', 'performance', 'quality'] as const;
@@ -257,7 +257,7 @@ export function exportBlockedReason(scope: AnalyticsScope, isProvisional: boolea
   return null;
 }
 
-const LOSS_PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss'] as const;
+const LOSS_PHYSICAL_TYPES = ['downtime', 'slowdown', 'quality_loss', 'production_loss'] as const;
 
 /**
  * The loss events of the scope (Losses → Events): stops, slowdowns and quality losses overlapping the

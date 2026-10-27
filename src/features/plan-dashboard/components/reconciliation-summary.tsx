@@ -3,6 +3,7 @@ import type { ReconciliationView, SliceReconciliationView } from '@/api/v2/types
 import { labelOf } from '@/features/ux-kit/labels';
 import { Quantity } from '@/features/ux-kit/quantity';
 import { FLAG_LABELS } from '../model/display';
+import { isDataFlag, stopsCrossCheckOf } from '../model/candidate-derivation';
 import { residualStateOf } from '../model/residual-state';
 import { ResidualStateBadge } from './residual-state-badge';
 
@@ -35,6 +36,21 @@ function Figure({ slice, figure, label, emphasis }: { slice: SliceReconciliation
   );
 }
 
+function SliceStatus({ slice }: { slice: SliceReconciliationView }) {
+  const labelled = slice.flags.filter((flag) => !isDataFlag(flag));
+  const check = stopsCrossCheckOf(slice.flags);
+  return (
+    <>
+      {labelled.length > 0 && <p className="text-xs text-muted-foreground">Status: {labelled.map((f) => labelOf(FLAG_LABELS, f)).join(', ')}</p>}
+      {check && (
+        <p className="text-xs text-muted-foreground" data-testid="stops-cross-check">
+          Stops cross-check: <Quantity value={check.quantity} uom={check.uom} /> recorded in stops
+        </p>
+      )}
+    </>
+  );
+}
+
 function SliceFigures({ slice }: { slice: SliceReconciliationView }) {
   const aboveTolerance = residualStateOf(slice.flags)?.tone === 'warning';
   return (
@@ -62,7 +78,7 @@ function SliceFigures({ slice }: { slice: SliceReconciliationView }) {
           <Figure key={key} slice={slice} figure={key} label={label} />
         ))}
       </div>
-      {slice.flags.length > 0 && <p className="text-xs text-muted-foreground">Status: {slice.flags.map((f) => labelOf(FLAG_LABELS, f)).join(', ')}</p>}
+      <SliceStatus slice={slice} />
     </div>
   );
 }

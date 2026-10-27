@@ -13,9 +13,10 @@ function narrowed(state: EventFilterState, filter: PeriodStopsFilter): EventFilt
 
 /**
  * E-7: the Event Hub listing this period's stops of its unit (the period window as explicit bounds),
- * optionally only the uncoded ones or only those not yet verified by a supervisor.
+ * optionally only the uncoded ones or only those not yet verified by a supervisor. In declared mode the list
+ * holds the unit's production loss events instead of its stops.
  */
-export function periodStopsHref(view: Pick<ReconciliationView, 'unitId' | 'utcStart' | 'utcEnd'>, filter: PeriodStopsFilter): string {
-  const state = { ...defaultFilters({ from: view.utcStart, to: view.utcEnd, label: 'This period' }), unitIds: [view.unitId], physicalTypes: ['downtime'] };
+export function periodStopsHref(view: Pick<ReconciliationView, 'unitId' | 'utcStart' | 'utcEnd'>, filter: PeriodStopsFilter, declared = false): string {
+  const state = { ...defaultFilters({ from: view.utcStart, to: view.utcEnd, label: 'This period' }), unitIds: [view.unitId], physicalTypes: [declared ? 'production_loss' : 'downtime'] };
   return `/events?${toEventSearchParams(narrowed(state, filter))}`;
 }
