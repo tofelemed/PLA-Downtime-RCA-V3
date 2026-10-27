@@ -1424,3 +1424,20 @@ Engineering defaults; change any of them on request.
 - **One existing login on `instrumental-postgres`** is used for migrations and runtime (`DB_USER`); no separate `traverse_forge_owner` / `traverse_forge_app` roles. The RLS role keeps its name `proact_rls_user` and is granted to that login.
 - **No forced password change and no new login throttle** (on-premises deployment). Seeded accounts still get random passwords written to a mode-600 file.
 - **Settled by the report's recommendations (owner did not object):** dev directory `server/pro-act-backend` and dev compose names stay; only the runtime names change. `DB_USER` wins over `DB_USERNAME`; `DB_SCHEMA` (production `forge`) sets the search_path. `DB_SSL=true` verifies the server certificate. `FORGE_PLANT_TIMEZONE` is a seed parameter only. The worker becomes a third production service with `uploads` and `exports` volumes. Swagger is off in production (`FORGE_SWAGGER`). `GET /api/health` gains `version` and `commit`, and there is a new public `GET /api/health/ready`. FK indexes are added in an additive `V002`. Backend base image stays Debian bookworm-slim. nginx `PI_SERVER` loses its hard-coded default.
+
+## 2026-10-27 — Independent, daily, OT-declared production loss accounting ("declared mode") (owner approved `docs/PLA_DECLARED_MODE_PLAN.md`)
+
+- **PLA becomes independent of downtime for a plant that opts in.** A new accounting policy kind `loss_accounting` (versioned, effective-dated, approved) carries `grain` (shift / day), `dayStart`, `lossBasis` (computed / declared), `targetSource` (plan / declared), `accountingUnitId`, `stopsCrossCheck`, `identityTolerance`. Every existing plant keeps `shift` + `computed`; HDPE switches to `day` + `declared`.
+- **D1 Target = OT's planned figure** (`targetSource = declared`); the Traverse Forge plan stays available as the alternative.
+- **D2 Identity:** `planned − actual ≠ shortfall` beyond the tolerance stores the event, raises a review item and blocks submission until OT revises or an engineer books the difference as a tolerance line. Only a message with no shortfall at all is quarantined.
+- **D3 One production loss event per unit per day;** a second `event_id` for the same window raises a review item; never summed.
+- **D4 One slice per period in declared mode;** product campaigns do not split the declared figure.
+- **D5 Certify day stays** as a separate step even with one period per day.
+- **D6 Loss line kind = the reason code's OEE component;** a reason without a component books as `unaccounted_classified`.
+- **D7 Manual production loss events** are allowed for event writers; a later OT event for the same window supersedes after confirmation.
+- **D8 OT status:** `DETECTED` and `CONFIRMED` both create the event; a day is approved only when the status is `CONFIRMED`.
+- **D9 The PLA feed no longer writes an external daily report;** the production loss event is the record and the "PLA reports" tab becomes a link to the Event Hub.
+- **D10 HDPE accounting unit = Extruder1** for the pilot; stops stay on their equipment.
+- **D11 `lost_production_t` is dropped from the downtime template** (never used).
+- **D12 Effective date:** the new regime applies from the policy's effective date; approved periods before it are untouched, open ones are re-materialized.
+- **Standards note (owner asked):** this is top-down loss accounting (production balance plan − actual, coded by reason, ISO 22400 / Meridium PLA practice). Downtime stays the supporting evidence (cross-check figure, reliability KPIs) rather than the pricing engine; OEE and capacity-gap views are not available in declared mode.
