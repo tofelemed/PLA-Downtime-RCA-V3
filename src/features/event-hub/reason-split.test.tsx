@@ -203,10 +203,10 @@ describe('Code dialog: production loss split by tonnes (declared mode)', () => {
     fireEvent.change(values()[0], { target: { value: '40' } });
     fireEvent.change(values()[1], { target: { value: '6' } });
     fireEvent.click(screen.getAllByTestId('split-recovery')[1]);
-    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('Losses 40.000 t − recovery 6.000 t = 34.000 t · 2.000 t over the shortfall.');
+    expect(screen.getByTestId('split-balance-remaining')).toHaveTextContent('Losses 40.000 t − recovery 6.000 t = 34.000 t · 2.000 t over the shortfall.');
     expect(screen.getByRole('button', { name: 'Save reason' })).toBeDisabled();
     fireEvent.change(values()[1], { target: { value: '8' } });
-    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('Losses 40.000 t − recovery 8.000 t = 32.000 t ✓');
+    expect(screen.getByTestId('split-balance-remaining')).toHaveTextContent('Losses 40.000 t − recovery 8.000 t = 32.000 t ✓');
     save();
     await waitFor(() => expect(onDone).toHaveBeenCalled());
     expect(sent).toEqual([{ reasonWeights: [{ reasonCodeId: 'r1', quantity: '40' }, { reasonCodeId: 'r2', quantity: '8', recovery: true }] }]);
@@ -217,9 +217,9 @@ describe('Code dialog: production loss split by tonnes (declared mode)', () => {
     fireEvent.change(values()[0], { target: { value: '125' } });
     fireEvent.change(values()[1], { target: { value: '20' } });
     fireEvent.click(screen.getAllByTestId('split-recovery')[1]);
-    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('Losses 125.00 % − recovery 20.00 % = 105.00 % · 5.00 % over 100 %.');
+    expect(screen.getByTestId('split-balance-remaining')).toHaveTextContent('Losses 125.00 % − recovery 20.00 % = 105.00 % · 5.00 % over 100 %.');
     fireEvent.change(values()[1], { target: { value: '25' } });
-    expect(screen.getByTestId('split-tonnes-remaining')).toHaveTextContent('= 100.00 % ✓');
+    expect(screen.getByTestId('split-balance-remaining')).toHaveTextContent('= 100.00 % ✓');
   });
 });
 

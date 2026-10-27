@@ -46,7 +46,7 @@ export function SplitBalanceText({ split }: { split: ReasonSplitState }) {
   }
   const { text, fits } = balanceText(split, unit, numbers);
   return (
-    <p className={fits ? 'text-xs text-muted-foreground' : 'text-xs text-destructive'} data-testid="split-tonnes-remaining" data-balance="recovery" role="status">
+    <p className={fits ? 'text-xs text-muted-foreground' : 'text-xs text-destructive'} data-testid="split-balance-remaining" data-balance="recovery" role="status">
       {text}
     </p>
   );
