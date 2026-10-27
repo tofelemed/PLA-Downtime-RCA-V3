@@ -53,6 +53,7 @@ describe('loss accounting form model', () => {
   it('summarises a version in plain words', () => {
     expect(lossAccountingSummary(COMPUTED)).toBe('Shift accounting · computed from measurements and stops');
     expect(lossAccountingSummary(DECLARED, 'Extruder1')).toBe('Daily accounting from 00:00 · declared by the OT production loss event · target: OT planned figure · unit: Extruder1');
+    expect(lossAccountingSummary({ ...DECLARED, accountingProductId: 'p' }, 'Extruder1', 'HDPE film')).toMatch(/unit: Extruder1 · product: HDPE film$/);
     expect(lossAccountingSummary({ ...DECLARED, targetSource: 'plan' })).toContain('target: Traverse Forge plan');
   });
 });

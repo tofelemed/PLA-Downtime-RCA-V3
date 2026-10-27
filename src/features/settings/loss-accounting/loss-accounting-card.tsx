@@ -6,9 +6,8 @@ import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { EditorSheet } from '@/features/ux-kit/editor-sheet';
 import { LossAccountingForm } from './loss-accounting-form';
-import { lossAccountingSummary } from './loss-accounting-model';
 import { LossAccountingVersions } from './loss-accounting-versions';
-import { useUnitNames } from './use-unit-names';
+import { useLossAccountingSummary } from './use-loss-accounting-summary';
 
 export const LOSS_ACCOUNTING_INFO =
   'How the plant accounts its production losses: one period per shift or per day, and whether the loss is computed from measurements and stops or declared by OT. A change is a draft by the plant administrator or production accounting; it applies only once production accounting or the manager approves it.';
@@ -20,7 +19,7 @@ export const LOSS_ACCOUNTING_INFO =
  */
 export function LossAccountingCard() {
   const inForce = useLossAccountingInForce();
-  const unitName = useUnitNames();
+  const summaryOf = useLossAccountingSummary();
   const { canEditLossAccounting } = useCapabilities();
   const [changing, setChanging] = useState(false);
   const [listing, setListing] = useState(false);
@@ -29,7 +28,7 @@ export function LossAccountingCard() {
     <DataState state={dataStateOf(inForce)} error={inForce.error} onRetry={() => void inForce.refetch()}>
       {policy && (
         <div className="space-y-3 text-sm">
-          <p data-testid="loss-in-force">{lossAccountingSummary(policy, unitName(policy.accountingUnitId))}</p>
+          <p data-testid="loss-in-force">{summaryOf(policy)}</p>
           <div className="flex flex-wrap items-center gap-2">
             {canEditLossAccounting && (
               <Button size="sm" onClick={() => setChanging(true)} data-testid="loss-change">

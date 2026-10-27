@@ -23,6 +23,7 @@ const GRAIN_INFO = 'One accounting period per shift, or one per day starting at 
 const BASIS_INFO =
   "Computed: the loss is target − measured actual, explained by stops and quality events. Declared: the loss is the shortfall OT reports in its production loss event, coded by reason in the Event Hub; stops no longer price the loss and OEE is not available.";
 const TARGET_INFO = "Traverse Forge plan, or the planned figure in OT's event.";
+const MAX_TOLERANCE = 1_000_000;
 const PRODUCT_HINT = 'Product the declared figures are booked to when the unit runs several products and no plan covers the day';
 const EFFECTIVE_INFO = 'The new rules apply from this date. Approved periods before it are untouched; open ones are rebuilt.';
 
@@ -86,7 +87,7 @@ export function LossAccountingForm({ base, onDone }: { base: LossAccountingPolic
             <NativeSelect id="loss-product" testId="loss-product" value={values.accountingProductId} onChange={(v) => set('accountingProductId', v)} options={productOptions} placeholder="None" />
           </Field>
           <Field id="loss-tolerance" label="Identity tolerance (t)" error={errors.identityTolerance} hint="How far target − actual may differ from the declared shortfall, in the event's unit">
-            <Input id="loss-tolerance" type="number" min={0} step="any" value={values.identityTolerance} onChange={(e) => set('identityTolerance', e.target.value)} data-testid="loss-tolerance" />
+            <Input id="loss-tolerance" type="number" min={0} max={MAX_TOLERANCE} step="any" value={values.identityTolerance} onChange={(e) => set('identityTolerance', e.target.value)} data-testid="loss-tolerance" />
           </Field>
           <label className="flex items-center gap-2 text-sm">
             <Switch checked={values.stopsCrossCheck} onCheckedChange={(on) => set('stopsCrossCheck', on)} data-testid="loss-cross-check" />

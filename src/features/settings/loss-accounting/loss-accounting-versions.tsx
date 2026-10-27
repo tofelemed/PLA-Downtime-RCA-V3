@@ -9,8 +9,7 @@ import { selfDecisionKindOf } from '@/features/ux-kit/self-decision-kind';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
 import { EffectiveFromText, PlantInstant } from '@/features/integration-console/components/plant-instant';
 import { LossAccountingVersionActions } from './loss-accounting-version-actions';
-import { lossAccountingSummary } from './loss-accounting-model';
-import { useUnitNames } from './use-unit-names';
+import { useLossAccountingSummary } from './use-loss-accounting-summary';
 
 const STATE_LABELS: Readonly<Record<string, string>> = { proposed: 'Proposed', approved: 'Approved', rejected: 'Rejected' };
 
@@ -27,7 +26,7 @@ function Decision({ version, timezone }: { version: LossAccountingVersionView; t
   );
 }
 
-function VersionRow({ version, timezone, unitName }: { version: LossAccountingVersionView; timezone: string; unitName: (id: string | null) => string | undefined }) {
+function VersionRow({ version, timezone, summaryOf }: { version: LossAccountingVersionView; timezone: string; summaryOf: (policy: LossAccountingVersionView['policy']) => string }) {
   return (
     <article className="space-y-1.5 rounded-md border p-3 text-sm" data-testid="loss-version" data-state={version.state} data-in-force={version.inForce}>
       <header className="flex flex-wrap items-center gap-2">
@@ -41,7 +40,7 @@ function VersionRow({ version, timezone, unitName }: { version: LossAccountingVe
           </span>
         )}
       </header>
-      <p>{lossAccountingSummary(version.policy, unitName(version.policy.accountingUnitId))}</p>
+      <p>{summaryOf(version.policy)}</p>
       <Decision version={version} timezone={timezone} />
       {version.requestedEffectiveFrom && (
         <p className="text-xs">
@@ -58,7 +57,7 @@ function VersionRow({ version, timezone, unitName }: { version: LossAccountingVe
 export function LossAccountingVersions() {
   const versions = useLossAccountingVersions();
   const { timezone } = usePlantTimezone();
-  const unitName = useUnitNames();
+  const summaryOf = useLossAccountingSummary();
   const items = versions.data?.items ?? [];
   return (
     <DataState state={dataStateOf(versions)} error={versions.error} onRetry={() => void versions.refetch()}>
@@ -67,7 +66,7 @@ export function LossAccountingVersions() {
       ) : (
         <div className="space-y-2" data-testid="loss-versions">
           {items.map((version) => (
-            <VersionRow key={version.id} version={version} timezone={timezone} unitName={unitName} />
+            <VersionRow key={version.id} version={version} timezone={timezone} summaryOf={summaryOf} />
           ))}
         </div>
       )}

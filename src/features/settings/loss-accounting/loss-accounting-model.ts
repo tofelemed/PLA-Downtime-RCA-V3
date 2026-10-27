@@ -77,11 +77,12 @@ export function lossAccountingBody(values: LossAccountingFormValues, base: LossA
 }
 
 /** One line for a version, e.g. "Daily accounting from 00:00 · declared by the OT production loss event · target: OT planned figure · unit: Extruder1". */
-export function lossAccountingSummary(policy: LossAccountingPolicyView, unitName?: string): string {
+export function lossAccountingSummary(policy: LossAccountingPolicyView, unitName?: string, productName?: string): string {
   const period = policy.grain === 'day' ? `Daily accounting from ${policy.dayStart}` : 'Shift accounting';
   if (policy.lossBasis !== 'declared') return `${period} · computed from measurements and stops`;
   const target = policy.targetSource === 'declared' ? 'OT planned figure' : 'Traverse Forge plan';
   const parts = [period, 'declared by the OT production loss event', `target: ${target}`];
   if (unitName) parts.push(`unit: ${unitName}`);
+  if (productName) parts.push(`product: ${productName}`);
   return parts.join(' · ');
 }

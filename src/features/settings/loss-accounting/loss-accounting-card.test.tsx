@@ -75,6 +75,25 @@ describe('Plant settings: Loss accounting card', () => {
     expect(screen.queryByTestId('loss-change')).toBeNull();
   });
 
+  it('names the accounting product in the summary once it is known', async () => {
+    current = inForce({ ...DECLARED, accountingProductId: PRODUCT_ID });
+    actAs('viewer', 'viewer-1');
+    renderCard();
+    await waitFor(() => expect(screen.getByTestId('loss-in-force')).toHaveTextContent('unit: Extruder1 · product: HDPE film'));
+  });
+
+  it('the identity tolerance accepts a value above 0', async () => {
+    actAs('production_accountant', 'author-1');
+    renderCard();
+    fireEvent.click(await screen.findByTestId('loss-change'));
+    const tolerance = await screen.findByTestId('loss-tolerance');
+    fireEvent.change(tolerance, { target: { value: '0.5' } });
+    expect(tolerance).toHaveValue(0.5);
+    expect(tolerance).toHaveAttribute('min', '0');
+    expect(Number(tolerance.getAttribute('max'))).toBeGreaterThan(0.5);
+    expect((tolerance as HTMLInputElement).validity.valid).toBe(true);
+  });
+
   it('shows a computed shift policy in one line', async () => {
     current = inForce(COMPUTED);
     actAs('viewer', 'viewer-1');
