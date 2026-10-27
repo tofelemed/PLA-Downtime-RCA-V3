@@ -42,8 +42,10 @@ export interface LossStatementRowView {
 
 /** `GET /v2/reports/loss-statement` data. */
 export interface LossStatementReportView {
+  /** page one only (null when a cursor was sent, or no complete period / mixed units) */
   total: LossStatementView | null;
-  incomplete: number;
+  /** page one only (null on later pages) */
+  incomplete: number | null;
   items: LossStatementRowView[];
   nextCursor: string | null;
 }

@@ -34,10 +34,16 @@ import {
 
 /** `GET /v2/reports/loss-statement`: the window's statement, the keyset page of its periods. */
 export interface LossStatementReportView {
-  /** the statement of every complete period of the window; null when none is complete or units differ */
+  /**
+   * the statement of every complete period of the window; null when none is complete, units differ, or on
+   * a later page (`cursor` given: the total is computed on page one only)
+   */
   total: LossStatementView | null;
-  /** periods left out of `total` (no approved revision when approved only, no run, target or actuals) */
-  incomplete: number;
+  /**
+   * periods left out of `total` (no approved revision when approved only, no run, target or actuals);
+   * null on a later page
+   */
+  incomplete: number | null;
   items: LossStatementRowView[];
   nextCursor: string | null;
 }
@@ -50,6 +56,13 @@ export interface DayStatementView {
 
 const NOTE_INCOMPLETE = 'incomplete_periods';
 const NOTE_UOM_MIXED = 'uom_mixed';
+
+function totalNotes(sum: StatementSum): string[] {
+  return [
+    ...(sum.incomplete > 0 ? [NOTE_INCOMPLETE] : []),
+    ...(sum.uoms.size > 1 ? [NOTE_UOM_MIXED] : []),
+  ];
+}
 
 /**
  * The loss accounting statement (Task 13, owner requirement 27 Oct 2026) of a window, a day and the rows
@@ -75,22 +88,34 @@ export class LossStatementV2Service {
       unitIds: query.unitIds,
       approvedOnly: query.revision === 'approved',
     });
-    const sum = statementSum();
-    const provisional = await this.foldTotal(context, scope, sum);
     const page = await this.rows(context, scope, query);
-    const data = { total: sumView(sum), incomplete: sum.incomplete, ...page };
-    const notes = [
-      ...(sum.incomplete > 0 ? [NOTE_INCOMPLETE] : []),
-      ...(sum.uoms.size > 1 ? [NOTE_UOM_MIXED] : []),
-    ];
+    const total = query.cursor ? null : await this.total(context, scope);
+    const data = {
+      total: total ? sumView(total.sum) : null,
+      incomplete: total ? total.sum.incomplete : null,
+      ...page,
+    };
     const stats = await periodStats(manager, scope);
+    const pageProvisional = page.items.some(
+      (row) => row.revisionState === 'provisional',
+    );
     return reportEnvelope(data, {
       scope,
       stats,
       policyVersions: await policyVersions(manager, stats.runIds),
-      provisionalData: provisional || sum.provisional,
-      notes,
+      provisionalData: total ? total.provisional : pageProvisional,
+      notes: total ? totalNotes(total.sum) : [],
     });
+  }
+
+  /** Page one only: the window's total (every period folded) and whether any of it is provisional. */
+  private async total(
+    context: RequestContext,
+    scope: ReportScope,
+  ): Promise<{ sum: StatementSum; provisional: boolean }> {
+    const sum = statementSum();
+    const provisional = await this.foldTotal(context, scope, sum);
+    return { sum, provisional: provisional || sum.provisional };
   }
 
   /** The day's statement: its periods (shown revision: approved, else the open draft) summed. */

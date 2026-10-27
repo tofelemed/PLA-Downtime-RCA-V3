@@ -19,7 +19,7 @@ function TotalNotes({ first }: { first: LossStatementPage }) {
   const mixed = first.dataQuality.notes?.includes('uom_mixed') ?? false;
   return (
     <>
-      {incomplete > 0 && (
+      {incomplete !== null && incomplete > 0 && (
         <p className="text-xs text-muted-foreground" data-testid="statement-incomplete">
           {`${plural(incomplete, 'period is', 'periods are')} not in the total: no approved revision in this selection, or no calculation, target or actuals yet.`}
         </p>

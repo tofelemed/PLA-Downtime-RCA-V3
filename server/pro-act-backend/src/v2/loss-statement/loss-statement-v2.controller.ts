@@ -26,7 +26,8 @@ export class LossStatementV2Controller {
       'Read-only. Periods starting in [from, to) (≤ 400 days); unitIds must be units of the tenant and the caller’s scope ' +
       '(422 INVALID_REFERENCE), omitted: every unit the caller may read. `total` sums the complete periods of the window ' +
       '(server-side, from the shown revisions’ reconciled plan ledgers); `items` is a keyset page of the periods in ' +
-      '(local date, start, id) order, each with its statement; `incomplete` counts the periods left out of the total. ' +
+      '(local date, start, id) order, each with its statement; `incomplete` counts the periods left out of the total. `total` and ' +
+      '`incomplete` are computed on page one only (null when `cursor` is given). ' +
       'revision=approved: approved revisions only; provisional (default): approved, else the open draft. ' +
       'Identity: shortfall = netAccounted + toleranceAdjustment + unaccounted; netAccounted = grossAttributed − recovery.',
   })
