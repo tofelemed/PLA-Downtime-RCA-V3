@@ -60,7 +60,7 @@ function figuresOf(values: DeclaredValues): Pick<DeclaredFigures, 'planned' | 'a
 export function declaredCreateFields(values: DeclaredValues & { physicalType: string }): Pick<CreateEventBody, 'declaredFigures' | 'quantity'> {
   if (values.physicalType !== PRODUCTION_LOSS) return {};
   const figures = figuresOf(values);
-  return { declaredFigures: figures as unknown as CreateEventBody['declaredFigures'], quantity: String(figures.shortfall) };
+  return { declaredFigures: figures, quantity: String(figures.shortfall) };
 }
 
 type PatchBody = PatchEventInput['changes'];
@@ -69,5 +69,5 @@ type PatchBody = PatchEventInput['changes'];
 export function declaredPatchFields(initial: DeclaredValues, values: DeclaredValues & { physicalType: string }, event: Pick<ProductionEventView, 'declaredFigures'> | null): Pick<PatchBody, 'declaredFigures'> {
   if (values.physicalType !== PRODUCTION_LOSS || DECLARED_FIELDS.every((field) => values[field] === initial[field])) return {};
   const merged: DeclaredFigures = { uom: 't', measurementQuality: null, plan: null, piSource: null, ...event?.declaredFigures, ...figuresOf(values) };
-  return { declaredFigures: merged as unknown as PatchBody['declaredFigures'] };
+  return { declaredFigures: merged };
 }

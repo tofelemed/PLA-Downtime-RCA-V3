@@ -65,13 +65,13 @@ export class DeclaredPiSourceDto {
  * the shortfall (send both only with equal values). Numbers in the event's unit of measure.
  */
 export class DeclaredFiguresDto {
-  @ApiPropertyOptional({ example: 120, nullable: true })
+  @ApiPropertyOptional({ type: Number, example: 120, nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsNumber(FIGURE)
   planned?: number | null;
 
-  @ApiPropertyOptional({ example: 112.5, nullable: true })
+  @ApiPropertyOptional({ type: Number, example: 112.5, nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsNumber(FIGURE)

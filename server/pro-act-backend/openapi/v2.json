@@ -27052,12 +27052,12 @@
         "type": "object",
         "properties": {
           "planned": {
-            "type": "object",
+            "type": "number",
             "example": 120,
             "nullable": true
           },
           "actual": {
-            "type": "object",
+            "type": "number",
             "example": 112.5,
             "nullable": true
           },

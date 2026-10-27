@@ -20,7 +20,7 @@ export interface FeedSpec {
   topic: string;
   /** PLA: the unit the plant-day actual is booked to */
   unitId?: string;
-  /** PLA: the product of the booked line */
+  /** PLA: optional product of the booked line (declared mode books by event, not product) */
   productId?: string;
   /** Downtime: unit of the duration field (default minutes) */
   durationUnit?: FeedDurationUnit;
@@ -96,8 +96,13 @@ function plaProblems(feed: Record<string, unknown>, path: string): string[] {
     problems.push(
       `${path}.unitId: choose the unit the daily actual is booked to`,
     );
-  if (typeof feed.productId !== 'string' || !UUID.test(feed.productId))
-    problems.push(`${path}.productId: choose the product`);
+  const { productId } = feed;
+  if (
+    productId !== undefined &&
+    productId !== null &&
+    (typeof productId !== 'string' || !UUID.test(productId))
+  )
+    problems.push(`${path}.productId: must be a product id when given`);
   return problems;
 }
 

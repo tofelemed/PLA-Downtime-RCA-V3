@@ -112,7 +112,7 @@ describe('MQTT feeds', () => {
       ]);
     });
 
-    it('refuses a PLA feed without unit or product, overlapping topics, bad paths and contract keys', () => {
+    it('refuses a PLA feed without a unit, overlapping topics, bad paths and contract keys', () => {
       const problems = validateMqttConfig(
         feedsConfig([
           { id: 'pla', purpose: 'pla', topic: 'marun/#' },
@@ -128,7 +128,6 @@ describe('MQTT feeds', () => {
       expect(problems).toEqual(
         expect.arrayContaining([
           'payloadProfile.feeds[0].unitId: choose the unit the daily actual is booked to',
-          'payloadProfile.feeds[0].productId: choose the product',
           'payloadProfile.feeds[1].fields.start: must be a dotted JSON path',
           'payloadProfile.feeds[1].fields.nope: not a downtime field',
           'payloadProfile.feeds[1].durationUnit: must be one of s, min, h',

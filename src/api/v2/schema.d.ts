@@ -8096,9 +8096,9 @@ export interface components {
         };
         DeclaredFiguresDto: {
             /** @example 120 */
-            planned?: Record<string, never> | null;
+            planned?: number | null;
             /** @example 112.5 */
-            actual?: Record<string, never> | null;
+            actual?: number | null;
             /**
              * @description planned - actual; becomes the event quantity
              * @example 7.5
