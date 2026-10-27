@@ -142,6 +142,8 @@ describe('capabilitiesOf', () => {
       ['canAdoptTolerance', Roles.TOLERANCE_ADOPTERS],
       ['canWriteSourceAuthority', Roles.SOURCE_AUTHORITY_WRITERS],
       ['canApproveSourceAuthority', Roles.SOURCE_AUTHORITY_APPROVERS],
+      ['canEditLossAccounting', Roles.LOSS_ACCOUNTING_WRITERS],
+      ['canApproveLossAccounting', Roles.LOSS_ACCOUNTING_APPROVERS],
     ];
     const SCOPE_ROLES = ['manager_approver', 'production_accountant', 'quality_approver', 'metrology_approver', 'finance_approver', 'finance_maintainer', 'production_engineer', 'reliability_engineer', 'integration_admin', 'master_data_admin', 'operator', 'viewer'];
 
@@ -149,6 +151,15 @@ describe('capabilitiesOf', () => {
       for (const role of SCOPE_ROLES) expect([role, capabilitiesOf([role])[key]]).toEqual([role, set.includes(role)]);
       expect(capabilitiesOf(['SuperAdmin'])[key]).toBe(true);
       expect(capabilitiesOf(['OrgAdmin'])[key]).toBe(true);
+    });
+
+    it('loss accounting: writers are the source authority writers and the plant administrator; approvers add the manager', () => {
+      expect(capabilitiesOf(['TenantAdmin']).canEditLossAccounting).toBe(true);
+      expect(capabilitiesOf(['TenantAdmin']).canApproveLossAccounting).toBe(false);
+      expect(capabilitiesOf(['manager_approver']).canEditLossAccounting).toBe(false);
+      expect(capabilitiesOf(['manager_approver']).canApproveLossAccounting).toBe(true);
+      expect(Roles.LOSS_ACCOUNTING_WRITERS).toEqual([...Roles.SOURCE_AUTHORITY_WRITERS, 'TenantAdmin']);
+      expect(Roles.LOSS_ACCOUNTING_APPROVERS).toEqual([...Roles.SOURCE_AUTHORITY_APPROVERS, 'manager_approver']);
     });
 
     it('legacy roles count through their D06 mapping (TenantAdmin/Manager approve, Engineer/Analyst write plans)', () => {

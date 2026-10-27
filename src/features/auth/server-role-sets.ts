@@ -45,6 +45,9 @@ export const TOLERANCE_ADOPTERS = ['production_accountant', 'manager_approver'] 
 /** v2/source-authority/source-authority-roles.ts (owner 15 Oct 2026: maker-checker source authority versions) */
 export const SOURCE_AUTHORITY_WRITERS = ['integration_admin', 'production_accountant'] as const;
 export const SOURCE_AUTHORITY_APPROVERS = ['production_accountant'] as const;
+/** v2/loss-accounting/loss-accounting-roles.ts (declared mode: the source authority sets, plus the plant administrator to draft and the manager to approve) */
+export const LOSS_ACCOUNTING_WRITERS = ['integration_admin', 'production_accountant', 'TenantAdmin'] as const;
+export const LOSS_ACCOUNTING_APPROVERS = ['production_accountant', 'manager_approver'] as const;
 /** v2/administration/administration-roles.ts (SME R1 / R6: who records delegations of approval roles) */
 export const DELEGATION_WRITERS = ['SuperAdmin', 'OrgAdmin', 'TenantAdmin', 'manager_approver', 'production_accountant', 'finance_approver', 'quality_approver', 'metrology_approver'] as const;
 

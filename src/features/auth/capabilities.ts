@@ -122,6 +122,9 @@ export interface Capabilities {
   /** owner 15 Oct 2026: draft source authority versions / approve them (production accounting, never the author) */
   canWriteSourceAuthority: boolean;
   canApproveSourceAuthority: boolean;
+  /** declared mode: draft loss accounting versions (plant settings) / approve them (production accounting, manager; never the author) */
+  canEditLossAccounting: boolean;
+  canApproveLossAccounting: boolean;
   canWriteCodes: boolean;
   canAuthorRules: boolean;
   canApproveRules: boolean;
@@ -205,6 +208,8 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canAdoptTolerance: may(ServerRoles.TOLERANCE_ADOPTERS),
     canWriteSourceAuthority: may(ServerRoles.SOURCE_AUTHORITY_WRITERS),
     canApproveSourceAuthority: may(ServerRoles.SOURCE_AUTHORITY_APPROVERS),
+    canEditLossAccounting: may(ServerRoles.LOSS_ACCOUNTING_WRITERS),
+    canApproveLossAccounting: may(ServerRoles.LOSS_ACCOUNTING_APPROVERS),
     canWriteCodes: may(ServerRoles.CODE_WRITERS),
     canAuthorRules: may(ServerRoles.RULE_AUTHORS),
     canApproveRules: may(ServerRoles.RULE_APPROVERS),

@@ -5,6 +5,7 @@ import { useCapabilities } from '@/features/auth/use-capabilities';
 import { DataState } from '@/features/ux-kit/data-state';
 import { dataStateOf } from '@/features/ux-kit/data-state-of';
 import { usePlantTimezone } from '@/features/ux-kit/use-plant-timezone';
+import { LossAccountingCard, LOSS_ACCOUNTING_INFO } from './loss-accounting/loss-accounting-card';
 import { CalendarSettingsForm } from './calendar-settings-form';
 import { calendarPreferenceOf, useActingTenant, useSaveWeekStart } from './use-tenant-display-settings';
 import { WeekStartForm } from './week-start-form';
@@ -59,6 +60,9 @@ export function SettingsPage({ embedded = false }: { embedded?: boolean }) {
         <DataState state={state} error={tenant.error} onRetry={retry}>
           <WeekStartForm saved={tenant.data?.weekStart ?? ''} canEdit={canManagePlantSettings} pending={saveWeek.isPending} error={saveWeek.error} onSave={(weekStart) => saveWeek.mutate(weekStart)} />
         </DataState>
+      </AdminCard>
+      <AdminCard title="Loss accounting" info={LOSS_ACCOUNTING_INFO} testId="plant-loss-accounting">
+        <LossAccountingCard />
       </AdminCard>
       <AdminCard title="Plant" info={PLANT_INFO}>
         <PlantFacts organization={tenant.data?.organizationName} code={tenant.data?.code} zone={zone} />
