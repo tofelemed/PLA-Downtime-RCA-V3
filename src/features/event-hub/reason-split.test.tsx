@@ -177,7 +177,7 @@ describe('Code dialog: production loss split by tonnes (declared mode)', () => {
     wrap(<CodeEventDialog event={LOSS} onClose={() => undefined} onDone={() => undefined} />);
     expect(screen.queryByRole('radio', { name: /Minutes/ })).toBeNull();
     fireEvent.click(screen.getByRole('radio', { name: 'Tonnes' }));
-    expect(screen.getByText(/The tonnes must add up to the day's shortfall \(7\.5 t\)\./)).toBeInTheDocument();
+    expect(screen.getByText(/The tonnes must add up to the day's shortfall \(7\.500 t\)\./)).toBeInTheDocument();
   });
 
   it('shows the tonnes still to place, blocks a sum that is off and sends quantity entries when it fits', async () => {

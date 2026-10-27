@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { ReasonSplitState } from '../hooks/use-reason-split';
-import { useNumberFormat } from '@/features/ux-kit/use-number-format';
+import { useNumberFormat, type NumberFormat } from '@/features/ux-kit/use-number-format';
 import { tonnesSplitGap } from '../model/declared-split';
 import type { SplitMode, SplitRow } from '../model/reason-split';
 import { ReasonCodeSelect } from './reason-code-select';
@@ -58,9 +58,9 @@ function SplitModeChoice({ split }: { split: ReasonSplitState }) {
   );
 }
 
-function hintOf(split: ReasonSplitState): string {
+function hintOf(split: ReasonSplitState, numbers: NumberFormat): string {
   if (split.mode === 'percent') return 'The percents must add up to 100.';
-  if (split.mode === 'tonnes') return `The tonnes must add up to the day's shortfall (${split.shortfall} t).`;
+  if (split.mode === 'tonnes') return `The tonnes must add up to the day's shortfall (${numbers.number(split.shortfall, 3)} t).`;
   return 'The minutes must add up to the length of the stop.';
 }
 
@@ -82,6 +82,7 @@ function TonnesRemaining({ split, shortfall }: { split: ReasonSplitState; shortf
  * length, so the minutes option is not offered.
  */
 export function ReasonSplitSection({ split, percentOnly = false }: { split: ReasonSplitState; percentOnly?: boolean }) {
+  const numbers = useNumberFormat();
   return (
     <section className="space-y-2" data-testid="reason-split">
       <div className="flex items-center gap-2">
@@ -100,7 +101,7 @@ export function ReasonSplitSection({ split, percentOnly = false }: { split: Reas
             Add reason
           </Button>
           <p className="text-xs text-muted-foreground">
-            {hintOf(split)} The largest share becomes the {split.shortfall !== null ? 'event’s' : 'stop’s'} reason.
+            {hintOf(split, numbers)} The largest share becomes the {split.shortfall !== null ? 'event’s' : 'stop’s'} reason.
           </p>
           {split.mode === 'tonnes' && split.shortfall !== null && <TonnesRemaining split={split} shortfall={split.shortfall} />}
         </>
