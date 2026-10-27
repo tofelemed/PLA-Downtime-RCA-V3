@@ -13,7 +13,6 @@ import {
 import { ReasonComponents } from '../domain/accounting/declared.types';
 import { loadFlowInputs } from '../plant-model/flow-inputs.loader';
 import { loadStreamRuns } from '../plant-model/stream-inputs.loader';
-import { sliceTarget } from '../domain/accounting/slice-target';
 import { RateTimebase } from '../domain/actuals/actuals.types';
 import { QualityClasses } from '../domain/actuals/period/quality-classes';
 import { PeriodProductSlice } from '../periods/entities/period-product-slice.entity';
@@ -27,6 +26,11 @@ import {
   EventRow,
   toEvent,
 } from './loss-event-rows';
+import {
+  loadSliceTargets,
+  PlanPeriodTarget,
+  targetOfSlice,
+} from './plan-targets.loader';
 import { loadReasonComponents } from './reason-components.loader';
 import {
   loadContextModes,
@@ -134,6 +138,8 @@ interface FingerprintSource {
   standardIds: string[];
   streamRunIds: string[];
   actualsRunId: string | null;
+  /** every plan period whose target a slice carries */
+  planPeriodIds: string[];
   /** set while the period is running and an open event is measured to it */
   asOf: Date | null;
 }
@@ -155,9 +161,10 @@ function fingerprintOf(source: FingerprintSource): InputFingerprint {
     occurrenceIds: sorted(events.map((e) => e.occurrence_id)),
     actualsRunId: source.actualsRunId,
     planVersionId: period.selectedPlanVersionId,
-    planPeriodIds: sorted(
-      slices.flatMap((s) => (s.planPeriodId ? [s.planPeriodId] : [])),
-    ),
+    planPeriodIds: sorted([
+      ...slices.flatMap((s) => (s.planPeriodId ? [s.planPeriodId] : [])),
+      ...source.planPeriodIds,
+    ]),
     rateVersionIds: source.rateIds,
     calendarVersionIds: sorted(
       [
@@ -176,28 +183,9 @@ function fingerprintOf(source: FingerprintSource): InputFingerprint {
 interface SliceLookups {
   slices: readonly PeriodProductSlice[];
   rates: readonly RateRow[];
-  targets: Map<string, PlanPeriodTarget>;
+  /** slice id → the plan periods whose targets it carries */
+  targets: Map<string, PlanPeriodTarget[]>;
   actuals: Map<string, SliceActualsInput>;
-}
-
-/** A plan period's target with the window it was planned for. */
-interface PlanPeriodTarget {
-  target: string;
-  start: Date;
-  end: Date;
-}
-
-/** The slice's time share of its plan period's target (LA-07); null without a plan period. */
-function targetOf(
-  slice: PeriodProductSlice,
-  targets: ReadonlyMap<string, PlanPeriodTarget>,
-): string | null {
-  const planned = slice.planPeriodId ? targets.get(slice.planPeriodId) : null;
-  if (!planned) return null;
-  return sliceTarget(planned.target, planned, {
-    start: slice.windowFrom,
-    end: slice.windowTo,
-  });
 }
 
 function toSliceInput(
@@ -214,7 +202,7 @@ function toSliceInput(
       ? own.filter((r) => r.rate_kind === 'sustained').map(toRate)
       : null,
     planningRates: own.filter((r) => r.rate_kind === 'planning').map(toRate),
-    target: targetOf(slice, lookups.targets),
+    target: targetOfSlice(slice, lookups.targets),
     actuals: lookups.actuals.get(slice.id) ?? null,
     concurrent: lookups.slices.some(
       (other) =>
@@ -282,6 +270,7 @@ export class AccountingInputsLoader {
         standardIds: sorted(standards.map((s) => s.id)),
         streamRunIds: streams.ids,
         actualsRunId,
+        planPeriodIds: sliceInputs.planPeriodIds,
         asOf: openMeasured ? asOf : null,
       }),
     };
@@ -292,7 +281,11 @@ export class AccountingInputsLoader {
     period: ProductionPeriod,
     slices: readonly PeriodProductSlice[],
     actualsRunId: string | null,
-  ): Promise<{ inputs: SliceInput[]; rateIds: string[] }> {
+  ): Promise<{
+    inputs: SliceInput[];
+    rateIds: string[];
+    planPeriodIds: string[];
+  }> {
     const profileIds = sorted(
       slices.flatMap((s) => (s.profileId ? [s.profileId] : [])),
     );
@@ -306,36 +299,16 @@ export class AccountingInputsLoader {
     const lookups: SliceLookups = {
       slices,
       rates,
-      targets: await this.targets(manager, slices),
+      targets: await loadSliceTargets(manager, slices),
       actuals: await this.actuals(manager, actualsRunId),
     };
     return {
       inputs: slices.map((slice) => toSliceInput(slice, lookups)),
       rateIds: sorted(rates.map((r) => r.id)),
+      planPeriodIds: sorted(
+        [...lookups.targets.values()].flatMap((t) => t.map((p) => p.id)),
+      ),
     };
-  }
-
-  private async targets(
-    manager: EntityManager,
-    slices: readonly PeriodProductSlice[],
-  ): Promise<Map<string, PlanPeriodTarget>> {
-    const ids = slices.flatMap((s) => (s.planPeriodId ? [s.planPeriodId] : []));
-    if (ids.length === 0) return new Map();
-    const rows: Array<{
-      id: string;
-      target: string;
-      utc_start: Date;
-      utc_end: Date;
-    }> = await manager.query(
-      `SELECT "id", "target"::text AS "target", "utc_start", "utc_end" FROM "plan_periods" WHERE "id" = ANY($1::uuid[])`,
-      [ids],
-    );
-    return new Map(
-      rows.map((r) => [
-        r.id,
-        { target: r.target, start: r.utc_start, end: r.utc_end },
-      ]),
-    );
   }
 
   private async actuals(

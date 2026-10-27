@@ -28,3 +28,20 @@ export function sliceTarget(
   if (share === length) return target;
   return formatDec(new Dec(target).times(share).div(length));
 }
+
+/**
+ * The target a slice window carries from every plan period it overlaps: the sum of each plan period's time
+ * share (LA-07). A declared day slice spanning three shift plan periods carries the three targets; a slice
+ * inside one plan period carries its share of that one. Null without any plan period.
+ */
+export function windowTarget(
+  planned: ReadonlyArray<Window & { target: string }>,
+  slice: Window,
+): string | null {
+  if (planned.length === 0) return null;
+  const total = planned.reduce(
+    (sum, p) => sum.plus(new Dec(sliceTarget(p.target, p, slice))),
+    ZERO,
+  );
+  return formatDec(total);
+}

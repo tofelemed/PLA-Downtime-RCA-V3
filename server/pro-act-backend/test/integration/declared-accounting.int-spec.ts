@@ -1,4 +1,4 @@
-import { A, B, HOUR } from './support/actuals-world';
+import { A, B, HOUR, NEXT_DAY } from './support/actuals-world';
 import { AccountingWorld, plus } from './support/accounting-world';
 
 const POLICY = {
@@ -285,5 +285,65 @@ describe('declared mode is limited to the accounting unit', () => {
       lossBasis: 'computed',
       isDayGrain: false,
     });
+  });
+});
+
+/**
+ * Declared day with `targetSource = plan` (spec §4.4): the unit was planned per shift (three 8 h plan periods)
+ * and then accounts per day; the day's declared slice carries the sum of the three shift targets, not the
+ * target of the one plan period it names. Test data only.
+ */
+describe('declared day target from the shift plan periods it spans', () => {
+  const env = new AccountingWorld();
+  let periodId = '';
+
+  beforeAll(async () => {
+    await env.start();
+    const unit = env.world.unitA2;
+    await env.approvedPlan(unit);
+    await env.dailyCalendar(unit);
+    await env.rows(
+      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
+              effective_from, approved_at)
+       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, 1, $3::jsonb, '2026-01-01T00:00:00Z', now())`,
+      [
+        env.world.tenantA,
+        unit,
+        JSON.stringify({ ...POLICY, grain: 'day', targetSource: 'plan' }),
+      ],
+    );
+    await env.materialize([unit], A, NEXT_DAY);
+    periodId = await env.periodId(unit, A);
+    await env
+      .post('production-events', {
+        unitId: unit,
+        startTime: A,
+        endTime: NEXT_DAY,
+        physicalType: 'production_loss',
+        reasonCodeId: env.world.reasonR1,
+        declaredFigures: {
+          planned: 2000,
+          actual: 1900,
+          shortfall: 100,
+          sourceStatus: 'CONFIRMED',
+        },
+      })
+      .expect(201);
+    await env.settle();
+  });
+  afterAll(() => env.stop());
+
+  it('the day target is the sum of the overlapping shift plan targets', async () => {
+    const plans = await env.rows<{ n: string; total: string }>(
+      `SELECT count(*)::text AS n, sum(target)::text AS total FROM plan_periods
+        WHERE unit_id = $1 AND utc_start < $3 AND utc_end > $2`,
+      [env.world.unitA2, A, NEXT_DAY],
+    );
+    expect(Number(plans[0].n)).toBe(3);
+    const body = await env.accounting(periodId);
+    expect(body.data.run).toMatchObject({ status: 'validated' });
+    expect(Number(env.totals(body, 'plan').target)).toBe(
+      Number(plans[0].total),
+    );
   });
 });

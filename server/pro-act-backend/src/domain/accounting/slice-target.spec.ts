@@ -1,4 +1,4 @@
-import { sliceTarget } from './slice-target';
+import { sliceTarget, windowTarget } from './slice-target';
 
 const at = (hour: number) => new Date(Date.UTC(2027, 2, 1, hour));
 
@@ -58,5 +58,37 @@ describe('sliceTarget (LA-07)', () => {
         { start: at(8), end: at(9) },
       ),
     ).toBe('0');
+  });
+});
+
+describe('windowTarget (declared day over shift plan periods)', () => {
+  const shift = (from: number, target: string) => ({
+    start: at(from),
+    end: at(from + 8),
+    target,
+  });
+
+  it('a day slice over three shift plan periods carries the sum of their targets', () => {
+    const day = { start: at(0), end: at(24) };
+    expect(
+      windowTarget([shift(0, '100'), shift(8, '120'), shift(16, '80.5')], day),
+    ).toBe('300.5');
+  });
+
+  it('a plan period reaching past the day counts pro rata', () => {
+    const day = { start: at(2), end: at(26) };
+    expect(
+      windowTarget(
+        [shift(0, '80'), shift(8, '80'), shift(16, '80'), shift(24, '80')],
+        day,
+      ),
+    ).toBe('240');
+  });
+
+  it('one plan period behaves as sliceTarget; none gives no target', () => {
+    expect(windowTarget([shift(0, '720')], { start: at(6), end: at(8) })).toBe(
+      '180',
+    );
+    expect(windowTarget([], { start: at(0), end: at(8) })).toBeNull();
   });
 });
