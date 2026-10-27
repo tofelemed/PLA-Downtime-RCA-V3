@@ -60,6 +60,18 @@ export class FeedReader {
     return null;
   }
 
+  /** A boolean field (`true` / `false`, or their text). */
+  boolean(key: string): boolean | null {
+    const value = this.raw(key);
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'boolean') return value;
+    if (value === 'true' || value === 'false') return value === 'true';
+    this.problems.push(
+      `${key} (${this.pathOf(key)}) must be true or false, got ${JSON.stringify(value)}`,
+    );
+    return null;
+  }
+
   /** An instant with an explicit offset or Z (`2026-10-25T00:00:00+03:30`). */
   time(key: string): Date | null {
     const value = this.raw(key);

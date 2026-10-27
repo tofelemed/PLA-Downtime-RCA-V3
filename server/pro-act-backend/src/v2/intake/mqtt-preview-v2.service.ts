@@ -11,6 +11,8 @@ import { IntegrationConnection } from '../../intake/entities/integration-connect
 import { CanonicalEnvelope } from '../../intake/envelope/canonical-envelope';
 import { parseMqttConfig } from '../../intake/adapters/mqtt/mqtt-config';
 import { decodeMqttMessage } from '../../intake/adapters/mqtt/profiles';
+import { declaredIdentityGap } from '../../domain/events/declared-figures';
+import { declaredFiguresOf } from '../../intake/adapters/mqtt/handlers/pla-declared-figures';
 import { Signal } from '../../signals/entities/signal.entity';
 import { sameUnit } from '../../signals/measurement-value';
 import { MqttPreviewV2Dto } from './mqtt-preview-v2.dto';
@@ -96,7 +98,8 @@ function feedOf(
 function bindingStatus(envelope: CanonicalEnvelope, binding: Signal | null) {
   if (envelope.sourceControls?.mqtt?.availability) return 'source_health_only';
   const feed = feedOf(envelope);
-  if (feed) return feed.purpose === 'pla' ? 'pla_report' : 'downtime_event';
+  if (feed)
+    return feed.purpose === 'pla' ? 'production_loss_event' : 'downtime_event';
   if (!envelope.values?.sample?.signalRef && !envelope.values?.state?.stateRef)
     return 'event_mapping_required';
   if (!binding) return 'unknown_signal_or_out_of_scope';
@@ -120,7 +123,7 @@ function previewView(envelope: CanonicalEnvelope, binding: Signal | null) {
       null,
     availability: envelope.sourceControls?.mqtt?.availability === true,
     feed: feedOf(envelope),
-    /** what a feed read from the message (PLA: report figures; downtime: unit, equipment, status) */
+    /** what a feed read from the message (PLA: declared figures; downtime: unit, equipment, status) */
     feedFacts: feedOf(envelope) ? feedFactsOf(envelope) : null,
     startTime: envelope.startTime ?? null,
     endTime: envelope.endTime ?? null,
@@ -154,5 +157,26 @@ function feedFactsOf(envelope: CanonicalEnvelope): Record<string, unknown> {
     'source',
   ])
     delete facts[key];
-  return { ...facts, unitId: envelope.location.unitId ?? null };
+  const declared = declaredFactsOf(envelope);
+  return {
+    ...facts,
+    ...(declared ? { declared } : {}),
+    unitId: envelope.location.unitId ?? null,
+  };
+}
+
+/** PLA feed: the declared figures with the identity gap (planned - actual - shortfall), as the event will keep them. */
+function declaredFactsOf(envelope: CanonicalEnvelope) {
+  if (envelope.sourceControls?.mqtt?.feed !== 'pla') return null;
+  const result = declaredFiguresOf(envelope);
+  if ('reason' in result) return null;
+  const { figures } = result;
+  return {
+    planned: figures.planned,
+    actual: figures.actual,
+    shortfall: figures.shortfall,
+    uom: figures.uom,
+    status: figures.sourceStatus,
+    identityGap: declaredIdentityGap(figures),
+  };
 }

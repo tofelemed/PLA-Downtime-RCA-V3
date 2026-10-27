@@ -101,6 +101,9 @@ function plaProblems(feed: Record<string, unknown>, path: string): string[] {
   return problems;
 }
 
+/** Mapped by profiles saved before declared mode (D11); accepted and ignored, the decoder emits no quantity. */
+const RETIRED_DOWNTIME_FIELD = 'lostQuantity';
+
 function fieldProblems(
   fields: unknown,
   purpose: FeedPurpose,
@@ -110,6 +113,7 @@ function fieldProblems(
   if (!isRecord(fields)) return [`${path}: must be an object of field paths`];
   const known = purpose === 'pla' ? PLA_FIELDS : DOWNTIME_FIELDS;
   return Object.entries(fields).flatMap(([key, entry]) => {
+    if (purpose === 'downtime' && key === RETIRED_DOWNTIME_FIELD) return [];
     if (!(key in known)) return [`${path}.${key}: not a ${purpose} field`];
     return typeof entry === 'string' && FIELD_PATH.test(entry)
       ? []

@@ -17,12 +17,18 @@ export const PLA_FIELDS = {
   periodEnd: { path: 'period_end', required: true },
   actual: { path: 'production.actual_good_production_t', required: true },
   planned: { path: 'plan.planned_production_t', required: false },
-  shortfall: { path: 'production.shortfall_t', required: false },
+  shortfall: { path: 'production.shortfall_t', required: true },
   status: { path: 'status', required: false },
   quality: { path: 'production.measurement_quality', required: false },
   plant: { path: 'plant', required: false },
   eventType: { path: 'event_type', required: false },
   uom: { path: 'uom', required: false },
+  planSource: { path: 'plan.source', required: false },
+  planId: { path: 'plan.plan_id', required: false },
+  planRevision: { path: 'plan.revision', required: false },
+  planApproved: { path: 'plan.approved', required: false },
+  piActualTag: { path: 'pi_source.actual_tag', required: false },
+  piEventFrameId: { path: 'pi_source.event_frame_id', required: false },
 } satisfies Record<string, FeedField>;
 
 export const DOWNTIME_FIELDS = {
@@ -35,7 +41,6 @@ export const DOWNTIME_FIELDS = {
   duration: { path: 'duration_min', required: false },
   reason: { path: 'reason_code', required: false },
   description: { path: 'description', required: false },
-  lostQuantity: { path: 'lost_production_t', required: false },
   status: { path: 'status', required: false },
   plant: { path: 'plant', required: false },
   eventType: { path: 'event_type', required: false },

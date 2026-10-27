@@ -3,7 +3,7 @@ import { AttributeMappingModule } from '../../../attribute-mapping/attribute-map
 import { OutboxModule } from '../../../common/outbox/outbox.module';
 import { IntegrationModule } from '../../../integration/integration.module';
 import { SourceMappingModule } from '../../../source-mapping/source-mapping.module';
-import { PeriodsModule } from '../../../periods/periods.module';
+import { ProductionEventModule } from '../../../production-event/production-event.module';
 import { IntakeModule } from '../../intake.module';
 import { MqttDowntimeFeedHandler } from './handlers/mqtt-downtime-feed.handler';
 import { MqttIntervalEventHandler } from './handlers/mqtt-interval-event.handler';
@@ -26,7 +26,7 @@ import { MqttAdapter } from './mqtt.adapter';
     IntegrationModule,
     SourceMappingModule,
     AttributeMappingModule,
-    PeriodsModule,
+    ProductionEventModule,
   ],
   providers: [
     MqttAdapter,

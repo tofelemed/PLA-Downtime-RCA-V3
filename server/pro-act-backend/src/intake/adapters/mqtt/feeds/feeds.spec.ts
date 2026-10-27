@@ -150,45 +150,75 @@ describe('MQTT feeds', () => {
   });
 
   describe('PLA', () => {
-    it('reads the sample payload as one plant day booked to the feed unit and product', () => {
+    it('reads the sample payload as one declared production loss on the feed unit', () => {
       const envelope = ok(decode('marun/hdpe/pla', PLA));
       expect(envelope).toMatchObject({
-        kind: 'output_event',
+        kind: 'interval_event',
         sourceObjectId: 'pla:MARUN-HDPE-20261025',
+        messageId: 'pla:MARUN-HDPE-20261025:1',
         sourceRevision: '1',
         startTime: '2026-10-24T20:30:00.000Z',
         endTime: '2026-10-25T20:30:00.000Z',
+        observedAt: '2026-10-25T20:30:00.000Z',
         location: { unitId: UNIT_ID },
-        values: {
-          output: {
-            quantity: 208,
-            unit: 't',
-            productRef: PRODUCT_ID,
-            good: true,
-          },
-        },
+        values: { templateName: 'Production Loss Declared' },
       });
+      expect(envelope.values?.attributes).toEqual([
+        { name: 'Planned', type: 'number', value: 240, unit: 't' },
+        { name: 'Actual', type: 'number', value: 208, unit: 't' },
+        { name: 'Shortfall', type: 'number', value: 32, unit: 't' },
+        { name: 'MeasurementQuality', type: 'string', value: 'GOOD' },
+        { name: 'Status', type: 'string', value: 'DETECTED' },
+        { name: 'PlanSource', type: 'string', value: 'PLANNING_SYSTEM_TBD' },
+        { name: 'PlanId', type: 'string', value: 'PLAN-20261025' },
+        { name: 'PlanRevision', type: 'number', value: 1 },
+        { name: 'PlanApproved', type: 'boolean', value: true },
+        { name: 'PiActualTag', type: 'string', value: 'PI_TAG_TBD' },
+        { name: 'PiEventFrameId', type: 'string', value: 'PI_EVENT_ID_TBD' },
+      ]);
       expect(envelope.sourceControls?.mqtt).toMatchObject({
         feed: 'pla',
         feedId: 'pla',
-        report: {
-          productionDate: '2026-10-25',
-          planned: 240,
-          actual: 208,
-          shortfall: 32,
-          status: 'DETECTED',
-          quality: 'GOOD',
-          plant: 'MARUN_HDPE',
-        },
+        eventId: 'MARUN-HDPE-20261025',
       });
+      expect(envelope.sourceControls?.mqtt).not.toHaveProperty('report');
+    });
+
+    it('keeps a negative shortfall for the handler, and needs actual and shortfall', () => {
+      const negative = {
+        ...PLA,
+        production: { ...PLA.production, shortfall_t: -4 },
+      };
+      expect(
+        ok(decode('marun/hdpe/pla', negative)).values?.attributes,
+      ).toContainEqual({
+        name: 'Shortfall',
+        type: 'number',
+        value: -4,
+        unit: 't',
+      });
+      const result = decode('marun/hdpe/pla', {
+        ...PLA,
+        production: { actual_good_production_t: 208 },
+      });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.detail).toContain(
+        'shortfall (production.shortfall_t) is required',
+      );
     });
 
     it('follows overridden paths and names every missing field', () => {
       const feeds = [{ ...FEEDS[0], fields: { actual: 'good_t' } }, FEEDS[1]];
       expect(
         ok(decode('marun/hdpe/pla', { ...PLA, good_t: '199.5' }, feeds)).values
-          ?.output?.quantity,
-      ).toBe(199.5);
+          ?.attributes,
+      ).toContainEqual({
+        name: 'Actual',
+        type: 'number',
+        value: 199.5,
+        unit: 't',
+      });
       const result = decode('marun/hdpe/pla', {
         event_id: 'X',
         period_start: 'yesterday',
@@ -209,7 +239,7 @@ describe('MQTT feeds', () => {
   });
 
   describe('downtime', () => {
-    it('reads a closed stop with unit, equipment, reason, text and lost tonnes', () => {
+    it('reads a closed stop with unit, equipment, reason and text (lost tonnes are not read)', () => {
       const envelope = ok(decode('marun/hdpe/downtime', STOP));
       expect(envelope).toMatchObject({
         kind: 'interval_event',
@@ -227,7 +257,6 @@ describe('MQTT feeds', () => {
           type: 'string',
           value: 'Gearbox high vibration trip',
         },
-        { name: 'Quantity', type: 'number', value: 7.3, unit: 't' },
         { name: 'Equipment', type: 'string', value: 'EXT1-Main' },
       ]);
       expect(envelope.sourceControls?.mqtt).toMatchObject({

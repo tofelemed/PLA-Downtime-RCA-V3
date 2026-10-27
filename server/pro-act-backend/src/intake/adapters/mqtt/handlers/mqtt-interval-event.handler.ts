@@ -29,6 +29,11 @@ const PLACEMENT_CODE: Readonly<
   invalid_target: 'mapping_invalid_target',
 };
 
+function isFeedMessage(envelope: CanonicalEnvelope): boolean {
+  const feed = envelope.sourceControls?.mqtt?.feed;
+  return feed === 'downtime' || feed === 'pla';
+}
+
 /**
  * Normaliser of MQTT interval events (plan 1.8 WP3 step 3, design §5 `DowntimeEventHandler`): the
  * retained contract event goes through the PI frame path — typed attribute mapping by template →
@@ -60,8 +65,8 @@ export class MqttIntervalEventHandler
       envelope.sourceType === 'mqtt' &&
       envelope.kind === 'interval_event' &&
       envelope.operation !== 'retract' &&
-      // downtime-feed stops are placed by unit code (MqttDowntimeFeedHandler)
-      envelope.sourceControls?.mqtt?.feed !== 'downtime'
+      // feed messages have their own handlers: stops by unit code, PLA days as production loss events
+      !isFeedMessage(envelope)
     );
   }
 

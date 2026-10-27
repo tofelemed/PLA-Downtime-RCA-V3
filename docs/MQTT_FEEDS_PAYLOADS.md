@@ -4,7 +4,7 @@ Traverse Forge reads two kinds of message from **one MQTT connection**, each on 
 
 | Topic (example) | Purpose | What Traverse Forge does with it |
 |---|---|---|
-| `proact/marun/hdpe/pla` | **PLA**: plant production for one day | Stores a daily production report: the OT actual, plus OT's planned and shortfall for comparison |
+| `proact/marun/hdpe/pla` | **PLA**: plant production loss for one day | Creates one production loss event for the unit and day, with OT's planned, actual and shortfall |
 | `proact/marun/hdpe/downtime` | **Downtime**: one stop | Opens or closes a stop on the unit / equipment in the Event Hub |
 
 Rules for both topics:
@@ -13,7 +13,9 @@ Rules for both topics:
 - The field names below are the **template**. If OT's names differ, an administrator remaps each field in Connectivity → the connection → Payload profile → Field mapping. Nothing has to change on the OT side.
 - Fields marked *required* must be present; other fields are optional.
 
-## PLA (plant production per day)
+## PLA (production loss per unit and day)
+
+PLA = one production loss event per unit per day. Traverse Forge shows it in the Event Hub, where people code it (reason split by tonnes). The shortfall is the event's quantity.
 
 ```json
 {
@@ -34,17 +36,23 @@ Rules for both topics:
 
 | Field (template path) | Required | Meaning |
 |---|---|---|
-| `event_id` | yes | Identity of the day's report |
-| `event_revision` | no (1) | Send a higher revision to correct a day; the latest revision replaces the earlier one |
+| `event_id` | yes | Identity of the day's loss; the event is `pla:<event_id>` |
+| `event_revision` | no (1) | Send a higher revision to correct a day: it replaces the figures and keeps the coding people already gave. The same revision with other numbers goes to quarantine |
 | `production_date` | yes | `YYYY-MM-DD` |
-| `period_start`, `period_end` | yes | Boundaries of the production day |
-| `production.actual_good_production_t` | yes | Good production in t; becomes the reported actual, booked to the unit and product chosen on the feed |
-| `plan.planned_production_t` | no | OT plan; shown next to Traverse Forge's own figures for comparison |
-| `production.shortfall_t` | no | OT shortfall; shown for comparison |
-| `status` | no | Source status, shown as "OT status" |
-| `production.measurement_quality`, `plant`, `event_type` | no | Kept with the report |
+| `period_start`, `period_end` | yes | Boundaries of the production day; the event covers exactly this window |
+| `production.actual_good_production_t` | yes | Actual good production in t |
+| `production.shortfall_t` | yes | Shortfall in t; the event's quantity. Must be 0 or more: a negative value (overproduction) is not a loss and is quarantined |
+| `plan.planned_production_t` | no | OT planned production in t |
+| `status` | no (`REPORTED`) | Source status, see the status rule below |
+| `plan.source`, `plan.plan_id`, `plan.revision`, `plan.approved` | no | Which plan OT measured against; kept with the event |
+| `pi_source.actual_tag`, `pi_source.event_frame_id` | no | PI provenance of the actual; kept with the event |
+| `production.measurement_quality`, `plant`, `event_type` | no | Kept with the event |
 
-Fields that are not mapped, such as `pi_source`, are ignored.
+The unit comes from the feed setting (a PLA feed without a unit is quarantined as `mapping_invalid_target`).
+
+**Identity rule.** Planned − actual = shortfall, within the plant's tolerance (Loss accounting settings). A day that breaks it still creates the event, with a review item for a person to resolve.
+
+**Status rule.** `DETECTED` and `CONFIRMED` both create the event. The approval of the day needs `CONFIRMED`: send the same `event_id` again with a higher `event_revision` and `status` `CONFIRMED` when OT has confirmed the figures.
 
 ## Downtime (one stop)
 
@@ -64,7 +72,6 @@ Closed stop, sent in one message:
   "duration_min": 35,
   "reason_code": "MECH-GEARBOX",
   "description": "Gearbox high vibration trip",
-  "lost_production_t": 7.3,
   "status": "CLOSED"
 }
 ```
@@ -84,7 +91,6 @@ To report a stop while it is still running:
 | `duration_min` | no | Gives the end time when `end_time` is absent; the unit (s, min or h) is set on the feed |
 | `reason_code` | no | Traverse Forge reason code or name, e.g. `MECH-GEARBOX` |
 | `description` | no | Free text |
-| `lost_production_t` | no | Lost production in t |
 | `status`, `plant`, `event_type` | no | Kept with the stop |
 
 ## What happens with a bad or unknown message
@@ -94,6 +100,7 @@ Every such message goes to Connectivity → Quarantine, with the reason and the 
 | Case | Quarantine item |
 |---|---|
 | A required field is missing, or a date / time / number cannot be read | `schema_invalid`, naming the field and its path |
+| A PLA day with a missing or negative shortfall | `schema_invalid`. Overproduction is not a loss |
 | A stop's unit / equipment code is not a Traverse Forge unit or asset | `unknown_unit`. Bind the code to a unit, then replay |
 | A reason that is not in the code library | `unknown_code`. The stop is created uncoded and operators code it in the Event Hub |
-| The same revision of a PLA day sent again with different numbers | `order_conflict` |
+| The same revision of a PLA day sent again with different numbers | `order_conflict`. Send the correction as a higher `event_revision` |

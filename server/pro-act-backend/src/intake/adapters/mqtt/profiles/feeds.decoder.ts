@@ -65,7 +65,11 @@ function envelopeOf(
     : envelope;
 }
 
-/** One plant production day: the OT actual is the reported quantity, OT plan / shortfall are kept for comparison. */
+/**
+ * One plant production day, declared by OT: an `interval_event` over the period whose attributes carry
+ * the planned / actual / shortfall figures and their provenance (the PLA handler turns it into one
+ * `production_loss` event on the feed's unit). Overproduction (a negative shortfall) is the handler's call.
+ */
 function plaParts(
   feed: FeedSpec,
   reader: FeedReader,
@@ -73,51 +77,66 @@ function plaParts(
 ): (EnvelopeParts & { unitId?: string }) | null {
   const eventId = reader.string('eventId');
   const revision = reader.string('revision') ?? '1';
-  const productionDate = reader.date('productionDate');
+  reader.date('productionDate');
   const start = reader.time('periodStart');
   const end = reader.time('periodEnd');
   const actual = reader.number('actual');
-  const report = {
-    productionDate,
-    planned: reader.number('planned'),
-    shortfall: reader.number('shortfall'),
-    status: reader.string('status') ?? 'REPORTED',
-    quality: reader.string('quality'),
-    plant: reader.string('plant'),
-    eventType: reader.string('eventType'),
-  };
-  const uom = reader.string('uom') ?? 't';
+  const shortfall = reader.number('shortfall');
+  const attributes = plaAttributes(reader, { actual, shortfall });
   if (start && end && start >= end)
     reader.problems.push('periodStart must be before periodEnd');
-  if (!eventId || !start || !end || actual === null || !productionDate)
+  if (!eventId || !start || !end || actual === null || shortfall === null)
     return null;
   return {
     messageId: `pla:${eventId}:${revision}`,
     sourceObjectId: `pla:${eventId}`,
     sourceRevision: revision,
     operation: 'observe',
-    kind: 'output_event',
+    kind: 'interval_event',
     observedAt: end.toISOString(),
     startTime: start.toISOString(),
     endTime: end.toISOString(),
-    sourcePath: report.plant ?? input.topic,
+    sourcePath: reader.string('plant') ?? input.topic,
     unitId: feed.unitId,
-    values: {
-      output: {
-        quantity: actual,
-        unit: uom,
-        productRef: feed.productId ?? null,
-        good: true,
-      },
-    },
+    values: { templateName: 'Production Loss Declared', attributes },
     quality: GOOD,
-    controls: {
-      feed: 'pla',
-      feedId: feed.id,
-      eventId,
-      report: { ...report, actual, uom },
-    },
+    controls: { feed: 'pla', feedId: feed.id, eventId },
   };
+}
+
+function plaAttributes(
+  reader: FeedReader,
+  figures: { actual: number | null; shortfall: number | null },
+): EnvelopeAttribute[] {
+  const uom = reader.string('uom') ?? 't';
+  const attributes: EnvelopeAttribute[] = [];
+  const tonnes = (name: string, value: number | null) => {
+    if (value !== null)
+      attributes.push({ name, type: 'number', value, unit: uom });
+  };
+  const text = (name: string, value: string | null) => {
+    if (value !== null) attributes.push({ name, type: 'string', value });
+  };
+  tonnes('Planned', reader.number('planned'));
+  tonnes('Actual', figures.actual);
+  tonnes('Shortfall', figures.shortfall);
+  text('MeasurementQuality', reader.string('quality'));
+  text('Status', reader.string('status') ?? 'REPORTED');
+  text('PlanSource', reader.string('planSource'));
+  text('PlanId', reader.string('planId'));
+  const planRevision = reader.number('planRevision');
+  if (planRevision !== null)
+    attributes.push({
+      name: 'PlanRevision',
+      type: 'number',
+      value: planRevision,
+    });
+  const approved = reader.boolean('planApproved');
+  if (approved !== null)
+    attributes.push({ name: 'PlanApproved', type: 'boolean', value: approved });
+  text('PiActualTag', reader.string('piActualTag'));
+  text('PiEventFrameId', reader.string('piEventFrameId'));
+  return attributes;
 }
 
 /** One stop: open while it has no end (a later message with the same event id closes it). */
@@ -182,7 +201,6 @@ function downtimeAttributes(
   const attributes: EnvelopeAttribute[] = [];
   const reason = reader.string('reason');
   const description = reader.string('description');
-  const lost = reader.number('lostQuantity');
   if (reason)
     attributes.push({ name: 'ReasonCode', type: 'string', value: reason });
   if (description)
@@ -190,13 +208,6 @@ function downtimeAttributes(
       name: 'Description',
       type: 'string',
       value: description,
-    });
-  if (lost !== null)
-    attributes.push({
-      name: 'Quantity',
-      type: 'number',
-      value: lost,
-      unit: 't',
     });
   if (durationSeconds !== null)
     attributes.push({

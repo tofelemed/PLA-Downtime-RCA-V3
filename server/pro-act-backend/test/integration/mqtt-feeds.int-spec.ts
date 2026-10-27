@@ -9,7 +9,7 @@ import { AccountingWorld } from './support/accounting-world';
 
 /**
  * MQTT feeds on one connection (plans/MQTT_FEEDS.md, owner 26 Oct 2026), isolated proact_test: the PLA
- * topic becomes external daily reports with OT's figures kept for comparison, the downtime topic becomes
+ * topic becomes one declared production loss event per unit and day (OT's figures kept with it), the downtime topic becomes
  * stops placed by unit / equipment code (open, then closed by a later message of the same event id).
  */
 describe('MQTT PLA and downtime feeds', () => {
@@ -69,7 +69,7 @@ describe('MQTT PLA and downtime feeds', () => {
         }
       : { accepted, outcome: null };
   };
-  const pla = (revision: number, actual: number) => ({
+  const pla = (revision: number, actual: number, extra = {}) => ({
     event_type: 'PRODUCTION_LOSS_DETECTED',
     event_id: 'MARUN-HDPE-20261025',
     event_revision: revision,
@@ -84,6 +84,7 @@ describe('MQTT PLA and downtime feeds', () => {
       measurement_quality: 'GOOD',
     },
     status: 'DETECTED',
+    ...extra,
   });
   const stop = (change: Record<string, unknown> = {}) => ({
     event_id: 'EXT1-0612',
@@ -126,10 +127,19 @@ describe('MQTT PLA and downtime feeds', () => {
       .expect(200);
     expect(response.body).toMatchObject({
       ok: true,
-      kind: 'output_event',
+      kind: 'interval_event',
       feed: { id: 'pla', purpose: 'pla' },
-      bindingStatus: 'pla_report',
-      feedFacts: { report: { planned: 240, actual: 208, shortfall: 32 } },
+      bindingStatus: 'production_loss_event',
+      feedFacts: {
+        declared: {
+          planned: 240,
+          actual: 208,
+          shortfall: 32,
+          uom: 't',
+          status: 'DETECTED',
+          identityGap: 0,
+        },
+      },
     });
     const downtime = await env
       .post(`connections/${env.connections.mqtt}/mqtt-preview`, {
@@ -146,7 +156,24 @@ describe('MQTT PLA and downtime feeds', () => {
     });
   });
 
-  it('stores a PLA day as an external report with OT figures; a later revision supersedes it', async () => {
+  const plaEvents = () =>
+    env.rows<{
+      id: string;
+      physical_type: string;
+      source: string;
+      unit_id: string;
+      quantity: string;
+      quantity_uom: string;
+      reason_code_id: string | null;
+      end_time: Date | null;
+      declared_figures: Record<string, unknown>;
+    }>(
+      `SELECT id, physical_type, source, unit_id, quantity, quantity_uom, reason_code_id, end_time, declared_figures
+         FROM production_events WHERE event_id = 'pla:MARUN-HDPE-20261025' AND tenant_id = $1`,
+      [env.world.tenantA],
+    );
+
+  it('stores a PLA day as one production loss event; a revision replaces the figures and keeps the coding', async () => {
     const first = await deliver('marun/hdpe/pla', pla(1, 208));
     expect(first.outcome).toMatchObject({
       status: 'processed',
@@ -154,36 +181,55 @@ describe('MQTT PLA and downtime feeds', () => {
     });
     const repeated = await deliver('marun/hdpe/pla', pla(1, 208));
     expect(repeated.accepted.status).toBe('duplicate');
-    await deliver('marun/hdpe/pla', pla(2, 212));
-    const reports = await env.rows<{
-      external_revision: string;
-      state: string;
-      source_system: string;
-      connection_id: string;
-      lines: Array<{ unitId: string; productId: string; good: string }>;
-      source_figures: Record<string, unknown>;
-    }>(
-      `SELECT external_revision, state, source_system, connection_id, lines, source_figures FROM external_production_reports WHERE external_report_id = 'MARUN-HDPE-20261025' ORDER BY external_revision`,
-    );
-    expect(reports.map((row) => [row.external_revision, row.state])).toEqual([
-      ['1', 'superseded'],
-      ['2', 'current'],
-    ]);
-    expect(reports[1]).toMatchObject({
-      source_system: 'MQTT',
-      connection_id: env.connections.mqtt,
-      lines: [
-        { unitId: env.world.unitA1, productId: env.products.p1, good: '212' },
-      ],
-      source_figures: {
+    const [created] = await plaEvents();
+    expect(created).toMatchObject({
+      physical_type: 'production_loss',
+      source: 'MQTT',
+      unit_id: env.world.unitA1,
+      quantity_uom: 't',
+      declared_figures: {
         planned: 240,
-        actual: 212,
-        shortfall: 28,
-        status: 'DETECTED',
-        quality: 'GOOD',
-        plant: 'MARUN_HDPE',
+        actual: 208,
+        shortfall: 32,
+        sourceStatus: 'DETECTED',
+        measurementQuality: 'GOOD',
       },
     });
+    expect(Number(created.quantity)).toBe(32);
+    expect(created.end_time?.toISOString()).toBe('2026-10-25T20:30:00.000Z');
+    await env.rows(
+      'UPDATE production_events SET reason_code_id = $1 WHERE id = $2',
+      [env.world.reasonR1, created.id],
+    );
+
+    const revised = await deliver('marun/hdpe/pla', pla(2, 212));
+    expect(revised.outcome).toMatchObject({
+      status: 'processed',
+      result: { status: 'applied', outcome: 'updated' },
+    });
+    const events = await plaEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      id: created.id,
+      reason_code_id: env.world.reasonR1,
+      declared_figures: { actual: 212, shortfall: 28 },
+    });
+    expect(Number(events[0].quantity)).toBe(28);
+  });
+
+  it('quarantines a PLA day with a negative shortfall as schema_invalid', async () => {
+    const result = await deliver(
+      'marun/hdpe/pla',
+      pla(1, 250, { event_id: 'OVER-1' }),
+    );
+    expect(result.outcome).toMatchObject({
+      status: 'processed',
+      result: { status: 'quarantined', errorCode: 'schema_invalid' },
+    });
+    const events = await env.rows(
+      `SELECT 1 FROM production_events WHERE event_id = 'pla:OVER-1'`,
+    );
+    expect(events).toEqual([]);
   });
 
   it('opens a stop placed by unit and equipment code, and closes it with the end message', async () => {
