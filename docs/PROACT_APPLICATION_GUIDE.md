@@ -213,6 +213,38 @@ Valuation runs inside the calculation run from a frozen, hashed context:
 
 Every valued loss is reported in **IRR and USD**. Without an approved FX rate the other currency is null with reason `fx_rate_missing`; it is never estimated. A finance-authorised **provisional FX rate** can fill dates until the final rate arrives; those values are flagged everywhere. The final rate revalues open periods and proposes changes for approved ones. A missing price gives an unvalued quantity, never zero. Nothing is valued before finance approves the policy. Demand-constrained lost sales are supported. Finance screens are at `/finance`.
 
+### 5.6 Loss accounting statement
+
+Wherever a period's figures are shown, the accounting reads as one ten-row **statement** (owner requirement, 27 Oct 2026). Every figure is a server sum of the period's reconciled revision; the browser only renders it. Example (a declared day):
+
+| Accounting result | t |
+|---|---|
+| Planned production | 240 |
+| Actual good production | 208 |
+| Production shortfall | 32 |
+| Equipment downtime loss (availability) | 23 |
+| Reduced throughput loss (performance) | 11 |
+| Quality loss | 6 |
+| Gross attributed loss | 40 |
+| Verified recovery | −8 |
+| Net accounted loss | 32 |
+| Unaccounted loss | 0 |
+
+Identities:
+- **Gross attributed loss** = Σ the loss kinds (availability + performance + quality, plus transition excess and loss classified as Unaccounted when there is any).
+- **Net accounted loss** = Gross attributed − Verified recovery.
+- **Unaccounted loss** = Shortfall − Net accounted (− the tolerance adjustment, when one was booked at submission). It is the same figure as the reconciliation residual of the period (§6).
+
+The recovery row reads **"Recovery (unverified)"** until a supervisor verifies the event's coding (Verify coding); the figures do not change, only the label. The statement carries a Provisional or Approved marker (the approved revision when one exists).
+
+Where it is shown:
+- the **period page**, above the loss lines (the Checks row and the stops cross-check line stay under it; in a declared period the Checks row also shows "Recovery −8.000 t", the recovery the reconciliation took off);
+- the **day panel** (Review & close / day certification) for the whole day;
+- the production-loss **event page**, card "Day accounting", with a link to the period;
+- the PLA page **Accounting statement** (`/pla-analytics/statement`): the statement of the selected units and window on top, then one row per day (per shift on shift grain) that expands to the full statement and links to the period page; CSV export (approved only).
+
+**View accounting from the event:** every event page (production losses and stops) has a "View accounting" button that opens `/pla-analytics/statement` on the event's period, with that row expanded and a link back to the event. It is disabled with "No accounting period covers this event yet" when no period covers the event. The Event Hub list row, the "Attributed losses" card ("Open the day's accounting statement") and the toast after saving a reason offer the same link.
+
 ### 5.7 Declared basis (OT production loss event)
 
 A plant can account its loss **top-down from what OT declares** instead of working it up from stops. This is a plant setting (§2.3); the computed model described above stays the default. Under the declared basis (calculation engine 2.9.0):
@@ -220,6 +252,7 @@ A plant can account its loss **top-down from what OT declares** instead of worki
 - It applies to the policy's **accounting unit** only; the plant's other units keep the computed model (their stops still produce loss lines). Each period shows the basis its own calculation used, so periods calculated per shift before the switch keep their shift names and computed wording.
 - **Target** is OT's planned figure (or the Traverse Forge plan, as the policy says), **actual** is OT's actual, and **gap = target − actual**. With the Traverse Forge plan as target, a day period carries the sum of every plan period it overlaps (for example the three shift plans of that day), each pro rata to its overlap.
 - **Loss lines** are the shortfall times each reason's share, with basis "Declared". The kind is the OEE component of the reason code; a reason without one books as "Unaccounted classified". The part not yet coded stays **Unaccounted**.
+- **Recovery shares:** a split entry can be marked "Recovery" (any reason code). Loss shares − recovery shares must equal the shortfall (percent mode: loss percents − recovery percents = 100). Each recovery share books as a `gain` line, so the statement shows Gross attributed = Σ loss shares, Verified recovery = Σ recovery shares and Net = the shortfall; the reconciliation takes the recovery off the attributed loss, so a split such as 23 + 11 + 6 − 8 on a 32 t shortfall leaves no residual and is not over-accounted.
 - **Stops produce no loss lines.** The **stops cross-check** (stop time times the planned rate) is shown beside the shortfall as a figure to compare. It never becomes a line.
 - **No capacity figures.** The OEE and Capacity gap pages show "Not available: this plant accounts declared losses".
 - If OT's actual is missing, the measured good production is used and the period is flagged "OT actual missing — measured good used".
