@@ -9,6 +9,8 @@ import { eventNoun, labelOf, SOURCE_KIND_LABELS } from '@/features/ux-kit/labels
 import { Page, PageHeader, Section } from '@/features/ux-kit/page-layout';
 import { DisplayCurrencyToggle } from '@/features/display-currency/display-currency-toggle';
 import { AttributedLossesCard } from './components/attributed-losses-card';
+import { DayAccountingCard } from './components/day-accounting-card';
+import { accountingHrefOf } from './model/accounting-link';
 import { EventDetailActions } from './components/event-detail-actions';
 import { EventDetailTabs } from './components/event-detail-tabs';
 import { EventSummary } from './components/event-summary';
@@ -73,7 +75,10 @@ function EventBody({ event, timezone }: { event: ProductionEventView; timezone: 
         <EventSummary event={event} />
       </Section>
       <Section title="Attributed losses" description="Loss lines of the periods this event touched, as accounted" actions={<DisplayCurrencyToggle />}>
-        <AttributedLossesCard eventId={event.id} />
+        <AttributedLossesCard eventId={event.id} accountingHref={accountingHrefOf(event)} />
+      </Section>
+      <Section title="Day accounting" description="The accounting statement of the production day this event belongs to">
+        <DayAccountingCard event={event} />
       </Section>
       {event.classification.physicalType === 'downtime' && event.verification && (
         <Section title="Coding verification">

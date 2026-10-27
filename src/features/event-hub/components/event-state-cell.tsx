@@ -3,6 +3,7 @@ import { StatusBadge } from '@/features/ux-kit/status-badge';
 import { EventRcaChip } from '@/features/rca/components/event-rca-chip';
 import { AccountingStateChip } from './accounting-state-chip';
 import { StateBadges } from './state-badges';
+import { ViewAccountingLink } from './view-accounting-button';
 
 /**
  * C-9: the event's states as one inline row of chips ("Ongoing · Uncoded"), the RCA state as the shared
@@ -25,6 +26,7 @@ export function EventStateCell({ event }: { event: ProductionEventView }) {
           Repeat incident
         </StatusBadge>
       )}
+      <ViewAccountingLink event={event} />
     </span>
   );
 }

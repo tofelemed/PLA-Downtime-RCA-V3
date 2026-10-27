@@ -1,4 +1,8 @@
 import { EntityManager } from 'typeorm';
+import {
+  accountingPeriodsOf,
+  EventAccountingPeriodView,
+} from './event-accounting-period';
 
 /** Workflow of the accounting of the periods an event overlaps (the period grid's `workflowState`). */
 export type EventAccountingState =
@@ -47,13 +51,21 @@ export function eventAccountingStateOf(
 
 /**
  * Owner finding 2 (18 Oct 2026): every role reads the same server state, so the list and the single read
- * carry the accounting workflow of the event's periods next to its coding state (additive field).
+ * carry the accounting workflow of the event's periods next to its coding state (additive field), and
+ * (Task 13) the period whose accounting statement "View accounting" opens (null = no period yet).
  */
 export async function withAccountingStates<T extends { id: string }>(
   manager: EntityManager,
   tenantId: string,
   views: readonly T[],
-): Promise<Array<T & { accountingState: EventAccountingState }>> {
+): Promise<
+  Array<
+    T & {
+      accountingState: EventAccountingState;
+      accountingPeriod: EventAccountingPeriodView | null;
+    }
+  >
+> {
   const ids = views.map((view) => view.id);
   const rows =
     ids.length === 0
@@ -62,6 +74,7 @@ export async function withAccountingStates<T extends { id: string }>(
           STATES_SQL,
           [tenantId, ids],
         );
+  const periods = await accountingPeriodsOf(manager, tenantId, ids);
   const byEvent = new Map<string, string[]>();
   for (const row of rows) {
     byEvent.set(row.event_id, [
@@ -72,5 +85,6 @@ export async function withAccountingStates<T extends { id: string }>(
   return views.map((view) => ({
     ...view,
     accountingState: eventAccountingStateOf(byEvent.get(view.id) ?? []),
+    accountingPeriod: periods.get(view.id) ?? null,
   }));
 }

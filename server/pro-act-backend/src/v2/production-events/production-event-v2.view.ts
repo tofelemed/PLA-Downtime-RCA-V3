@@ -1,4 +1,5 @@
 import type { EventAccountingState } from './event-accounting-states';
+import type { EventAccountingPeriodView } from './event-accounting-period';
 import {
   CodingState,
   ImpactMode,
@@ -140,6 +141,8 @@ export interface ProductionEventV2View {
    * the coding state so every role reads the same server state
    */
   accountingState?: EventAccountingState;
+  /** Task 13: the first production period the event overlaps (its accounting statement); null = none yet */
+  accountingPeriod?: EventAccountingPeriodView | null;
   /** single reads only: what the source last said (ING06), null for events without a source revision */
   sourceFacts?: EventFacts | null;
   /** single reads only: fields where the user's value overrides the source value */

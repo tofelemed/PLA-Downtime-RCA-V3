@@ -8,6 +8,7 @@ import { isProductionLoss } from '../model/production-loss';
 import { CloseStopDialog } from './close-stop-dialog';
 import { RetractEventDialog } from './retract-event-dialog';
 import { SplitDialog } from './split-dialog';
+import { ViewAccountingButton } from './view-accounting-button';
 
 /** History is append-only; superseded and retracted events are read-only (409 on any operation). */
 const isOperable = (event: ProductionEventView) => event.states.physical === 'open' || event.states.physical === 'closed';
@@ -16,8 +17,18 @@ const isOperable = (event: ProductionEventView) => event.states.physical === 'op
  * Commands of an event page: Edit / code (sub-page), Split and Close stop (short dialogs), Retract
  * (confirmation, manual events only). Hidden for read-only roles and for replaced or retracted events; a
  * production loss day (declared mode) cannot be split or closed (the server answers 409 UNSUPPORTED_FOR_KIND).
+ * "View accounting" (Task 13) is offered to every reader, for every kind.
  */
 export function EventDetailActions({ event }: { event: ProductionEventView }) {
+  return (
+    <>
+      <ViewAccountingButton event={event} />
+      <EventCommands event={event} />
+    </>
+  );
+}
+
+function EventCommands({ event }: { event: ProductionEventView }) {
   const { canWriteEvents } = useCapabilities();
   const navigate = useNavigate();
   const { state } = useLocation();

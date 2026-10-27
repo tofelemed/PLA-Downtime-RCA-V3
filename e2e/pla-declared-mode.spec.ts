@@ -142,4 +142,21 @@ test.describe('Declared mode on Marun HDPE (29 Oct 2026)', () => {
     await row.getByTestId('statement-row-toggle').click();
     await expectStatement(page.getByTestId('statement-row-statement'), OWNER_DAY);
   });
+
+  test('operator: View accounting on the coded production loss opens its day row expanded, with the way back', async ({ page }) => {
+    const omid = await apiSession('omid');
+    const events = await getJson<{ items: Array<{ id: string; eventId: string }> }>(omid, `/v2/production-events?q=${EVENT_ID}&limit=5`);
+    const event = events.items.find((item) => item.eventId === EVENT_ID);
+    expect(event, 'the 29 Oct production loss event exists (coded by the task-12 run)').toBeTruthy();
+
+    await signInReadOnly(page, 'omid');
+    await page.goto(`/events/${event!.id}`);
+    await expectStatement(page.getByTestId('day-accounting-statement'), OWNER_DAY);
+    await page.getByTestId('view-accounting').click();
+    await expect(page).toHaveURL(/\/pla-analytics\/statement\?/);
+    const expansion = page.getByTestId('statement-expansion');
+    await expect(expansion).toBeVisible({ timeout: 60_000 });
+    await expectStatement(expansion, OWNER_DAY);
+    await expect(page.getByTestId('statement-back-to-event')).toHaveAttribute('href', `/events/${event!.id}`);
+  });
 });

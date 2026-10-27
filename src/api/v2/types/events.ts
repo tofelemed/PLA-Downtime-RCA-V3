@@ -147,6 +147,8 @@ export interface ProductionEventView {
    * (open work wins); shown next to the coding state, never instead of it. Absent on older servers.
    */
   accountingState?: GridWorkflowState;
+  /** Task 13: the first production period the event overlaps ("View accounting"); null / absent = none yet */
+  accountingPeriod?: EventAccountingPeriodView | null;
 }
 
 export interface EventRevisionView {
@@ -273,4 +275,13 @@ export interface EventAttributedLossesView {
   /** more periods than the server bound (200) carried this event; the earliest are listed */
   truncated: boolean;
   asOf: string;
+}
+
+/** Task 13: the accounting period of an event (backend `EventAccountingPeriodView`). */
+export interface EventAccountingPeriodView {
+  periodId: string;
+  utcStart: string;
+  utcEnd: string;
+  localDate: string;
+  shiftName: string | null;
 }

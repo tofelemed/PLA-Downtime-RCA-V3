@@ -13,6 +13,7 @@ import { AttributedValueText } from './attributed-value-text';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { periodLabel } from '../model/period-label';
 import { PeriodLink } from './period-link';
+import { Link } from 'react-router-dom';
 
 /** Approved = the published revision's lines (success); provisional = an open revision's proposals (warning, §5.8). */
 function PeriodStatus({ status }: { status: AttributedPeriodView['status'] }) {
@@ -66,7 +67,7 @@ function AttributedPeriodRow({ item }: { item: AttributedPeriodView }) {
  * (approved or provisional, as the server labels them): quantities per kind and unit, the value in the
  * display currency (USD by default, IRR on the toggle). Rows are never summed in the browser.
  */
-export function AttributedLossesCard({ eventId }: { eventId: string }) {
+export function AttributedLossesCard({ eventId, accountingHref = null }: { eventId: string; accountingHref?: string | null }) {
   const query = useEventAttributedLosses(eventId);
   const data = query.data;
   // QA re-test N5 / N3: the value basis is money context, shown only with the money capability
@@ -86,6 +87,11 @@ export function AttributedLossesCard({ eventId }: { eventId: string }) {
               <p className="text-xs text-muted-foreground" data-testid="attributed-valuation-view">
                 {valueBasisLabel(data.valuationView)}
               </p>
+            )}
+            {accountingHref && (
+              <Link to={accountingHref} className="text-sm font-medium text-primary hover:underline" data-testid="attributed-accounting-link">
+                Open the day's accounting statement
+              </Link>
             )}
             {data.truncated && (
               <p className="text-xs text-warning" data-testid="attributed-truncated">

@@ -13,22 +13,48 @@ describe('event accounting state (owner finding 2)', () => {
     expect(eventAccountingStateOf(['approved', 'draft'])).toBe('draft');
   });
 
-  it('decorates a page with one query and gives events without periods "none"', async () => {
-    const query = jest.fn().mockResolvedValue([
-      { event_id: 'e1', state: 'approved' },
-      { event_id: 'e1', state: 'in_review' },
-    ]);
+  it('decorates a page with one state query and one period query; events without periods get "none" and null', async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce([
+        { event_id: 'e1', state: 'approved' },
+        { event_id: 'e1', state: 'in_review' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          eventId: 'e1',
+          periodId: 'p1',
+          utcStart: new Date('2026-10-29T02:30:00Z'),
+          utcEnd: new Date('2026-10-30T02:30:00Z'),
+          localDate: '2026-10-29',
+          shiftName: null,
+        },
+      ]);
     const manager = { query } as unknown as EntityManager;
     const views = await withAccountingStates(manager, 't1', [
       { id: 'e1' },
       { id: 'e2' },
     ]);
     expect(views).toEqual([
-      { id: 'e1', accountingState: 'in_review' },
-      { id: 'e2', accountingState: 'none' },
+      {
+        id: 'e1',
+        accountingState: 'in_review',
+        accountingPeriod: {
+          periodId: 'p1',
+          utcStart: '2026-10-29T02:30:00.000Z',
+          utcEnd: '2026-10-30T02:30:00.000Z',
+          localDate: '2026-10-29',
+          shiftName: null,
+        },
+      },
+      { id: 'e2', accountingState: 'none', accountingPeriod: null },
     ]);
-    expect(query).toHaveBeenCalledTimes(1);
-    expect(query).toHaveBeenCalledWith(expect.any(String), [
+    expect(query).toHaveBeenCalledTimes(2);
+    expect(query).toHaveBeenNthCalledWith(1, expect.any(String), [
+      't1',
+      ['e1', 'e2'],
+    ]);
+    expect(query).toHaveBeenNthCalledWith(2, expect.any(String), [
       't1',
       ['e1', 'e2'],
     ]);

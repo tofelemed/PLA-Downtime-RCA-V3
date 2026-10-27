@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { useCodeEvent, type CodeChanges } from '../hooks/use-code-and-close';
 import { usePlantFormat } from '../hooks/use-plant-format';
+import { useSavedReasonToast } from '../hooks/use-saved-reason-toast';
 import { useReasonSplit, type ReasonSplitState } from '../hooks/use-reason-split';
 import { isProductionLoss, shortfallOf } from '../model/production-loss';
 import { useEventHubEnv } from '../use-event-hub-env';
@@ -44,13 +45,16 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
   const env = useEventHubEnv();
   const { dateTime } = usePlantFormat();
   const code = useCodeEvent(event);
+  const savedToast = useSavedReasonToast(event);
   const [reasonCodeId, setReasonCodeId] = useState(event.reasonCodeId ?? '');
   const [pending, setPending] = useState(event.investigationPending === true);
   const split = useReasonSplit(event, shortfallOf(event));
   const changes = changesOf(event, { reasonCodeId, pending }, split);
   const reasonGiven = split.enabled ? split.complete : Boolean(reasonCodeId);
   const save = async () => {
-    if (await code.submit(changes)) onDone();
+    if (!(await code.submit(changes))) return;
+    savedToast();
+    onDone();
   };
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
