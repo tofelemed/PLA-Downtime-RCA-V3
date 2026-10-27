@@ -12,6 +12,8 @@ export const POLICY_KINDS = [
   'month_close',
   /** SME R3 / R6: reconciliation deadlines, escalation and rejection escalation (plant-wide) */
   'reconciliation_sla',
+  /** Declared mode: loss accounting basis, grain and tolerance (plant-wide) */
+  'loss_accounting',
 ] as const;
 export type PolicyKind = (typeof POLICY_KINDS)[number];
 

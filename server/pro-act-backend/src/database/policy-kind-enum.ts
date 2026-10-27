@@ -20,6 +20,7 @@ export async function dropPolicyKind(
     [kind],
   )) as Array<{ value: string }>;
   const values = rows.map((r) => `'${r.value}'`).join(', ');
+  const dependents = await dropDependentIndexes(queryRunner);
   await queryRunner.query(
     `DROP INDEX "public"."IDX_accounting_policies_lookup"`,
   );
@@ -43,4 +44,22 @@ export async function dropPolicyKind(
   await queryRunner.query(
     `ALTER TABLE "accounting_policies" ADD CONSTRAINT "UQ_accounting_policies_kind_scope_version" UNIQUE ("tenant_id", "policy_kind", "scope_key", "version")`,
   );
+  for (const definition of dependents) await queryRunner.query(definition);
+}
+
+/**
+ * Partial indexes whose predicate names the kind enum (the approval-inbox index) block retyping the column:
+ * they are dropped, and their definitions returned so the caller can recreate them afterwards.
+ */
+async function dropDependentIndexes(
+  queryRunner: QueryRunner,
+): Promise<string[]> {
+  const rows = (await queryRunner.query(
+    `SELECT indexname AS "name", indexdef AS "definition" FROM pg_indexes
+      WHERE tablename = 'accounting_policies' AND indexname = 'IDX_approval_inbox_accounting_policies'`,
+  )) as Array<{ name: string; definition: string }>;
+  for (const row of rows) {
+    await queryRunner.query(`DROP INDEX "public"."${row.name}"`);
+  }
+  return rows.map((row) => row.definition);
 }

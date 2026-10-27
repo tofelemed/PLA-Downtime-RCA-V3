@@ -24,6 +24,11 @@ import {
   ReconciliationTolerance,
 } from './engine-policy-bodies';
 import {
+  LOSS_ACCOUNTING_DEFAULT,
+  LossAccountingPolicy,
+  parseLossAccounting,
+} from './loss-accounting-policy';
+import {
   parseRcaPolicy,
   RCA_POLICY_DEFAULT,
   RcaPolicy,
@@ -46,12 +51,14 @@ const DEFAULT_BODIES: Readonly<Record<EngineKind, object>> = {
   oee_policy: OEE_POLICY_DEFAULT,
   reconciliation_tolerance: RECONCILIATION_TOLERANCE_DEFAULT,
   rca_policy: RCA_POLICY_DEFAULT,
+  loss_accounting: LOSS_ACCOUNTING_DEFAULT,
 };
 
 /** Policies of the accounting engine (plan 2.5): D04 OEE policy and D06 tolerance, with their versions. */
 export interface EnginePolicies {
   oee: OeePolicy;
   tolerance: ReconciliationTolerance;
+  lossAccounting: LossAccountingPolicy;
   refs: PolicyVersionRef[];
 }
 
@@ -97,7 +104,7 @@ export class AccountingPoliciesService {
     };
   }
 
-  /** `oee_policy` and `reconciliation_tolerance` in force for the unit at the instant (plan 2.5). */
+  /** `oee_policy`, `reconciliation_tolerance` and `loss_accounting` in force for the unit at the instant (plan 2.5). */
   async resolveEngine(
     manager: EntityManager,
     scope: { tenantId: string; unitId: string },
@@ -110,10 +117,17 @@ export class AccountingPoliciesService {
       'reconciliation_tolerance',
       at,
     );
+    const lossAccounting = await this.inForce(
+      manager,
+      scope,
+      'loss_accounting',
+      at,
+    );
     return {
       oee: parseOeePolicy(oee.body),
       tolerance: parseReconciliationTolerance(tolerance.body),
-      refs: [oee, tolerance].map((policy) => ({
+      lossAccounting: parseLossAccounting(lossAccounting.body),
+      refs: [oee, tolerance, lossAccounting].map((policy) => ({
         id: policy.id,
         kind: policy.policyKind,
         version: policy.version,
