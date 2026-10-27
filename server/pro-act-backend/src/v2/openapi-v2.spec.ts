@@ -134,6 +134,7 @@ import { RevisionLifecycleService } from '../reconciliation/revision-lifecycle.s
 import { SubmissionService } from '../reconciliation/submission.service';
 import { ActualsJobsService } from '../periods/actuals-jobs.service';
 import { ExternalReportsService } from '../periods/external-reports.service';
+import { PeriodMaterializerService } from '../periods/period-materializer.service';
 import { PeriodsModule } from '../periods/periods.module';
 import { PeriodsService } from '../periods/periods.service';
 import { AccountingCommandsService } from '../accounting/accounting-commands.service';
@@ -334,6 +335,7 @@ class PlansModuleStub {}
     { provide: ExternalReportsService, useValue: {} },
     { provide: AccountingPoliciesService, useValue: {} },
     { provide: SourceStatusMappingsService, useValue: {} },
+    { provide: PeriodMaterializerService, useValue: {} },
   ],
   exports: [
     PeriodsService,
@@ -342,6 +344,7 @@ class PlansModuleStub {}
     ExternalReportsService,
     AccountingPoliciesService,
     SourceStatusMappingsService,
+    PeriodMaterializerService,
   ],
 })
 class PeriodsModuleStub {}

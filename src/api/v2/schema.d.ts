@@ -3000,7 +3000,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v2/external-production-reports": {
+    "/api/v2/loss-accounting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The loss accounting version in force for a unit (its override, else tenant-wide) */
+        get: operations["LossAccountingV2Controller_current_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/loss-accounting/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Loss accounting versions (drafts, approved, rejected), newest first; keyset on createdAt, id */
+        get: operations["LossAccountingV2Controller_list_v2"];
+        put?: never;
+        /**
+         * Draft a loss accounting version from the version in force; fields left out are kept. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).
+         * @description Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit, accountingUnitId), INVALID_POLICY (the policy parser refuses the merged body); 422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).
+         */
+        post: operations["LossAccountingV2Controller_write_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/loss-accounting/versions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One loss accounting version; foreign or out-of-scope ids are 404 */
+        get: operations["LossAccountingV2Controller_get_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/loss-accounting/versions/{id}/approve": {
         parameters: {
             query?: never;
             header?: never;
@@ -3008,6 +3063,50 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /**
+         * Approve a draft version (another approver than the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated. A day-grain version publishes the daily calendar from its effective date and replaces the open periods it covers.
+         * @description SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant or manager_approver; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, 409 BACKDATE_OVERLAPS_CALCULATION (details.periods); 422 EFFECTIVE_DATE_TOO_EARLY (day grain: a period with an approved revision starts on or after the effective date).
+         */
+        post: operations["LossAccountingV2Controller_approve_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/loss-accounting/versions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a draft version with a reason (another approver than the author); the version in force stays
+         * @description SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.
+         */
+        post: operations["LossAccountingV2Controller_reject_v2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/external-production-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Imported records, newest local production date first (keyset on localProductionDate, id)
+         * @description Filters: connectionId (records delivered by that integration connection, e.g. an MQTT PLA feed), state (current | superseded), from/to (overlap of the UTC window). Unit-limited callers see records with a line of their units only. `sourceFigures` is what the source itself reported (e.g. OT planned, actual, shortfall), for comparison only; accounting never uses it.
+         */
+        get: operations["ExternalReportsV2Controller_list_v2"];
         put?: never;
         /**
          * Import one external daily-production record (JSON)
@@ -9500,6 +9599,50 @@ export interface components {
             measurementHierarchy: components["schemas"]["MeasurementHierarchyDto"] | null;
             notes?: string;
         };
+        LossAccountingVersionDto: {
+            /**
+             * Format: date-time
+             * @description Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them).
+             */
+            effectiveFrom?: string;
+            /** @description Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it */
+            backdateReason?: string;
+            /**
+             * Format: uuid
+             * @description Unit override; absent = the tenant-wide version
+             */
+            unitId?: string;
+            /**
+             * @description Accounting period: one per shift, or one per operational day
+             * @enum {string}
+             */
+            grain?: "shift" | "day";
+            /**
+             * @description Plant-local HH:mm the operational day starts; used by day
+             * @example 06:00
+             */
+            dayStart?: string;
+            /**
+             * @description Loss lines computed from the plan, or declared by OT
+             * @enum {string}
+             */
+            lossBasis?: "computed" | "declared";
+            /**
+             * @description Declared mode: the target is the plan or the OT planned
+             * @enum {string}
+             */
+            targetSource?: "plan" | "declared";
+            /**
+             * Format: uuid
+             * @description The unit the accounting is kept on; null = the version unit
+             */
+            accountingUnitId?: Record<string, never> | null;
+            /** @description Cross-check declared losses against the recorded stops */
+            stopsCrossCheck?: boolean;
+            /** @description Identity tolerance in the event unit of measure */
+            identityTolerance?: number;
+            notes?: string;
+        };
         ExternalReportLineDto: {
             /** Format: uuid */
             unitId: string;
@@ -15926,6 +16069,180 @@ export interface operations {
                 "application/json": components["schemas"]["AdjustmentRejectDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossAccountingV2Controller_current_v2: {
+        parameters: {
+            query?: {
+                /** @description Unit whose version in force is read; absent = tenant-wide */
+                unitId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossAccountingV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: string;
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Versions of this unit only; absent = every scope the caller sees */
+                unitId?: string;
+                /** @description With unitId: the plant-wide versions as well (unitId null); alone: only the plant-wide versions */
+                includeTenantWide?: boolean;
+                state?: "proposed" | "approved" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossAccountingV2Controller_write_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LossAccountingVersionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossAccountingV2Controller_get_v2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossAccountingV2Controller_approve_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentApproveDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossAccountingV2Controller_reject_v2: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdjustmentRejectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ExternalReportsV2Controller_list_v2: {
+        parameters: {
+            query?: {
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+                /** @description Sort field; prefix "-" for descending. Each resource allowlists its fields; id is always the tiebreak */
+                sort?: "-localProductionDate";
+                /** @description Window start, ISO 8601 (inclusive); intervals use overlap semantics */
+                from?: string;
+                /** @description Window end, ISO 8601 (exclusive) */
+                to?: string;
+                /** @description Records delivered by this integration connection */
+                connectionId?: string;
+                state?: "current" | "superseded";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

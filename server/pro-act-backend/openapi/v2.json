@@ -10681,6 +10681,300 @@
         ]
       }
     },
+    "/api/v2/loss-accounting": {
+      "get": {
+        "operationId": "LossAccountingV2Controller_current_v2",
+        "parameters": [
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Unit whose version in force is read; absent = tenant-wide",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The loss accounting version in force for a unit (its override, else tenant-wide)",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/loss-accounting/versions": {
+      "get": {
+        "operationId": "LossAccountingV2Controller_list_v2",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Sort field; prefix \"-\" for descending. Each resource allowlists its fields; id is always the tiebreak",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Window start, ISO 8601 (inclusive); intervals use overlap semantics",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Window end, ISO 8601 (exclusive)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "required": false,
+            "in": "query",
+            "description": "Versions of this unit only; absent = every scope the caller sees",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeTenantWide",
+            "required": false,
+            "in": "query",
+            "description": "With unitId: the plant-wide versions as well (unitId null); alone: only the plant-wide versions",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "state",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "proposed",
+                "approved",
+                "rejected"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Loss accounting versions (drafts, approved, rejected), newest first; keyset on createdAt, id",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      },
+      "post": {
+        "description": "Requires `Idempotency-Key`. 403 TENANT_SCOPE_REQUIRED for a tenant-wide version without a tenant-wide grant; 422 INVALID_REFERENCE (unit, accountingUnitId), INVALID_POLICY (the policy parser refuses the merged body); 422 INVALID_EFFECTIVE_FROM / BACKDATE_REASON_REQUIRED, 409 BACKDATE_REWRITES_HISTORY / BACKDATE_OVERLAPS_CALCULATION (commissioning backdate).",
+        "operationId": "LossAccountingV2Controller_write_v2",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LossAccountingVersionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Draft a loss accounting version from the version in force; fields left out are kept. It applies only once approved (from approval time, or from a past effectiveFrom while commissioning).",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/loss-accounting/versions/{id}": {
+      "get": {
+        "operationId": "LossAccountingV2Controller_get_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "One loss accounting version; foreign or out-of-scope ids are 404",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/loss-accounting/versions/{id}/approve": {
+      "post": {
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant or manager_approver; 403 SEPARATION_OF_DUTIES for the author; 403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; 409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, 409 BACKDATE_OVERLAPS_CALCULATION (details.periods); 422 EFFECTIVE_DATE_TOO_EARLY (day grain: a period with an approved revision starts on or after the effective date).",
+        "operationId": "LossAccountingV2Controller_approve_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve a draft version (another approver than the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated. A day-grain version publishes the daily calendar from its effective date and replaces the open periods it covers.",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
+    "/api/v2/loss-accounting/versions/{id}/reject": {
+      "post": {
+        "description": "SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE / SEPARATION_OF_DUTIES / TENANT_SCOPE_REQUIRED; 409 INVALID_TRANSITION when not proposed.",
+        "operationId": "LossAccountingV2Controller_reject_v2",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustmentRejectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reject a draft version with a reason (another approver than the author); the version in force stays",
+        "tags": [
+          "v2 · Production periods"
+        ]
+      }
+    },
     "/api/v2/external-production-reports": {
       "post": {
         "description": "Requires `Idempotency-Key` and a tenant-wide grant (403 TENANT_SCOPE_REQUIRED: a site document). Lines must name units and products of the tenant (422 INVALID_REFERENCE). Same id + revision with the same content → `outcome: duplicate`; with other content → 409 REPORT_REVISION_CONFLICT. A higher revision supersedes the current one (never summed) and is a correction candidate; a lower one is stored superseded (`stale`). Certified eligibility follows the approved status mapping of the record’s source system in force at import (SME R13, GET /v2/source-status-mappings; `sourceSystem` default `import`); the mapping version is kept on the record.",
@@ -29864,6 +30158,74 @@
         "required": [
           "measurementHierarchy"
         ]
+      },
+      "LossAccountingVersionDto": {
+        "type": "object",
+        "properties": {
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Commissioning only: a past instant the version takes effect from instead of approval / record time. Requires backdateReason; 422 INVALID_EFFECTIVE_FROM (not past), 409 BACKDATE_REWRITES_HISTORY (not after the latest approved version of the scope), 409 BACKDATE_OVERLAPS_CALCULATION (a calculated period of the unit, or of any unit for a plant-wide version, overlaps [effectiveFrom, now); details.periods lists them)."
+          },
+          "backdateReason": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Why the version is backdated; required with effectiveFrom (422 BACKDATE_REASON_REQUIRED), refused without it"
+          },
+          "unitId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unit override; absent = the tenant-wide version"
+          },
+          "grain": {
+            "type": "string",
+            "enum": [
+              "shift",
+              "day"
+            ],
+            "description": "Accounting period: one per shift, or one per operational day"
+          },
+          "dayStart": {
+            "type": "string",
+            "example": "06:00",
+            "description": "Plant-local HH:mm the operational day starts; used by day"
+          },
+          "lossBasis": {
+            "type": "string",
+            "enum": [
+              "computed",
+              "declared"
+            ],
+            "description": "Loss lines computed from the plan, or declared by OT"
+          },
+          "targetSource": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "declared"
+            ],
+            "description": "Declared mode: the target is the plan or the OT planned"
+          },
+          "accountingUnitId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true,
+            "description": "The unit the accounting is kept on; null = the version unit"
+          },
+          "stopsCrossCheck": {
+            "type": "boolean",
+            "description": "Cross-check declared losses against the recorded stops"
+          },
+          "identityTolerance": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Identity tolerance in the event unit of measure"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        }
       },
       "ExternalReportLineDto": {
         "type": "object",

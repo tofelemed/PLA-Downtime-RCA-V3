@@ -139,6 +139,10 @@ import { UnitStreamsV2Controller } from './plant-model/unit-streams-v2.controlle
 import { UnitStreamsV2Service } from './plant-model/unit-streams-v2.service';
 import { UncertaintyBudgetsV2Controller } from './uncertainty/uncertainty-budgets-v2.controller';
 import { UncertaintyBudgetsV2Service } from './uncertainty/uncertainty-budgets-v2.service';
+import { LossAccountingV2Controller } from './loss-accounting/loss-accounting-v2.controller';
+import { LossAccountingCalendarService } from './loss-accounting/loss-accounting-calendar.service';
+import { LossAccountingDecisionsService } from './loss-accounting/loss-accounting-decisions.service';
+import { LossAccountingV2Service } from './loss-accounting/loss-accounting-v2.service';
 import { SourceAuthorityV2Controller } from './source-authority/source-authority-v2.controller';
 import { SourceAuthorityDecisionsService } from './source-authority/source-authority-decisions.service';
 import { SourceAuthorityV2Service } from './source-authority/source-authority-v2.service';
@@ -313,6 +317,7 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     BufferLevelsV2Controller,
     SiteLossV2Controller,
     SourceAuthorityV2Controller,
+    LossAccountingV2Controller,
     ExternalReportsV2Controller,
     ActualsJobsV2Controller,
     PeriodAccountingV2Controller,
@@ -385,6 +390,9 @@ import { RcaPoliciesV2Service } from './rca-policies/rca-policies-v2.service';
     SiteLossV2Service,
     SourceAuthorityV2Service,
     SourceAuthorityDecisionsService,
+    LossAccountingV2Service,
+    LossAccountingDecisionsService,
+    LossAccountingCalendarService,
     PeriodAccountingV2Service,
     LossAttributionV2Service,
     ReconciliationV2Service,
