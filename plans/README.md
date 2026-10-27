@@ -95,6 +95,12 @@ Status legend: ⬜ not started · 🔄 in progress · 🧪 implemented, tests pe
 
 ---
 
+## Declared mode (27 Oct 2026)
+
+- [x] Independent, daily, OT-declared production loss accounting: plant setting "Loss accounting", production loss event from the MQTT PLA feed, declared ledger (engine 2.9.0), workflow gates, docs. Plan: [../docs/superpowers/plans/2026-10-27-pla-declared-mode.md](../docs/superpowers/plans/2026-10-27-pla-declared-mode.md); design: [../docs/PLA_DECLARED_MODE_PLAN.md](../docs/PLA_DECLARED_MODE_PLAN.md); decisions D1–D12 in [DECISIONS.md](DECISIONS.md).
+
+---
+
 ## Decision register status (spec §21)
 
 | ID | Decision | Owner | Proposed default | Status |

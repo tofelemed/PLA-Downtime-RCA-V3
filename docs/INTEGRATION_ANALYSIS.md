@@ -18,6 +18,8 @@ Where this document and other docs disagree, the code was checked and this docum
 >
 > **Superseded, 20 Oct 2026 (DECISIONS D-T2):** frames that cannot be placed are no longer mirrored into `unmapped_events`. Its writer is retired; the table stays. `ingestion_exceptions` is the only quarantine. Read every mention of `unmapped_events` below as "exception only".
 
+> **Update, 27 Oct 2026 (declared mode).** The MQTT PLA feed no longer writes an external daily report. A PLA message becomes a **production loss event** (`pla:<event_id>`) that people code in the Event Hub; the connection's "PLA reports" tab is replaced by a "Production loss events" tab. The PLA feed's product is optional and the downtime template has no lost-tonnes field. Read mentions of PLA reports below with that in mind. See `plans/MQTT_FEEDS.md` and `docs/PLA_DECLARED_MODE_PLAN.md`.
+
 Paths:
 - Backend paths are relative to `server/pro-act-backend/src/`.
 - Frontend paths start with `src/` (repo root).

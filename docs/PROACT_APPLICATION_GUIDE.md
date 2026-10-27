@@ -77,6 +77,9 @@ Scope comes from the caller's identity, never from a query parameter.
 | Calendar system | Gregorian / Persian (Jalali) | Display only |
 | Digits | Latin / Persian | Every displayed number follows it; the percent sign stays `%` |
 | Reporting week | Monday (ISO) / Saturday | **Saturday is the default for Iranian plants** (Asia/Tehran or Persian calendar) |
+| Loss accounting | Grain (shift / day), day start, loss basis (computed / declared), target (Traverse Forge plan / OT planned figure), accounting unit, stops cross-check, identity tolerance | A versioned policy that needs approval (see below). Default: shift grain, computed basis |
+
+**Loss accounting policy (Admin → Plant settings, card after "Reporting week").** It decides how the plant accounts production loss. It is drafted by `integration_admin`, `production_accountant` or a tenant admin, and approved by a `production_accountant` or `manager_approver` who is not the drafter (the same maker-checker rule as Source priority). It takes effect at approval, or from a past commissioning date when a reason is given. A future start date is not supported. Approving a **day** grain publishes a daily calendar (one 24-hour "Day" shift starting at the day start) for the accounting unit, or for the site, and replaces the open shift periods that have never been calculated with daily periods. Days that were already calculated stay on their shift periods. If an approved period lies on or after the effective date, the approval is refused (`EFFECTIVE_DATE_TOO_EARLY`). The loss basis is explained in §5.7.
 
 A change applies on every screen at once. Server buckets, API values, CSV exports and identifiers stay ISO, Gregorian, UTC and Latin. Which days are worked (the Thursday–Friday weekend) belongs to the shift calendar.
 
@@ -145,6 +148,15 @@ Only a `full_stop` counts as stopped time. A `fractional` stop is a rate loss an
 
 States are separate too: physical state (open, closed, superseded, retracted), coding state (uncoded, coded, reviewed) and RCA state (none, required, linked, completed). An event can carry an origin unit / asset (for starved or blocked stops), a planned end (maintenance overrun) and failure severity.
 
+### 4.2a Production loss event
+
+A **production loss event** (physical type `production_loss`) is the plant's own statement of one day's loss on a unit. It carries the figures OT declared: planned, actual and shortfall (planned − actual), the unit of measure, the measurement quality, OT's status, the OT plan it was measured against (source, id, revision, approved) and the PI source of the actual. Its quantity is the shortfall.
+
+- There is one per unit per day. Its window is exactly the accounting period and it is always closed.
+- It comes from the MQTT PLA feed (§9) or is created by hand by an event writer.
+- In the Event Hub it is coded with one reason, marked "investigation pending", or split by percent or by **tonnes** (the parts must add up to the shortfall). Close, Split and Merge are not available for it.
+- **Review items** are raised automatically: `declared_identity_mismatch` (planned − actual differs from the shortfall by more than the plant tolerance), `declared_window_mismatch` (the window matches no accounting period) and `duplicate_declared_loss` (a second event for the same window). An engineer can dismiss them; a revision from OT clears the identity one.
+
 ### 4.3 Sources, source layer and user layer
 
 Events come from PI event frames, MQTT, imports or manual entry. Each event keeps two layers:
@@ -155,7 +167,7 @@ The effective value is the source overlaid by the current coding. A re-sync from
 
 ### 4.4 Event Hub (`/events`)
 
-Server filters with keyset paging and a virtualised list; current stops with elapsed time; a detail drawer with source vs effective values, revisions, review items and impacted periods. Operations: create, edit (end or duration), **split, merge, bulk code** (preview, then a job) and **close** ("Code and close"). Quick filters include "To code", "Possible duplicate stops" and repeat stops within 2 minutes. Edits use optimistic concurrency: a conflict (412) shows a review and keeps the draft.
+Server filters with keyset paging and a virtualised list; current stops with elapsed time; a detail page with source vs effective values, revisions, review items and impacted periods. Operations: create, edit (end or duration), **split, merge, bulk code** (preview, then a job) and **close** ("Code and close"). Quick filters include "To code", "Possible duplicate stops" and repeat stops within 2 minutes. Edits use optimistic concurrency: a conflict (412) shows a review and keeps the draft.
 
 ## 5. Loss accounting
 
@@ -201,6 +213,17 @@ Valuation runs inside the calculation run from a frozen, hashed context:
 
 Every valued loss is reported in **IRR and USD**. Without an approved FX rate the other currency is null with reason `fx_rate_missing`; it is never estimated. A finance-authorised **provisional FX rate** can fill dates until the final rate arrives; those values are flagged everywhere. The final rate revalues open periods and proposes changes for approved ones. A missing price gives an unvalued quantity, never zero. Nothing is valued before finance approves the policy. Demand-constrained lost sales are supported. Finance screens are at `/finance`.
 
+### 5.7 Declared basis (OT production loss event)
+
+A plant can account its loss **top-down from what OT declares** instead of working it up from stops. This is a plant setting (§2.3); the computed model described above stays the default. Under the declared basis (calculation engine 2.9.0):
+
+- **Target** is OT's planned figure (or the Traverse Forge plan, as the policy says), **actual** is OT's actual, and **gap = target − actual**.
+- **Loss lines** are the shortfall times each reason's share, with basis "Declared". The kind is the OEE component of the reason code; a reason without one books as "Unaccounted classified". The part not yet coded stays **Unaccounted**.
+- **Stops produce no loss lines.** The **stops cross-check** (stop time times the planned rate) is shown beside the shortfall as a figure to compare. It never becomes a line.
+- **No capacity figures.** The OEE and Capacity gap pages show "Not available: this plant accounts declared losses".
+- If OT's actual is missing, the measured good production is used and the period is flagged "OT actual missing — measured good used".
+- Flags shown on the period: "OT has not sent this day's production loss"; "Planned − actual ≠ shortfall (review)"; "Capacity figures not available (declared basis)"; "Two production loss events cover this period"; "Several product slices — the declared figure is booked to the first".
+
 ## 6. Reconciliation and approval
 
 ### 6.1 Period workflow
@@ -209,6 +232,8 @@ Every valued loss is reported in **IRR and USD**. Without an approved FX rate th
 draft ──submit──► in_review ──approve──► approved ──revise / change proposal──► new draft revision
                      └──reject (reason, failed lines, new due time)──► draft
 ```
+
+Under the declared basis the submit step has its own checks: it is refused with `DECLARED_LOSS_MISSING` when OT has not sent the day's production loss, and with `DECLARED_IDENTITY_MISMATCH` until an OT revision or a tolerance line clears the difference. The coding gate counts production loss events (`LOSS_EVENT_UNCODED`, measured as the coded share of the shortfall, with the same warn or block modes). `ACTUALS_INCOMPLETE` does not apply. **Approval is refused with `DECLARED_NOT_CONFIRMED` until OT's status is `CONFIRMED`** (a manual event with no status counts as confirmed). Day certification and month close are unchanged.
 
 Each period has numbered **accounting revisions**. At most one is open (draft or in review); a draft can also be cancelled. An in-review revision whose inputs changed is marked **stale**.
 
@@ -323,6 +348,7 @@ flowchart LR
 
 - **PI:** event frames and actuals (signals, counters, rates, output frames) through the PI Web API. Connections have a write-only secret, staged diagnostics, discovery, a mapping preview and audited job control (start, pause, resume, drain, stop). Re-pulling a frame updates the same event. Built and tested against a PI Web API simulator.
 - **MQTT:** the data engineering team owns the feed (PI → MQTT). Traverse Forge only subscribes. Messages are persisted before acknowledgement and decoded by contract.
+- **PLA feed:** the PLA topic message (sample in `docs/MQTT_FEEDS_PAYLOADS.md`) becomes the production loss event `pla:<event_id>` (§4.2a). A higher `event_revision` revises it and keeps the coding people already gave. A missing or negative shortfall goes to quarantine as `schema_invalid`. Both `DETECTED` and `CONFIRMED` create the event. The `plan.*` and `pi_source.*` fields and the feed's product are optional. The connection shows a "Production loss events" tab that links to the Event Hub; the old "PLA reports" tab is gone. The downtime template no longer has a lost-tonnes field.
 - **Quarantine:** records that fail mapping wait in an inbox; a dry run shows the result before replay, or they are marked irrecoverable. Replay and backfill are bounded.
 - **Unit state:** a state mapping per unit (running, internal stop, planned maintenance, starved, blocked, standby, not scheduled) gives coverage and availability bounds.
 

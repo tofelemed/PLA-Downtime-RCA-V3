@@ -1,5 +1,7 @@
 # Downtime and PLA today: how they are linked and calculated
 
+> **Implemented on 27 Oct 2026:** a plant can now choose the **declared mode** (plant setting "Loss accounting": daily periods, OT's production loss event as the loss, stops as a cross-check only). The computed model described below stays the default for every plant that does not opt in. See `docs/PLA_DECLARED_MODE_PLAN.md` and `docs/PROACT_APPLICATION_GUIDE.md` §5.7.
+
 **As implemented on 26 Oct 2026** (engine 2.8.0, HDPE plant). Simple view; details in `docs/PLA_END_TO_END_ANALYSIS.md`.
 
 ---

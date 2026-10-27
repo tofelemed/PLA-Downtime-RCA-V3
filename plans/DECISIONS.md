@@ -1441,3 +1441,4 @@ Engineering defaults; change any of them on request.
 - **D11 `lost_production_t` is dropped from the downtime template** (never used).
 - **D12 Effective date:** the new regime applies from the policy's effective date; approved periods before it are untouched, open ones are re-materialized.
 - **Standards note (owner asked):** this is top-down loss accounting (production balance plan − actual, coded by reason, ISO 22400 / Meridium PLA practice). Downtime stays the supporting evidence (cross-check figure, reliability KPIs) rather than the pricing engine; OEE and capacity-gap views are not available in declared mode.
+- **Build-time rulings (27 Oct 2026).** (a) Days already calculated under shifts stay on shift accounting when a plant switches to day grain; the effective date is the approval date (no future scheduling). (b) When the OT actual is missing, the measured good production is used and the period is flagged `declared_actual_missing`.

@@ -1,5 +1,7 @@
 # Production Loss Accounting (PLA): end-to-end analysis
 
+> **Implemented on 27 Oct 2026:** the OT "production loss event" this analysis discusses now exists. A plant can choose the **declared mode** (plant setting "Loss accounting": daily periods, OT's planned figure as the target, the shortfall coded by reason in the Event Hub, stops as a cross-check only). The computed model described below stays the default and is what this analysis explains. See `docs/PLA_DECLARED_MODE_PLAN.md`.
+
 **Scope:** PLA only. How a loss is defined, computed, explained, approved and reported in Traverse Forge; how production events (stops) relate to it; and what an OT "production loss event" can and cannot do in this model.
 **Basis:** backend code (engine `2.8.0`), frontend code, `plans/DECISIONS.md`, and the live HDPE plant on 26 Oct 2026 (1,690 downtime events, all `full_stop`; 29 PI output events; loss lines of kinds availability / performance / quality / residual).
 

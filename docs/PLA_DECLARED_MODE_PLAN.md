@@ -1,6 +1,6 @@
 # Plan: daily, OT-declared production loss accounting ("declared mode")
 
-**Status:** analysis and plan only. Nothing is changed. 26 Oct 2026.
+**Status:** built 27 Oct 2026 (originally analysis and plan, 26 Oct 2026). Deviations from this plan: the policy takes effect at approval (no future start date); days already calculated stay on shift periods when a plant switches to day grain; the stops cross-check is a figure beside the shortfall, not a line; there are no capacity totals in declared mode; when the OT actual is missing the measured good is used and flagged. Decisions: `plans/DECISIONS.md` (27 Oct 2026).
 **Companion docs:** `docs/PLA_END_TO_END_ANALYSIS.md` (how PLA works today), `docs/PLA_OT_DATA_REQUIREMENTS.md`, `docs/MQTT_FEEDS_PAYLOADS.md`.
 
 ---

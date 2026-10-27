@@ -15,6 +15,11 @@ Reused words live in `src/features/ux-kit/labels/`: `GLOSSARY` (`glossary.ts`) a
 | **Stop** | An event of kind `downtime`. | "downtime event" in a downtime-only screen |
 | **Unaccounted** | The reconciliation residual: gap − attributed − tolerance adjustment (server figure), and loss lines of kind `unaccounted_classified`. | Residual, Unexplained, Shortfall (for the residual), "Unaccounted (classified)" |
 | **Gap** | Target − actual. A different figure from Unaccounted. | — |
+| **Declared loss** | The production loss OT declares for a unit and day (planned, actual, shortfall). Under the declared basis the shortfall, split by reason, is the loss; stops do not create loss lines. | — |
+| **Production loss event** | The event that holds one declared loss: one per unit per day, covering the accounting period, with the shortfall as its quantity. Coded in the Event Hub. | PLA report |
+| **Loss accounting policy** | The approved plant setting for grain (shift / day), loss basis (computed / declared), target source, accounting unit, stops cross-check and identity tolerance. | — |
+| **Stops cross-check** | Stop time times the planned rate, shown beside the declared shortfall to compare. It never becomes a loss line. | — |
+| **Identity** | The rule planned − actual = shortfall, within the plant's tolerance. A break raises a review item and blocks submission. | — |
 | **Investigation** | An RCA case. The module and the nav item keep the name "RCA". | case, RCA case |
 | **Action** | A corrective action of an investigation. | — |
 | **Recommendation** | A proposed action of an investigation (stays "Recommendation"). | — |
