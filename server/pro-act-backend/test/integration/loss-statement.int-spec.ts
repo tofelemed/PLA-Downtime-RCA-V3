@@ -49,7 +49,7 @@ interface RowBody {
 interface ReportBody {
   data: {
     total: StatementBody | null;
-    incomplete: number;
+    incomplete: number | null;
     items: RowBody[];
     nextCursor: string | null;
   };
@@ -205,12 +205,10 @@ describe('loss accounting statement (Task 13)', () => {
         expectIdentity(row.statement);
     }
     expect(body.isProvisional).toBe(true);
-    if (body.data.total) {
-      expectIdentity(body.data.total);
-      expect(Number(body.data.total.recovery)).toBe(8);
-    } else {
-      expect(body.dataQuality.notes).toContain('uom_mixed');
-    }
+    expect(body.dataQuality.notes ?? []).not.toContain('uom_mixed');
+    expect(body.data.total).not.toBeNull();
+    expectIdentity(body.data.total as StatementBody);
+    expect(body.data.total?.recovery).toBe('8');
   });
 
   it('pages by keyset without losing or repeating a row', async () => {
@@ -222,6 +220,9 @@ describe('loss accounting statement (Task 13)', () => {
     );
     expect(second.data.items).toHaveLength(1);
     expect(second.data.nextCursor).toBeNull();
+    expect(first.data.total).not.toBeNull();
+    expect(second.data.total).toBeNull();
+    expect(second.data.incomplete).toBeNull();
     const ids = [...first.data.items, ...second.data.items].map(
       (r) => r.periodId,
     );
@@ -260,7 +261,7 @@ describe('loss accounting statement (Task 13)', () => {
   it('the recovery counts as verified once a supervisor verified the event coding', async () => {
     await env.rows(
       `UPDATE production_events SET verified_by = $2, verified_at = now() WHERE id = $1`,
-      [lossEvent, env.world.tenantA],
+      [lossEvent, randomUUID()],
     );
     const body = await report(window());
     const day = body.data.items.find((row) => row.periodId === dayPeriod);
