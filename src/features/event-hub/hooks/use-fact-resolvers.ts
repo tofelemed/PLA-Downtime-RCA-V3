@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useFailureDictionary } from '@/api/v2/queries/failure-dictionary';
 import { useCodeLibrary } from '@/api/v2/queries/reference-data';
 import { flattenPages } from '@/api/v2/queries/use-v2-list';
+import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { useAssetNames, useUserNames } from '@/features/ux-kit/labels';
 import type { FactResolvers } from '../model/fact-display';
 import { KIND_OF_FIELD } from '../model/failure-dictionary-options';
@@ -17,6 +18,7 @@ export function useFactResolvers(): FactResolvers {
   const impact = useCodeLibrary('impact-codes');
   const dictionary = useFailureDictionary();
   const { dateTime, duration } = usePlantFormat();
+  const { decimal } = useNumberFormat();
   return useMemo(() => {
     const impactNames = new Map(flattenPages(impact.data?.pages).map((code) => [code.id, `${code.code} · ${code.name}`]));
     const failureNames = new Map(dictionary.entries.map((entry) => [`${entry.kind}:${entry.code}`, entry.name]));
@@ -32,6 +34,7 @@ export function useFactResolvers(): FactResolvers {
       userName: users.nameOf,
       dateTime,
       duration,
+      decimal: (value: string, fractionDigits: number) => decimal(value, fractionDigits),
     };
-  }, [env.unitName, env.reasonName, assets.nameOf, users.nameOf, impact.data, dictionary.entries, dateTime, duration]);
+  }, [env.unitName, env.reasonName, assets.nameOf, users.nameOf, impact.data, dictionary.entries, dateTime, duration, decimal]);
 }

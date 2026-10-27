@@ -12,6 +12,8 @@ import {
   SCHEDULE_CLASS_LABELS,
   SOURCE_KIND_LABELS,
 } from '@/features/ux-kit/labels';
+import type { DeclaredFigures } from '@/api/v2/types/events';
+import { declaredFiguresText } from './production-loss';
 import { EVENT_TYPE_LABELS, FAILURE_SEVERITY_LABELS } from '@/features/ux-kit/labels/event-hub-labels';
 
 /**
@@ -33,6 +35,8 @@ export interface FactResolvers {
    * when the plant has no such code (free text is shown as typed)
    */
   failureName?: (field: string, code: string) => string | null;
+  /** a decimal string in the plant's digits (declared tonnes); without it the declared figures show as a plain list */
+  decimal?: (value: string, fractionDigits: number) => string;
 }
 
 type Resolver = (value: string, r: FactResolvers) => string;
@@ -102,9 +106,14 @@ function objectText(value: object, r: FactResolvers): string {
     .join(' · ');
 }
 
+function isDeclaredFigures(value: unknown): value is DeclaredFigures {
+  return typeof value === 'object' && value !== null && typeof (value as DeclaredFigures).shortfall === 'number' && typeof (value as DeclaredFigures).uom === 'string';
+}
+
 /** Readable text of one fact value. */
 export function factText(field: string, value: unknown, r: FactResolvers): string {
   if (value === null || value === undefined || value === '') return '—';
+  if (field === 'declaredFigures' && isDeclaredFigures(value)) return declaredFiguresText(value, r.decimal ?? ((v) => v));
   if (Array.isArray(value)) return value.length === 0 ? '—' : value.map((item) => factText(field, item, r)).join(', ');
   if (typeof value === 'object') return objectText(value, r);
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return scalarText(field, value, r);

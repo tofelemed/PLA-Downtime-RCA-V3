@@ -378,6 +378,12 @@ describe('E-5 fields the source owns', () => {
     expect(screen.getByTestId('from-source-assetId')).toHaveTextContent('From PI');
   });
 
+  it('a production loss event has no OEE impact of its own; the summary points to the loss lines', () => {
+    wrap(<EventSummary event={{ ...STOP, classification: { ...STOP.classification, physicalType: 'production_loss', oeeComponent: 'none' } } as ProductionEventView} />);
+    expect(screen.getByTestId('detail-oee-component')).toHaveTextContent('Per reason (on the loss lines)');
+    expect(screen.queryByText('No OEE impact')).toBeNull();
+  });
+
   it('Marun E2E 1.5: names the data source "Source" and shows the failure severity beside the event severity', () => {
     const failure = { mode: null, severity: 'critical', maintainableItem: null, mechanism: null, cause: null, detectionMethod: null };
     wrap(<EventSummary event={{ ...STOP, severity: null, failure }} />);

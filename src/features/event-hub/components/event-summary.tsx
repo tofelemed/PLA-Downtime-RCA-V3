@@ -21,6 +21,9 @@ import { StateBadges } from './state-badges';
 import { UnitLabel } from './unit-label';
 import { VerificationChip } from './verification-chip';
 
+/** A production loss event has no OEE component of its own: each reason on its loss lines carries one. */
+const PER_REASON_OEE = 'Per reason (on the loss lines)';
+
 function Row({ term, children, testId }: { term: string; children: ReactNode; testId?: string }) {
   return (
     <>
@@ -78,7 +81,9 @@ export function EventSummary({ event }: { event: ProductionEventView }) {
         </Row>
         <Row term="Kind">{labelOf(PHYSICAL_TYPE_LABELS, c.physicalType)}</Row>
         <Row term="Schedule class">{labelOf(SCHEDULE_CLASS_LABELS, c.scheduleClass)}</Row>
-        <Row term="OEE component">{labelOf(OEE_COMPONENT_LABELS, c.oeeComponent)}</Row>
+        <Row term="OEE component" testId="detail-oee-component">
+          {c.physicalType === 'production_loss' ? PER_REASON_OEE : labelOf(OEE_COMPONENT_LABELS, c.oeeComponent)}
+        </Row>
         <Row term="Event family">{labelOf(EVENT_TYPE_LABELS, event.eventType)}</Row>
         <Row term="Event severity" testId="event-severity">{labelOf(SEVERITY_LABELS, event.severity)}</Row>
         {c.physicalType === 'downtime' && (
