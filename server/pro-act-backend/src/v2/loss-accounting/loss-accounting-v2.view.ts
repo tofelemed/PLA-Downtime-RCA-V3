@@ -5,6 +5,7 @@ import {
   parseLossAccounting,
 } from '../../periods/loss-accounting-policy';
 import { LossAccountingInForce } from './loss-accounting-v2.service';
+import { DailyCalendarResult } from './loss-accounting-calendar.service';
 import {
   SourceAuthorityVersionState as LossAccountingVersionState,
   versionStateOf,
@@ -48,6 +49,24 @@ export interface LossAccountingVersionV2View {
   requestedEffectiveFrom: string | null;
   backdateReason: string | null;
   policy: LossAccountingPolicy;
+}
+
+/** What approving a day-grain version did to the calendar of its scope. */
+export interface LossAccountingCalendarV2View {
+  /** the daily calendar version (published by this approval, or already in force) */
+  versionId: string;
+  /** its first operational date: the first `dayStart` after the last calculated period, never before the policy's */
+  effectiveFrom: string;
+  /** open periods deleted so daily periods take their place */
+  retired: number;
+  /** days left to the old periods because one of them has calculation history */
+  kept: number;
+}
+
+/** The approve response: the version, and for a day-grain version the daily calendar (null otherwise). */
+export interface LossAccountingApprovalV2View
+  extends LossAccountingVersionV2View {
+  calendar: LossAccountingCalendarV2View | null;
 }
 
 const iso = (value: Date | null): string | null =>
@@ -96,5 +115,20 @@ export function toLossAccountingVersionView(
     requestedEffectiveFrom: iso(row.requestedEffectiveFrom),
     backdateReason: row.backdateReason,
     policy: parseLossAccounting(row.body),
+  };
+}
+
+export function toLossAccountingApprovalView(
+  row: AccountingPolicy,
+  daily: DailyCalendarResult | null,
+): LossAccountingApprovalV2View {
+  return {
+    ...toLossAccountingVersionView(row),
+    calendar: daily && {
+      versionId: daily.calendarVersionId,
+      effectiveFrom: daily.effectiveFrom,
+      retired: daily.retired,
+      kept: daily.keptInstances,
+    },
   };
 }

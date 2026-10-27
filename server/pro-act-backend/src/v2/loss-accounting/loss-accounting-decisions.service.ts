@@ -22,7 +22,10 @@ import { assertTenantWideWriter } from '../../profiles/profile-scope';
 import { keysetPage } from '../common/keyset-page';
 import { listResponse, ListResponse } from '../common/response';
 import { versionStateOf } from '../source-authority/source-authority-v2.view';
-import { LossAccountingCalendarService } from './loss-accounting-calendar.service';
+import {
+  DailyCalendarResult,
+  LossAccountingCalendarService,
+} from './loss-accounting-calendar.service';
 import { LOSS_ACCOUNTING_APPROVERS } from './loss-accounting-roles';
 import { LossAccountingVersionListQueryDto } from './loss-accounting-v2.dto';
 import {
@@ -42,10 +45,20 @@ interface Decision {
   reason?: string;
 }
 
+interface AppliedDetail {
+  dailyCalendar?: DailyCalendarResult;
+}
+
 type Applied = (
   manager: EntityManager,
   draft: AccountingPolicy,
-) => Promise<Record<string, unknown>>;
+) => Promise<AppliedDetail>;
+
+/** An approval and, for a day-grain version, what it did to the calendar. */
+export interface LossAccountingApproval {
+  row: AccountingPolicy;
+  daily: DailyCalendarResult | null;
+}
 
 /**
  * Maker-checker of `loss_accounting` versions: another user approves or rejects a draft, never its author.
@@ -117,39 +130,46 @@ export class LossAccountingDecisionsService {
     return found;
   }
 
-  approve(
+  async approve(
     context: RequestContext,
     id: string,
     reason?: string,
-  ): Promise<AccountingPolicy> {
+  ): Promise<LossAccountingApproval> {
     const decision = { kind: 'approved' as const, reason };
-    return this.decide(context, id, decision, (manager, draft) =>
+    const done = await this.decide(context, id, decision, (manager, draft) =>
       this.applyApproval(context, manager, draft),
     );
+    return { row: done.row, daily: done.applied.dailyCalendar ?? null };
   }
 
-  reject(
+  async reject(
     context: RequestContext,
     id: string,
     reason: string,
   ): Promise<AccountingPolicy> {
     const decision = { kind: 'rejected' as const, reason };
-    return this.decide(context, id, decision, async (manager, draft) => {
-      await manager.update(AccountingPolicy, draft.id, {
-        rejectedBy: context.userId,
-        rejectedAt: new Date(),
-        rejectionReason: reason.trim(),
-        updatedBy: context.userId,
-      });
-      return {};
-    });
+    const done = await this.decide(
+      context,
+      id,
+      decision,
+      async (manager, draft) => {
+        await manager.update(AccountingPolicy, draft.id, {
+          rejectedBy: context.userId,
+          rejectedAt: new Date(),
+          rejectionReason: reason.trim(),
+          updatedBy: context.userId,
+        });
+        return {};
+      },
+    );
+    return done.row;
   }
 
   private async applyApproval(
     context: RequestContext,
     manager: EntityManager,
     draft: AccountingPolicy,
-  ): Promise<Record<string, unknown>> {
+  ): Promise<AppliedDetail> {
     const base = await this.versions.current(
       context,
       draft.unitId ?? undefined,
@@ -199,7 +219,7 @@ export class LossAccountingDecisionsService {
     id: string,
     decision: Decision,
     apply: Applied,
-  ): Promise<AccountingPolicy> {
+  ): Promise<{ row: AccountingPolicy; applied: AppliedDetail }> {
     const tenantId = requireTenantId(context);
     return this.manager.transaction(async (manager) => {
       const found = await this.get(context, id, manager);
@@ -259,7 +279,10 @@ export class LossAccountingDecisionsService {
           },
         },
       ]);
-      return manager.findOneByOrFail(AccountingPolicy, { id: draft.id });
+      const row = await manager.findOneByOrFail(AccountingPolicy, {
+        id: draft.id,
+      });
+      return { row, applied };
     });
   }
 }

@@ -38,8 +38,10 @@ import {
 } from './loss-accounting-v2.dto';
 import { LossAccountingV2Service } from './loss-accounting-v2.service';
 import {
+  LossAccountingApprovalV2View,
   LossAccountingV2View,
   LossAccountingVersionV2View,
+  toLossAccountingApprovalView,
   toLossAccountingVersionView as toVersionView,
   toLossAccountingView as toView,
 } from './loss-accounting-v2.view';
@@ -122,22 +124,25 @@ export class LossAccountingV2Controller {
   @Roles(...LOSS_ACCOUNTING_APPROVERS)
   @ApiOperation({
     summary:
-      'Approve a draft version (another approver than the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated. A day-grain version publishes the daily calendar from its effective date and replaces the open periods it covers.',
+      'Approve a draft version (another approver than the author): in force from now, the previous version of the scope ends; calculated periods keep theirs until recalculated. A day-grain version publishes the daily calendar and replaces the open periods it covers; the response carries `calendar` (versionId, effectiveFrom, retired, kept; null for shift grain).',
     description:
       'SuperAdmin bypasses independence checks; it may perform every stage itself. Required data and workflow states still apply. ' +
       'Requires `Idempotency-Key`. 403 FORBIDDEN_ROLE unless a production_accountant or manager_approver; 403 SEPARATION_OF_DUTIES for the author; ' +
       '403 TENANT_SCOPE_REQUIRED (tenant-wide version); 409 INVALID_TRANSITION when not proposed; ' +
       '409 STALE_DRAFT when the version it was prepared from is no longer in force. A draft with a commissioning ' +
       'backdate takes effect at its requestedEffectiveFrom; the checks are repeated now: 409 BACKDATE_REWRITES_HISTORY, ' +
-      '409 BACKDATE_OVERLAPS_CALCULATION (details.periods); 422 EFFECTIVE_DATE_TOO_EARLY (day grain: a period with an approved revision starts on or after the effective date).',
+      '409 BACKDATE_OVERLAPS_CALCULATION (details.periods); 422 EFFECTIVE_DATE_TOO_EARLY (day grain: a period with an approved revision starts on or after the effective date). ' +
+      'Day grain: the daily calendar starts at the first dayStart on or after the effective date that is not before the end of the last period with calculation history ' +
+      '(calendar.effectiveFrom, plant local); old-calendar shifts from there are removed and the shift crossing it ends there; 409 SWITCH_CROSSES_CALCULATION when a period after that start gained calculation history meanwhile.',
   })
   @ApiHeader({ name: 'Idempotency-Key', required: true })
   async approve(
     @Ctx() ctx: RequestContext,
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: AdjustmentApproveDto,
-  ): Promise<LossAccountingVersionV2View> {
-    return toVersionView(await this.decisions.approve(ctx, id, body.reason));
+  ): Promise<LossAccountingApprovalV2View> {
+    const done = await this.decisions.approve(ctx, id, body.reason);
+    return toLossAccountingApprovalView(done.row, done.daily);
   }
 
   @Post('versions/:id/reject')

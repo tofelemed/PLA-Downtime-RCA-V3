@@ -1,7 +1,7 @@
 import { EntityManager } from 'typeorm';
 
 /** Period history that cannot be deleted: runs, revisions, proposals, line sets, postings, holds, adjustments. */
-const HAS_HISTORY = `(
+export const HAS_HISTORY = `(
   EXISTS (SELECT 1 FROM "actuals_runs" x WHERE x."period_id" = p."id")
   OR EXISTS (SELECT 1 FROM "calculation_runs" x WHERE x."period_id" = p."id")
   OR EXISTS (SELECT 1 FROM "accounting_revisions" x WHERE x."period_id" = p."id")
@@ -84,7 +84,8 @@ export async function retireOpenPeriods(
   return { retired: retire.length, keptInstances: blocked.size };
 }
 
-async function deletePeriods(
+/** Deletes open periods with their slices and queued jobs (no calculation history). */
+export async function deletePeriods(
   manager: EntityManager,
   periodIds: string[],
 ): Promise<void> {
