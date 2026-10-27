@@ -8,13 +8,19 @@ import { ProductionDaysV2Controller } from './production-days-v2.controller';
 import { ReconciliationQueueV2Controller } from './reconciliation-queue-v2.controller';
 import { RestatementV2Controller } from './restatement-v2.controller';
 import { SourceStatusMappingsV2Controller } from './source-status-mappings-v2.controller';
+import { LossStatementV2Module } from '../loss-statement/loss-statement-v2.module';
 
 /**
  * Close resources on `/api/v2` (EXPERT_REVIEW Area 3: month close, reconciliation SLA, restatement, source status mapping). Imported by `V2Module` and included in
  * the v2 OpenAPI document (`openapi-v2.ts`).
  */
 @Module({
-  imports: [CloseModule, PeriodsModule, ReconciliationModule],
+  imports: [
+    CloseModule,
+    PeriodsModule,
+    ReconciliationModule,
+    LossStatementV2Module,
+  ],
   controllers: [
     MonthCloseV2Controller,
     PeriodSlaV2Controller,

@@ -20,6 +20,7 @@ import {
 import { bridgeReviewOf } from '../../reconciliation/bridge-review';
 import { loadCodingGate } from '../../reconciliation/coding-gate.loader';
 import { loadRevisionState } from '../../reconciliation/revision-state';
+import { revisionStatement } from '../loss-statement/revision-statement';
 import { reversibleKindsOf } from '../../periods/reconciliation-options';
 import { toleranceJustification } from '../../uncertainty/tolerance-justification';
 import { keysetPage } from '../common/keyset-page';
@@ -213,6 +214,7 @@ export class ReconciliationV2Service {
         state.tolerance.body,
       ),
       monthClose: await monthCloseStateOf(manager, period),
+      statement: await revisionStatement(manager, state),
       // the open proposal restates the published revision only
       approvedValuation: await loadApprovedValuation(
         manager,

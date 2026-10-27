@@ -26174,6 +26174,92 @@
         ]
       }
     },
+    "/api/v2/reports/loss-statement": {
+      "get": {
+        "description": "Read-only. Periods starting in [from, to) (≤ 400 days); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. `total` sums the complete periods of the window (server-side, from the shown revisions’ reconciled plan ledgers); `items` is a keyset page of the periods in (local date, start, id) order, each with its statement; `incomplete` counts the periods left out of the total. revision=approved: approved revisions only; provisional (default): approved, else the open draft. Identity: shortfall = netAccounted + toleranceAdjustment + unaccounted; netAccounted = grossAttributed − recovery.",
+        "operationId": "LossStatementV2Controller_lossStatement_v2",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting at or after this instant (ISO 8601 with offset)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "Periods starting before this instant (exclusive); ≤ 400 days after from",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitIds",
+            "required": false,
+            "in": "query",
+            "description": "Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "revision",
+            "required": false,
+            "in": "query",
+            "description": "`approved`: approved revisions only (periods without one are left out and counted in `incomplete`); `provisional`: the approved revision, else the open draft (marked provisional)",
+            "schema": {
+              "default": "provisional",
+              "enum": [
+                "approved",
+                "provisional"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned as nextCursor by the previous page",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Loss accounting statement of a window and units: planned, actual, shortfall, losses by kind, gross attributed, verified recovery, net accounted, tolerance adjustment, unaccounted",
+        "tags": [
+          "v2 · PLA analytics"
+        ]
+      }
+    },
     "/api/v2/notifications": {
       "get": {
         "operationId": "NotificationsV2Controller_list_v2",
@@ -26857,6 +26943,11 @@
             "type": "string",
             "example": "2.5",
             "description": "Tonnes of a production_loss event (the tonnes add up to the event quantity within max(0.001, quantity x 1e-6))"
+          },
+          "recovery": {
+            "type": "boolean",
+            "example": false,
+            "description": "Declared mode: this share of a production_loss is a recovery (booked as a verified-recovery gain). Σ loss shares − Σ recovery shares = the event quantity (percent: = 100). 422 REASON_WEIGHTS_RECOVERY on a stop or without a loss share"
           }
         },
         "required": [

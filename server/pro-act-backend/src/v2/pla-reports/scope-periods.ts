@@ -68,7 +68,7 @@ function scopePage(
 export async function foldScopeStates(
   periods: Repository<ProductionPeriod>,
   input: ScopeFoldInput,
-  visit: (states: readonly PeriodState[]) => void,
+  visit: (states: readonly PeriodState[]) => void | Promise<void>,
 ): Promise<boolean> {
   let provisional = false;
   if (input.scope.unitIds.length === 0) return provisional;
@@ -84,7 +84,7 @@ export async function foldScopeStates(
       { actuals: input.actuals },
     );
     provisional = provisional || hasProvisional(states);
-    visit(states);
+    await visit(states);
     if (page.length < SCOPE_PAGE_SIZE) return provisional;
     after = page[page.length - 1];
   }

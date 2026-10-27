@@ -5,6 +5,7 @@ import { DayRollup } from '../../domain/close/day-certification';
 import { CodingGateResult } from '../../domain/reconciliation/coding-gate';
 import { spansOperationalDay } from '../../periods/day-grain';
 import { LossBasis } from '../../periods/loss-accounting-policy';
+import type { DayStatementView } from '../loss-statement/loss-statement-v2.service';
 
 export interface DayCertificationV2View {
   id: string;
@@ -47,6 +48,11 @@ export interface DayV2View extends DaySummaryV2View {
   codingGate: CodingGateResult | null;
   /** loss basis of the day's current runs (their policy snapshots); null = no run yet */
   lossBasis: LossBasis | null;
+  /**
+   * Task 13: the day's loss accounting statement — its periods' shown revisions (approved, else the open
+   * draft, marked provisional) summed server-side; `incomplete` = periods left out
+   */
+  accounting: DayStatementView;
 }
 
 function certificationView(
@@ -94,7 +100,7 @@ export function toDaySummaryView(day: DaySummary): DaySummaryV2View {
   };
 }
 
-export function toDayView(day: DaySnapshot): DayV2View {
+export function toDayView(day: DaySnapshot): Omit<DayV2View, 'accounting'> {
   return {
     ...toDaySummaryView(day),
     rollup: day.rollup,

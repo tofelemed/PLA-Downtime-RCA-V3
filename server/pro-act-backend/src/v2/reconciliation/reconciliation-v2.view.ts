@@ -16,6 +16,7 @@ import { revisionSelfApproved } from '../../domain/reconciliation/self-approval'
 import { BridgeReviewState } from '../../reconciliation/bridge-review';
 import { RevisionState } from '../../reconciliation/revision-state';
 import { spansOperationalDay } from '../../periods/day-grain';
+import { LossStatementView } from '../loss-statement/loss-statement';
 import { LossBasis } from '../../periods/loss-accounting-policy';
 import { ToleranceJustification } from '../../uncertainty/tolerance-justification';
 import {
@@ -167,6 +168,11 @@ export interface ReconciliationV2View {
   bridgeReview: BridgeReviewState;
   /** UX D-7: close state of the period's financial month (locked = correct through a change proposal) */
   monthClose: MonthCloseStateV2View;
+  /**
+   * Task 13: the loss accounting statement of this revision (server-side sums of its reconciled plan ledger
+   * and the run's recovery / transition / classified lines); null without a run
+   */
+  statement: LossStatementView | null;
   /** owner, 18 Oct 2026: an approved revision's frozen valuation view vs the current policy (else null) */
   approvedValuation: ApprovedValuationV2View | null;
 }
@@ -213,6 +219,7 @@ export function toReconciliationView(
     bridgeReview: BridgeReviewState;
     justification?: ToleranceJustification | null;
     monthClose: MonthCloseStateV2View;
+    statement?: LossStatementView | null;
     approvedValuation?: ApprovedValuationV2View | null;
     derivations?: ReadonlyMap<string, CandidateDerivationV2View>;
     eventRca?: ReadonlyMap<string, EventRcaV2View>;
@@ -255,6 +262,7 @@ export function toReconciliationView(
     codingGate: extra.codingGate,
     bridgeReview: extra.bridgeReview,
     monthClose: extra.monthClose,
+    statement: extra.statement ?? null,
     approvedValuation: extra.approvedValuation ?? null,
   };
 }

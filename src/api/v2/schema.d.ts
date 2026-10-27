@@ -7796,6 +7796,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/reports/loss-statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Loss accounting statement of a window and units: planned, actual, shortfall, losses by kind, gross attributed, verified recovery, net accounted, tolerance adjustment, unaccounted
+         * @description Read-only. Periods starting in [from, to) (≤ 400 days); unitIds must be units of the tenant and the caller’s scope (422 INVALID_REFERENCE), omitted: every unit the caller may read. `total` sums the complete periods of the window (server-side, from the shown revisions’ reconciled plan ledgers); `items` is a keyset page of the periods in (local date, start, id) order, each with its statement; `incomplete` counts the periods left out of the total. revision=approved: approved revisions only; provisional (default): approved, else the open draft. Identity: shortfall = netAccounted + toleranceAdjustment + unaccounted; netAccounted = grossAttributed − recovery.
+         */
+        get: operations["LossStatementV2Controller_lossStatement_v2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/notifications": {
         parameters: {
             query?: never;
@@ -8024,6 +8044,11 @@ export interface components {
              * @example 2.5
              */
             quantity?: string;
+            /**
+             * @description Declared mode: this share of a production_loss is a recovery (booked as a verified-recovery gain). Σ loss shares − Σ recovery shares = the event quantity (percent: = 100). 422 REASON_WEIGHTS_RECOVERY on a stop or without a loss share
+             * @example false
+             */
+            recovery?: boolean;
         };
         BulkCodesDto: {
             /**
@@ -23199,6 +23224,35 @@ export interface operations {
                 "application/json": components["schemas"]["CertifyDayDto"];
             };
         };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    LossStatementV2Controller_lossStatement_v2: {
+        parameters: {
+            query: {
+                /** @description Periods starting at or after this instant (ISO 8601 with offset) */
+                from: string;
+                /** @description Periods starting before this instant (exclusive); ≤ 400 days after from */
+                to: string;
+                /** @description Repeat for several units; units of the tenant and of the caller’s scope (422 INVALID_REFERENCE). Omitted: every unit the caller may read. */
+                unitIds?: string[];
+                /** @description `approved`: approved revisions only (periods without one are left out and counted in `incomplete`); `provisional`: the approved revision, else the open draft (marked provisional) */
+                revision?: "approved" | "provisional";
+                /** @description Opaque cursor returned as nextCursor by the previous page */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {

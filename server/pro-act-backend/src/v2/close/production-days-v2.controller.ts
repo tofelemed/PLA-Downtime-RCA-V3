@@ -26,6 +26,7 @@ import {
 } from 'class-validator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { DayCertificationService } from '../../close/day-certification.service';
+import { LossStatementV2Service } from '../loss-statement/loss-statement-v2.service';
 import { Ctx } from '../../common/context/ctx.decorator';
 import {
   RequestContext,
@@ -88,7 +89,10 @@ export class CertifyDayDto {
 @UseGuards(TenantQueryParamGuard)
 @Controller({ path: 'production-days', version: '2' })
 export class ProductionDaysV2Controller {
-  constructor(private readonly days: DayCertificationService) {}
+  constructor(
+    private readonly days: DayCertificationService,
+    private readonly statements: LossStatementV2Service,
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -122,7 +126,10 @@ export class ProductionDaysV2Controller {
     @Ctx() ctx: RequestContext,
     @Param() params: DayParamDto,
   ): Promise<DayV2View> {
-    return toDayView(await this.days.day(ctx, params.unitId, params.localDate));
+    return this.withStatement(
+      ctx,
+      toDayView(await this.days.day(ctx, params.unitId, params.localDate)),
+    );
   }
 
   @Post(':unitId/:localDate/certify')
@@ -144,8 +151,22 @@ export class ProductionDaysV2Controller {
     @Param() params: DayParamDto,
     @Body() body: CertifyDayDto,
   ): Promise<DayV2View> {
-    return toDayView(
-      await this.days.certify(ctx, params, body.comment ?? null),
+    return this.withStatement(
+      ctx,
+      toDayView(await this.days.certify(ctx, params, body.comment ?? null)),
     );
+  }
+
+  /** Task 13: the day's loss accounting statement (its periods' shown revisions, summed server-side). */
+  private async withStatement(
+    ctx: RequestContext,
+    view: Omit<DayV2View, 'accounting'>,
+  ): Promise<DayV2View> {
+    const accounting = await this.statements.day(
+      ctx,
+      view.unitId,
+      view.localDate,
+    );
+    return { ...view, accounting };
   }
 }

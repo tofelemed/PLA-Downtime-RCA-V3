@@ -4,6 +4,7 @@ import { MasterDataV2Module } from './master-data/master-data-v2.module';
 import { ReliabilityV2Module } from './reliability/reliability-v2.module';
 import { StopEventsV2Module } from './stop-events/stop-events-v2.module';
 import { CloseV2Module } from './close/close-v2.module';
+import { LossStatementV2Module } from './loss-statement/loss-statement-v2.module';
 import { NotificationsV2Module } from './notifications/notifications-v2.module';
 import { SitesV2Module } from './sites/sites-v2.module';
 import { V2Module } from './v2.module';
@@ -25,6 +26,7 @@ export function buildV2Document(app: INestApplication): OpenAPIObject {
       ReliabilityV2Module,
       StopEventsV2Module,
       CloseV2Module,
+      LossStatementV2Module,
       NotificationsV2Module,
       SitesV2Module,
     ],
