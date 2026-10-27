@@ -4,7 +4,7 @@
 
 Your `.env` file has been updated with:
 - **DB_USERNAME:** `sa`
-- **DB_PASSWORD:** `P@ssw0rd`
+- **DB_PASSWORD:** `<redacted>`
 - **PORT:** `4004`
 
 ---
@@ -46,7 +46,7 @@ The `sa` account might be disabled.
 ALTER LOGIN sa ENABLE;
 
 -- Set password (if needed)
-ALTER LOGIN sa WITH PASSWORD = 'P@ssw0rd';
+ALTER LOGIN sa WITH PASSWORD = '<redacted>';
 ```
 
 Or via GUI:
@@ -73,7 +73,7 @@ Try connecting with SSMS:
 - **Server name:** `localhost` or `localhost\SQLEXPRESS`
 - **Authentication:** SQL Server Authentication
 - **Login:** `sa`
-- **Password:** `P@ssw0rd`
+- **Password:** `<redacted>`
 
 If this fails, fix SQL Server configuration first.
 

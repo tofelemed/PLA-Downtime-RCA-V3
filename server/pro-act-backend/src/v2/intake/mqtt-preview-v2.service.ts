@@ -82,8 +82,21 @@ function decodePacket(
     dup: false,
   });
 }
+/** The feed a feeds-profile message belongs to (plans/MQTT_FEEDS.md), or null. */
+function feedOf(
+  envelope: CanonicalEnvelope,
+): { id: string; purpose: string } | null {
+  const controls = envelope.sourceControls?.mqtt;
+  return typeof controls?.feed === 'string' &&
+    typeof controls.feedId === 'string'
+    ? { id: controls.feedId, purpose: controls.feed }
+    : null;
+}
+
 function bindingStatus(envelope: CanonicalEnvelope, binding: Signal | null) {
   if (envelope.sourceControls?.mqtt?.availability) return 'source_health_only';
+  const feed = feedOf(envelope);
+  if (feed) return feed.purpose === 'pla' ? 'pla_report' : 'downtime_event';
   if (!envelope.values?.sample?.signalRef && !envelope.values?.state?.stateRef)
     return 'event_mapping_required';
   if (!binding) return 'unknown_signal_or_out_of_scope';
@@ -106,6 +119,11 @@ function previewView(envelope: CanonicalEnvelope, binding: Signal | null) {
       envelope.values?.state?.stateRef ??
       null,
     availability: envelope.sourceControls?.mqtt?.availability === true,
+    feed: feedOf(envelope),
+    /** what a feed read from the message (PLA: report figures; downtime: unit, equipment, status) */
+    feedFacts: feedOf(envelope) ? feedFactsOf(envelope) : null,
+    startTime: envelope.startTime ?? null,
+    endTime: envelope.endTime ?? null,
     binding: binding
       ? {
           signalId: binding.id,
@@ -117,4 +135,24 @@ function previewView(envelope: CanonicalEnvelope, binding: Signal | null) {
       : null,
     bindingStatus: bindingStatus(envelope, binding),
   };
+}
+
+function feedFactsOf(envelope: CanonicalEnvelope): Record<string, unknown> {
+  const facts: Record<string, unknown> = {
+    ...(envelope.sourceControls?.mqtt ?? {}),
+  };
+  for (const key of [
+    'feed',
+    'feedId',
+    'topic',
+    'retained',
+    'duplicate',
+    'qos',
+    'packetId',
+    'bootId',
+    'sequence',
+    'source',
+  ])
+    delete facts[key];
+  return { ...facts, unitId: envelope.location.unitId ?? null };
 }

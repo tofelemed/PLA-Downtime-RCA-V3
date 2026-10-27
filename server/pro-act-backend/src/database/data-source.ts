@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { dbSsl, dbUser, schemaPoolOptions } from './connection-env';
 import { SlowQueryLogger } from './slow-query.logger';
 
 // `.env` is read from the working directory (server/pro-act-backend), the same way app.module.ts
@@ -17,18 +18,26 @@ const here = __dirname.replace(/\\/g, '/');
  *
  * Schema changes are migrations under src/database/migrations; `synchronize` stays off everywhere.
  */
-export const dataSourceOptions: DataSourceOptions = {
-  type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USERNAME || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'proact',
-  entities: [`${here}/../**/*.entity{.ts,.js}`],
-  migrations: [`${here}/migrations/*{.ts,.js}`],
-  synchronize: false,
-  logging: process.env.DB_LOGGING === 'true',
-};
+export function dataSourceOptionsFrom(
+  env: NodeJS.ProcessEnv = process.env,
+): DataSourceOptions {
+  return {
+    type: 'postgres',
+    host: env.DB_HOST || 'localhost',
+    port: parseInt(env.DB_PORT || '5432', 10),
+    username: dbUser(env),
+    password: env.DB_PASSWORD || '',
+    database: env.DB_NAME || 'traverse_forge',
+    ssl: dbSsl(env),
+    extra: schemaPoolOptions(env),
+    entities: [`${here}/../**/*.entity{.ts,.js}`],
+    migrations: [`${here}/migrations/*{.ts,.js}`],
+    synchronize: false,
+    logging: env.DB_LOGGING === 'true',
+  };
+}
+
+export const dataSourceOptions: DataSourceOptions = dataSourceOptionsFrom();
 
 export const AppDataSource = new DataSource(dataSourceOptions);
 
@@ -47,11 +56,12 @@ export function runtimeDataSourceOptions(
   env: NodeJS.ProcessEnv = process.env,
 ): DataSourceOptions {
   return {
-    ...dataSourceOptions,
+    ...dataSourceOptionsFrom(env),
     migrationsRun: false,
     maxQueryExecutionTime: positiveInt(env.DB_SLOW_QUERY_MS, 500),
     logger: new SlowQueryLogger(env.DB_LOGGING === 'true'),
     extra: {
+      ...schemaPoolOptions(env),
       max: positiveInt(env.DB_POOL_MAX, 10),
       statement_timeout: positiveInt(env.DB_STATEMENT_TIMEOUT_MS, 30_000),
       connectionTimeoutMillis: positiveInt(env.DB_CONNECT_TIMEOUT_MS, 10_000),

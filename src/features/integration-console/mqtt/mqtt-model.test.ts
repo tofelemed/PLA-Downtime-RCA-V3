@@ -8,6 +8,8 @@ import { profileDraftErrors, profileDraftOf, profilePatchOf } from './model/prof
 import { parseTopicTemplate, topicFiltersOverlap, validateTopicFilter } from './model/topic-rules';
 import { classifyToken, stateMapProblem, tokenOfInput } from './model/value-map-classify';
 
+/** the contract v1 interval preset (the wizard's default is the feeds profile since 26 Oct 2026) */
+const contractForm = () => ({ ...emptyMqttForm(), profileKind: 'interval_event_json' as const, topics: PROFILE_PRESETS.interval_event_json.topics });
 const PEM = '-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----';
 const NOW = Date.parse('2026-10-11T08:00:00Z');
 
@@ -37,7 +39,7 @@ const job = (patch: Partial<IngestionJobView> = {}): IngestionJobView => ({
 
 describe('MQTT form → endpoint_config (plan 1.8 step 5)', () => {
   it('produces exactly the adapter shape with the defaults and the contract v1 preset', () => {
-    const form = { ...emptyMqttForm(), displayName: ' Lab ', brokerUrl: ' mqtt://mqtt:1883 ', username: 'lab', secret: 'pw' };
+    const form = { ...contractForm(), displayName: ' Lab ', brokerUrl: ' mqtt://mqtt:1883 ', username: 'lab', secret: 'pw' };
     const body = mqttCreateBody(form);
     expect(body).toEqual({
       sourceType: 'mqtt',
@@ -118,7 +120,7 @@ describe('validation mirrors of mqtt-config.ts / payload-profile.ts', () => {
   });
 
   it('whole form: required name, client id pattern, QoS, integer ranges, reconnect order', () => {
-    const ok = { ...emptyMqttForm(), displayName: 'x', brokerUrl: 'mqtt://b' };
+    const ok = { ...contractForm(), displayName: 'x', brokerUrl: 'mqtt://b' };
     expect(mqttFormErrors(ok)).toEqual({});
     const errors = mqttFormErrors({ ...ok, displayName: ' ', clientId: 'pro act', keepaliveSeconds: '0', reconnectMinSeconds: '30', reconnectMaxSeconds: '5', maxPastSeconds: '-1', sessionExpirySeconds: '1.5' });
     expect(Object.keys(errors).sort()).toEqual(['clientId', 'displayName', 'keepaliveSeconds', 'maxPastSeconds', 'reconnectMaxSeconds', 'sessionExpirySeconds']);

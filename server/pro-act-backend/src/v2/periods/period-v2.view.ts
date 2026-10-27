@@ -234,6 +234,10 @@ export interface ExternalReportV2View {
   certifiedEligible: boolean;
   approvedAtSource: string | null;
   evidenceRef: string | null;
+  /** integration connection that delivered it (null = API / file import) */
+  connectionId: string | null;
+  /** what the source itself reported, for comparison only (never used in accounting) */
+  sourceFigures: ExternalProductionReport['sourceFigures'];
   state: string;
   supersededById: string | null;
   importedAt: string;
@@ -261,6 +265,8 @@ export function toReportView(
     certifiedEligible: report.certifiedEligible,
     approvedAtSource: iso(report.approvedAtSource),
     evidenceRef: report.evidenceRef,
+    connectionId: report.connectionId,
+    sourceFigures: report.sourceFigures ?? null,
     state: report.state,
     supersededById: report.supersededById,
     importedAt: report.importedAt.toISOString(),

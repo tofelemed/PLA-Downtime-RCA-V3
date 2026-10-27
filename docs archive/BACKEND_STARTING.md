@@ -8,7 +8,7 @@ The backend server is starting with the following configuration:
 - **Database:** ProActDB
 - **Host:** localhost:1433
 - **Username:** sa
-- **Password:** P@ssw0rd (configured in .env)
+- **Password:** <redacted> (configured in .env)
 
 ---
 

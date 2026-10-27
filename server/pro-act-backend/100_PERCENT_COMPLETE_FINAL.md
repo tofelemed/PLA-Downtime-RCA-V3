@@ -593,7 +593,7 @@ export const api = {
 # 1. Login
 TOKEN=$(curl -s -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}' \
+  -d '{"email":"admin@example.com","password":"<redacted>"}' \
   | jq -r '.access_token')
 
 # 2. Use token

@@ -17,6 +17,7 @@ describe('MQTT decode stages shared by every profile (plan 1.8 WP3 step 2, desig
   it('registers one decoder per profile kind', () => {
     expect(Object.keys(PROFILE_DECODERS).sort()).toEqual([
       'availability',
+      'feeds',
       'interval_event_json',
       'measurement_json',
       'state_json',

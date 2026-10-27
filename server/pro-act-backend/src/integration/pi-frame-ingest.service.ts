@@ -67,7 +67,8 @@ export interface FrameContext {
   tenantId: string;
   organizationId?: string;
   profile: MappingProfile;
-  resolver: TenantMappingResolver;
+  /** placement of the frame (source mappings; the MQTT downtime feed adds unit / equipment codes) */
+  resolver: Pick<TenantMappingResolver, 'resolve'>;
   sourceSystem?: 'PI' | 'MQTT';
 }
 

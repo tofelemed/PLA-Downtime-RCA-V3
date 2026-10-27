@@ -47,6 +47,7 @@ describe('MQTT console flows (plan 1.8 step 5)', () => {
     const onSaved = vi.fn();
     wrap(<MqttWizardBody connection={null} onClose={() => undefined} onSaved={onSaved} />);
     expect(screen.getByTestId('mqtt-wizard')).toHaveAttribute('data-step', 'profile');
+    fireEvent.change(screen.getByTestId('mqtt-kind'), { target: { value: 'interval_event_json' } });
     fireEvent.click(screen.getByTestId('mqtt-next'));
     expect(screen.getByTestId('mqtt-wizard')).toHaveAttribute('data-step', 'basics');
     fireEvent.click(screen.getByTestId('mqtt-next'));
@@ -80,6 +81,7 @@ describe('MQTT console flows (plan 1.8 step 5)', () => {
   it('wizard: a 422 with field errors lands on the owning step with the message inline', async () => {
     reply = () => json(422, { code: 'INVALID_ENDPOINT_CONFIG', message: 'bad', correlationId: 'corr-2', retryable: false, fieldErrors: [{ field: 'endpointConfig.mqtt.keepaliveSeconds', message: 'must be an integer between 1 and 65535' }] });
     wrap(<MqttWizardBody connection={null} onClose={() => undefined} onSaved={() => undefined} />);
+    fireEvent.change(screen.getByTestId('mqtt-kind'), { target: { value: 'interval_event_json' } });
     fireEvent.click(screen.getByTestId('mqtt-next'));
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Lab' } });
     fireEvent.change(screen.getByLabelText('Broker URL'), { target: { value: 'mqtt://mqtt:1883' } });

@@ -10,7 +10,7 @@ ERROR: UnauthorizedException: Unauthorized
 ```
 
 **This confirms:**
-- ✅ Backend is using JWT_SECRET: `admin123` (length 8)
+- ✅ Backend is using JWT_SECRET: `<redacted>` (length 8)
 - ✅ Token IS being sent correctly
 - ❌ Token was signed with a DIFFERENT secret and can't be verified
 
@@ -32,7 +32,7 @@ After the page reloads:
 2. Enter your credentials
 3. Click "Login"
 
-**You'll get a fresh token signed with the current JWT_SECRET (`admin123`)**
+**You'll get a fresh token signed with the current JWT_SECRET (`<redacted>`)**
 
 ### Step 3: Verify It Works
 
@@ -55,7 +55,7 @@ After the page reloads:
 
 ## Why This Happens
 
-Your token in localStorage was created with a different JWT_SECRET. The backend is now using `admin123`, but your token was signed with the old secret.
+Your token in localStorage was created with a different JWT_SECRET. The backend is now using `<redacted>`, but your token was signed with the old secret.
 
 **Solution:** Clear old token → Login → Get fresh token signed with current secret → Everything works!
 

@@ -30,6 +30,7 @@ const PROTOCOL_DEFAULT: Record<PayloadProfileKind, QualityProtocol> = {
   measurement_json: 'PI',
   state_json: 'PI',
   availability: 'NONE',
+  feeds: 'NONE',
 };
 
 export function decodeTiming(

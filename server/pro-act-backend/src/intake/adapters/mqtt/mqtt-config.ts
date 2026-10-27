@@ -2,6 +2,7 @@ import { AdapterError } from '../adapter-error';
 import { BrokerUrl, parseBrokerUrl } from './broker-url';
 import { PayloadProfile, validatePayloadProfile } from './payload-profile';
 import { validateTopicFilter } from './topic-filter';
+import { feedTopics } from './feeds/feed-profile';
 
 /**
  * `integration_connections.endpoint_config` of an MQTT connection (plan 1.8 design §3): the `mqtt`
@@ -237,9 +238,11 @@ function validatePem(pem: unknown, problems: Problems): void {
 function validateTopics(
   block: Record<string, unknown>,
   problems: Problems,
+  feedsMode = false,
 ): string[] {
-  const topics = block.topics;
-  if (!Array.isArray(topics) || topics.length === 0) {
+  const topics = block.topics ?? (feedsMode ? [] : undefined);
+  // a feeds profile subscribes its feed topics; extra filters are optional then
+  if (!Array.isArray(topics) || (topics.length === 0 && !feedsMode)) {
     problems.push('mqtt.topics: at least one topic filter is required');
     return [];
   }
@@ -294,7 +297,9 @@ export function validateMqttConfig(
   validateIdentity(block, problems);
   validateSession(block, problems);
   validateTls(block.tls, broker, problems);
-  const topics = validateTopics(block, problems);
+  const feedsMode =
+    isRecord(config.payloadProfile) && config.payloadProfile.kind === 'feeds';
+  const topics = validateTopics(block, problems, feedsMode);
   problems.push(...validatePayloadProfile(config.payloadProfile, topics));
   return problems;
 }
@@ -352,7 +357,13 @@ export function parseMqttConfig(
       ...MQTT_DEFAULTS.reconnect,
     },
     tls,
-    topics: [...(block.topics as string[])],
+    // feeds mode: the feed topics are subscribed as well (plans/MQTT_FEEDS.md)
+    topics: [
+      ...new Set([
+        ...((block.topics as string[] | undefined) ?? []),
+        ...feedTopics((config.payloadProfile as PayloadProfile).feeds),
+      ]),
+    ],
     availabilityTopic: block.availabilityTopic as string | undefined,
     maxMessageBytes:
       (block.maxMessageBytes as number | undefined) ??

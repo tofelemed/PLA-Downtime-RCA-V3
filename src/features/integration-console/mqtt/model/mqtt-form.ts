@@ -1,5 +1,6 @@
 import type { ConnectionCreateBody, ConnectionUpdateBody } from '@/api/v2/queries/integration-connections';
 import type { ConnectionView } from '@/api/v2/types/integrations';
+import { feedsFromProfile, feedsProfileOf, newFeed, type FeedForm } from './feeds';
 
 /**
  * MQTT connection form (plan 1.8 WP3 step 5). It produces exactly the backend's `endpoint_config`
@@ -9,6 +10,9 @@ import type { ConnectionView } from '@/api/v2/types/integrations';
  */
 export const PROFILE_KINDS = ['interval_event_json', 'measurement_json', 'state_json', 'availability'] as const;
 export type ProfileKind = (typeof PROFILE_KINDS)[number];
+/** `feeds` (plans/MQTT_FEEDS.md): PLA and downtime topics on one connection; the default. */
+export type MqttProfileKind = 'feeds' | ProfileKind;
+export const MQTT_PROFILE_KINDS: readonly MqttProfileKind[] = ['feeds', ...PROFILE_KINDS];
 export const IDENTITY_STRATEGIES = ['seq_boot', 'event_id', 'payload_hash'] as const;
 export type IdentityStrategy = (typeof IDENTITY_STRATEGIES)[number];
 export const TIME_UNITS = ['auto', 'ms', 's', 'iso'] as const;
@@ -18,7 +22,9 @@ export type TlsMode = (typeof TLS_MODES)[number];
 
 export interface MqttConnectionForm {
   // profile step
-  profileKind: ProfileKind;
+  profileKind: MqttProfileKind;
+  /** feeds profile only */
+  feeds: FeedForm[];
   topicTemplate: string;
   identityStrategy: IdentityStrategy;
   // basics step
@@ -94,13 +100,15 @@ export const PROFILE_PRESETS: Record<ProfileKind, { label: string; topicTemplate
 /** The backend defaults (`MQTT_DEFAULTS`, design §3), as the form shows them. */
 export function emptyMqttForm(): MqttConnectionForm {
   const preset = PROFILE_PRESETS.interval_event_json;
+  const pla = newFeed('pla');
   return {
-    profileKind: 'interval_event_json',
+    profileKind: 'feeds',
+    feeds: [pla, newFeed('downtime', [pla])],
     topicTemplate: preset.topicTemplate,
     identityStrategy: preset.identityStrategy,
     displayName: '',
     brokerUrl: '',
-    topics: preset.topics,
+    topics: '',
     availabilityTopic: '',
     protocolVersion: '5',
     username: '',
@@ -134,7 +142,7 @@ const text = (value: unknown, fallback = ''): string => (typeof value === 'strin
 const oneOf = <T extends string>(value: unknown, options: readonly T[], fallback: T): T =>
   (options as readonly string[]).includes(value as string) ? (value as T) : fallback;
 
-const WIZARD_PROFILE_KEYS = new Set(['kind', 'topicTemplate', 'identityStrategy', 'schemaVersion', 'time', 'quality']);
+const WIZARD_PROFILE_KEYS = new Set(['kind', 'feeds', 'topicTemplate', 'identityStrategy', 'schemaVersion', 'time', 'quality']);
 
 /** The form of a stored MQTT connection; the secret always starts empty. */
 export function mqttFormFromConnection(connection: ConnectionView): MqttConnectionForm {
@@ -146,9 +154,11 @@ export function mqttFormFromConnection(connection: ConnectionView): MqttConnecti
   const time = record(profile.time);
   const topics = Array.isArray(mqtt.topics) ? mqtt.topics.filter((entry): entry is string => typeof entry === 'string') : [];
   const extras = Object.fromEntries(Object.entries(profile).filter(([key]) => !WIZARD_PROFILE_KEYS.has(key)));
+  const profileKind = oneOf(profile.kind, MQTT_PROFILE_KINDS, 'interval_event_json');
   return {
     ...base,
-    profileKind: oneOf(profile.kind, PROFILE_KINDS, base.profileKind),
+    profileKind,
+    feeds: profileKind === 'feeds' ? feedsFromProfile(profile) : base.feeds,
     topicTemplate: text(profile.topicTemplate),
     identityStrategy: oneOf(profile.identityStrategy, IDENTITY_STRATEGIES, 'seq_boot'),
     displayName: connection.displayName,
@@ -199,6 +209,8 @@ function tlsBlock(form: MqttConnectionForm): Record<string, unknown> {
 }
 
 function profileBlock(form: MqttConnectionForm): Record<string, unknown> {
+  // a feeds profile is exactly { kind, feeds }: the server refuses unknown keys
+  if (form.profileKind === 'feeds') return feedsProfileOf(form.feeds);
   const time: Record<string, unknown> = { unit: form.timeUnit };
   if (form.maxFutureSkewSeconds.trim()) time.maxFutureSkewSeconds = int(form.maxFutureSkewSeconds);
   if (form.maxPastSeconds.trim()) time.maxPastSeconds = int(form.maxPastSeconds);

@@ -5,7 +5,7 @@
 The `.env` file has been updated with the following credentials:
 
 - **DB_USERNAME:** `sa`
-- **DB_PASSWORD:** `P@ssw0rd`
+- **DB_PASSWORD:** `<redacted>`
 - **PORT:** `4004`
 
 ---
@@ -44,7 +44,7 @@ The backend server needs to be restarted to pick up the new credentials.
    - Try connecting with SQL Server Management Studio (SSMS)
    - Use Server: `localhost` or `localhost\SQLEXPRESS`
    - Username: `sa`
-   - Password: `P@ssw0rd`
+   - Password: `<redacted>`
 
 4. **Check SQL Server Instance Name:**
    - If using a named instance (e.g., `SQLEXPRESS`), update `DB_HOST`:
@@ -77,7 +77,7 @@ If you still see connection errors, check:
 - SQL Server service is running
 - SQL Server Authentication is enabled
 - `sa` account is enabled
-- Password is correct: `P@ssw0rd`
+- Password is correct: `<redacted>`
 
 ---
 

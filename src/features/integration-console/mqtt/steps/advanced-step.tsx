@@ -52,7 +52,7 @@ export function AdvancedStep({ form, errors, onChange }: StepProps) {
         </div>
         {SESSION.map(number)}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      {form.profileKind !== 'feeds' && <div className="grid gap-3 sm:grid-cols-2">
         <Field id="mqtt-schema" label="Schema version" error={errors.schemaVersion}>
           <Input id="mqtt-schema" value={form.schemaVersion} onChange={(event) => onChange({ schemaVersion: event.target.value })} />
         </Field>
@@ -81,7 +81,7 @@ export function AdvancedStep({ form, errors, onChange }: StepProps) {
             onChange={(value) => onChange({ qualityProtocol: value as MqttConnectionForm['qualityProtocol'] })}
           />
         </Field>
-      </div>
+      </div>}
     </div>
   );
 }

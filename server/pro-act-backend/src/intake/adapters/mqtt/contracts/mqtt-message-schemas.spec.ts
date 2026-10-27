@@ -1,6 +1,9 @@
 import { readdirSync, readFileSync } from 'fs';
 import { resolve } from 'path';
-import { PAYLOAD_PROFILE_KINDS, PayloadProfileKind } from '../payload-profile';
+import {
+  CONTRACT_PROFILE_KINDS,
+  ContractProfileKind,
+} from '../payload-profile';
 import { contractFileOf, MQTT_MESSAGE_SCHEMAS } from './mqtt-message-schemas';
 import {
   describeViolations,
@@ -13,7 +16,7 @@ const FIXTURES = resolve(BACKEND, 'test', 'fixtures', 'mqtt');
 
 interface Fixture {
   id: string;
-  profile: { kind: PayloadProfileKind };
+  profile: { kind: ContractProfileKind };
   packet: { topic: string };
   payload: Record<string, unknown>;
 }
@@ -26,7 +29,7 @@ const fixtures = readdirSync(FIXTURES)
   .map((file) => readJson(resolve(FIXTURES, file)) as Fixture);
 
 /** The contract kind of a fixture: the availability topic carries availability messages. */
-function kindOf(fixture: Fixture): PayloadProfileKind {
+function kindOf(fixture: Fixture): ContractProfileKind {
   return fixture.packet.topic.endsWith('/gateway/availability')
     ? 'availability'
     : fixture.profile.kind;
@@ -46,9 +49,9 @@ describe('MQTT message contracts v1 (plan 1.8 WP3 step 2, OT contract §3)', () 
   it('every checked copy equals its published contract and every contract has a copy', () => {
     const files = readdirSync(CONTRACTS).filter((f) => f.endsWith('.json'));
     expect(files.sort()).toEqual(
-      PAYLOAD_PROFILE_KINDS.map(contractFileOf).sort(),
+      CONTRACT_PROFILE_KINDS.map(contractFileOf).sort(),
     );
-    for (const kind of PAYLOAD_PROFILE_KINDS) {
+    for (const kind of CONTRACT_PROFILE_KINDS) {
       const published = readJson(resolve(CONTRACTS, contractFileOf(kind)));
       expect(JSON.parse(JSON.stringify(MQTT_MESSAGE_SCHEMAS[kind]))).toEqual(
         published,
@@ -76,7 +79,7 @@ describe('MQTT message contracts v1 (plan 1.8 WP3 step 2, OT contract §3)', () 
     },
   );
 
-  it.each<[string, PayloadProfileKind, unknown]>([
+  it.each<[string, ContractProfileKind, unknown]>([
     [
       'a missing schema_version',
       'interval_event_json',

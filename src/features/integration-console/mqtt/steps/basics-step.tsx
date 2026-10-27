@@ -9,6 +9,8 @@ import { plural } from '@/features/ux-kit/format/plural';
 /** Step 2 — name, broker URL (egress allowlist applies server-side) and the topic filter allowlist. */
 export function BasicsStep({ form, errors, onChange }: StepProps) {
   const { number } = useNumberFormat();
+  // feeds: the feed topics are subscribed; extra filters only show when a stored connection has some
+  const showTopics = form.profileKind !== 'feeds' || topicList(form).length > 0;
   return (
     <div className="space-y-3">
       <Field id="mqtt-name" label="Name" error={errors.displayName}>
@@ -17,14 +19,15 @@ export function BasicsStep({ form, errors, onChange }: StepProps) {
       <Field id="mqtt-broker" label="Broker URL" error={errors.brokerUrl} hint="mqtt://host[:port] or mqtts://host[:port]; the broker must be on the server's egress allowlist.">
         <Input id="mqtt-broker" inputMode="url" placeholder="mqtts://broker.plant.local:8883" value={form.brokerUrl} onChange={(event) => onChange({ brokerUrl: event.target.value })} />
       </Field>
-      <Field
+      {showTopics && <Field
         id="mqtt-topics"
-        label="Topic filters (one per line)"
+        label={form.profileKind === 'feeds' ? 'Extra topic filters (optional, one per line)' : 'Topic filters (one per line)'}
         error={errors.topics}
         hint={`${plural(topicList(form).length, 'filter', 'filters', number)}. + matches one level, # the rest (last level only); at most ${number(64)}. A second connection overlapping these filters on the same broker is refused (duplicate feed).`}
       >
         <Textarea id="mqtt-topics" rows={4} className="font-mono text-xs" value={form.topics} onChange={(event) => onChange({ topics: event.target.value })} />
-      </Field>
+      </Field>}
+      {!showTopics && <p className="text-xs text-muted-foreground" data-testid="mqtt-feed-topics-note">The connection subscribes to the feed topics set on the Profile step.</p>}
       <Field id="mqtt-availability" label="Availability topic (optional)" error={errors.availabilityTopic} hint="Retained ONLINE / OFFLINE plus the gateway's Last Will; OFFLINE marks the source unavailable, never a stop.">
         <Input id="mqtt-availability" placeholder="proact/v1/+/gateway/availability" value={form.availabilityTopic} onChange={(event) => onChange({ availabilityTopic: event.target.value })} />
       </Field>

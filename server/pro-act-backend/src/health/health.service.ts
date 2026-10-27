@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import type { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
+import { buildInfo } from './build-info';
 
 @Injectable()
 export class HealthService {
@@ -15,6 +17,16 @@ export class HealthService {
     return {
       status: dbStatus ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
+      database: dbStatus ? 'connected' : 'disconnected',
+      ...buildInfo(),
+    };
+  }
+
+  /** Readiness probe: `SELECT 1` only, no host or runtime details (the route is public). */
+  async ready() {
+    const dbStatus = await this.checkDatabase();
+    return {
+      status: dbStatus ? 'ready' : 'unavailable',
       database: dbStatus ? 'connected' : 'disconnected',
     };
   }
@@ -31,8 +43,9 @@ export class HealthService {
       database: {
         status: dbStatus ? 'connected' : 'disconnected',
         type: this.dataSource.options.type,
-        host: (this.dataSource.options as any).host,
-        database: (this.dataSource.options as any).database,
+        host: (this.dataSource.options as PostgresConnectionOptions).host,
+        database: (this.dataSource.options as PostgresConnectionOptions)
+          .database,
       },
       memory: {
         rss: Math.round(memoryUsage.rss / 1024 / 1024) + ' MB',
@@ -49,7 +62,7 @@ export class HealthService {
     try {
       await this.dataSource.query('SELECT 1');
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

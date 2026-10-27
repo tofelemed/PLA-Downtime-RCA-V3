@@ -46,7 +46,7 @@ export interface EnvelopeParts {
  */
 export function buildEnvelope(
   input: DecodeInput,
-  picked: PickedMessage,
+  picked: Pick<PickedMessage, 'json' | 'hash'>,
   common: CommonFields,
   parts: EnvelopeParts,
 ): CanonicalEnvelope {

@@ -11,6 +11,22 @@ export interface ExternalReportLine {
   uom: string | null;
 }
 
+/**
+ * What the source itself reported for comparison (e.g. MQTT PLA feed: OT planned, actual, shortfall,
+ * status, quality); kept on the record and shown, never used in accounting.
+ */
+export interface ExternalReportSourceFigures {
+  planned?: number | null;
+  actual?: number | null;
+  shortfall?: number | null;
+  uom?: string | null;
+  status?: string | null;
+  quality?: string | null;
+  plant?: string | null;
+  eventType?: string | null;
+  topic?: string | null;
+}
+
 /** An external daily-production record as delivered (Maximo or similar, ACT08). */
 export interface ExternalReportDraft {
   externalReportId: string;
@@ -27,6 +43,10 @@ export interface ExternalReportDraft {
   approvedAtSource: Date | null;
   evidenceRef: string | null;
   lines: ExternalReportLine[];
+  /** the source's own figures, for comparison only (null / absent = none) */
+  sourceFigures?: ExternalReportSourceFigures | null;
+  /** integration connection that delivered it (null / absent = API / file import) */
+  connectionId?: string | null;
 }
 
 export interface DraftProblem {

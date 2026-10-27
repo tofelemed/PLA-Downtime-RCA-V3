@@ -1,6 +1,6 @@
 import Ajv2020, { ErrorObject, ValidateFunction } from 'ajv/dist/2020';
 import addFormats from 'ajv-formats';
-import { PayloadProfileKind } from '../payload-profile';
+import { ContractProfileKind } from '../payload-profile';
 import { MQTT_MESSAGE_SCHEMAS } from './mqtt-message-schemas';
 
 /** One contract violation in a storable form (no ajv internals). */
@@ -9,10 +9,10 @@ export interface MessageViolation {
   message: string;
 }
 
-let compiled: Map<PayloadProfileKind, ValidateFunction> | null = null;
+let compiled: Map<ContractProfileKind, ValidateFunction> | null = null;
 
 /** One ajv validator per profile kind, compiled once per process. */
-function validators(): Map<PayloadProfileKind, ValidateFunction> {
+function validators(): Map<ContractProfileKind, ValidateFunction> {
   if (compiled) return compiled;
   // `required` inside if/then names properties declared at the top level, hence strictRequired off
   const ajv = new Ajv2020({
@@ -25,7 +25,7 @@ function validators(): Map<PayloadProfileKind, ValidateFunction> {
   compiled = new Map(
     (
       Object.entries(MQTT_MESSAGE_SCHEMAS) as Array<
-        [PayloadProfileKind, object]
+        [ContractProfileKind, object]
       >
     ).map(([kind, schema]) => [kind, ajv.compile(schema)]),
   );
@@ -37,7 +37,7 @@ function validators(): Map<PayloadProfileKind, ValidateFunction> {
  * Used by every profile decoder before any field is read (design §4.2 stage 2 → `SCHEMA_INVALID`).
  */
 export function validateMqttMessage(
-  kind: PayloadProfileKind,
+  kind: ContractProfileKind,
   message: unknown,
 ): MessageViolation[] {
   const validate = validators().get(kind);

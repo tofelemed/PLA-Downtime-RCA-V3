@@ -1,4 +1,5 @@
 import { topicList, type MqttConnectionForm, type MqttFormErrors } from './mqtt-form';
+import { feedErrorSummary, feedErrors } from './feeds';
 import { parseTopicTemplate, topicFiltersOverlap, validateTopicFilter } from './topic-rules';
 
 /**
@@ -120,14 +121,33 @@ export function mqttFormErrors(form: MqttConnectionForm, options: ValidationOpti
   if (form.displayName.trim() === '') errors.displayName = 'Name is required';
   const url = brokerUrlProblem(form.brokerUrl);
   if (url) errors.brokerUrl = url;
+  if (form.profileKind === 'feeds') return { ...errors, ...feedsModeProblems(form) };
   const topics = topicsProblem(form);
   if (topics) errors.topics = topics;
+  const template = topicTemplateProblem(form, options);
+  if (template) errors.topicTemplate = template;
+  return { ...errors, ...sharedProblems(form) };
+}
+
+/** Feeds mode: the feed rules instead of the topic filter and template rules (extra filters stay optional). */
+function feedsModeProblems(form: MqttConnectionForm): MqttFormErrors {
+  const errors: MqttFormErrors = sharedProblems(form);
+  const extra = topicList(form);
+  if (extra.length > 0) {
+    const topics = topicsProblem(form);
+    if (topics) errors.topics = topics;
+  }
+  const feeds = feedErrorSummary(feedErrors(form.feeds));
+  if (feeds) errors.feeds = feeds;
+  return errors;
+}
+
+function sharedProblems(form: MqttConnectionForm): MqttFormErrors {
+  const errors: MqttFormErrors = {};
   const availability = form.availabilityTopic.trim() ? validateTopicFilter(form.availabilityTopic.trim()) : null;
   if (availability) errors.availabilityTopic = availability;
   if (form.clientId.trim() && !CLIENT_ID_PATTERN.test(form.clientId.trim())) errors.clientId = 'Must match ^[A-Za-z0-9_-]{1,64}$ (blank = derived proact-<connection id>)';
   if (form.username.length > 256) errors.username = 'At most 256 characters';
   if (!['0', '1', '2'].includes(form.qos)) errors.qos = 'Must be 0, 1 or 2';
-  const template = topicTemplateProblem(form, options);
-  if (template) errors.topicTemplate = template;
   return errors;
 }

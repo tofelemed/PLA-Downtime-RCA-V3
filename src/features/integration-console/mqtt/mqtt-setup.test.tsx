@@ -7,6 +7,7 @@ import { jsonResponse, stubV2Fetch } from '@/test/v2-fetch';
 import { MQTT_CONNECTION } from './mqtt-test-fixtures';
 import { MqttConnectionPanel } from './mqtt-connection-panel';
 import { MqttSamplePreview } from './mqtt-sample-preview';
+import { newFeed } from './model/feeds';
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 vi.mock('@/features/ux-kit/date-inputs', async (original) => ({ ...(await original<Record<string, unknown>>()), DateTimeInput: ({ label, value, onChange }: { label: string; value: string | null; onChange: (value: string) => void }) => <label>{label}<input value={value ?? ''} onChange={(e) => onChange(e.target.value)} /></label> }));
@@ -36,5 +37,18 @@ describe('MQTT setup navigation and sample validation', () => {
     // cleanup 25 Oct 2026: the "does not prove live delivery" caution is behind the card's ⓘ
     expect(screen.queryByText(/does not prove live delivery/)).toBeNull();
     expect(screen.getByRole('button', { name: 'About Validate MQTT sample' })).toBeInTheDocument();
+  });
+  it('fills the topic and example from a feed and shows how the feed read it', async () => {
+    const calls = stubV2Fetch(() => jsonResponse(200, { ok: true, kind: 'output_event', bindingStatus: 'pla_report', feed: { id: 'pla', purpose: 'pla' }, values: { output: { quantity: 208, unit: 't' } }, feedFacts: { report: { planned: 240, shortfall: 32 } } }));
+    const feeds = [{ ...newFeed('pla'), topic: 'marun/+/pla' }, { ...newFeed('downtime'), topic: 'marun/hdpe/downtime' }];
+    show(<MqttSamplePreview connectionId="c1" timezone="Asia/Dubai" feeds={feeds} />);
+    fireEvent.change(screen.getByTestId('sample-feed'), { target: { value: 'pla' } });
+    expect(screen.getByLabelText('Topic')).toHaveValue('marun/sample/pla');
+    expect((screen.getByLabelText('Payload JSON') as HTMLTextAreaElement).value).toContain('"event_id": "MARUN-HDPE-20261025"');
+    fireEvent.change(screen.getByLabelText('Sample receive time'), { target: { value: '2026-10-26T00:00:00Z' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Validate sample (no writes)' }));
+    await waitFor(() => expect(screen.getByText('Decoded feed pla: Read as a PLA daily report')).toBeInTheDocument());
+    expect(screen.getByTestId('sample-figures')).toHaveTextContent('OT planned240');
+    expect(calls[0].body).toMatchObject({ topic: 'marun/sample/pla' });
   });
 });

@@ -45,6 +45,8 @@ export const FIELD_DEFAULTS: Record<
     state: 'state',
     piConnected: 'pi_connected',
   },
+  // a feeds profile reads its fields with FeedReader (feeds/feed-templates.ts)
+  feeds: {},
 };
 
 /** Reads named fields of one message under a profile's field map. */

@@ -1,4 +1,4 @@
-import { PayloadProfileKind } from '../payload-profile';
+import { ContractProfileKind } from '../payload-profile';
 
 /**
  * Checked copies of `contracts/mqtt/*.v1.schema.json` (JSON Schema 2020-12, OT contract §3) so the
@@ -220,12 +220,12 @@ export const MQTT_MESSAGE_SCHEMAS = {
   measurement_json: MEASUREMENT_V1_SCHEMA,
   state_json: STATE_V1_SCHEMA,
   availability: AVAILABILITY_V1_SCHEMA,
-} as const satisfies Record<PayloadProfileKind, object>;
+} as const satisfies Record<ContractProfileKind, object>;
 
 /** The schema versions a decoder accepts for a profile kind (contract §3: `schema_version`). */
 export const SUPPORTED_SCHEMA_VERSIONS: readonly string[] = ['1.0'];
 
-const CONTRACT_FILES: Record<PayloadProfileKind, string> = {
+const CONTRACT_FILES: Record<ContractProfileKind, string> = {
   interval_event_json: 'interval-event.v1.schema.json',
   measurement_json: 'measurement.v1.schema.json',
   state_json: 'state.v1.schema.json',
@@ -233,6 +233,6 @@ const CONTRACT_FILES: Record<PayloadProfileKind, string> = {
 };
 
 /** File name of the published contract of a profile kind under `contracts/mqtt/`. */
-export function contractFileOf(kind: PayloadProfileKind): string {
+export function contractFileOf(kind: ContractProfileKind): string {
   return CONTRACT_FILES[kind];
 }

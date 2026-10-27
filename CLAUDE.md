@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
+use agents, subagents skills where required 
 ## Project
 Pro-Act: industrial production-loss accounting, downtime analytics and RCA. Two npm projects in one repo.
 - Frontend (repo root): React 18, Vite 5, TypeScript, Tailwind, shadcn/ui, TanStack Query, Recharts. Dev server `:8070`.
@@ -79,4 +79,16 @@ Docker: `cp .env.example .env` → `docker compose up -d --build` (see `docs/DOC
 - Display monetary amounts in USD by default, with a user option to switch the display to IRR.
 - Before seeding data or running full plant end-to-end tests, check with the user first and wait for their go-ahead.
 - Use the single proact-postgres container (port 5432) for all dev data; do not use the other Postgres instance. Integration tests run only on the throwaway `proact-test-postgres` container (`npm run test:int`, 127.0.0.1:5434), never on proact-postgres.
-<!-- end claude-reflect -->
+- Use only the @hdpe-train.mpc database as the main database; do not target other databases in future sessions.
+- Use relevant industry-standard colors for graphs, charts, and trends, not brand colors.
+- Refer to this project as Traverse Forge, not ProAct.
+
+
+
+logins for testing Email: admin@hdpe-train.mpc
+Password: Hdpe-zv5ks2liNDDJ!7
+
+Reza = Manager
+The 13 persona accounts use the same password, at <first name>@hdpe-train.mpc: leila, omid, sara, reza, neda, farid, mina, arman, darya, kamran, maryam, bahram, shirin.
+
+remember: When checking application pages, verify them under each user role, not only the default role.

@@ -7,6 +7,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -17,13 +18,17 @@ import {
 } from '@nestjs/swagger';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Ctx } from '../../common/context/ctx.decorator';
-import { RequestContext } from '../../common/context/request-context';
+import {
+  RequestContext,
+  requireTenantId,
+} from '../../common/context/request-context';
 import { Idempotent } from '../../common/idempotency/idempotent.decorator';
 import { ExternalReportDraft } from '../../domain/actuals/period/external-report';
 import { ActualsJobsService } from '../../periods/actuals-jobs.service';
 import { ExternalReportsService } from '../../periods/external-reports.service';
-import { JobAccepted } from '../common/response';
+import { JobAccepted, ListResponse, listResponse } from '../common/response';
 import { TenantQueryParamGuard } from '../common/tenant-query-param.guard';
+import { ExternalReportListQueryDto } from './external-report-list-query.dto';
 import { ExternalReportCreateDto, ExternalReportCsvDto } from './period-v2.dto';
 import { REPORT_IMPORTERS } from './period-roles';
 import { ExternalReportV2View, toReportView } from './period-v2.view';
@@ -81,6 +86,28 @@ export class ExternalReportsV2Controller {
   ): Promise<JobAccepted> {
     const job = await this.jobs.requestReportImport(ctx, body.csv);
     return { jobId: job.id, statusUrl: `/api/v2/actuals-jobs/${job.id}` };
+  }
+
+  @Get()
+  @ApiOperation({
+    summary:
+      'Imported records, newest local production date first (keyset on localProductionDate, id)',
+    description:
+      'Filters: connectionId (records delivered by that integration connection, e.g. an MQTT PLA feed), state ' +
+      '(current | superseded), from/to (overlap of the UTC window). Unit-limited callers see records with a line ' +
+      'of their units only. `sourceFigures` is what the source itself reported (e.g. OT planned, actual, ' +
+      'shortfall), for comparison only; accounting never uses it.',
+  })
+  async list(
+    @Ctx() ctx: RequestContext,
+    @Query() query: ExternalReportListQueryDto,
+  ): Promise<ListResponse<ExternalReportV2View>> {
+    const page = await this.reports.list(ctx, query);
+    return listResponse(
+      page.items.map((report) => toReportView(report)),
+      page.nextCursor,
+      { tenantId: requireTenantId(ctx) },
+    );
   }
 
   @Get(':id')

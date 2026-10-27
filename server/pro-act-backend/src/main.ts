@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { configureHttpApp } from './common/http/configure-http-app';
+import { swaggerEnabled } from './common/http/swagger-enabled';
 import { buildV2Document } from './v2/openapi-v2';
 import { getProcessRole } from './common/scheduling/process-role';
 import { bootstrapWorker } from './worker';
@@ -87,7 +88,33 @@ async function bootstrap() {
     console.log(`📈 Metrics: http://0.0.0.0:${metrics}/metrics`);
   }
 
-  // Swagger: v1 at /api (everything except /api/v2), v2 at /api/docs/v2 (V2Module only)
+  if (swaggerEnabled()) setupSwagger(app);
+
+  // Uploaded files are no longer served statically: downloads need a token and tenant membership
+  // (the owning v2 route streams them, plan 3.11, owner decision 2026-10-10).
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+  console.log('');
+  console.log('✅ Application is running on: http://localhost:' + port);
+  if (swaggerEnabled()) {
+    console.log(
+      '✅ API documentation available at: http://localhost:' +
+        port +
+        '/api (v2: /api/docs/v2)',
+    );
+  }
+  console.log(
+    '✅ CORS enabled - Frontend can connect from any origin in development',
+  );
+  console.log(
+    `✅ Process role: ${getProcessRole()} (schedulers ${getProcessRole() === 'api' ? 'off' : 'on'})`,
+  );
+  console.log('');
+}
+
+/** Swagger: v1 at /api (everything except /api/v2), v2 at /api/docs/v2 (V2Module only) */
+function setupSwagger(app: NestExpressApplication): void {
   const v1Config = new DocumentBuilder()
     .setTitle('Traverse Forge API')
     .setDescription('Traverse Forge backend API reference (v1)')
@@ -104,26 +131,6 @@ async function bootstrap() {
 
   const v2Document = buildV2Document(app);
   SwaggerModule.setup('api/docs/v2', app, v2Document);
-
-  // Uploaded files are no longer served statically: downloads need a token and tenant membership
-  // (the owning v2 route streams them, plan 3.11, owner decision 2026-10-10).
-
-  const port = process.env.PORT || 3000;
-  await app.listen(port);
-  console.log('');
-  console.log('✅ Application is running on: http://localhost:' + port);
-  console.log(
-    '✅ API documentation available at: http://localhost:' +
-      port +
-      '/api (v2: /api/docs/v2)',
-  );
-  console.log(
-    '✅ CORS enabled - Frontend can connect from any origin in development',
-  );
-  console.log(
-    `✅ Process role: ${getProcessRole()} (schedulers ${getProcessRole() === 'api' ? 'off' : 'on'})`,
-  );
-  console.log('');
 }
 
 // PROCESS_ROLE=worker never serves HTTP; dist/src/worker.js is the dedicated entry for that role

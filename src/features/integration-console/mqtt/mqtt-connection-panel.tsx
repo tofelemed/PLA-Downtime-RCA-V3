@@ -10,6 +10,8 @@ import { useUrlParam } from '../hooks/use-url-param';
 import { QuarantineInbox } from '../quarantine/quarantine-inbox';
 import { useMqttSubscription } from './hooks/use-mqtt-subscription';
 import { MqttTestPanel } from './mqtt-test-panel';
+import { feedsOfEndpoint } from './model/feeds';
+import { PlaReportsTab } from './pla-reports-tab';
 import { ProfileEditor } from './profile-editor';
 import { SubscriptionActions } from './subscription-actions';
 import { SubscriptionCounters } from './subscription-counters';
@@ -20,8 +22,9 @@ export interface MqttConnectionPanelProps {
   timezone: string;
 }
 
-const TABS = ['subscription', 'signals', 'profile', 'quarantine', 'setup'] as const;
+const TABS = ['subscription', 'signals', 'profile', 'quarantine', 'setup', 'pla-reports'] as const;
 type MqttTab = (typeof TABS)[number];
+const TABS_WITHOUT_PLA = TABS.filter((tab) => tab !== 'pla-reports');
 
 /**
  * MQTT panel of one connection (plan 1.8 WP3 step 5, design §8): the subscription's live health from
@@ -32,7 +35,9 @@ type MqttTab = (typeof TABS)[number];
 export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPanelProps) {
   const { canWriteIntegration } = useCapabilities();
   const session = useConsoleSession();
-  const [tab, setTab] = useUrlParam<MqttTab>('tab', TABS, 'subscription');
+  const feeds = feedsOfEndpoint(connection.endpointConfig);
+  const hasPlaFeed = Boolean(feeds?.some((feed) => feed.purpose === 'pla'));
+  const [tab, setTab] = useUrlParam<MqttTab>('tab', hasPlaFeed ? TABS : TABS_WITHOUT_PLA, 'subscription');
   const subscription = useMqttSubscription(connection.id, connection.isActive);
   return (
     <Tabs value={tab} onValueChange={(next) => setTab(next as MqttTab)}>
@@ -42,6 +47,7 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
         <TabsTrigger value="setup" data-testid="tab-setup">Setup readiness</TabsTrigger>
         <TabsTrigger value="profile" data-testid="tab-profile">Payload profile</TabsTrigger>
         <TabsTrigger value="quarantine" data-testid="tab-mqtt-quarantine">Quarantine</TabsTrigger>
+        {hasPlaFeed && <TabsTrigger value="pla-reports" data-testid="tab-pla-reports">PLA reports</TabsTrigger>}
       </TabsList>
       <TabsContent value="subscription" className="mt-4 space-y-4">
         <DataState state={dataStateOf(subscription)} error={subscription.error}>
@@ -52,13 +58,18 @@ export function MqttConnectionPanel({ connection, timezone }: MqttConnectionPane
         {canWriteIntegration && <MqttTestPanel connection={connection} last={session.testOf(connection.id)} timezone={timezone} onTested={(result) => session.recordTest(connection.id, result)} />}
       </TabsContent>
       <TabsContent value="signals" className="mt-4"><SignalsPanel connectionId={connection.id} timezone={timezone} allowBackfill={false} /></TabsContent>
-      <TabsContent value="setup" className="mt-4"><MqttSetupPanel connectionId={connection.id} timezone={timezone} /></TabsContent>
+      <TabsContent value="setup" className="mt-4"><MqttSetupPanel connectionId={connection.id} timezone={timezone} feeds={feeds} /></TabsContent>
       <TabsContent value="profile" className="mt-4">
         <ProfileEditor connection={connection} />
       </TabsContent>
       <TabsContent value="quarantine" className="mt-4">
         <QuarantineInbox timezone={timezone} connectionId={connection.id} />
       </TabsContent>
+      {hasPlaFeed && (
+        <TabsContent value="pla-reports" className="mt-4">
+          <PlaReportsTab connectionId={connection.id} timezone={timezone} />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

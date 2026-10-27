@@ -32,6 +32,7 @@ export const PROFILE_REQUIRED_CAPTURES: Record<
   measurement_json: [EQUIPMENT_CAPTURES, ['attribute']],
   state_json: [EQUIPMENT_CAPTURES],
   availability: [],
+  feeds: [],
 };
 
 const CAPTURE = /^\{([a-z][A-Za-z0-9_]*)\}$/;

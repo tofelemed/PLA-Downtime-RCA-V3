@@ -1,3 +1,4 @@
+import { FeedSpec, validateFeeds } from './feeds/feed-profile';
 import { topicFiltersOverlap } from './topic-filter';
 
 /**
@@ -10,8 +11,14 @@ export const PAYLOAD_PROFILE_KINDS = [
   'measurement_json',
   'state_json',
   'availability',
+  'feeds',
 ] as const;
 export type PayloadProfileKind = (typeof PAYLOAD_PROFILE_KINDS)[number];
+/** The contract-v1 kinds (a schema, a topic template, field defaults); `feeds` maps its own fields. */
+export type ContractProfileKind = Exclude<PayloadProfileKind, 'feeds'>;
+export const CONTRACT_PROFILE_KINDS = PAYLOAD_PROFILE_KINDS.filter(
+  (kind): kind is ContractProfileKind => kind !== 'feeds',
+);
 
 export const TIME_UNITS = ['auto', 'ms', 's', 'iso'] as const;
 export const QUALITY_PROTOCOLS = [
@@ -36,11 +43,15 @@ export const REASON_UNMAPPED = ['reject', 'keep'] as const;
 export const EQUIPMENT_CAPTURES: readonly string[] = ['machine', 'unit'];
 const PROFILES_WITHOUT_EQUIPMENT: ReadonlySet<PayloadProfileKind> = new Set([
   'availability',
+  'feeds',
 ]);
 
 export interface PayloadProfile {
   kind: PayloadProfileKind;
+  /** contract-v1 kinds only; a feeds profile reads its topics from `feeds` */
   topicTemplate: string;
+  /** `kind = 'feeds'`: PLA and downtime topics of one connection (plans/MQTT_FEEDS.md) */
+  feeds?: FeedSpec[];
   schemaVersion?: string;
   fields?: Record<string, string>;
   time?: {
@@ -253,6 +264,7 @@ export function validatePayloadProfile(
   topics: readonly string[],
 ): string[] {
   if (!isRecord(profile)) return ['payloadProfile: required object'];
+  if (profile.kind === 'feeds') return validateFeedsProfile(profile);
   const problems: Problems = [];
   for (const key of Object.keys(profile)) {
     if (!KNOWN_KEYS.has(key))
@@ -320,4 +332,12 @@ export function validatePayloadProfile(
   }
   if (profile.tenancy !== undefined) validateTenancy(profile.tenancy, problems);
   return problems;
+}
+
+/** A feeds profile carries only its feeds (no template, identity or value maps). */
+function validateFeedsProfile(profile: Record<string, unknown>): string[] {
+  const unknown = Object.keys(profile)
+    .filter((key) => key !== 'kind' && key !== 'feeds')
+    .map((key) => `payloadProfile.${key}: not used by a feeds profile`);
+  return [...unknown, ...validateFeeds(profile.feeds)];
 }

@@ -9,7 +9,10 @@ import {
 } from 'typeorm';
 import { Site } from '../../calendar/entities/site.entity';
 import { TenantScopedEntity } from '../../common/entities/tenant-scoped.entity';
-import { ExternalReportLine } from '../../domain/actuals/period/external-report';
+import {
+  ExternalReportLine,
+  ExternalReportSourceFigures,
+} from '../../domain/actuals/period/external-report';
 
 export const REPORT_STATES = ['current', 'superseded'] as const;
 export type ReportState = (typeof REPORT_STATES)[number];
@@ -33,6 +36,11 @@ export type ReportState = (typeof REPORT_STATES)[number];
   'localProductionDate',
 ])
 @Index('IDX_external_production_reports_window', ['tenantId', 'utcStart'])
+@Index('IDX_external_production_reports_connection_date', [
+  'tenantId',
+  'connectionId',
+  'localProductionDate',
+])
 @Index('IDX_external_production_reports_site', ['siteId'])
 @Check('CHK_external_production_reports_window', '"utc_end" > "utc_start"')
 export class ExternalProductionReport extends TenantScopedEntity {
@@ -98,6 +106,13 @@ export class ExternalProductionReport extends TenantScopedEntity {
 
   @Column({ name: 'evidence_ref', type: 'text', nullable: true })
   evidenceRef: string | null;
+
+  /**
+   * what the source itself reported for comparison (e.g. MQTT PLA feed: planned, actual, shortfall, status,
+   * quality); never used in accounting
+   */
+  @Column({ name: 'source_figures', type: 'jsonb', nullable: true })
+  sourceFigures: ExternalReportSourceFigures | null;
 
   @Column({
     name: 'state',

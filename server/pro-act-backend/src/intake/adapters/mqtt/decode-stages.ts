@@ -12,7 +12,7 @@ import {
   DecodeRawRef,
 } from './decode-result';
 import { MessageFields } from './message-fields';
-import { PayloadProfile, PayloadProfileKind } from './payload-profile';
+import { ContractProfileKind, PayloadProfile } from './payload-profile';
 import { topicMatchesFilter } from './topic-filter';
 import {
   compileTopicTemplate,
@@ -37,9 +37,42 @@ export interface PickedMessage {
   rawRef: DecodeRawRef;
 }
 
+/** A packet that passed the transport stages: allowed topic, size limit, a JSON object. */
+export interface ParsedPacket {
+  json: Record<string, unknown>;
+  hash: string;
+  rawRef: DecodeRawRef;
+}
+
+/** Stages 1–3 only (topic allowlist, size, JSON object): profiles without a contract schema (feeds). */
+export function parsePacket(input: DecodeInput): ParsedPacket | DecodeFailure {
+  const { config } = input.connection;
+  const rawRef = rawRefOf(input);
+  if (
+    !isAllowed(input.topic, config.mqtt.topics, config.mqtt.availabilityTopic)
+  ) {
+    return decodeFailure(
+      'TOPIC_NOT_ALLOWED',
+      `topic ${input.topic} matches no configured topic filter`,
+      rawRef,
+    );
+  }
+  if (input.payload.length > config.mqtt.maxMessageBytes) {
+    return decodeFailure(
+      'TOO_LARGE',
+      `payload is ${input.payload.length} bytes (limit ${config.mqtt.maxMessageBytes})`,
+      rawRef,
+    );
+  }
+  const json = parseObject(input.payload);
+  if (typeof json === 'string') return decodeFailure('NOT_JSON', json, rawRef);
+  rawRef.json = json;
+  return { json, hash: payloadHash(json), rawRef };
+}
+
 export function pickMessage(
   input: DecodeInput,
-  kind: PayloadProfileKind,
+  kind: ContractProfileKind,
 ): PickedMessage | DecodeFailure {
   const { config } = input.connection;
   const rawRef = rawRefOf(input);
@@ -148,7 +181,7 @@ function versionProblem(
  */
 function matchShape(
   topic: string,
-  kind: PayloadProfileKind,
+  kind: ContractProfileKind,
   profile: PayloadProfile,
   availabilityTopic: string | undefined,
 ): Record<string, string> | string {

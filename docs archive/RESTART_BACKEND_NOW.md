@@ -8,7 +8,7 @@ Added complete database configuration to `.env` file:
 DB_HOST=localhost
 DB_PORT=1433
 DB_USERNAME=sa
-DB_PASSWORD=P@ssw0rd
+DB_PASSWORD=<redacted>
 DB_NAME=ProActDB
 PORT=4004
 ```

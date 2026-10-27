@@ -50,7 +50,7 @@ export function MqttWizardBody({ connection, onClose, onSaved }: MqttWizardBodyP
           </li>
         ))}
       </ol>
-      {wizard.step === 'profile' && <ProfileStep {...stepProps} />}
+      {wizard.step === 'profile' && <ProfileStep {...stepProps} feedErrors={wizard.feedErrors} />}
       {wizard.step === 'basics' && <BasicsStep {...stepProps} />}
       {wizard.step === 'connection' && <ConnectionStep {...stepProps} hasSecret={connection?.hasSecret ?? false} />}
       {wizard.step === 'advanced' && <AdvancedStep {...stepProps} />}

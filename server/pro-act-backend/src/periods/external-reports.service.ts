@@ -9,6 +9,7 @@ import {
   draftProblems,
   ExternalReportDraft,
   ExternalReportLine,
+  ExternalReportSourceFigures,
   IMPORT_SOURCE,
   isReleasedStatus,
   reportsFromCsv,
@@ -18,6 +19,7 @@ import {
   requireTenantId,
 } from '../common/context/request-context';
 import { scopedQuery } from '../common/query/scoped-query';
+import { keysetPage } from '../v2/common/keyset-page';
 import {
   invalid,
   invalidReference,
@@ -29,6 +31,16 @@ import { ExternalProductionReport } from './entities/external-production-report.
 import { SourceStatusMapping } from './entities/source-status-mapping.entity';
 import { SourceStatusMappingsService } from './source-status-mappings.service';
 import { requestRecalculation } from './period-recalc';
+
+export interface ExternalReportListFilter {
+  connectionId?: string;
+  state?: ExternalProductionReport['state'];
+  /** window [from, to), ISO 8601: records whose UTC window overlaps it */
+  from?: string;
+  to?: string;
+  cursor?: string;
+  limit: number;
+}
 
 export interface Importer {
   tenantId: string;
@@ -79,6 +91,42 @@ export class ExternalReportsService {
       (!allowed || report.lines.some((line) => allowed.includes(line.unitId)));
     if (!report || !visible) throw notFound('External production report');
     return report;
+  }
+
+  /**
+   * Keyset page of the tenant's records, newest local production date first (id tiebreak), optionally of one
+   * connection, state or window; unit-limited callers see only records with a line of their units (as `get`).
+   */
+  async list(
+    context: RequestContext,
+    filter: ExternalReportListFilter,
+  ): Promise<{ items: ExternalProductionReport[]; nextCursor: string | null }> {
+    const qb = scopedQuery(
+      this.dataSource.getRepository(ExternalProductionReport),
+      'r',
+      { context },
+    );
+    if (filter.connectionId)
+      qb.andWhere('r.connectionId = :connectionId', {
+        connectionId: filter.connectionId,
+      });
+    if (filter.state) qb.andWhere('r.state = :state', { state: filter.state });
+    if (filter.from)
+      qb.andWhere('r.utcEnd > :from', { from: new Date(filter.from) });
+    if (filter.to) qb.andWhere('r.utcStart < :to', { to: new Date(filter.to) });
+    const allowed = periodScopeUnits(context);
+    if (allowed)
+      qb.andWhere(
+        `EXISTS (SELECT 1 FROM jsonb_array_elements("r"."lines") l WHERE l->>'unitId' = ANY(:scopeUnits))`,
+        { scopeUnits: allowed },
+      );
+    return keysetPage(qb, {
+      alias: 'r',
+      property: 'localProductionDate',
+      direction: 'DESC',
+      cursor: filter.cursor,
+      limit: filter.limit,
+    });
   }
 
   /** Interactive imports are plant documents: the importer role itself must cover the plant. */
@@ -280,6 +328,8 @@ function reportRow(
     ),
     approvedAtSource: draft.approvedAtSource,
     evidenceRef: draft.evidenceRef,
+    sourceFigures: draft.sourceFigures ?? null,
+    connectionId: draft.connectionId ?? null,
     importedAt: new Date(),
     importedBy: importer.userId,
     createdBy: importer.userId,
@@ -293,6 +343,26 @@ function canonicalLines(lines: readonly ExternalReportLine[]): string {
   );
 }
 
+const FIGURE_KEYS = [
+  'planned',
+  'actual',
+  'shortfall',
+  'uom',
+  'status',
+  'quality',
+  'plant',
+  'eventType',
+  'topic',
+] as const;
+
+/** Source figures in one key order, absent = null (jsonb does not keep the delivered key order). */
+function canonicalFigures(
+  figures: ExternalReportSourceFigures | null | undefined,
+): string {
+  if (!figures) return 'null';
+  return JSON.stringify(FIGURE_KEYS.map((key) => figures[key] ?? null));
+}
+
 /** Same id + revision: identical content is a duplicate; anything else is a conflicting redelivery. */
 function duplicateOf(
   stored: ExternalProductionReport,
@@ -303,7 +373,9 @@ function duplicateOf(
     stored.basis === draft.basis &&
     stored.sourceStatus === draft.sourceStatus &&
     stored.utcStart.getTime() === draft.utcStart.getTime() &&
-    stored.utcEnd.getTime() === draft.utcEnd.getTime();
+    stored.utcEnd.getTime() === draft.utcEnd.getTime() &&
+    canonicalFigures(stored.sourceFigures) ===
+      canonicalFigures(draft.sourceFigures);
   if (same) return 'duplicate';
   throw new ConflictException({
     code: 'REPORT_REVISION_CONFLICT',

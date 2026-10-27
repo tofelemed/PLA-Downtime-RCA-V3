@@ -664,7 +664,7 @@ export class OptionalAuthController { ... }
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}'
+  -d '{"email":"admin@example.com","password":"<redacted>"}'
 ```
 
 **Authenticated Request**:
@@ -969,7 +969,7 @@ npm run start:dev
 # Test login (create a user first or use existing)
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"admin123"}'
+  -d '{"email":"admin@example.com","password":"<redacted>"}'
 
 # Use returned token
 curl -X GET http://localhost:3000/api/products \

@@ -8,7 +8,9 @@ import { HealthService } from './health.service';
 
 /** 503 with the same body when the database is unreachable, so probes (Docker, load balancer) see it. */
 function statusOf(result: { status: string }, res: Response): void {
-  if (result.status !== 'healthy') res.status(HttpStatus.SERVICE_UNAVAILABLE);
+  if (result.status !== 'healthy' && result.status !== 'ready') {
+    res.status(HttpStatus.SERVICE_UNAVAILABLE);
+  }
 }
 
 @ApiTags('Health')
@@ -27,6 +29,17 @@ export class HealthController {
   })
   async check(@Res({ passthrough: true }) res: Response) {
     const result = await this.healthService.check();
+    statusOf(result, res);
+    return result;
+  }
+
+  /** Readiness for the container HEALTHCHECK and the deployment scripts (TF-PREP-001 §4.4). */
+  @Get('ready')
+  @Public()
+  @ApiResponse({ status: 200, description: 'Ready: the database answers' })
+  @ApiResponse({ status: 503, description: 'The database does not answer' })
+  async ready(@Res({ passthrough: true }) res: Response) {
+    const result = await this.healthService.ready();
     statusOf(result, res);
     return result;
   }

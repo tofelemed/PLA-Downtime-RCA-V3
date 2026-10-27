@@ -4,6 +4,7 @@ import { topicMatchesFilter } from '../topic-filter';
 import { availabilityDecoder } from './availability.decoder';
 import { intervalEventDecoder } from './interval-event.decoder';
 import { measurementDecoder } from './measurement.decoder';
+import { feedsDecoder } from './feeds.decoder';
 import { stateDecoder } from './state.decoder';
 
 /**
@@ -16,6 +17,7 @@ export const PROFILE_DECODERS: Record<PayloadProfileKind, ProfileDecoder> = {
   measurement_json: measurementDecoder,
   state_json: stateDecoder,
   availability: availabilityDecoder,
+  feeds: feedsDecoder,
 };
 
 export function decoderFor(kind: PayloadProfileKind): ProfileDecoder {

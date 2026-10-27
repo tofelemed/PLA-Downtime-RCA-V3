@@ -2,8 +2,11 @@ import { Button } from '@/components/ui/button';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import type { ProfileEditor } from './hooks/use-profile-draft';
 
+/** What the save bar needs of a profile editor (contract v1 draft or feeds draft). */
+export type SaveBarEditor = Pick<ProfileEditor, 'patch' | 'savedAt' | 'failed' | 'isPending' | 'save' | 'reset'> & { errors: Readonly<Record<string, unknown>> };
+
 interface SaveBarProps {
-  editor: ProfileEditor;
+  editor: SaveBarEditor;
   canWrite: boolean;
 }
 
@@ -24,7 +27,7 @@ export function ProfileSaveBar({ editor, canWrite }: SaveBarProps) {
   );
 }
 
-function saveStatus(editor: ProfileEditor, errorCount: number, format: (value: number) => string): string {
+function saveStatus(editor: SaveBarEditor, errorCount: number, format: (value: number) => string): string {
   if (editor.isPending) return 'Saving profile…';
   if (errorCount > 0) return `${format(errorCount)} ${errorCount === 1 ? 'field needs' : 'fields need'} attention before saving`;
   if (editor.failed) return 'Profile was not saved. Review the error below.';

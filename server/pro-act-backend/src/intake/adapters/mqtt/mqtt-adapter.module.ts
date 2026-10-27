@@ -3,8 +3,11 @@ import { AttributeMappingModule } from '../../../attribute-mapping/attribute-map
 import { OutboxModule } from '../../../common/outbox/outbox.module';
 import { IntegrationModule } from '../../../integration/integration.module';
 import { SourceMappingModule } from '../../../source-mapping/source-mapping.module';
+import { PeriodsModule } from '../../../periods/periods.module';
 import { IntakeModule } from '../../intake.module';
+import { MqttDowntimeFeedHandler } from './handlers/mqtt-downtime-feed.handler';
 import { MqttIntervalEventHandler } from './handlers/mqtt-interval-event.handler';
+import { MqttPlaFeedHandler } from './handlers/mqtt-pla-feed.handler';
 import { MqttStateHandler } from './handlers/mqtt-state.handler';
 import { MqttSubscriberHost } from './host/mqtt-subscriber-host';
 import { MqttSubscriberHostJob } from './host/mqtt-subscriber-host.job';
@@ -23,6 +26,7 @@ import { MqttAdapter } from './mqtt.adapter';
     IntegrationModule,
     SourceMappingModule,
     AttributeMappingModule,
+    PeriodsModule,
   ],
   providers: [
     MqttAdapter,
@@ -30,6 +34,8 @@ import { MqttAdapter } from './mqtt.adapter';
     MqttSubscriberHostJob,
     MqttIntervalEventHandler,
     MqttStateHandler,
+    MqttDowntimeFeedHandler,
+    MqttPlaFeedHandler,
   ],
   exports: [MqttAdapter, MqttSubscriberHost],
 })

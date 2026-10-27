@@ -18,6 +18,14 @@ export function endpointSummary(connection: ConnectionView): string {
     if (text(mqtt.username)) parts.push(`user ${text(mqtt.username)}`);
     if (text(mqtt.clientId)) parts.push(`client id ${text(mqtt.clientId)}`);
     if (tls.mode === 'insecure') parts.push('TLS verification disabled');
+    const profile = record(config.payloadProfile);
+    const feeds = profile.kind === 'feeds' && Array.isArray(profile.feeds) ? profile.feeds.map(record) : null;
+    if (feeds) {
+      // feeds mode: the feed topics are subscribed (PLA / downtime per topic)
+      const purposes = feeds.map((feed) => (feed.purpose === 'pla' ? 'PLA' : 'downtime'));
+      parts.push(`${plural(feeds.length, 'feed', 'feeds')} (${purposes.join(', ')})`);
+      return parts.join(' · ');
+    }
     const topics = Array.isArray(mqtt.topics) ? mqtt.topics.length : 0;
     parts.push(plural(topics, 'topic filter', 'topic filters'));
     return parts.join(' · ');

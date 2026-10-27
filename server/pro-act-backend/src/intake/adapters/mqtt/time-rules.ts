@@ -31,6 +31,7 @@ const STALE_DEFAULT_BY_KIND: Record<PayloadProfileKind, StaleHandling> = {
   measurement_json: 'flag',
   state_json: 'flag',
   availability: 'flag',
+  feeds: 'flag',
 };
 
 /** RFC 3339 `date-time` with `T` and an explicit offset or `Z` (no local time, no space separator). */

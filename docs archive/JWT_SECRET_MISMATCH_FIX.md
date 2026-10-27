@@ -13,13 +13,13 @@ Both **signing** and **verification** must use the **EXACT same** JWT_SECRET:
 **Location:** `server/pro-act-backend/.env`
 
 ```bash
-JWT_SECRET=admin123
+JWT_SECRET=<redacted>
 ```
 
 **Important:**
 - ❌ NO spaces around `=`
 - ❌ NO quotes around value
-- ✅ Just: `JWT_SECRET=admin123`
+- ✅ Just: `JWT_SECRET=<redacted>`
 
 ### 2. Where JWT_SECRET is Used
 
@@ -60,7 +60,7 @@ After restarting, look for:
 ```
 
 **This confirms:**
-- ✅ JWT_SECRET is being read (length 8 = "admin123")
+- ✅ JWT_SECRET is being read (length 8 = "<redacted>")
 - ✅ JwtStrategy is initialized with the secret
 
 ### Step 3: Login and Check Signing Logs
@@ -94,7 +94,7 @@ If verification fails, you'll now see:
 
 **Fix:**
 1. Check `.env` file is in `server/pro-act-backend/.env`
-2. Check file format: `JWT_SECRET=admin123` (no spaces, no quotes)
+2. Check file format: `JWT_SECRET=<redacted>` (no spaces, no quotes)
 3. Restart backend
 
 ### Issue 2: Multiple .env Files
@@ -140,7 +140,7 @@ Follow these steps **in order**:
 ### 2. Verify .env File
 ```bash
 # Check server/pro-act-backend/.env contains:
-JWT_SECRET=admin123
+JWT_SECRET=<redacted>
 ```
 
 ### 3. Start Backend

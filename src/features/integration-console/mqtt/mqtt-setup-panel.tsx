@@ -21,6 +21,7 @@ import { labelOf, SIGNAL_TYPE_LABELS } from '@/features/ux-kit/labels';
 import { ACTUALS_SOURCE_LABELS } from '@/features/plan-dashboard/model/actuals-labels';
 import { coverageSummaryText } from './model/coverage-text';
 import { MqttSamplePreview } from './mqtt-sample-preview';
+import type { FeedForm } from './model/feeds';
 import { plural } from '@/features/ux-kit/format/plural';
 
 function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; connectionId: string; timezone: string }) {
@@ -69,7 +70,7 @@ function UnitReadiness({ unitId, connectionId, timezone }: { unitId: string; con
     </nav>
   </div>;
 }
-export function MqttSetupPanel({ connectionId, timezone }: { connectionId: string; timezone: string }) {
+export function MqttSetupPanel({ connectionId, timezone, feeds }: { connectionId: string; timezone: string; feeds?: readonly FeedForm[] | null }) {
   const [params, setParams] = useSearchParams();
   const unitId = params.get('unitId') ?? '';
   const setUnitId = (id: string) => setParams((current) => { const next = new URLSearchParams(current); if (id) next.set('unitId', id); else next.delete('unitId'); return next; });
@@ -79,7 +80,7 @@ export function MqttSetupPanel({ connectionId, timezone }: { connectionId: strin
       <h2 className="text-base font-semibold text-heading">Setup readiness</h2>
       <KpiInfo label="Setup readiness" text="Broker connectivity, sample decoding, state coverage and accounting readiness are separate checks. No configuration is approved automatically here." />
     </div>
-    {canWriteIntegration && <MqttSamplePreview connectionId={connectionId} timezone={timezone} />}
+    {canWriteIntegration && <MqttSamplePreview connectionId={connectionId} timezone={timezone} feeds={feeds} />}
     <UnitSelect id="mqtt-setup-unit" label="Production unit" value={unitId} onChange={setUnitId} />
     {unitId && <UnitReadiness key={unitId} unitId={unitId} connectionId={connectionId} timezone={timezone} />}
   </div>;

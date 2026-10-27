@@ -13,6 +13,7 @@ export const WIZARD_STEPS: ReadonlyArray<{ key: WizardStep; label: string }> = [
 /** Which step owns each form field (and so each inline error). */
 export const FIELD_STEP: Record<MqttFormField, WizardStep> = {
   profileKind: 'profile',
+  feeds: 'profile',
   topicTemplate: 'profile',
   identityStrategy: 'profile',
   displayName: 'basics',
@@ -65,6 +66,7 @@ const SERVER_FIELDS: ReadonlyArray<[pattern: RegExp, field: MqttFormField]> = [
   [/^endpointConfig\.mqtt\.reconnect(\.\w+)?$/, 'reconnectMinSeconds'],
   [/^endpointConfig\.mqtt\.maxMessageBytes$/, 'maxMessageBytes'],
   [/^endpointConfig\.payloadProfile\.kind$/, 'profileKind'],
+  [/^endpointConfig\.payloadProfile\.feeds(\[\d+\]|\.\d+)?(\..+)?$/, 'feeds'],
   [/^endpointConfig\.payloadProfile\.topicTemplate$/, 'topicTemplate'],
   [/^endpointConfig\.payloadProfile\.identityStrategy$/, 'identityStrategy'],
   [/^endpointConfig\.payloadProfile\.schemaVersion$/, 'schemaVersion'],

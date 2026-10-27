@@ -59,7 +59,9 @@ export class MqttIntervalEventHandler
     return (
       envelope.sourceType === 'mqtt' &&
       envelope.kind === 'interval_event' &&
-      envelope.operation !== 'retract'
+      envelope.operation !== 'retract' &&
+      // downtime-feed stops are placed by unit code (MqttDowntimeFeedHandler)
+      envelope.sourceControls?.mqtt?.feed !== 'downtime'
     );
   }
 

@@ -45,7 +45,7 @@ secretOrKey: process.env.JWT_SECRET || 'changeme',
 
 Make sure `server/pro-act-backend/.env` has:
 ```bash
-JWT_SECRET=admin123
+JWT_SECRET=<redacted>
 ```
 
 **NO spaces, NO quotes around the value!**
@@ -62,13 +62,13 @@ If you changed `.env`, you MUST restart the backend:
 
 **Wrong:**
 ```bash
-JWT_SECRET = admin123  # Spaces around =
-JWT_SECRET="admin123"  # Quotes (sometimes causes issues)
+JWT_SECRET = <redacted>  # Spaces around =
+JWT_SECRET="<redacted>"  # Quotes (sometimes causes issues)
 ```
 
 **Correct:**
 ```bash
-JWT_SECRET=admin123
+JWT_SECRET=<redacted>
 ```
 
 ### Issue 2: Backend Not Restarted
@@ -98,7 +98,7 @@ I've added detailed logging that will show:
 
 1. **Verify .env file:**
    ```bash
-   JWT_SECRET=admin123
+   JWT_SECRET=<redacted>
    ```
 
 2. **Restart backend** (completely stop and start)

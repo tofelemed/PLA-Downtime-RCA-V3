@@ -32,20 +32,24 @@ const OLD_PARTITIONS = `SELECT "name" FROM (
    WHERE i."inhparent" = $2::regclass) p
  WHERE p."upper" <= $1 ORDER BY p."upper"`;
 
-/** A monthly partition family: the parent and the only child names the job may drop. */
+/**
+ * A monthly partition family: the parent and the only child names the job may drop. Names are
+ * unqualified and resolve through the session `search_path` (`public` in development, `DB_SCHEMA` in
+ * production), the same schema the partitions were created in.
+ */
 interface PartitionFamily {
   parent: string;
   name: RegExp;
 }
 
 const RAW_OBSERVATIONS: PartitionFamily = {
-  parent: '"public"."raw_observations"',
+  parent: '"raw_observations"',
   name: /^raw_observations_y\d{4}m\d{2}$/,
 };
 
 /** Monthly by `observed_at` (`measurement_samples_ensure_partition`, migration SignalsAndSamples). */
 const MEASUREMENT_SAMPLES: PartitionFamily = {
-  parent: '"public"."measurement_samples"',
+  parent: '"measurement_samples"',
   name: /^measurement_samples_y\d{4}m\d{2}$/,
 };
 
@@ -117,7 +121,7 @@ export class DataRetentionService {
     const dropped: string[] = [];
     for (const { name } of rows) {
       if (!family.name.test(name)) continue;
-      await this.dataSource.query(`DROP TABLE "public"."${name}"`);
+      await this.dataSource.query(`DROP TABLE "${name}"`);
       dropped.push(name);
     }
     return dropped;

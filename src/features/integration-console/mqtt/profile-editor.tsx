@@ -2,8 +2,10 @@ import type { ConnectionView } from '@/api/v2/types/integrations';
 import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useNumberFormat } from '@/features/ux-kit/use-number-format';
 import { ConsoleRefusal } from '../components/console-refusal';
+import { FeedsProfileEditor } from './feeds/feeds-profile-editor';
 import { useProfileDraft } from './hooks/use-profile-draft';
 import { profileServerFieldErrors } from './model/profile-field-errors';
+import { isFeedsProfile } from './model/feeds';
 import { identityStrategyLabel } from './model/profile-labels';
 import { ProfileFieldsEditor } from './profile-fields-editor';
 import { ProfileSaveBar } from './profile-save-bar';
@@ -11,8 +13,14 @@ import { ProfileSection } from './profile-section';
 import { ProfileSettingsFields } from './profile-settings-fields';
 import { ValueMapEditor } from './value-map-editor';
 
-/** One retained profile draft and merge-patch save, presented in four task-focused groups. */
+/** The payload profile tab: the feeds editor for a feeds profile, the contract v1 editor otherwise. */
 export function ProfileEditor({ connection }: { connection: ConnectionView }) {
+  if (isFeedsProfile(connection.endpointConfig.payloadProfile)) return <FeedsProfileEditor connection={connection} />;
+  return <ContractProfileEditor connection={connection} />;
+}
+
+/** One retained profile draft and merge-patch save, presented in four task-focused groups. */
+function ContractProfileEditor({ connection }: { connection: ConnectionView }) {
   const { canWriteIntegration } = useCapabilities();
   const { number } = useNumberFormat();
   const editor = useProfileDraft(connection);

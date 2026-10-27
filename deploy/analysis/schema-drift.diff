@@ -1,0 +1,125 @@
+--- deploy/analysis/repo-schema.sql	2026-10-26 17:15:52.837429000 +0400
++++ deploy/analysis/dev-schema.sql	2026-10-26 17:15:52.790102500 +0400
+@@ -2,7 +2,7 @@
+ -- PostgreSQL database dump
+ --
+ 
+-\restrict a0PheUVQ11VI1IfhWWjhHeVgHLmhNeEFUJNUQtEuFbBamw9gDRwVhi3xa6gTSgk
++\restrict SKJ1lGvNTDU2MERNvy9SfzQ3hoTwhRajx3AbtpdBpc7vWgUZaCio8zagt9UeeKN
+ 
+ -- Dumped from database version 15.18
+ -- Dumped by pg_dump version 15.18
+@@ -3390,6 +3390,27 @@
+ 
+ 
+ --
++-- Name: measurement_samples_y2026m10; Type: TABLE; Schema: public; Owner: -
++--
++
++CREATE TABLE public.measurement_samples_y2026m10 (
++    id uuid NOT NULL,
++    observed_at timestamp with time zone NOT NULL,
++    tenant_id uuid NOT NULL,
++    signal_id uuid NOT NULL,
++    value numeric(24,8),
++    state_name text,
++    state_value integer,
++    quality public.measurement_sample_quality NOT NULL,
++    quality_flags jsonb,
++    raw_id uuid NOT NULL,
++    raw_received_at timestamp with time zone NOT NULL,
++    source_revision text NOT NULL,
++    inserted_at timestamp with time zone DEFAULT now() NOT NULL
++);
++
++
++--
+ -- Name: migrations; Type: TABLE; Schema: public; Owner: -
+ --
+ 
+@@ -6128,6 +6149,13 @@
+ 
+ 
+ --
++-- Name: measurement_samples_y2026m10; Type: TABLE ATTACH; Schema: public; Owner: -
++--
++
++ALTER TABLE ONLY public.measurement_samples ATTACH PARTITION public.measurement_samples_y2026m10 FOR VALUES FROM ('2026-10-01 00:00:00+00') TO ('2026-11-01 00:00:00+00');
++
++
++--
+ -- Name: raw_observations_y2026m09; Type: TABLE ATTACH; Schema: public; Owner: -
+ --
+ 
+@@ -7898,6 +7926,22 @@
+ 
+ 
+ --
++-- Name: measurement_samples_y2026m10 measurement_samples_y2026m10_pkey; Type: CONSTRAINT; Schema: public; Owner: -
++--
++
++ALTER TABLE ONLY public.measurement_samples_y2026m10
++    ADD CONSTRAINT measurement_samples_y2026m10_pkey PRIMARY KEY (id, observed_at);
++
++
++--
++-- Name: measurement_samples_y2026m10 measurement_samples_y2026m10_signal_id_observed_at_source_r_key; Type: CONSTRAINT; Schema: public; Owner: -
++--
++
++ALTER TABLE ONLY public.measurement_samples_y2026m10
++    ADD CONSTRAINT measurement_samples_y2026m10_signal_id_observed_at_source_r_key UNIQUE (signal_id, observed_at, source_revision);
++
++
++--
+ -- Name: raw_observations_y2026m09 raw_observations_y2026m09_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+ --
+ 
+@@ -11255,6 +11299,13 @@
+ 
+ 
+ --
++-- Name: measurement_samples_y2026m10_signal_id_inserted_at_idx; Type: INDEX; Schema: public; Owner: -
++--
++
++CREATE INDEX measurement_samples_y2026m10_signal_id_inserted_at_idx ON public.measurement_samples_y2026m10 USING btree (signal_id, inserted_at);
++
++
++--
+ -- Name: raw_observations_y2026m09_replay_run_id_idx; Type: INDEX; Schema: public; Owner: -
+ --
+ 
+@@ -11339,6 +11390,27 @@
+ 
+ 
+ --
++-- Name: measurement_samples_y2026m10_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
++--
++
++ALTER INDEX public."PK_4d03c08dea906212173c500a637" ATTACH PARTITION public.measurement_samples_y2026m10_pkey;
++
++
++--
++-- Name: measurement_samples_y2026m10_signal_id_inserted_at_idx; Type: INDEX ATTACH; Schema: public; Owner: -
++--
++
++ALTER INDEX public."IDX_measurement_samples_signal_inserted" ATTACH PARTITION public.measurement_samples_y2026m10_signal_id_inserted_at_idx;
++
++
++--
++-- Name: measurement_samples_y2026m10_signal_id_observed_at_source_r_key; Type: INDEX ATTACH; Schema: public; Owner: -
++--
++
++ALTER INDEX public."UQ_measurement_samples_identity" ATTACH PARTITION public.measurement_samples_y2026m10_signal_id_observed_at_source_r_key;
++
++
++--
+ -- Name: raw_observations_y2026m09_pkey; Type: INDEX ATTACH; Schema: public; Owner: -
+ --
+ 
+@@ -15108,5 +15180,5 @@
+ -- PostgreSQL database dump complete
+ --
+ 
+-\unrestrict a0PheUVQ11VI1IfhWWjhHeVgHLmhNeEFUJNUQtEuFbBamw9gDRwVhi3xa6gTSgk
++\unrestrict SKJ1lGvNTDU2MERNvy9SfzQ3hoTwhRajx3AbtpdBpc7vWgUZaCio8zagt9UeeKN
+ 

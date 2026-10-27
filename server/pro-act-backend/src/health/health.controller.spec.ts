@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { Server } from 'http';
 import * as request from 'supertest';
 import { HealthController } from './health.controller';
+import { buildInfo } from './build-info';
 import { HealthService } from './health.service';
 
 describe('GET /health (perf audit P13)', () => {
@@ -19,6 +20,11 @@ describe('GET /health (perf audit P13)', () => {
             check: () =>
               Promise.resolve({
                 status: healthy ? 'healthy' : 'unhealthy',
+                database: healthy ? 'connected' : 'disconnected',
+              }),
+            ready: () =>
+              Promise.resolve({
+                status: healthy ? 'ready' : 'unavailable',
                 database: healthy ? 'connected' : 'disconnected',
               }),
           },
@@ -48,5 +54,26 @@ describe('GET /health (perf audit P13)', () => {
       status: 'unhealthy',
       database: 'disconnected',
     });
+  });
+
+  it('GET /health/ready answers 200 while the database answers and 503 otherwise', async () => {
+    healthy = true;
+    await request(app.getHttpServer() as Server)
+      .get('/health/ready')
+      .expect(200, { status: 'ready', database: 'connected' });
+    healthy = false;
+    await request(app.getHttpServer() as Server)
+      .get('/health/ready')
+      .expect(503, { status: 'unavailable', database: 'disconnected' });
+  });
+});
+
+describe('buildInfo (TF-PREP-001 §4.4)', () => {
+  it('reports the version and commit baked into the image', () => {
+    expect(buildInfo({ APP_VERSION: '1.0.0', GIT_COMMIT: 'abc1234' })).toEqual({
+      version: '1.0.0',
+      commit: 'abc1234',
+    });
+    expect(buildInfo({})).toEqual({ version: 'dev', commit: 'unknown' });
   });
 });

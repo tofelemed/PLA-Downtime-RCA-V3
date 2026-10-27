@@ -17,7 +17,14 @@ export function identityStrategyLabel(value: string | null | undefined): string 
 
 export const IDENTITY_STRATEGY_OPTIONS = IDENTITY_STRATEGIES.map((value) => ({ value, label: IDENTITY_STRATEGY_LABELS[value] }));
 
-/** The payload profile kind's label ("Measurements (signal samples)"). */
-export function profileKindLabel(kind: string): string {
-  return PROFILE_PRESETS[kind as ProfileKind]?.label ?? kind;
+export const FEEDS_PROFILE_LABEL = 'PLA and downtime feeds';
+
+/**
+ * The payload profile kind's label ("Measurements (signal samples)"). In the profile picker the
+ * contract v1 kinds read as advanced choices next to the default feeds profile.
+ */
+export function profileKindLabel(kind: string, inPicker = false): string {
+  if (kind === 'feeds') return FEEDS_PROFILE_LABEL;
+  const label = PROFILE_PRESETS[kind as ProfileKind]?.label ?? kind;
+  return inPicker ? `Advanced: contract v1 profile — ${label}` : label;
 }
