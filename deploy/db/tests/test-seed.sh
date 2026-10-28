@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End to end on a throwaway postgres:15-alpine container (forge-seed-pg, 127.0.0.1:55435):
-# 00-create-db-and-roles.sh, 10-migrate.sh, 20-seed-reference.sh --with-users twice, then spot checks of
+# 00-create-db-and-roles.sh, 10-migrate.sh, 20-seed-reference.sh --with-users twice, all as the restricted
+# login forge_app (NOSUPERUSER CREATEDB CREATEROLE BYPASSRLS + SET on app.tenant_ids), then spot checks of
 # the seeded HDPE-TRAIN plant and of row-level security. Needs the git-ignored
 # db/seed/generated/U010__users.sql from extract-reference-from-dev.sh.
 set -euo pipefail
@@ -70,9 +71,13 @@ start_container() {
   { echo "FAIL: db/seed/generated/U010__users.sql missing; run deploy/db/extract-reference-from-dev.sh" >&2; exit 1; }
 tenant_id="$(sed -n 's/.*"tenantId": "\([0-9a-f-]*\)".*/\1/p' "$repo_root/db/seed/manifest.json")"
 cp -r "$repo_root/db" "$work/db"
-printf '%s\n' "DB_CONTAINER=$container" DB_USER=postgres DB_PASSWORD=postgres DB_NAME=traverse_forge \
+printf '%s\n' "DB_CONTAINER=$container" DB_USER=forge_app DB_PASSWORD=forge-app-pw DB_NAME=traverse_forge \
   DB_SCHEMA=forge > "$work/forge.env"
 start_container
+MSYS_NO_PATHCONV=1 docker exec -i "$container" psql -X -q -v ON_ERROR_STOP=1 -U postgres -d postgres <<'SQL'
+CREATE ROLE forge_app LOGIN PASSWORD 'forge-app-pw' NOSUPERUSER CREATEDB CREATEROLE BYPASSRLS;
+GRANT SET ON PARAMETER app.tenant_ids TO forge_app;
+SQL
 
 run 00-create-db-and-roles.sh
 must 00-create-db-and-roles.sh
@@ -80,6 +85,7 @@ run 10-migrate.sh
 must 10-migrate.sh
 run 20-seed-reference.sh --with-users
 must 20-seed-reference.sh
+if [[ -n "${FORGE_TEST_EVIDENCE:-}" ]]; then echo "$out" > "$FORGE_TEST_EVIDENCE"; fi
 check "first seed ends with seed ok" "$(tail -1 <<<"$out")" "seed ok"
 first_counts="$(grep '^seed: ' <<<"$out")"
 

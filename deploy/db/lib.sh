@@ -8,6 +8,7 @@ forge_die() {
 }
 
 # forge_load_env <file>: export every KEY=value line (comments and blank lines skipped). Never echoes.
+# A value holding $ " ' # or whitespace is refused, naming the variable only (never the value).
 forge_load_env() {
   local file="$1" line key value
   [[ -f "$file" ]] || forge_die "env file not found: $file"
@@ -17,9 +18,9 @@ forge_load_env() {
     [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
     key="${BASH_REMATCH[1]}"
     value="${BASH_REMATCH[2]}"
-    if [[ "$value" =~ ^\"(.*)\"$ || "$value" =~ ^\'(.*)\'$ ]]; then
-      value="${BASH_REMATCH[1]}"
-    fi
+    case "$value" in
+      *[\$\"\'#[:space:]]*) forge_die "$key in $file holds \$, a quote, # or a space (values are unquoted)" ;;
+    esac
     export "$key=$value"
   done < "$file"
 }

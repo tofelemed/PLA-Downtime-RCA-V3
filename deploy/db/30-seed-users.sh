@@ -9,8 +9,8 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib.sh
-source "$here/lib.sh"
+# shellcheck source=../vm/lib-vm.sh
+source "$here/../vm/lib-vm.sh"
 
 csv="$here/../seed-users.csv"
 out_dir="${FORGE_HOME:-/opt/traverse-forge}/private"
@@ -40,16 +40,13 @@ if git -C "$out_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 out_name="passwords-$(date +%Y%m%d-%H%M%S).txt"
 
-# host_path <path>: the path as docker sees it for a bind mount (Windows form under Git Bash).
-host_path() {
-  if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else echo "$1"; fi
-}
-
 # --user: run as the invoking user so the (possibly 0600) CSV is readable and the 0700 out dir writable,
 # and the passwords file is owned by that user rather than by the image user. --entrypoint node: the
-# image's entrypoint starts the API and would swallow the CLI arguments.
-MSYS_NO_PATHCONV=1 docker run --rm --user "$(id -u):$(id -g)" --network "$PG_NETWORK" --env-file "$env_file" \
-  -v "$(host_path "$csv_abs"):/seed/users.csv:ro" -v "$(host_path "$out_dir"):/seed/out" \
+# image's entrypoint starts the API and would swallow the CLI arguments. `-e NAME` copies each database
+# variable from this shell (loaded above), so no value appears on the command line.
+MSYS_NO_PATHCONV=1 docker run --rm --user "$(id -u):$(id -g)" --network "$PG_NETWORK" \
+  -e DB_HOST -e DB_PORT -e DB_USER -e DB_PASSWORD -e DB_NAME -e DB_SCHEMA -e DB_SSL \
+  -v "$(vm_host_path "$csv_abs"):/seed/users.csv:ro" -v "$(vm_host_path "$out_dir"):/seed/out" \
   --entrypoint node "traverse-forge-backend:$FORGE_VERSION" \
   dist/scripts/deploy/seed-users.js --csv /seed/users.csv \
   --tenant-code "${TENANT_CODE:-HDPE-TRAIN}" --out "/seed/out/$out_name"

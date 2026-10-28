@@ -4,6 +4,7 @@
 # The env file (default ./.env, else $FORGE_HOME/.env) gives DB_CONTAINER, DB_USER, DB_PASSWORD, DB_NAME
 # and DB_SCHEMA (default forge). Database and role are created through the maintenance database
 # `postgres`; schema, extensions, grants, default privileges and the deploy_migrations ledger in $DB_NAME.
+# It first checks the login's rights (`ok login-rights (...)`) and DB_PASSWORD over TCP (`ok password`).
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -34,6 +35,49 @@ step() {
     echo "ok $1"
   fi
 }
+
+# check_login_rights: the login is a superuser, or may create databases and roles (or a DBA created the
+# database, proact_rls_user and the membership). A non-superuser also needs two grants only a superuser
+# gives: SET on app.tenant_ids (V001 defines functions with `SET app.tenant_ids`) and BYPASSRLS (pg_dump in
+# backup-forge.sh refuses tables with forced row-level security otherwise).
+check_login_rights() {
+  local rights super createdb createrole setparam bypass precreated mode="createdb+createrole" missing="" dba=""
+  rights="$(query postgres "
+    SELECT rolsuper, rolcreatedb, rolcreaterole, has_parameter_privilege('app.tenant_ids', 'SET'), rolbypassrls,
+      EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db') AND EXISTS (SELECT 1 FROM pg_auth_members m
+        JOIN pg_roles r ON r.oid = m.roleid WHERE r.rolname = 'proact_rls_user' AND m.member = u.oid)
+    FROM pg_roles u WHERE u.rolname = current_user;")"
+  IFS='|' read -r super createdb createrole setparam bypass precreated <<<"$rights"
+  if [[ "$super" == t ]]; then
+    echo "ok login-rights (superuser)"
+    return
+  fi
+  [[ "$createdb" == t ]] || missing="CREATEDB"
+  [[ "$createrole" == t ]] || missing="${missing:+$missing and }CREATEROLE"
+  if [[ -n "$missing" && "$precreated" == t ]]; then
+    mode="pre-created by a DBA"
+  elif [[ -n "$missing" ]]; then
+    forge_die "$DB_USER lacks $missing: it needs SUPERUSER, or CREATEDB and CREATEROLE, or a DBA creates" \
+      "database $DB_NAME, role proact_rls_user and its grant to $DB_USER"
+  fi
+  [[ "$setparam" == t ]] || dba="GRANT SET ON PARAMETER app.tenant_ids TO \"$DB_USER\";"
+  [[ "$bypass" == t ]] || dba="${dba:+$dba }ALTER ROLE \"$DB_USER\" BYPASSRLS;"
+  [[ -z "$dba" ]] || forge_die "$DB_USER lacks rights only a superuser grants; a superuser runs: $dba"
+  echo "ok login-rights ($mode)"
+}
+
+# check_password: DB_PASSWORD over TCP to the container's own network address (the official image trusts
+# 127.0.0.1 and the socket, so only a network connection checks the password, as the app's does).
+check_password() {
+  local container="${DB_CONTAINER:-instrumental-postgres}"
+  PGPASSWORD="${DB_PASSWORD:-}" MSYS_NO_PATHCONV=1 docker exec -e PGPASSWORD -e PGUSER="$DB_USER" "$container" \
+    sh -c 'psql -X -q -At -w -h "$(hostname -i | cut -d" " -f1)" -p 5432 -d postgres -c "select 1"' >/dev/null 2>&1 ||
+    forge_die "DB_PASSWORD rejected by $container for $DB_USER"
+  echo "ok password"
+}
+
+check_login_rights
+check_password
 
 step database postgres \
   "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = :'db');" \

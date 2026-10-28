@@ -27,12 +27,7 @@ images=("traverse-forge-backend:$version" "traverse-forge-frontend:$version")
 # shellcheck source=../vm/lib-vm.sh
 source "$deploy/vm/lib-vm.sh"
 
-# host_path <path>: mixed Windows form (C:/...) under Git Bash, so docker and Windows tools resolve it.
-host_path() {
-  if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else echo "$1"; fi
-}
-
-export FORGE_COMPOSE_EXTRA="-f $(host_path "$deploy/docker-compose.local.yml")"
+export FORGE_COMPOSE_EXTRA="-f $(vm_host_path "$deploy/docker-compose.local.yml")"
 
 # teardown_stack <root>: compose down -v, the rehearsal images and the temp folder.
 teardown_stack() {
@@ -64,7 +59,7 @@ for name in forge-rehearsal-pg traverse-forge-backend traverse-forge-worker trav
   ! docker inspect "$name" >/dev/null 2>&1 || forge_die "container $name exists: tear the previous rehearsal down first"
 done
 
-root="$(host_path "$(mktemp -d "${TMPDIR:-/tmp}/forge-rehearsal.XXXXXX")")"
+root="$(vm_host_path "$(mktemp -d "${TMPDIR:-/tmp}/forge-rehearsal.XXXXXX")")"
 export FORGE_HOME="$root/home"
 work="$root/work"
 mkdir -p "$FORGE_HOME" "$work/logs" "$work/bundle"

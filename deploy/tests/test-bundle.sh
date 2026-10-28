@@ -71,10 +71,26 @@ check "package-bundle.sh writes the archive" "$(truth test -f "$archive")"
 listing="$(tar tzf "$archive" 2>/dev/null || true)"
 missing=""
 for entry in images.tar db/migrations/V001__baseline.sql deploy/db/10-migrate.sh deploy/vm/load-and-start.sh \
-  docker-compose.forge.yml VERSION MANIFEST.sha256; do
+  docker-compose.forge.yml VERSION MANIFEST.sha256 db/seed/generated/U010__users.sql; do
   grep -q "^traverse-forge-$version/$entry\$" <<<"$listing" || missing="$missing $entry"
 done
 check "bundle lists the release files (missing:$missing)" "$(truth test -z "$missing")"
+check "package-bundle.sh says the users seed is included" \
+  "$(truth grep -q '^users seed: included (sensitive)$' "$work/package.log")"
+
+# A db/ copy without the generated users file: refused by default, packaged with --without-users.
+cp -R "$deploy/../db" "$work/db-nousers"
+rm -f "$work/db-nousers/seed/generated/U010__users.sql"
+result="$(DB_DIR="$work/db-nousers" run_rc bash "$deploy/build/package-bundle.sh" --version "$version" \
+  --out "$work/out-nousers")"
+check "package-bundle.sh refuses a missing users seed (exit ${result%%|*})" \
+  "$(truth ended 1 "$result" "U010__users.sql missing" --without-users)"
+result="$(DB_DIR="$work/db-nousers" run_rc bash "$deploy/build/package-bundle.sh" --version "$version" \
+  --out "$work/out-nousers" --without-users)"
+listing="$(tar tzf "$work/out-nousers/traverse-forge-$version.tar.gz" 2>/dev/null || true)"
+check "package-bundle.sh --without-users packages without it (exit ${result%%|*})" \
+  "$( ended 0 "$result" "users seed: excluded (--without-users)" && [[ -n "$listing" ]] &&
+  [[ "$listing" != *U010__users.sql* ]] && echo true || echo false)"
 
 home="$work/home"
 result="$(FORGE_HOME="$home" run_rc bash "$deploy/vm/install.sh" "$archive")"

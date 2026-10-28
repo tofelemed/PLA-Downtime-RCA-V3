@@ -24,6 +24,7 @@ services:
     image: traverse-forge-backend:${FORGE_VERSION:?Set FORGE_VERSION}
     container_name: traverse-forge-backend
     init: true
+    security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     env_file:
       - ${FORGE_ENV_FILE:-.env}
@@ -43,6 +44,7 @@ services:
     image: traverse-forge-backend:${FORGE_VERSION:?Set FORGE_VERSION}
     container_name: traverse-forge-worker
     init: true
+    security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     env_file:
       - ${FORGE_ENV_FILE:-.env}
@@ -65,6 +67,7 @@ services:
     image: traverse-forge-frontend:${FORGE_VERSION:?Set FORGE_VERSION}
     container_name: traverse-forge-frontend
     init: true
+    security_opt: ["no-new-privileges:true"]
     restart: unless-stopped
     environment:
       BACKEND_URL: http://traverse-forge-backend:3000

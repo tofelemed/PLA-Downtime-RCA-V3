@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Package one release into the offline bundle copied to the VM (TF-PREP-001 task 7).
-#   bash deploy/build/package-bundle.sh [--version <v>] [--out <dir>]
+#   bash deploy/build/package-bundle.sh [--version <v>] [--out <dir>] [--without-users]
 # Version: --version, else deploy/build/.last-version (written by build-images.sh). Output directory:
 # --out, default dist/bundle/ (git-ignored). The archive traverse-forge-<v>.tar.gz holds one folder
 # traverse-forge-<v>/ with:
 #   images.tar                 docker save of traverse-forge-backend:<v> and traverse-forge-frontend:<v>
-#   db/                        migrations, reference seed, manifest, CHECKSUMS (seed/generated/ when present)
+#   db/                        migrations, reference seed, manifest, CHECKSUMS and seed/generated/U010__users.sql
+#                              (account password hashes: the bundle is sensitive). Refuses when that file is
+#                              missing unless --without-users (which leaves it out). DB_DIR overrides db/ (tests).
 #   deploy/db/  deploy/vm/     database and VM scripts (deploy/db/tests is left out)
 #   docker-compose.forge.yml  .env.example  seed-users.csv.example
 #   VERSION                    FORGE_VERSION, GIT_COMMIT, BUILT_AT
@@ -18,15 +20,18 @@ repo_root="$(cd "$here/../.." && pwd)"
 source "$here/../db/lib.sh"
 
 usage() {
-  forge_die "usage: package-bundle.sh [--version <v>] [--out <dir>]"
+  forge_die "usage: package-bundle.sh [--version <v>] [--out <dir>] [--without-users]"
 }
 
 version=""
 out="$repo_root/dist/bundle"
+db_dir="${DB_DIR:-$repo_root/db}"
+with_users=true
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --version) [[ $# -ge 2 ]] || usage; version="$2"; shift 2 ;;
     --out) [[ $# -ge 2 ]] || usage; out="$2"; shift 2 ;;
+    --without-users) with_users=false; shift ;;
     *) usage ;;
   esac
 done
@@ -36,6 +41,14 @@ fi
 [[ -n "$version" ]] || forge_die "no version: pass --version or run build-images.sh first"
 [[ "$version" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || forge_die "invalid version: '$version'"
 command -v sha256sum >/dev/null 2>&1 || forge_die "sha256sum is required"
+users_seed="$db_dir/seed/generated/U010__users.sql"
+if [[ "$with_users" == true ]]; then
+  [[ -f "$users_seed" ]] ||
+    forge_die "$users_seed missing: run deploy/db/extract-reference-from-dev.sh, or pass --without-users"
+  echo "users seed: included (sensitive)"
+else
+  echo "users seed: excluded (--without-users)"
+fi
 
 images=("traverse-forge-backend:$version" "traverse-forge-frontend:$version")
 name="traverse-forge-$version"
@@ -62,7 +75,8 @@ save_images() {
 # copy_files: database files, scripts, compose file and templates.
 copy_files() {
   mkdir -p "$release/deploy"
-  cp -R "$repo_root/db" "$release/db"
+  cp -R "$db_dir" "$release/db"
+  if [[ "$with_users" == false ]]; then rm -f "$release/db/seed/generated/U010__users.sql"; fi
   cp -R "$repo_root/deploy/db" "$release/deploy/db"
   rm -rf "$release/deploy/db/tests"
   find "$release/deploy/db" -name '__pycache__' -type d -prune -exec rm -rf {} +

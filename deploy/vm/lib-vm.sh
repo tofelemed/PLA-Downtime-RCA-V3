@@ -48,7 +48,8 @@ vm_write_version() {
   mv -f "$FORGE_HOME/$1.tmp" "$FORGE_HOME/$1"
 }
 
-# vm_load_env: export the variables of $FORGE_HOME/.env (never printed).
+# vm_load_env: export the variables of $FORGE_HOME/.env (never printed); a value holding $ " ' # or
+# whitespace is refused by forge_load_env, naming the variable only.
 vm_load_env() {
   forge_load_env "$FORGE_HOME/.env"
 }
@@ -95,10 +96,11 @@ vm_http_body() {
   fi
 }
 
-# vm_host_path <path>: the path as docker sees it for a bind mount (Windows form under Git Bash).
+# vm_host_path <path>: the path as docker sees it for a bind mount; under Git Bash the mixed Windows form
+# (C:/...), which docker, Windows tools and bash all resolve. Unchanged on Linux.
 vm_host_path() {
   if command -v cygpath >/dev/null 2>&1; then
-    cygpath -w "$1"
+    cygpath -m "$1"
   else
     echo "$1"
   fi

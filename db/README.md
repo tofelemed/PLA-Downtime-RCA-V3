@@ -9,7 +9,7 @@ remain the authoring tool; the files here are exported from them and never edite
 | `migrations/V001__baseline.sql` | Schema built by the TypeORM migrations through `1794241400000` (144 files), plus their `migrations` / `typeorm_metadata` rows, in schema `forge` |
 | `migrations/V002__fk_indexes.sql` | TypeORM migration `FkIndexes1794242000000`: 34 foreign-key indexes |
 | `seed/reference/R0x0__*.sql` | Reference seed of plant `HDPE-TRAIN` / organisation `MPC-TRAIN`, extracted from the dev database by `deploy/db/extract-reference-from-dev.sh` (never hand-edited) |
-| `seed/reference/R060__connections_signals.sql` | The plant's integration connections and signals. Connections are seeded inactive without secrets; set the broker/PI endpoints and credentials in Settings → Integrations on the VM and activate them. |
+| `seed/reference/R060__connections_signals.sql` | The plant's integration connections and signals. Connections are seeded inactive without secrets; set the broker/PI endpoints and credentials on the Connectivity page on the VM and activate them (VM-STEPS A.9). |
 | `seed/manifest.json` | Source tenant / organisation ids, row count per seeded table, tables per seed file |
 | `seed/generated/U010__users.sql` | **Git-ignored.** The plant's accounts with their dev password hashes; carried to the VM by hand |
 | `CHECKSUMS.sha256` | SHA-256 of every `*.sql` under `db/` except `seed/generated/` (`<sha256>  <path relative to db/>`) |
@@ -67,14 +67,15 @@ In the repository:
    `forge.migrations` row. Read the file before committing.
 4. Commit the TypeORM migration, `db/migrations/V<nnn>__<slug>.sql` and `db/CHECKSUMS.sha256` together.
 
-On the VM (env file with `DB_CONTAINER`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SCHEMA=forge`: `--env
-<file>`, else `./.env`, else `$FORGE_HOME/.env`):
+On the VM, follow `deploy/vm/VM-STEPS.template.md` (prerequisites on the `DB_USER` login included); the
+scripts run from the installed release `R=/opt/traverse-forge/releases/<version>` with
+`--env /opt/traverse-forge/.env`:
 
 ```bash
-bash deploy/db/00-create-db-and-roles.sh      # first install; idempotent, ok|skip per step
-bash deploy/db/10-migrate.sh --dry-run        # apply|skip per file
-bash deploy/db/10-migrate.sh                  # before load-and-start.sh
-bash deploy/db/20-seed-reference.sh --with-users   # first install; re-run is a no-op, ends with `seed ok`
+bash $R/deploy/db/00-create-db-and-roles.sh --env /opt/traverse-forge/.env   # first install; ok|skip per step
+bash $R/deploy/db/10-migrate.sh --env /opt/traverse-forge/.env --dry-run     # apply|skip per file
+bash $R/deploy/db/10-migrate.sh --env /opt/traverse-forge/.env               # before load-and-start.sh
+bash $R/deploy/db/20-seed-reference.sh --env /opt/traverse-forge/.env --with-users   # first install; ends `seed ok`
 ```
 
 `10-migrate.sh` verifies `CHECKSUMS.sha256`, then applies each pending file in one transaction with its
