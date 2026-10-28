@@ -278,6 +278,13 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
 
   it('an empty computed period (no slice, default policy) is not submittable or certifiable', async () => {
     const unit = env.world.unitA2;
+    // computed mode: the unit has no loss_accounting policy yet (the declared test below adds one)
+    const policies = await env.rows<{ count: number }>(
+      `SELECT count(*)::int AS "count" FROM accounting_policies
+        WHERE policy_kind = 'loss_accounting' AND unit_id = $1`,
+      [unit],
+    );
+    expect(policies[0].count).toBe(0);
     const starts = [
       NEXT_DAY,
       '2027-03-02T10:30:00.000Z',

@@ -11,13 +11,15 @@ const issue = (
 ): WorkflowIssue => ({ code, message, sliceId });
 
 /**
- * A validated run without an active product slice computed nothing: whatever the loss basis (a run resolved
- * before the period's policy existed carries none), such a period is never submittable.
+ * A validated run without an active product slice or without a plan-ledger total computed nothing: whatever
+ * the loss basis (a run resolved before the period's policy existed carries none), such a period is never
+ * submittable. Same definition of "empty" as day certification (`emptyRunRevisions`).
  */
 function noComputableSlice(
-  state: Pick<RevisionState, 'slices'>,
+  state: Pick<RevisionState, 'slices' | 'totals'>,
 ): WorkflowIssue | null {
-  if (state.slices.length > 0) return null;
+  const planned = state.totals.some((t) => t.ledger === 'plan');
+  if (state.slices.length > 0 && planned) return null;
   return issue(
     'NO_COMPUTABLE_SLICE',
     'The calculation produced no computable slice; fix the period setup (see its warnings) and recompute before submitting.',
@@ -26,7 +28,7 @@ function noComputableSlice(
 
 /** The current run exists, is validated and computed a slice (only the first failing condition is blamed). */
 export function runIssues(
-  state: Pick<RevisionState, 'run' | 'slices'>,
+  state: Pick<RevisionState, 'run' | 'slices' | 'totals'>,
 ): WorkflowIssue[] {
   if (!state.run)
     return [issue('NO_CALCULATION_RUN', 'the revision has no calculation run')];
