@@ -55,7 +55,8 @@ reported="$(reported_version || true)"
 [[ "$reported" == "$version" ]] || fail "GET /api/health reports version '$reported', expected '$version'"
 answers / 200 || fail "GET $base/ is not 200"
 wait_for "$timeout_s" worker_healthy || fail "container traverse-forge-worker is not healthy"
-if [[ "${FORGE_SWAGGER:-false}" == false ]]; then
+swagger="$(tr -d '[:space:]' <<<"${FORGE_SWAGGER:-false}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${swagger:-false}" == false ]]; then
   answers /api 404 || fail "GET $base/api (Swagger) is not 404 although FORGE_SWAGGER=false"
 fi
 echo "verify ok $version"

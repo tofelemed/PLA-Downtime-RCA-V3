@@ -3,7 +3,8 @@
 # without a database:
 # OCI labels, the non-root nginx (uid 101) with security headers and /piwebapi off when PI_SERVER is empty,
 # the backend's APP_VERSION, and that deploy/docker-compose.forge.yml renders with the fixture env.
-# Container: forge-test-frontend (127.0.0.1:<first free port from 18095>), removed on exit.
+# Container: forge-test-frontend (127.0.0.1:<first free port from 18095>); it and the :test images are
+# removed on exit.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,7 +15,12 @@ frontend=forge-test-frontend
 cleanup() {
   docker rm -f "$frontend" >/dev/null 2>&1 || true
 }
-trap cleanup EXIT
+
+remove_images() {
+  cleanup
+  docker rmi "traverse-forge-backend:$version" "traverse-forge-frontend:$version" >/dev/null 2>&1 || true
+}
+trap remove_images EXIT
 
 passed=0
 failed=0

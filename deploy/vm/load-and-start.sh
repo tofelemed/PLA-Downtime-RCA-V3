@@ -3,10 +3,10 @@
 #   bash load-and-start.sh <version>
 # Refuses (exit 1) an unknown version (no $FORGE_HOME/releases/<v>/images.tar) and an .env that still
 # holds CHANGE_ME (FORGE_VERSION aside: this script sets it). Loads the images unless both tags already
-# exist, then requires `10-migrate.sh --dry-run` to list no `apply` (exit 2: migrate first). Records the
-# running version in previous-version, runs the production compose (project traverse-forge, project
-# directory $FORGE_HOME, extra -f files from FORGE_COMPOSE_EXTRA), writes current-version and the
-# FORGE_VERSION line of .env, and finishes with verify.sh.
+# exist, then requires `10-migrate.sh --dry-run` to list no `apply` (exit 2: migrate first). Runs the
+# production compose (project traverse-forge, project directory $FORGE_HOME, extra -f files from
+# FORGE_COMPOSE_EXTRA); only after it succeeds does it move the replaced version to previous-version and
+# write current-version and the FORGE_VERSION line of .env. Finishes with verify.sh.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -29,7 +29,9 @@ check_release() {
   [[ -z "$names" ]] || forge_die "$env_file still contains CHANGE_ME for: ${names% }"
 }
 
-# load_images: docker load unless both tags are present already (rollback reuses loaded images).
+# load_images: docker load unless both tags are present already. A release's images are loaded once;
+# rollback.sh and a restart of the same version reuse them (a tag is never rebuilt under the same
+# version, so an existing tag is the bundled image).
 load_images() {
   local image missing=false
   for image in "traverse-forge-backend:$version" "traverse-forge-frontend:$version"; do
@@ -57,16 +59,15 @@ check_migrations() {
   echo "migrations: up to date"
 }
 
-# record_versions: remember the version being replaced (rollback target).
+# record_versions <replaced>: after a successful start, remember the replaced version (rollback target).
 record_versions() {
-  local current
-  current="$(vm_read_version current-version)"
-  if [[ -n "$current" && "$current" != "$version" ]]; then
-    vm_write_version previous-version "$current"
+  if [[ -n "$1" && "$1" != "$version" ]]; then
+    vm_write_version previous-version "$1"
   fi
+  vm_write_version current-version "$version"
 }
 
-# set_env_version: rewrite the FORGE_VERSION line of .env in place (mode and owner kept).
+# set_env_version: rewrite the FORGE_VERSION line of .env through a temp file (mode 600).
 set_env_version() {
   local updated
   updated="$(awk -v v="$version" '
@@ -74,7 +75,9 @@ set_env_version() {
     { print }
     END { if (!done) print "FORGE_VERSION=" v }
   ' "$env_file")"
-  printf '%s\n' "$updated" > "$env_file"
+  (umask 077 && printf '%s\n' "$updated" > "$env_file.tmp")
+  chmod 600 "$env_file.tmp"
+  mv -f "$env_file.tmp" "$env_file"
 }
 
 check_release
@@ -82,9 +85,9 @@ vm_load_env
 export FORGE_VERSION="$version"
 load_images
 check_migrations
-record_versions
+replaced="$(vm_read_version current-version)"
 vm_compose "$version" up -d --remove-orphans || forge_die "docker compose up failed"
-vm_write_version current-version "$version"
+record_versions "$replaced"
 set_env_version
 echo "started $version"
 bash "$here/verify.sh" "$version"

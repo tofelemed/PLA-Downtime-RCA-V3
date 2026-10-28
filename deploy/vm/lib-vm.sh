@@ -21,6 +21,13 @@ vm_check_version() {
   [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || forge_die "invalid version name: '$1'"
 }
 
+# vm_private_dir <dir...>: create the folders for the owner only (mode 700). mkdir + chmod rather than
+# `install -d -m 700`: under Git Bash on NTFS install fails on the mode, chmod is a no-op there.
+vm_private_dir() {
+  mkdir -p "$@"
+  chmod 700 "$@"
+}
+
 # vm_release_dir <v>: the folder of an installed release.
 vm_release_dir() {
   echo "$FORGE_HOME/releases/$1"

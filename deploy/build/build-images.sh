@@ -26,10 +26,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# check_clean: refuse uncommitted changes (nested worktrees under .claude are not part of any image).
+# check_clean: refuse uncommitted changes to tracked files (as export-baseline.sh; submodules and nested
+# worktrees are not part of any image).
 check_clean() {
   local changes
-  changes="$(git -C "$repo_root" status --porcelain --ignore-submodules=dirty)"
+  changes="$(git -C "$repo_root" status --porcelain --ignore-submodules=all --untracked-files=no)"
   [[ -z "$changes" ]] && return 0
   if [[ "$allow_dirty" == true ]]; then
     echo "warn: building from a working tree with uncommitted changes (--allow-dirty)" >&2

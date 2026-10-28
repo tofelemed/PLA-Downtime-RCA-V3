@@ -30,17 +30,36 @@ backed up) and `traverse-forge_forge-exports` (report exports, regenerable), its
    ```
 
    Last line: `installed <version> at /opt/traverse-forge/releases/<version>` (preceded by
-   `ACTION: edit /opt/traverse-forge/.env ...` on the first install).
+   `ACTION: edit /opt/traverse-forge/.env ...` on the first install). Then remove the unpacked scripts
+   (the installed copy lives under `releases/<version>/deploy/`):
+
+   ```bash
+   rm -rf ~/forge-inbox/traverse-forge-<version>
+   ```
+
+   Last line: none.
+
+   **Re-install a damaged release** (`install.sh` refuses a version that is already installed, and a
+   failed `MANIFEST.sha256` check means the copied archive is damaged: copy it again first). Never remove
+   the release that `/opt/traverse-forge/current-version` names while it runs:
+
+   ```bash
+   rm -rf /opt/traverse-forge/releases/<version>
+   mkdir -p ~/forge-inbox && tar xzf ~/traverse-forge-<version>.tar.gz -C ~/forge-inbox traverse-forge-<version>/deploy
+   bash ~/forge-inbox/traverse-forge-<version>/deploy/vm/install.sh ~/traverse-forge-<version>.tar.gz
+   ```
+
+   Last line: `installed <version> at /opt/traverse-forge/releases/<version>`.
 
 3. Fill in the environment: `vi /opt/traverse-forge/.env` — replace every `CHANGE_ME` (database login and
    password, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `CREDENTIAL_ENCRYPTION_KEYS`, `CORS_ORIGIN` =
    `http://<VM address>:8095`). Leave `FORGE_VERSION` alone. Check:
 
    ```bash
-   grep -c CHANGE_ME /opt/traverse-forge/.env
+   grep -E '^[A-Z_]+=.*CHANGE_ME' /opt/traverse-forge/.env | grep -vc '^FORGE_VERSION='
    ```
 
-   Last line: `1` (only `FORGE_VERSION=CHANGE_ME`, set by step 8).
+   Last line: `0` (`FORGE_VERSION=CHANGE_ME` may stay: step 8 sets it).
 
 4. Set the release folder for the next commands:
 

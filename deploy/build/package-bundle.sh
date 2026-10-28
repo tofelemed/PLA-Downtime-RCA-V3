@@ -71,11 +71,12 @@ copy_files() {
     "$repo_root/deploy/seed-users.csv.example" "$release/"
 }
 
-# write_version: the release identity file.
+# write_version: the release identity file; GIT_COMMIT is the commit the backend image was built from.
 write_version() {
   {
     echo "FORGE_VERSION=$version"
-    echo "GIT_COMMIT=$(git -C "$repo_root" rev-parse HEAD)"
+    echo "GIT_COMMIT=$(docker image inspect "${images[0]}" \
+      --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')"
     echo "BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   } > "$release/VERSION"
 }

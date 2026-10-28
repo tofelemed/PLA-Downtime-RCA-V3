@@ -22,10 +22,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# prepare_home: the FORGE_HOME folders; private/ is readable by the deploy user only.
+# prepare_home: the FORGE_HOME folders; backups/ and private/ are for the deploy user only.
 prepare_home() {
-  mkdir -p "$FORGE_HOME/releases" "$FORGE_HOME/backups" "$FORGE_HOME/private"
-  chmod 700 "$FORGE_HOME/private"
+  mkdir -p "$FORGE_HOME/releases"
+  vm_private_dir "$FORGE_HOME/backups" "$FORGE_HOME/private"
 }
 
 # unpack: extract the archive into $incoming and print the path of its single release folder.
