@@ -14,6 +14,11 @@ remain the authoring tool; the files here are exported from them and never edite
 - Objects live in `forge`; the files set `search_path = forge, public`. Extensions (`uuid-ossp`,
   `btree_gist`, optional `pg_stat_statements`) stay in `public` and are created by
   `deploy/db/00-create-db-and-roles.sh`, as is the role `proact_rls_user`. No `CREATE ROLE` in `db/`.
+- Grants to `proact_rls_user`: schema USAGE and per-table grants come from the migration files;
+  default privileges for new objects come from `deploy/db/00-create-db-and-roles.sh`, which runs
+  `ALTER DEFAULT PRIVILEGES FOR ROLE "$DB_USER" IN SCHEMA "$DB_SCHEMA"` (tables: SELECT, INSERT, UPDATE,
+  DELETE; sequences: USAGE, SELECT, UPDATE) before V001 is applied, so tables created by V001 and by every
+  later migration get their grants. The dev login's `ALTER DEFAULT PRIVILEGES` lines are not exported.
 - An applied file never changes. A schema change is a new TypeORM migration exported as the next `V<nnn>`.
 - Line endings are LF (`.gitattributes`), so checksums match on every checkout.
 

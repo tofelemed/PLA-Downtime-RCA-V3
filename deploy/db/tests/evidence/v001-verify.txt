@@ -1,7 +1,7 @@
-# V001 verification (TF-PREP-001 task 2), 2026-10-28T05:30Z
+# V001 verification (TF-PREP-001 task 2, fix round 1), 2026-10-28T05:36Z
 # left : verify-schema.sh traverse_forge public  on forge-export-pg (fresh TypeORM migration:run, 144 migrations through 1794241400000)
 # right: verify-schema.sh traverse_forge forge   on forge-verify-pg (db/migrations/V001__baseline.sql applied with psql -v ON_ERROR_STOP=1)
-# diff of the two outputs: none (identical)
+# diff of the two outputs: none (identical). 154 tables: the dev database's 155th is a runtime partition.
 
 public (TypeORM)       forge (V001 SQL)
 columns 2771           columns 2771
@@ -14,3 +14,18 @@ tables 154             tables 154
 triggers 38            triggers 38
 types 97               types 97
 views 4                views 4
+
+# RLS role access on forge-verify-pg: GRANT proact_rls_user TO postgres; SET ROLE proact_rls_user; SET app.tenant_ids = ''; SELECT ... FROM forge.units
+GRANT ROLE
+SET
+SET
+  current_user   | count 
+-----------------+-------
+ proact_rls_user |     0
+(1 row)
+
+ forge_usage 
+-------------
+ t
+(1 row)
+

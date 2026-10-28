@@ -99,9 +99,12 @@ echo "started $container on 127.0.0.1:$port"
 echo "executed $(run_migrations) migrations"
 
 sha="$(git -C "$repo_root" rev-parse --short HEAD)"
+tables="$(MSYS_NO_PATHCONV=1 docker exec "$container" psql -At -U postgres -d traverse_forge -c \
+  "SELECT count(*) FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p')")"
 mkdir -p "$(dirname "$out")"
 {
   echo "-- V001 baseline: TypeORM migrations through $through ($count files) exported $(date -u +%Y-%m-%d) from $sha"
+  echo "-- $tables tables; the dev database's 155th is a runtime partition (measurement_samples_y2026m10)"
   dump --schema-only --no-owner
   dump --data-only --inserts --table=migrations --table=typeorm_metadata
 } | python "$here/rewrite-schema.py" > "$out.tmp"

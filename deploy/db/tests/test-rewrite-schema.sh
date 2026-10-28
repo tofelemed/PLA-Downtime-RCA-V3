@@ -43,6 +43,12 @@ expect "extension comments are gone" 'COMMENT ON EXTENSION' absent
 expect "psql meta-commands are gone" '\restrict' absent
 expect "psql unrestrict is gone" '\unrestrict' absent
 expect "psql connect is gone" '\connect' absent
+expect "schema USAGE grant moves to forge" 'GRANT USAGE ON SCHEMA forge TO proact_rls_user' present
+expect "no schema grant left on public" 'ON SCHEMA public' absent
+expect "default privileges are dropped" 'ALTER DEFAULT PRIVILEGES' absent
+expect "default privileges comment block is dropped" 'DEFAULT PRIVILEGES FOR TABLES' absent
+expect "typeorm_metadata row names schema forge" "INSERT INTO forge.typeorm_metadata VALUES ('GENERATED_COLUMN', 'traverse_forge', 'forge', 'units'" present
+expect "typeorm_metadata row keeps no public literal" "'traverse_forge', 'public'" absent
 
 total=$((passed + failed))
 if (( failed > 0 )); then

@@ -1,4 +1,5 @@
--- V001 baseline: TypeORM migrations through 1794241400000 (144 files) exported 2026-10-28 from d448ba40
+-- V001 baseline: TypeORM migrations through 1794241400000 (144 files) exported 2026-10-28 from 518b86e7
+-- 154 tables; the dev database's 155th is a runtime partition (measurement_samples_y2026m10)
 --
 -- PostgreSQL database dump
 --
@@ -15116,7 +15117,7 @@ ALTER TABLE forge.work_order_operations ENABLE ROW LEVEL SECURITY;
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
 --
 
-GRANT USAGE ON SCHEMA public TO proact_rls_user;
+GRANT USAGE ON SCHEMA forge TO proact_rls_user;
 
 
 --
@@ -16270,20 +16271,6 @@ GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE forge.work_order_operations TO proact
 
 
 --
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES  TO proact_rls_user;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES  TO proact_rls_user;
-
-
---
 -- PostgreSQL database dump complete
 --
 
@@ -16462,7 +16449,7 @@ INSERT INTO forge.migrations VALUES (144, 1794241400000, 'ApprovalInboxLossAccou
 -- Data for Name: typeorm_metadata; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-INSERT INTO forge.typeorm_metadata VALUES ('GENERATED_COLUMN', 'traverse_forge', 'public', 'production_events', 'duration_seconds', 'CASE WHEN "end_time" IS NULL THEN NULL ELSE EXTRACT(EPOCH FROM ("end_time" - "start_time")) END');
+INSERT INTO forge.typeorm_metadata VALUES ('GENERATED_COLUMN', 'traverse_forge', 'forge', 'production_events', 'duration_seconds', 'CASE WHEN "end_time" IS NULL THEN NULL ELSE EXTRACT(EPOCH FROM ("end_time" - "start_time")) END');
 
 
 --

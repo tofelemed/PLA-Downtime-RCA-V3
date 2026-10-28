@@ -39,6 +39,16 @@ ALTER TABLE ONLY public.units ADD CONSTRAINT "PK_units" PRIMARY KEY (id);
 ALTER TABLE ONLY public.units_y2026m10 ADD CONSTRAINT units_y2026m10_pkey PRIMARY KEY (id);
 ALTER INDEX public."PK_units" ATTACH PARTITION public.units_y2026m10_pkey;
 GRANT SELECT ON TABLE public.units TO proact_rls_user;
+GRANT USAGE ON SCHEMA public TO proact_rls_user;
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES  TO proact_rls_user;
+
+CREATE TABLE public.typeorm_metadata (type character varying NOT NULL, schema character varying);
+INSERT INTO public.typeorm_metadata VALUES ('GENERATED_COLUMN', 'traverse_forge', 'public', 'units', 'status', 'x');
 
 \unrestrict FixtureRestrictKey0123456789
 \connect traverse_forge

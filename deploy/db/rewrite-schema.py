@@ -15,6 +15,10 @@ stdin -> stdout, standard library only. Rules (TF-PREP-001 task 2):
   5. pg_stat_statements is dropped (extensions are created by 00-create-db-and-roles.sh), and so are
      COMMENT ON EXTENSION statements (only the extension owner may run them).
   6. psql meta-commands \restrict, \unrestrict and \connect are removed.
+  7. Grants: GRANT|REVOKE ... ON SCHEMA public -> ON SCHEMA forge. ALTER DEFAULT PRIVILEGES ... IN SCHEMA
+     public (bound to the dev login) is dropped with its comment block: 00-create-db-and-roles.sh sets the
+     default privileges of the deploy login in forge before V001 runs.
+  8. typeorm_metadata rows: the schema literal 'public' -> 'forge' (inside those INSERTs only).
 """
 import re
 import sys
@@ -26,6 +30,12 @@ CREATED = re.compile(
 INDEXED = re.compile(r'\bCREATE (?:UNIQUE )?INDEX (' + IDENT + r') ON (?:ONLY )?public\.(' + IDENT + ')')
 CONSTRAINT_INDEX = re.compile(r'\bADD CONSTRAINT (' + IDENT + r') (?:PRIMARY KEY|UNIQUE|EXCLUDE)\b')
 QUALIFIED = re.compile(r'(?<![A-Za-z0-9_$."])public\.(' + IDENT + ')')
+SCHEMA_ACL = re.compile(r'^((?:GRANT|REVOKE) .* ON SCHEMA )public\b', re.MULTILINE)
+DEFAULT_ACL = re.compile(
+    r'(?:--\n-- Name: DEFAULT PRIVILEGES[^\n]*\n--\n\n)?'
+    r'ALTER DEFAULT PRIVILEGES FOR ROLE \S+ IN SCHEMA public [^\n]*\n(?:\n\n)?'
+)
+METADATA_ROW = re.compile(r'^INSERT INTO forge\.typeorm_metadata VALUES .*$', re.MULTILINE)
 FUNCTION_SEARCH_PATH = re.compile(r"^(\s+SET search_path TO )(.*)$", re.MULTILINE)
 
 EMPTY_SEARCH_PATH = "SELECT pg_catalog.set_config('search_path', '', false);"
@@ -67,9 +77,19 @@ def drop_lines(sql: str) -> str:
     return ''.join(line for line in sql.splitlines(keepends=True) if not DROPPED_LINE.match(line.rstrip('\r\n')))
 
 
+def rewrite_grants(sql: str) -> str:
+    sql = DEFAULT_ACL.sub('', sql)
+    return SCHEMA_ACL.sub(lambda m: m.group(1) + 'forge', sql)
+
+
+def rewrite_metadata_rows(sql: str) -> str:
+    return METADATA_ROW.sub(lambda m: m.group(0).replace("'public'", "'forge'"), sql)
+
+
 def rewrite(sql: str) -> str:
-    sql = drop_lines(sql)
+    sql = drop_lines(rewrite_grants(sql))
     sql = requalify(sql, collect_names(sql))
+    sql = rewrite_metadata_rows(sql)
     return rewrite_search_paths(sql)
 
 
