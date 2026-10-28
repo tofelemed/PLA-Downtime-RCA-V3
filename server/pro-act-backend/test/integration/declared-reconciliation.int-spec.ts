@@ -91,6 +91,21 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
         { actorKind: 'connector' },
       );
 
+  /** A unit `loss_accounting` version (idempotent per version), in force from 2026 or over `window`. */
+  const lossPolicy = (
+    unit: string,
+    version: number,
+    body: object,
+    window: [string, string | null] = ['2026-01-01T00:00:00Z', null],
+  ) =>
+    env.rows(
+      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
+              effective_from, effective_to, approved_at)
+       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, $3, $4::jsonb, $5, $6, now())
+       ON CONFLICT ON CONSTRAINT "UQ_accounting_policies_kind_scope_version" DO NOTHING`,
+      [env.world.tenantA, unit, version, JSON.stringify(body), ...window],
+    );
+
   beforeAll(async () => {
     await env.start();
     reason = await env.reasonCode('FEED');
@@ -98,12 +113,7 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
       `UPDATE reason_codes SET default_oee_component = 'availability' WHERE id = $1`,
       [reason],
     );
-    await env.rows(
-      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
-              effective_from, approved_at)
-       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, 1, $3::jsonb, '2026-01-01T00:00:00Z', now())`,
-      [env.world.tenantA, env.world.unitA1, JSON.stringify(POLICY)],
-    );
+    await lossPolicy(env.world.unitA1, 1, POLICY);
     await env.tolerancePolicy(env.world.unitA1, tolerance('warn'));
     await env.recompute(env.periodA1);
     await env.recompute(env.periodB1);
@@ -276,15 +286,13 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
     });
   });
 
-  it('an empty computed period (no slice, default policy) is not submittable or certifiable', async () => {
+  it('an empty computed period (no slice, computed policy) is not submittable or certifiable', async () => {
     const unit = env.world.unitA2;
-    // computed mode: the unit has no loss_accounting policy yet (the declared test below adds one)
-    const policies = await env.rows<{ count: number }>(
-      `SELECT count(*)::int AS "count" FROM accounting_policies
-        WHERE policy_kind = 'loss_accounting' AND unit_id = $1`,
-      [unit],
-    );
-    expect(policies[0].count).toBe(0);
+    // computed mode for this day only, above any declared version the other tests give the unit
+    await lossPolicy(unit, 100, { ...POLICY, lossBasis: 'computed' }, [
+      NEXT_DAY,
+      '2027-03-03T02:30:00.000Z',
+    ]);
     const starts = [
       NEXT_DAY,
       '2027-03-02T10:30:00.000Z',
@@ -320,12 +328,7 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
 
   it('an empty declared period (no slice) is not submittable, approvable or certifiable', async () => {
     const unit = env.world.unitA2;
-    await env.rows(
-      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
-              effective_from, approved_at)
-       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, 1, $3::jsonb, '2026-01-01T00:00:00Z', now())`,
-      [env.world.tenantA, unit, JSON.stringify(POLICY)],
-    );
+    await lossPolicy(unit, 1, POLICY);
     await env.materialize([unit], A, NEXT_DAY);
     const periods = [A, B, C];
     const ids = await Promise.all(periods.map((at) => env.periodId(unit, at)));
@@ -351,6 +354,7 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
     const unit = env.world.unitA2;
     const start = '2027-03-03T02:30:00.000Z';
     // declared policy without accounting product, two approved profiles, no plan: no slice
+    await lossPolicy(unit, 1, POLICY);
     await env.materialize([unit], start, '2027-03-03T10:30:00.000Z');
     const id = await env.periodId(unit, start);
     const bare = await env.recompute(id);
@@ -359,16 +363,10 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
       'ambiguous_default_product',
     );
 
-    await env.rows(
-      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
-              effective_from, approved_at)
-       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, 2, $3::jsonb, '2026-01-01T00:00:00Z', now())`,
-      [
-        env.world.tenantA,
-        unit,
-        JSON.stringify({ ...POLICY, accountingProductId: env.products.p1 }),
-      ],
-    );
+    await lossPolicy(unit, 2, {
+      ...POLICY,
+      accountingProductId: env.products.p1,
+    });
     const resolved = await env.recompute(id);
     expect(resolved.data.slices).toEqual([
       expect.objectContaining({
@@ -380,5 +378,37 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
       'ambiguous_default_product',
     );
     expect((await env.view(id)).slices).toHaveLength(1);
+  });
+
+  it('an open source_reason_changed item does not block the submission; an open override conflict does', async () => {
+    // unit A3: one approved profile (default-product slice), declared mode from 2026
+    const unit = env.world.unitA3;
+    await lossPolicy(unit, 1, POLICY);
+    await env.materialize([unit], A, NEXT_DAY);
+    const shifts = [A, B, C];
+    const review = async (i: number, kind: string): Promise<string> => {
+      const id = await declare(shifts[i], shifts[i + 1], {
+        unitId: unit,
+        reasonCodeId: reason,
+        declaredFigures: { ...FIGURES, sourceStatus: 'CONFIRMED' },
+      });
+      await env.rows(
+        `INSERT INTO event_review_items (tenant_id, row_version, event_id, kind, field, state)
+         VALUES ($1, 1, $2, $3, 'reason', 'open')`,
+        [env.world.tenantA, id, kind],
+      );
+      const periodId = await env.periodId(unit, shifts[i]);
+      await env.recompute(periodId);
+      return periodId;
+    };
+
+    const advisory = await review(0, 'source_reason_changed');
+    await env.submit(await env.view(advisory), env.admin, advisory).expect(200);
+
+    const conflict = await review(1, 'source_vs_override_conflict');
+    const refused = await env
+      .submit(await env.view(conflict), env.admin, conflict)
+      .expect(422);
+    expect((refused.body as ApiError).code).toBe('OPEN_REVIEW_ITEMS');
   });
 });

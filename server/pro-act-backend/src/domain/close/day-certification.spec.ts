@@ -3,6 +3,7 @@ import {
   DayPeriod,
   dayRollup,
   dayState,
+  needsApproval,
 } from './day-certification';
 
 const shift = (over: Partial<DayPeriod> = {}): DayPeriod => ({
@@ -24,6 +25,19 @@ describe('day certification over the shift periods (SME R2, owner decision 14 Oc
     ).toBe('ready');
     expect(dayState([], false)).toBe('open');
     expect(dayState([shift()], true)).toBe('certified');
+  });
+
+  it('an excluded shift without a run is outside every certification gate (approval, figures, separation of duties)', () => {
+    const excluded = shift({
+      isExcluded: true,
+      workflow: 'none',
+      submittedBy: null,
+    });
+    // the figures gate (assertFigures) checks only the periods needsApproval keeps
+    expect(needsApproval(excluded)).toBe(false);
+    expect(needsApproval({ ...excluded, workflow: 'approved' })).toBe(true);
+    const day = [shift({ submittedBy: 'a' }), excluded];
+    expect(certifyRefusal('manager', day, false)).toBeNull();
   });
 
   it('the certifier submitted none of the shifts; the day is ready and not certified yet', () => {

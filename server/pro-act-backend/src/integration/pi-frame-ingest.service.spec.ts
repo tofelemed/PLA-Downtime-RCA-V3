@@ -1,8 +1,8 @@
 import { MappingProfile } from '../attribute-mapping/attribute-mapping.service';
 import { parseTenantMappingRules } from './pi-event-mapper';
 import { FrameContext, PiFrameIngestService } from './pi-frame-ingest.service';
-import { TenantMappingResolver } from '../source-mapping/source-mapping.service';
 import { ResolvedMapping } from '../source-mapping/source-mapping.service';
+import { unresolvedReason } from './unresolved-reason';
 
 const TENANT = '11111111-1111-4111-8111-111111111111';
 const UNIT = '22222222-2222-4222-8222-222222222222';
@@ -122,6 +122,39 @@ describe('PiFrameIngestService', () => {
     expect(provenance.sourceCoding).toEqual({
       reasonCodeId: 'code-2',
       reasonToken: 'Bearing',
+    });
+  });
+
+  it('hands an unresolved token to the revision with a null code and keeps CODE_UNRESOLVED for the quarantine', async () => {
+    findOne.mockResolvedValue(existing);
+    applySourceRevision.mockResolvedValue('revised');
+    const unresolved = {
+      code: 'CODE_UNRESOLVED',
+      field: 'reason',
+      message: '"Bearingx" is not a code of this tenant',
+    };
+    resolveFacts.mockResolvedValue({ ids: {}, diagnostics: [unresolved] });
+    const attributes = {
+      ReasonCode: { Name: 'Bearingx', Value: 9, IsSystem: false },
+    };
+
+    const result = await service.ingest(context(), FRAME, attributes);
+
+    const [, , provenance] = applySourceRevision.mock.calls[0] as [
+      string,
+      unknown,
+      Record<string, unknown>,
+    ];
+    expect(provenance.sourceCoding).toEqual({
+      reasonCodeId: null,
+      reasonToken: 'Bearingx',
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining(unresolved),
+    );
+    expect(unresolvedReason(result, attributes)).toMatchObject({
+      errorCode: 'unknown_code',
+      detail: { field: 'reason' },
     });
   });
 

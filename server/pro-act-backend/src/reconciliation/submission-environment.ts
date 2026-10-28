@@ -96,7 +96,10 @@ async function actualsIssues(
   });
 }
 
-/** Open review items (late corrections, conflicts) on any evidence event of the reconciliation. */
+/**
+ * Open review items (late corrections, conflicts) on any evidence event of the reconciliation. A
+ * `source_reason_changed` item is advisory (the operator's code stays the record) and never blocks.
+ */
 async function reviewIssues(
   manager: EntityManager,
   state: RevisionState,
@@ -111,7 +114,8 @@ async function reviewIssues(
   if (events.size === 0) return [];
   const rows: Array<{ event_id: string }> = await manager.query(
     `SELECT DISTINCT "event_id" FROM "event_review_items"
-      WHERE "tenant_id" = $1 AND "state" = 'open' AND "event_id" = ANY($2::uuid[])`,
+      WHERE "tenant_id" = $1 AND "state" = 'open' AND "event_id" = ANY($2::uuid[])
+        AND "kind" <> 'source_reason_changed'`,
     [state.period.tenantId, [...events]],
   );
   return rows.map((row) =>
@@ -125,7 +129,7 @@ async function reviewIssues(
 /**
  * Gates of submission that depend on more than the reconciliation arithmetic (ACC10, WF02): a validated
  * current run with a computable slice, no queued or running recalculation, actuals meeting the coverage
- * gate without a source conflict, and no open review item on an evidence event. In declared mode the actual is the production
+ * gate without a source conflict, and no blocking open review item on an evidence event. In declared mode the actual is the production
  * loss event's figure, not a measurement: the coverage gate does not apply (`DECLARED_LOSS_MISSING`
  * covers a missing event).
  */

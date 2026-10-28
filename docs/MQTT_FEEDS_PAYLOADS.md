@@ -93,7 +93,7 @@ To report a stop while it is still running:
 | `description` | no | Free text |
 | `status`, `plant`, `event_type` | no | Kept with the stop |
 
-A `reason_code` sent in a later revision never re-codes a stop that already has a reason: the stop keeps its code and, when the new code differs, the Event Hub shows a review item "Source now reports a different reason" that an operator can dismiss.
+A `reason_code` sent in a later revision never re-codes a stop that already has a reason: the stop keeps its code and, when the new code differs, the Event Hub shows a review item "Source now reports a different reason" that an operator can dismiss; the item never blocks period submission. A `reason_code` arriving in a later revision for a stop that is still uncoded is not applied either (codes are taken on create only): operators code it in the Event Hub.
 
 ## What happens with a bad or unknown message
 
