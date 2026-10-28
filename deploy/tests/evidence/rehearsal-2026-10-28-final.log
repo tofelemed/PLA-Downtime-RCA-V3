@@ -1,0 +1,23 @@
+rehearsal: FORGE_HOME=C:/Users/Admin/AppData/Local/Temp/forge-rehearsal.tryJOy/home
+[env-local] wrote deploy/.env.local (values not shown)
+[build-images] built traverse-forge-frontend:rehearsal
+[package-bundle] bundle /tmp/forge-rehearsal.tryJOy/work/bundle/traverse-forge-rehearsal.tar.gz (148M)
+[remove-local-images] removed traverse-forge-backend:rehearsal traverse-forge-frontend:rehearsal (load-and-start.sh loads them from the bundle)
+[install] installed rehearsal at C:/Users/Admin/AppData/Local/Temp/forge-rehearsal.tryJOy/home/releases/rehearsal
+[env] copied deploy/.env.local to C:/Users/Admin/AppData/Local/Temp/forge-rehearsal.tryJOy/home/.env
+[postgres-up] postgres ready: forge-rehearsal-pg (127.0.0.1:55436)
+[00-create-db-and-roles] skip: pg_stat_statements not preloaded
+[10-migrate] migrations: applied 2, skipped 0
+[20-seed-reference] seed ok
+[load-and-start] verify ok rehearsal
+[health] health: ready 200, version rehearsal (through :8096)
+[login-admin] login admin@hdpe-train.mpc: HTTP 200, tenant 433c1a69-7a32-4b32-ab20-c4139423abd2
+[login-reza] login reza@hdpe-train.mpc: HTTP 200, tenant 433c1a69-7a32-4b32-ab20-c4139423abd2
+[policy] loss accounting v3: grain day, lossBasis declared, unit HDPE Extruder 1
+[events-empty] production events (reza): items []
+[30-seed-users] passwords file: /tmp/forge-rehearsal.tryJOy/home/private/passwords-20261028-133150.txt (read it once, store it securely, then delete it)
+[backup-forge] /tmp/forge-rehearsal.tryJOy/home/backups/traverse-forge-uploads-20261028T093154Z.tar.gz
+[restore-test] restore ok: 155 tables (units 2 rows, users 16 rows) in traverse_forge_restore_20261028093158, dropped
+[rollback] exit 1: error: no previous version recorded in C:/Users/Admin/AppData/Local/Temp/forge-rehearsal.tryJOy/home/previous-version; nothing to roll back to
+[teardown] teardown ok
+rehearsal ok (251s)

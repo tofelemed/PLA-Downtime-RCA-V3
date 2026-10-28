@@ -177,3 +177,9 @@ bash deploy/tests/test-bundle.sh                  ok 8/8
 | farid | Event Hub | Renders, no events |
 
 All six sign-ins used the seeded accounts (password hashes carried over from the development database).
+
+### Phase 8 — rehearsal re-run after the final-review fixes (2026-10-28)
+
+| Step | Command | Result |
+|---|---|---|
+| Full rehearsal on the fixed scripts (2f0ba565) | `bash deploy/tests/rehearsal.sh` | `rehearsal ok (251s)`; `restore ok: 155 tables (units 2 rows, users 16 rows)`; `rollback` refused as expected (no previous version); `teardown ok`. Log: `tests/evidence/rehearsal-2026-10-28-final.log` (no secret values present) |
