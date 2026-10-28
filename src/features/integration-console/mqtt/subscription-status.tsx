@@ -23,7 +23,9 @@ export function SubscriptionStatus({ connection, subscription, timezone }: Subsc
   const { job, health, status, now } = subscription;
   const ago = (iso: string | null, none = 'never') => {
     const seconds = secondsSince(iso, now);
-    return seconds === null ? none : <><PlantTime iso={iso} tz={timezone} withDate withZone={false} /> (<DurationText seconds={seconds} variant="compact" /> ago)</>;
+    if (seconds === null) return none;
+    const when = <PlantTime iso={iso} tz={timezone} withDate withZone={false} />;
+    return seconds >= 0 ? <>{when} (<DurationText seconds={seconds} /> ago)</> : <>{when} (<DurationText seconds={-seconds} /> ahead of the server clock)</>;
   };
   return (
     <section aria-label="Subscription status" className="min-w-0 space-y-4 rounded-lg border bg-background p-4 text-sm" data-testid="mqtt-status" data-status={status.status} data-job-state={job?.state ?? 'none'}>

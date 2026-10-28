@@ -99,7 +99,7 @@ export function subscriptionStatus(job: IngestionJobView | null, health: MqttHea
   return { status: 'connected', tone: 'ok', label: 'Connected', detail: null };
 }
 
-/** Seconds since an ISO time, for "x ago" badges (null = never). */
+/** Signed seconds since an ISO time, for "x ago" badges (null = never; negative = the time is ahead of `now`). */
 export function secondsSince(iso: string | null, now: number): number | null {
-  return iso ? Math.max(0, Math.round((now - Date.parse(iso)) / 1000)) : null;
+  return iso ? Math.round((now - Date.parse(iso)) / 1000) : null;
 }

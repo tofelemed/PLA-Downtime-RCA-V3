@@ -5,12 +5,15 @@ import type { LossTreeView } from '@/api/v2/types/pla-analytics';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useDisplayCurrency } from '@/features/display-currency/use-display-currency';
 import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
+import { useLossAccountingMode } from '@/features/accounting-mode/use-loss-accounting-mode';
 import { LossTable } from '@/features/pla-analytics/components/loss-table';
 import type { DowntimeFilters } from '../model/downtime-filters';
 import { LOST_PRODUCTION_METRICS, lostProductionQuery, type LostProductionMetric } from '../model/lost-production';
 import { ReportCard } from './report-card';
 
 const METRIC_TEXT: Record<LostProductionMetric, string> = { qty: 'Lost quantity', value: 'Lost value' };
+
+const DECLARED_EMPTY = 'This plant accounts declared losses, so stops carry no lost production. Rank by downtime reasons to see stopped time and stop count.';
 
 /**
  * FE-08: what the stops cost in production — availability losses of the ledger per reason, as quantity
@@ -23,6 +26,7 @@ export function LostProductionPareto({ filters }: { filters: DowntimeFilters }) 
   // QA re-test N1: no money for operators — the Lost value view is not offered (the server refuses it too)
   const { canViewMoney } = useCapabilities();
   const metric: LostProductionMetric = canViewMoney ? chosen : 'qty';
+  const { isDeclared } = useLossAccountingMode(filters.unitIds[0]);
   const query = useLossTree(lostProductionQuery(filters, metric), env.timezone);
   const data = query.data?.data;
   return (
@@ -32,7 +36,7 @@ export function LostProductionPareto({ filters }: { filters: DowntimeFilters }) 
       query={query}
       response={query.data}
       isEmpty={data !== undefined && data.groups.length === 0}
-      emptyText="No availability losses in this scope."
+      emptyText={isDeclared ? DECLARED_EMPTY : 'No availability losses in this scope.'}
       info="Availability losses of the plan ledger: approved lines where the period is approved, else its current calculation."
       actions={canViewMoney &&
         <ToggleGroup type="single" size="sm" value={metric} onValueChange={(value) => value && setMetric(value as LostProductionMetric)} aria-label="Measure">

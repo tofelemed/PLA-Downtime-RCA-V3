@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConnectionView, IngestionJobView } from '@/api/v2/types/integrations';
 import { emptyMqttForm, mqttCreateBody, mqttEndpointConfig, mqttFormFromConnection, mqttUpdateBody, PROFILE_PRESETS } from './model/mqtt-form';
-import { awaitsSubscribeJob, mqttHealthOf, subscribeJobOf, subscriptionStatus } from './model/mqtt-health';
+import { awaitsSubscribeJob, mqttHealthOf, secondsSince, subscribeJobOf, subscriptionStatus } from './model/mqtt-health';
 import { errorsFromServer, firstStepWithErrors, formFieldOf } from './model/mqtt-steps';
 import { brokerUrlProblem, mqttFormErrors, pemProblem, tlsProblems, topicsProblem, topicTemplateProblem } from './model/mqtt-validation';
 import { profileDraftErrors, profileDraftOf, profilePatchOf } from './model/profile-draft';
@@ -267,5 +267,14 @@ describe('subscription health and status (design §8)', () => {
     expect(subscriptionStatus(job({ leaseExpiry: '2026-10-11T07:00:00Z' }), connected, NOW).status).toBe('no_lease');
     expect(subscriptionStatus(job({ state: 'paused' }), connected, NOW)).toMatchObject({ status: 'paused', tone: 'idle' });
     expect(subscriptionStatus(null, connected, NOW).status).toBe('no_job');
+  });
+});
+
+describe('secondsSince', () => {
+  const now = Date.parse('2026-10-11T08:00:00Z');
+  it('is signed: positive in the past, negative when the source clock is ahead, null for never', () => {
+    expect(secondsSince('2026-10-11T07:59:50Z', now)).toBe(10);
+    expect(secondsSince('2026-10-11T08:00:42Z', now)).toBe(-42);
+    expect(secondsSince(null, now)).toBeNull();
   });
 });

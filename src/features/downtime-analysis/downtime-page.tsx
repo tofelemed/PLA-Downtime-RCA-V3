@@ -12,6 +12,7 @@ import { useEventHubEnv } from '@/features/event-hub/use-event-hub-env';
 import { Page } from '@/features/ux-kit/page-layout';
 import { DowntimeFiltersBar } from './components/downtime-filters-bar';
 import { DowntimeHeader } from './components/downtime-header';
+import { useCausesMode } from './hooks/use-causes-mode';
 import { useDowntimeBundle } from './hooks/use-downtime-bundle';
 import { useDowntimeFilters } from './hooks/use-downtime-filters';
 import { downtimePageSettings } from './model/page-settings';
@@ -32,9 +33,15 @@ export function DowntimeAnalysisPage() {
   return <EventHubFrame noTenantText="Choose a plant to analyse its downtime."><DowntimeScreen view={view} /></EventHubFrame>;
 }
 
-function ModeSelect({ view }: { view: DowntimeView }) {
+function ModeSelect({ view, fallback }: { view: DowntimeView; fallback?: string }) {
   const spec = DOWNTIME_MODES[view];
-  return spec ? <AnalysisModeSelect param={spec.param} label={spec.label} options={spec.options} stacked /> : null;
+  return spec ? <AnalysisModeSelect param={spec.param} label={spec.label} options={spec.options} stacked fallback={fallback} /> : null;
+}
+
+function withAnalysis(params: URLSearchParams, mode: string): URLSearchParams {
+  const next = new URLSearchParams(params);
+  next.set('analysis', mode);
+  return next;
 }
 
 function DowntimeScreen({ view }: { view: DowntimeView }) {
@@ -43,7 +50,9 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
   const [params] = useSearchParams();
   const [closing, setClosing] = useState<ProductionEventView | null>(null);
   const [coding, setCoding] = useState<ProductionEventView | null>(null);
-  const { mode, bundled, scope, page, showTrend } = downtimePageSettings(view, params);
+  const causes = useCausesMode(filters.unitIds[0]);
+  const settingsParams = view === 'causes' && causes.mode ? withAnalysis(params, causes.mode) : params;
+  const { mode, bundled, scope, page, showTrend } = downtimePageSettings(view, settingsParams);
   const bundle = useDowntimeBundle(pageBundleQuery(filters, view, mode), env.timezone, bundled);
   const Content = PAGES[view];
   const showSchedule = params.get('presentation') !== 'timeline' || view !== 'stops';
@@ -52,7 +61,7 @@ function DowntimeScreen({ view }: { view: DowntimeView }) {
       <div className="space-y-5" data-testid="downtime-analysis">
         <DowntimeHeader filters={filters} bundle={bundled ? bundle : null} title={`Downtime analysis · ${page.label}`} showStatus={!(view === 'trends' && mode === 'calendar')} />
         <AnalysisPageNav label="Downtime analysis pages" pages={DOWNTIME_PAGES} />
-        <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={showSchedule} mode={<ModeSelect view={view} />} />
+        <DowntimeFiltersBar filters={filters} onChange={change} scope={scope} showTrend={showTrend} showSchedule={showSchedule} mode={<ModeSelect view={view} fallback={view === 'causes' ? causes.fallback : undefined} />} />
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <Content filters={filters} bundle={bundle} onChange={change} onClose={setClosing} onCode={setCoding} />
         </Suspense>

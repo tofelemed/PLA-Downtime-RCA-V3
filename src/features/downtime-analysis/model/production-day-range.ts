@@ -17,6 +17,13 @@ const midnight = (date: string | null, timeZone: string) => (date ? plantLocalTo
 const dayStartOf = (iso: string | null, timeZone: string, dayStart: string) =>
   iso ? plantLocalToUtc(`${utcToPlantLocal(iso, timeZone).slice(0, 10)}T${dayStart}`, timeZone) : null;
 
+/** The midnight after the production day that contains the last instant before `to` (the window is half-open). */
+function lastDayEnd(to: string, timeZone: string, dayStart: string): string | null {
+  const last = new Date(Date.parse(to) - 1).toISOString();
+  const date = productionDate(last, timeZone, dayStart);
+  return midnight(date ? addCalendarDays(date, 1) : null, timeZone);
+}
+
 /**
  * Owner decision 2026-10-19 "Production-day boundaries" (QA L20): the date fields of the downtime window pick
  * production days (06:00–06:00 plant time), not calendar days. The shared date-range input works on plant
@@ -26,7 +33,7 @@ const dayStartOf = (iso: string | null, timeZone: string, dayStart: string) =>
 export function toCalendarDayRange(range: InstantBoundsRange, timeZone: string, dayStart: string): InstantBoundsRange {
   return {
     from: range.from ? midnight(productionDate(range.from, timeZone, dayStart), timeZone) : null,
-    to: range.to ? midnight(productionDate(range.to, timeZone, dayStart), timeZone) : null,
+    to: range.to ? lastDayEnd(range.to, timeZone, dayStart) : null,
   };
 }
 

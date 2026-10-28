@@ -35,6 +35,12 @@ describe('MQTT subscription health presentation', () => {
     expect(screen.queryByText('never')).toBeNull();
   });
 
+  it('says a time ahead of the server clock instead of "0 s ago"', () => {
+    render(<SubscriptionStatus connection={MQTT_CONNECTION} subscription={subscription({ lastMessageAt: '2026-10-11T08:03:00Z' })} timezone="Asia/Tehran" />);
+    expect(screen.getByTestId('mqtt-last-message')).toHaveTextContent('ahead of the server clock');
+    expect(screen.getByTestId('mqtt-last-message')).not.toHaveTextContent('ago');
+  });
+
   it('keeps persistence failures and source unavailability prominent, never reporting healthy', () => {
     render(<SubscriptionStatus connection={MQTT_CONNECTION} subscription={subscription({ sourceAvailable: false, persistFailed: { at: '2026-10-11T07:59:45Z', error: 'Database write unavailable' } })} timezone="Asia/Tehran" />);
     expect(screen.getByTestId('mqtt-status')).toHaveAttribute('data-status', 'persist_failed');

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { plantLocalToUtc } from '@/lib/dates';
 import { toCalendarDayRange, toProductionDayRange } from './production-day-range';
 
 const TZ = 'Asia/Tehran';
@@ -9,6 +10,18 @@ describe('production-day date fields (owner decision 2026-10-19, QA L20)', () =>
   it('one production day reads as one inclusive date', () => {
     // plant midnights of 17 Oct and 18 Oct: the input shows From 17 Oct, To 17 Oct
     expect(toCalendarDayRange(DAY, TZ, '06:00')).toEqual({ from: '2026-10-16T20:30:00.000Z', to: '2026-10-17T20:30:00.000Z' });
+  });
+
+  it('a window ending at an arbitrary time reads its last day inclusive', () => {
+    // 27 Oct 19:50 – 28 Oct 19:50 plant time: From 27 Oct, To 28 Oct (inclusive)
+    const from = plantLocalToUtc('2026-10-27T19:50', TZ);
+    const to = plantLocalToUtc('2026-10-28T19:50', TZ);
+    expect(toCalendarDayRange({ from, to }, TZ, '06:00')).toEqual({ from: plantLocalToUtc('2026-10-27T00:00', TZ), to: plantLocalToUtc('2026-10-29T00:00', TZ) });
+  });
+
+  it('a two-day aligned window ends on the second day', () => {
+    const range = { from: '2026-10-17T02:30:00.000Z', to: '2026-10-19T02:30:00.000Z' };
+    expect(toCalendarDayRange(range, TZ, '06:00')).toEqual({ from: '2026-10-16T20:30:00.000Z', to: '2026-10-18T20:30:00.000Z' });
   });
 
   it('picked days become 06:00–06:00 bounds, and the round trip keeps the window', () => {
