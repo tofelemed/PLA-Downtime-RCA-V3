@@ -72,6 +72,21 @@ describe('HealthTracker (plan 1.8 step 3, design §8)', () => {
     expect(tracker.snapshot().parkedReason).toBeNull();
   });
 
+  it('reports the open parking and normalisation quarantine of the heartbeat (F6)', () => {
+    const tracker = new HealthTracker();
+    tracker.exceptionCounts({ parked: 2, quarantinedOpen: 3 });
+    expect(tracker.snapshot().counters).toMatchObject({
+      quarantined: 0,
+      parked: 2,
+      quarantined_open: 3,
+    });
+    tracker.exceptionCounts({ parked: 0, quarantinedOpen: 1 });
+    expect(tracker.snapshot().counters).toMatchObject({
+      parked: 0,
+      quarantined_open: 1,
+    });
+  });
+
   it('snapshots are copies: mutating one never changes the tracker', () => {
     const tracker = new HealthTracker();
     const snapshot = tracker.snapshot();

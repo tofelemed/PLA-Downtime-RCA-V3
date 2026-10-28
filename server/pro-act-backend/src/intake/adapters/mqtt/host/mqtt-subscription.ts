@@ -14,7 +14,7 @@ import { DisconnectMode, MqttSession } from './mqtt-session';
 import { HealthTracker } from './subscription-health';
 import {
   claimSubscription,
-  countParked,
+  countExceptions,
   failSubscription,
   finishDrain,
   heartbeatSubscription,
@@ -102,7 +102,9 @@ export class MqttSubscription {
   async heartbeat(): Promise<void> {
     if (!this.lease) return;
     const manager = this.deps.dataSource.manager;
-    this.health.parkedCount(await countParked(manager, this.connectionId));
+    this.health.exceptionCounts(
+      await countExceptions(manager, this.connectionId),
+    );
     const held = await heartbeatSubscription(
       manager,
       this.lease,

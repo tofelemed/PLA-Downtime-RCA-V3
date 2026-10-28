@@ -384,7 +384,7 @@ Retention follows the existing raw partition policy (`raw-partitions.service.ts`
 
 ## 8. Observability and operations
 
-**Per connection (`ingestion_jobs.health`, shown on the 3.7 console MQTT panel):** `connected`, `connectionError`, `reconnects`, `lastMessageAt`, `lastPersistAt`, `inflight`, counters `received / accepted / duplicate / stale / conflict / quarantined{by code} / parked`, `sessionPresent` on last connect, `effectiveClientId`.
+**Per connection (`ingestion_jobs.health`, shown on the 3.7 console MQTT panel):** `connected`, `connectionError`, `reconnects`, `lastMessageAt`, `lastPersistAt`, `inflight`, counters `received / accepted / duplicate / stale / conflict / quarantined` (since the worker started; `quarantined` = rejected at decode, console label "Rejected at decode") plus `quarantined_open` (open `ingestion_exceptions` rows of the connection outside the parking codes, e.g. `unknown_unit`, `mapping_*`, `schema_invalid`, `order_conflict`; label "Quarantined (open)") and `parked` (open `unknown_template / unknown_signal / unknown_code` rows), both refreshed on every heartbeat, `sessionPresent` on last connect, `effectiveClientId`.
 
 **Prometheus (3.12; label = connection display name, never machine id, to bound cardinality):** `mqtt_connected`, `mqtt_reconnects_total`, `mqtt_messages_received_total`, `mqtt_messages_acked_total`, `mqtt_inflight`, `mqtt_ack_latency_seconds` (receive → PUBACK), `mqtt_source_lag_seconds` (now − eventTime), `intake_outcomes_total{outcome}`, `ingestion_exceptions_open{code}`.
 

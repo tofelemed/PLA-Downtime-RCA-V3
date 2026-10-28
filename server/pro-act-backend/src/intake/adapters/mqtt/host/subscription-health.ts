@@ -10,6 +10,14 @@ export interface SubscriptionCounters {
   quarantined: number;
   /** open parking rows of the connection (unknown template / signal / code), refreshed on heartbeat */
   parked: number;
+  /** open normalisation quarantine rows of the connection (every other open code), refreshed on heartbeat */
+  quarantined_open: number;
+}
+
+/** Open `ingestion_exceptions` rows of a connection, split into parking and quarantine (F6). */
+export interface ExceptionCounts {
+  parked: number;
+  quarantinedOpen: number;
 }
 
 /**
@@ -65,6 +73,7 @@ export function emptyHealth(): SubscriptionHealth {
       conflict: 0,
       quarantined: 0,
       parked: 0,
+      quarantined_open: 0,
     },
   };
 }
@@ -172,7 +181,8 @@ export class HealthTracker {
     this.health.parkedDetail = null;
   }
 
-  parkedCount(count: number): void {
-    this.health.counters.parked = count;
+  exceptionCounts(counts: ExceptionCounts): void {
+    this.health.counters.parked = counts.parked;
+    this.health.counters.quarantined_open = counts.quarantinedOpen;
   }
 }

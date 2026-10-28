@@ -8,7 +8,7 @@ import {
   SUBSCRIBE_MODE,
 } from '../../../jobs/job-lease';
 import { failedConfigVersionOf } from './failed-job-recovery';
-import { SubscriptionHealth } from './subscription-health';
+import { ExceptionCounts, SubscriptionHealth } from './subscription-health';
 
 /** The `ingestion_jobs` row of a subscription as the host reads it. */
 export interface SubscribeJobRow {
@@ -299,15 +299,23 @@ export async function finishDrain(
   });
 }
 
-/** Open parking rows of the connection (the `parked` counter of the health). */
-export async function countParked(
+/**
+ * Open exception rows of the connection: parking codes are the `parked` counter, every other open code
+ * (unknown unit, mapping, schema, order conflict, ...) is the `quarantined_open` counter of the health.
+ */
+export async function countExceptions(
   manager: EntityManager,
   connectionId: string,
-): Promise<number> {
-  const rows: Array<{ count: number }> = await manager.query(
-    `SELECT count(*)::int AS "count" FROM "ingestion_exceptions"
-      WHERE "connection_id" = $1 AND "state" = 'open' AND "error_code"::text = ANY($2)`,
-    [connectionId, PARKED_CODES],
+): Promise<ExceptionCounts> {
+  const rows: Array<{ code: string; count: number }> = await manager.query(
+    `SELECT "error_code"::text AS "code", count(*)::int AS "count" FROM "ingestion_exceptions"
+      WHERE "connection_id" = $1 AND "state" = 'open' GROUP BY "error_code"`,
+    [connectionId],
   );
-  return rows[0]?.count ?? 0;
+  const counts: ExceptionCounts = { parked: 0, quarantinedOpen: 0 };
+  for (const row of rows) {
+    if (PARKED_CODES.includes(row.code)) counts.parked += row.count;
+    else counts.quarantinedOpen += row.count;
+  }
+  return counts;
 }

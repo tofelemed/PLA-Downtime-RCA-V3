@@ -14,7 +14,7 @@ const JOB: IngestionJobView = {
 };
 
 function subscription(patch: Record<string, unknown> = {}, job: IngestionJobView | null = JOB): MqttSubscription {
-  const health = mqttHealthOf({ connected: true, configVersion: 1, sourceAvailable: true, effectiveClientId: 'proact-c1', sessionPresent: true, reconnects: 2, lastMessageAt: '2026-10-11T07:59:49Z', lastPersistAt: '2026-10-11T07:59:50Z', subscribedTopics: ['proact/v1/+/+/+/+/events'], counters: { received: 10, accepted: 7, duplicate: 1, stale: 1, conflict: 1, quarantined: 2, parked: 3 }, ...patch });
+  const health = mqttHealthOf({ connected: true, configVersion: 1, sourceAvailable: true, effectiveClientId: 'proact-c1', sessionPresent: true, reconnects: 2, lastMessageAt: '2026-10-11T07:59:49Z', lastPersistAt: '2026-10-11T07:59:50Z', subscribedTopics: ['proact/v1/+/+/+/+/events'], counters: { received: 10, accepted: 7, duplicate: 1, stale: 1, conflict: 1, quarantined: 2, quarantined_open: 4, parked: 3 }, ...patch });
   return { job, health, now: NOW, status: subscriptionStatus(job, health, NOW), isLoading: false, isError: false, error: null };
 }
 
@@ -51,7 +51,7 @@ describe('MQTT subscription health presentation', () => {
     expect(screen.getByTestId('mqtt-technical-details')).not.toHaveAttribute('open');
   });
 
-  it('reveals every technical fact on request and preserves all seven counters', () => {
+  it('reveals every technical fact on request and preserves all eight counters', () => {
     const current = subscription({ lastAvailabilityAt: '2026-10-11T07:59:00Z' });
     render(<><SubscriptionStatus connection={MQTT_CONNECTION} subscription={current} timezone="Asia/Tehran" /><SubscriptionCounters health={current.health} /></>);
     fireEvent.click(screen.getByText('Technical connection details'));
@@ -62,7 +62,18 @@ describe('MQTT subscription health presentation', () => {
     expect(details).toHaveTextContent('worker-1 until 2026-10-11T08:01:00Z');
     expect(details).toHaveTextContent('proact/v1/+/+/+/+/events');
     for (const [key, value] of Object.entries(current.health.counters)) expect(screen.getByTestId('mqtt-counters').querySelector(`[data-counter="${key}"] dd`)).toHaveTextContent(String(value));
-    expect(screen.getByTestId('mqtt-counters').querySelectorAll('dt')).toHaveLength(7);
+    expect(screen.getByTestId('mqtt-counters').querySelectorAll('dt')).toHaveLength(8);
+  });
+
+  it('separates decode rejections from open normalisation quarantine, listed before the open parking (F6)', () => {
+    render(<SubscriptionCounters health={subscription().health} />);
+    const counters = screen.getByTestId('mqtt-counters');
+    const label = (key: string) => counters.querySelector(`[data-counter="${key}"] dt`);
+    expect(label('quarantined')).toHaveTextContent('Rejected at decode');
+    expect(label('quarantined_open')).toHaveTextContent('Quarantined (open)');
+    expect(counters.querySelector('[data-counter="quarantined_open"] dd')).toHaveTextContent('4');
+    const keys = Array.from(counters.querySelectorAll('[data-counter]')).map((row) => row.getAttribute('data-counter'));
+    expect(keys.indexOf('quarantined_open')).toBe(keys.indexOf('parked') - 1);
   });
 
   it('retains the existing no-job and pending-restart states', () => {

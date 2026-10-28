@@ -1,7 +1,7 @@
 import { KpiInfo } from '@/features/pla-analytics/dashboard/kpi-info';
 import { COUNTER_KEYS, type CounterKey, type MqttHealthView } from './model/mqtt-health';
 
-const COUNTERS_NOTE = 'Counted since the worker last started (reset when it restarts); stored observations are not affected.';
+const COUNTERS_NOTE = 'Counted since the worker last started (reset when it restarts); stored observations are not affected. Quarantined (open) and Parked (open) are the exception rows open now.';
 
 const LABELS: Record<CounterKey, string> = {
   received: 'Received',
@@ -9,7 +9,8 @@ const LABELS: Record<CounterKey, string> = {
   duplicate: 'Duplicate',
   stale: 'Stale',
   conflict: 'Conflict',
-  quarantined: 'Quarantined',
+  quarantined: 'Rejected at decode',
+  quarantined_open: 'Quarantined (open)',
   parked: 'Parked (open)',
 };
 
@@ -21,7 +22,7 @@ export function SubscriptionCounters({ health }: { health: MqttHealthView }) {
       <h3 className="text-sm font-medium">Counters</h3>
       <KpiInfo label="Counters" text={COUNTERS_NOTE} />
     </div>
-    <dl className="grid grid-cols-4 gap-2 text-center text-xs sm:grid-cols-7" aria-label="Subscription counters since the worker started" data-testid="mqtt-counters">
+    <dl className="grid grid-cols-4 gap-2 text-center text-xs lg:grid-cols-8" aria-label="Subscription counters since the worker started" data-testid="mqtt-counters">
       {COUNTER_KEYS.map((key) => (
         <div key={key} className="rounded-md border p-2" data-counter={key}>
           <dt className="text-muted-foreground">{LABELS[key]}</dt>

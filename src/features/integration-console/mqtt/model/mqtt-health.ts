@@ -2,7 +2,7 @@ import type { IngestionJobView } from '@/api/v2/types/integrations';
 import type { Tone } from '../../model/job-states';
 
 /** The keys `subscription-health.ts` writes on every heartbeat, plus the normaliser's availability keys. */
-export const COUNTER_KEYS = ['received', 'accepted', 'duplicate', 'stale', 'conflict', 'quarantined', 'parked'] as const;
+export const COUNTER_KEYS = ['received', 'accepted', 'duplicate', 'stale', 'conflict', 'quarantined', 'quarantined_open', 'parked'] as const;
 export type CounterKey = (typeof COUNTER_KEYS)[number];
 
 export interface MqttHealthView {
