@@ -1,0 +1,92 @@
+# Traverse Forge production stack (TF-PREP-001 §8.3, with the worker of ANALYSIS-REPORT Q10).
+# Three containers next to the shared database container on the external network ${PG_NETWORK}:
+#   traverse-forge-backend   API (PROCESS_ROLE=api) on :3000, private network only
+#   traverse-forge-worker    schedulers and connectors (PROCESS_ROLE=worker), health on :4005, not published
+#   traverse-forge-frontend  nginx (non-root, :8080) serving the UI and proxying /api and /socket.io;
+#                            published on ${FORGE_UI_PORT}
+#
+#   docker compose --project-directory "$FORGE_HOME" --env-file "$FORGE_HOME/.env" \
+#     -f "$FORGE_HOME/releases/<version>/docker-compose.forge.yml" up -d
+#
+# Runtime variables come from the env file named by FORGE_ENV_FILE (default .env, resolved against the
+# project directory). Migrations are a release step (deploy/db/10-migrate.sh), never at start-up.
+# Variables and build arguments: deploy/BUILD-VARS.md.
+name: traverse-forge
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  backend:
+    image: traverse-forge-backend:${FORGE_VERSION:?Set FORGE_VERSION}
+    container_name: traverse-forge-backend
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ${FORGE_ENV_FILE:-.env}
+    environment:
+      PROCESS_ROLE: api
+      PORT: "3000"
+      DB_MIGRATIONS_RUN: "false"
+    networks:
+      - forge
+      - pgnet
+    volumes:
+      - forge-uploads:/app/uploads
+      - forge-exports:/app/storage/exports
+    logging: *logging
+
+  worker:
+    image: traverse-forge-backend:${FORGE_VERSION:?Set FORGE_VERSION}
+    container_name: traverse-forge-worker
+    init: true
+    restart: unless-stopped
+    env_file:
+      - ${FORGE_ENV_FILE:-.env}
+    environment:
+      PROCESS_ROLE: worker
+      WORKER_PORT: "4005"
+      DB_MIGRATIONS_RUN: "false"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - forge
+      - pgnet
+    volumes:
+      - forge-uploads:/app/uploads
+      - forge-exports:/app/storage/exports
+    logging: *logging
+
+  frontend:
+    image: traverse-forge-frontend:${FORGE_VERSION:?Set FORGE_VERSION}
+    container_name: traverse-forge-frontend
+    init: true
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://traverse-forge-backend:3000
+      # Empty = /piwebapi answers 404 (the browser does not reach the PI Web API through the UI)
+      PI_SERVER: ${PI_SERVER:-}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-26m}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FORGE_UI_PORT:-8095}:8080"
+    networks:
+      - forge
+    logging: *logging
+
+networks:
+  forge:
+    driver: bridge
+  pgnet:
+    external: true
+    name: ${PG_NETWORK:-instrumental-network}
+
+volumes:
+  forge-uploads:
+  forge-exports:

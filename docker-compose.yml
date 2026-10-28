@@ -171,9 +171,9 @@ services:
       - backend
     environment:
       BACKEND_URL: http://backend:4004
-      PI_SERVER: ${PI_SERVER:-https://87.107.103.198:7443}
+      PI_SERVER: ${PI_SERVER:-}
     ports:
-      - "${FRONTEND_PORT:-8070}:80"
+      - "${FRONTEND_PORT:-8070}:8080"
 
   kafka:
     # Single-node KRaft broker (no ZooKeeper). Same image line as the host's instrumental-kafka-* cluster.

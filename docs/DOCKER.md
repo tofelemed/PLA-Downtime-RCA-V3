@@ -4,7 +4,7 @@ Everything needed to run the platform in containers lives at the repo root:
 
 | File | Purpose |
 |------|---------|
-| `Dockerfile` | Frontend image: Vite build served by nginx, which also reverse-proxies the backend |
+| `Dockerfile` | Frontend image: Vite build served by non-root nginx (`nginx-unprivileged`, uid 101, port 8080), which also reverse-proxies the backend |
 | `docker/nginx/default.conf.template` | nginx config (SPA fallback + proxy for `/api`, `/uploads`, `/socket.io`, `/piwebapi`) |
 | `server/pro-act-backend/Dockerfile` | Backend image: NestJS compiled to `dist/`, production dependencies only; `PROCESS_ROLE=api\|worker\|all` selects the entrypoint |
 | `docker/mosquitto/mosquitto.conf` | Dev MQTT broker config: anonymous MQTT + WebSockets listeners, a password-protected listener and a TLS listener (plan 1.8 step 4); `passwd` / `acl` hold the dev-only users, `certs/` the dev CA + server certificate from `gen-dev-certs.sh` |
@@ -50,7 +50,7 @@ database. The backend and worker do not wait for Kafka/MQTT; connectors retry un
 ## How the pieces fit together
 
 ```
-browser ──► frontend (nginx :80 → host :8070)
+browser ──► frontend (nginx :8080 → host :8070)
               ├─ /            static Vite build (SPA fallback to index.html)
               ├─ /api         ─┐
               ├─ /uploads      ├──► backend (NestJS API :4004 → host :4004) ──► postgres :5432
@@ -76,7 +76,7 @@ All settings are read by `docker compose` from `.env` (or the shell environment)
 
 | Variable | Default | Used by | Meaning |
 |----------|---------|---------|---------|
-| `FRONTEND_PORT` | `8070` | compose | Host port for nginx |
+| `FRONTEND_PORT` | `8070` | compose | Host port for nginx (container port 8080) |
 | `BACKEND_PORT` | `4004` | compose | Host port for the API (direct access, Swagger) |
 | `POSTGRES_PORT` | `5433` | compose | Host port for the bundled Postgres |
 | `KAFKA_PORT` | `9092` | compose, kafka | Host port of the bundled broker (also its advertised `localhost:` listener) |
@@ -99,7 +99,7 @@ All settings are read by `docker compose` from `.env` (or the shell environment)
 | `RAW_RETENTION_DAYS` | `365` | worker (passed to backend too) | Days of raw source observations (`raw_observations`) kept: whole monthly partitions older than the window are dropped (owner decision 2026-10-15: 1 year); empty = keep forever |
 | `SAMPLE_RETENTION_DAYS` | `90` | worker (passed to backend too) | Days of signal samples (`measurement_samples`) kept: whole monthly partitions older than the window are dropped (owner decision 2026-10-15: 90 days); signal summaries are kept; empty = keep forever |
 | `RETENTION_BATCH` | `1000` | worker (passed to backend too) | Rows deleted per statement by the retention job |
-| `PI_SERVER` | `https://87.107.103.198:7443` | frontend | Target of the `/piwebapi` proxy |
+| `PI_SERVER` | empty | frontend | Target of the `/piwebapi` proxy; empty = `/piwebapi` answers 404 (opt-in, e.g. `PI_SERVER=https://<pi-host>:<port>`) |
 | `VITE_API_BASE_URL` | `/api` (build arg) | frontend build | Where the bundle sends API calls; leave relative unless the backend is on another host |
 
 Do not add `VITE_*` keys to the root `.env`: Vite reads that file too, and `VITE_API_BASE_URL=/api` would make
@@ -111,7 +111,8 @@ VITE_API_BASE_URL=https://api.example.com/api docker compose build frontend
 ```
 
 Runtime settings of the frontend container (`BACKEND_URL`, `PI_SERVER`, `CLIENT_MAX_BODY_SIZE`) are rendered into
-the nginx config by the image entrypoint on every start, so they can be changed without rebuilding.
+the nginx config by the image entrypoint on every start, so they can be changed without rebuilding. Every response carries
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN` and `Referrer-Policy: strict-origin-when-cross-origin`.
 
 ## Using the shared `instrumental-postgres` container
 

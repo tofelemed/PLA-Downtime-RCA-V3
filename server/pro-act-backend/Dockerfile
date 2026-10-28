@@ -24,9 +24,19 @@ RUN npm prune --omit=dev --legacy-peer-deps
 
 
 FROM node:24-bookworm-slim AS runtime
+# Release identity (deploy/BUILD-VARS.md): reported in the environment and as OCI labels
+ARG APP_VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.title="traverse-forge-backend" \
+      org.opencontainers.image.version="$APP_VERSION" \
+      org.opencontainers.image.revision="$GIT_COMMIT" \
+      org.opencontainers.image.created="$BUILD_DATE"
 ENV NODE_ENV=production \
     PORT=4004 \
-    WORKER_PORT=4005
+    WORKER_PORT=4005 \
+    APP_VERSION=$APP_VERSION \
+    GIT_COMMIT=$GIT_COMMIT
 WORKDIR /app
 
 COPY --from=build --chown=node:node /app/node_modules ./node_modules

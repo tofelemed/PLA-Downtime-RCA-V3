@@ -1,0 +1,26 @@
+# Rehearsal override: runs the production compose on a workstation against a bundled throwaway
+# postgres:15-alpine (forge-rehearsal-pg, host 127.0.0.1:55436) instead of the shared database container.
+#
+#   docker compose --project-directory deploy --env-file <rehearsal env> \
+#     -f deploy/docker-compose.forge.yml -f deploy/docker-compose.local.yml up -d
+#
+# Set DB_HOST=forge-rehearsal-pg in the rehearsal env file. The network is created by this project
+# (forge-rehearsal-pgnet) rather than expected to exist.
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: forge-rehearsal-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:55436:5432"
+    networks:
+      - pgnet
+
+networks:
+  pgnet:
+    external: false
+    name: forge-rehearsal-pgnet
+    driver: bridge
