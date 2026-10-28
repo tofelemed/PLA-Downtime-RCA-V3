@@ -1,1 +1,2 @@
 84cc46c3a1c664d121f0ac678f1af4abd6d6e9bf4611b2bdb46eebf125b653e9  migrations/V001__baseline.sql
+600959087792b54f4d2426be38bf36f37536437524766ebc022671ac50113e35  migrations/V002__fk_indexes.sql
