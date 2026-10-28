@@ -55,14 +55,6 @@ for extension in uuid-ossp btree_gist; do
     "CREATE EXTENSION IF NOT EXISTS \"$extension\" SCHEMA public;"
 done
 
-if [[ "$(query "$DB_NAME" 'SHOW shared_preload_libraries;')" == *pg_stat_statements* ]]; then
-  step "extension pg_stat_statements" "$DB_NAME" \
-    "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements');" \
-    'CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public;'
-else
-  echo "skip: pg_stat_statements not preloaded"
-fi
-
 # Schema USAGE for the RLS role, and default privileges of the deploy login so every table and
 # sequence a migration creates in the schema is granted to proact_rls_user (7 privileges in all).
 step default-privileges "$DB_NAME" \
@@ -88,3 +80,23 @@ step ledger "$DB_NAME" \
      applied_at timestamptz NOT NULL DEFAULT now(),
      applied_by text NOT NULL
    );'
+
+# pg_stat_statements is optional and last: a login that may not read shared_preload_libraries or
+# create the (untrusted) extension gets a skip line instead of a failed bootstrap.
+pg_stat_statements_step() {
+  local preload
+  if ! preload="$(query "$DB_NAME" 'SHOW shared_preload_libraries;' 2>/dev/null)"; then
+    echo "skip: pg_stat_statements not available to $DB_USER"
+  elif [[ "$preload" != *pg_stat_statements* ]]; then
+    echo "skip: pg_stat_statements not preloaded"
+  elif [[ "$(query "$DB_NAME" "SELECT EXISTS (SELECT 1 FROM pg_extension
+      WHERE extname = 'pg_stat_statements');" 2>/dev/null)" == t ]]; then
+    echo "skip extension pg_stat_statements"
+  elif query "$DB_NAME" 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements SCHEMA public;' >/dev/null 2>&1; then
+    echo "ok extension pg_stat_statements"
+  else
+    echo "skip: pg_stat_statements not available to $DB_USER"
+  fi
+}
+
+pg_stat_statements_step

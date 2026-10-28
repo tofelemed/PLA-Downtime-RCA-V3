@@ -52,13 +52,29 @@ applied_by() {
   echo "${who//[^A-Za-z0-9_.@-]/_}"
 }
 
+# controls_transaction <path>: true when a line outside dollar-quoted bodies is BEGIN, START
+# TRANSACTION, COMMIT, END, ABORT or ROLLBACK (the file would break out of the apply transaction).
+controls_transaction() {
+  awk '
+    tag == "" && toupper($0) ~ /^[[:space:]]*(BEGIN|START TRANSACTION|COMMIT|END|ABORT|ROLLBACK)([[:space:]]+(WORK|TRANSACTION))?[[:space:]]*;/ {
+      found = 1; exit
+    }
+    {
+      rest = $0
+      while (match(rest, /\$([A-Za-z_][A-Za-z_0-9]*)?\$/)) {
+        token = substr(rest, RSTART, RLENGTH)
+        if (tag == "") tag = token; else if (token == tag) tag = ""
+        rest = substr(rest, RSTART + RLENGTH)
+      }
+    }
+    END { exit found ? 0 : 1 }
+  ' "$1"
+}
+
 # apply_file <path> <version> <checksum>: file, ledger row and grants in one transaction.
 apply_file() {
   local path="$1" version="$2" checksum="$3" file
   file="$(basename "$path")"
-  if grep -qiE '^[[:space:]]*(BEGIN|COMMIT|ROLLBACK|START TRANSACTION)[[:space:]]*;' "$path"; then
-    forge_die "$file controls its own transaction; refusing"
-  fi
   {
     printf 'BEGIN;\nSET client_min_messages = warning;\nSET search_path = forge, public;\n'
     cat "$path"
@@ -76,17 +92,22 @@ echo "checksums: ok"
   forge_die "$DB_SCHEMA.deploy_migrations is missing: run 00-create-db-and-roles.sh first"
 
 declare -A ledger=()
+declare -A on_disk=()
+ledger_rows="$(query "SELECT version || ' ' || checksum FROM \"$DB_SCHEMA\".deploy_migrations;")"
 while read -r version checksum; do
-  [[ -n "$version" ]] && ledger["$version"]="$checksum"
-done < <(query "SELECT version || ' ' || checksum FROM \"$DB_SCHEMA\".deploy_migrations;")
+  if [[ -n "$version" ]]; then ledger["$version"]="$checksum"; fi
+done <<<"$ledger_rows"
 
-# Plan first: a changed applied file refuses the whole run before anything is applied.
+# Plan first: a changed applied file, or a pending one that controls its own transaction, refuses
+# the whole run before anything is applied.
 plan=()
 while IFS= read -r path; do
   version="$(basename "$path")"
   version="${version%%__*}"
+  on_disk["$version"]=1
   checksum="$(forge_sha256 "$path")"
   if [[ -z "${ledger[$version]+set}" ]]; then
+    ! controls_transaction "$path" || forge_die "$(basename "$path") controls its own transaction; refusing"
     plan+=("apply $version $checksum $path")
   elif [[ "${ledger[$version]}" == "$checksum" ]]; then
     plan+=("skip $version $checksum $path")
@@ -94,10 +115,13 @@ while IFS= read -r path; do
     forge_die "$version was applied with checksum ${ledger[$version]}, file now has $checksum"
   fi
 done < <(pending_files)
+for version in "${!ledger[@]}"; do
+  [[ -n "${on_disk[$version]+set}" ]] || echo "warn: ledger has $version but no file" >&2
+done
 
 applied=0
 skipped=0
-for entry in "${plan[@]}"; do
+for entry in ${plan[@]+"${plan[@]}"}; do
   read -r action version checksum path <<<"$entry"
   echo "$action $version"
   if [[ "$action" == skip ]]; then

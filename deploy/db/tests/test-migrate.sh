@@ -70,6 +70,11 @@ check "bootstrap creates the database" "$(has "$out" 'ok database')"
 check "bootstrap creates the role" "$(has "$out" 'ok role')"
 check "bootstrap creates the schema" "$(has "$out" 'ok schema')"
 check "bootstrap skips pg_stat_statements" "$(has "$out" 'skip: pg_stat_statements not preloaded')"
+check "bootstrap grants the role, default privileges and ledger" \
+  "$([[ "$out" == *"ok grant-role"* && "$out" == *"ok default-privileges"* && "$out" == *"ok ledger"* ]] \
+  && echo true || echo false)"
+check "pg_stat_statements is the last step" "$([[ "$(tail -1 <<<"$out")" == "skip: pg_stat_statements"* ]] \
+  && echo true || echo false)"
 
 run 00-create-db-and-roles.sh
 check "second bootstrap only skips" \
@@ -87,6 +92,10 @@ idx="$(sql "SELECT count(*) FROM pg_indexes WHERE schemaname='forge' AND indexna
 check "forge has the FK indexes" "$([[ "$idx" =~ ^[0-9]+$ ]] && (( idx >= 34 )) && echo true || echo false)"
 rls="$(sql "SET ROLE proact_rls_user; SET app.tenant_ids = ''; SELECT count(*) FROM forge.units;" 2>&1 || true)"
 check "proact_rls_user reads forge.units" "$([[ "$rls" == 0 ]] && echo true || echo false)"
+probe="$(sql "CREATE TABLE forge.zz_probe(id int); SET ROLE proact_rls_user; SELECT count(*) FROM forge.zz_probe;" \
+  2>&1 || true)"
+sql 'DROP TABLE IF EXISTS forge.zz_probe;' >/dev/null 2>&1 || true
+check "default privileges cover a table created after bootstrap" "$([[ "$probe" == 0 ]] && echo true || echo false)"
 
 run 10-migrate.sh
 check "second migrate skips both files" "$(has "$(tail -1 <<<"$out")" 'migrations: applied 0, skipped 2')"

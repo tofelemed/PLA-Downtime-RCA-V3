@@ -109,7 +109,7 @@ extract_queries() {
       }
       if (stmt ~ /-- PARAMETERS:/) { print "parameterised query: " stmt > "/dev/stderr"; failed = 1; exit 3 }
       sub(/[ \t\n;]+$/, "", stmt)
-      print stmt ";"
+      print stmt "\n;"
       stmt = ""
     }
     /migrations are new migrations must be executed/ { open = 1; stmt = ""; next }
