@@ -164,3 +164,16 @@ bash deploy/db/tests/test-seed-users.sh           ok 12/12
 bash deploy/tests/test-images.sh                  ok 7/7
 bash deploy/tests/test-bundle.sh                  ok 8/8
 ```
+
+### Phase 8 — on-screen check by role (2026-10-28, rehearsal stack on :8096)
+
+| Role | Page | Result |
+|---|---|---|
+| admin | Admin panel → Settings | "Loss accounting: Daily accounting from 00:00 · declared by the OT production loss event · target: OT planned figure · unit: HDPE Extruder 1 · product: HDPE grade A" (`evidence/rehearsal-settings-admin.png`) |
+| reza | Accounting statement | Opens, "No complete period to state in this selection", no error (`evidence/rehearsal-statement-reza.png`) |
+| omid | Event Hub, Type = Production loss | "No events", "Production loss to code 0", Code/New event available (`evidence/rehearsal-events-omid.png`) |
+| sara | Event Hub | Renders read-only for the role, no events |
+| leila | Production loss analysis · Overview | Renders, "0 % of periods calculated" (no data yet) |
+| farid | Event Hub | Renders, no events |
+
+All six sign-ins used the seeded accounts (password hashes carried over from the development database).
