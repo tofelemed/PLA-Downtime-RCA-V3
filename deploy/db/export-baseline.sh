@@ -120,7 +120,12 @@ echo "executed $executed migrations"
   dump --data-only --inserts --table=migrations --table=typeorm_metadata
 } > "$dump_file"
 tables="$(grep -c '^CREATE TABLE public\.' "$dump_file" || true)"
-commit="$(git -C "$repo_root" describe --always --dirty)"
+# Like `git describe --always --dirty`, but changed gitlinks (agent worktrees under .claude/) do not
+# count as dirty: only tracked files can change what the export contains.
+commit="$(git -C "$repo_root" describe --always)"
+if [[ -n "$(git -C "$repo_root" status --porcelain --ignore-submodules=all --untracked-files=no)" ]]; then
+  commit="$commit-dirty"
+fi
 mkdir -p "$(dirname "$out")"
 {
   echo "-- V001 baseline: TypeORM migrations through $through ($count files) exported $(date -u +%Y-%m-%d) from $commit"
