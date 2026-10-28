@@ -1,4 +1,10 @@
-import { dbSchema, dbSsl, dbUser, schemaPoolOptions } from './connection-env';
+import {
+  dbMigrationsDir,
+  dbSchema,
+  dbSsl,
+  dbUser,
+  schemaPoolOptions,
+} from './connection-env';
 import { dataSourceOptionsFrom, runtimeDataSourceOptions } from './data-source';
 
 describe('database connection settings from the environment (TF-PREP-001 §4.2)', () => {
@@ -43,5 +49,17 @@ describe('database connection settings from the environment (TF-PREP-001 §4.2)'
       options: '-c search_path=forge',
       max: 7,
     });
+  });
+
+  it('dbMigrationsDir falls back to the given directory', () => {
+    expect(dbMigrationsDir({}, '/app/dist/src/database/migrations')).toBe(
+      '/app/dist/src/database/migrations',
+    );
+  });
+
+  it('dbMigrationsDir takes DB_MIGRATIONS_DIR with forward slashes and no trailing slash', () => {
+    expect(dbMigrationsDir({ DB_MIGRATIONS_DIR: 'C:\\tmp\\mig\\' }, '/x')).toBe(
+      'C:/tmp/mig',
+    );
   });
 });

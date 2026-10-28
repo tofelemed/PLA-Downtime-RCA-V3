@@ -1,7 +1,12 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import { dbSsl, dbUser, schemaPoolOptions } from './connection-env';
+import {
+  dbMigrationsDir,
+  dbSsl,
+  dbUser,
+  schemaPoolOptions,
+} from './connection-env';
 import { SlowQueryLogger } from './slow-query.logger';
 
 // `.env` is read from the working directory (server/pro-act-backend), the same way app.module.ts
@@ -31,7 +36,7 @@ export function dataSourceOptionsFrom(
     ssl: dbSsl(env),
     extra: schemaPoolOptions(env),
     entities: [`${here}/../**/*.entity{.ts,.js}`],
-    migrations: [`${here}/migrations/*{.ts,.js}`],
+    migrations: [`${dbMigrationsDir(env, `${here}/migrations`)}/*{.ts,.js}`],
     synchronize: false,
     logging: env.DB_LOGGING === 'true',
   };

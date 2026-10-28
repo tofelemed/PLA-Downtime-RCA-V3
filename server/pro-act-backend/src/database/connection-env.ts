@@ -45,3 +45,16 @@ export function dbSsl(
   if (mode === 'true') return { rejectUnauthorized: true };
   throw new Error(`DB_SSL must be true or false, got "${mode}"`);
 }
+
+/**
+ * `DB_MIGRATIONS_DIR` redirects the migrations glob to another folder (the baseline exporter copies a subset
+ * of migration files there). Returned with forward slashes and no trailing slash, as TypeORM globs need.
+ */
+export function dbMigrationsDir(
+  env: NodeJS.ProcessEnv,
+  fallback: string,
+): string {
+  const dir = env.DB_MIGRATIONS_DIR?.trim();
+  if (!dir) return fallback;
+  return dir.replace(/\\/g, '/').replace(/\/+$/, '');
+}
