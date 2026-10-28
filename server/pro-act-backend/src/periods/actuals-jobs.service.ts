@@ -1,6 +1,6 @@
 import { HttpException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, IsNull, Repository } from 'typeorm';
 import { requireTenantRole } from '../auth/roles/require-tenant-role';
 import { requireUnitRole } from '../auth/roles/require-unit-role';
 import {
@@ -13,6 +13,7 @@ import { runnerIdentity } from '../common/scheduling/runner-identity';
 import { notFound } from '../profiles/profile-errors';
 import { ActualsRunnerService } from './actuals-runner.service';
 import { ActualsJob } from './entities/actuals-job.entity';
+import { PeriodProductSlice } from './entities/period-product-slice.entity';
 import { ProductionPeriod } from './entities/production-period.entity';
 import { ExternalReportsService } from './external-reports.service';
 import { PeriodRecomputePort } from './period-recompute.port';
@@ -22,6 +23,7 @@ import {
   periodScopeUnits,
   scopeCovers,
 } from './period-scope';
+import { SliceResolverService } from './slice-resolver.service';
 import { PERIOD_WRITERS, REPORT_IMPORTERS } from '../v2/periods/period-roles';
 
 type Outcome =
@@ -54,6 +56,7 @@ export class ActualsJobsService {
     private readonly runner: ActualsRunnerService,
     private readonly reports: ExternalReportsService,
     private readonly recompute: PeriodRecomputePort,
+    private readonly slices: SliceResolverService,
   ) {}
 
   /** 202 recompute of one period of the caller's scope (404 otherwise); returns the queued job. */
@@ -256,6 +259,7 @@ export class ActualsJobsService {
         message: 'the period unit is outside the requester’s unit scope',
       };
     }
+    await this.ensureSlices(period);
     const trigger = {
       reason: job.request.trigger,
       requestedBy: job.requestedBy,
@@ -266,6 +270,20 @@ export class ActualsJobsService {
       ? await full(period.id, trigger)
       : { ...(await this.runner.run(period.id, trigger)) };
     return { state: 'completed', result };
+  }
+
+  /**
+   * A period without an active slice (e.g. reopened by `revise`, which the materializer's re-resolution
+   * skips) is re-resolved on the current setup before the run, so the recompute does not repeat an empty run.
+   */
+  private async ensureSlices(period: ProductionPeriod): Promise<void> {
+    const active = await this.jobs.manager.exists(PeriodProductSlice, {
+      where: { periodId: period.id, supersededAt: IsNull() },
+    });
+    if (active) return;
+    await this.jobs.manager.transaction((manager) =>
+      this.slices.resolve(manager, [period]),
+    );
   }
 
   /** Error code and message for the job record; never SQL or stack traces. */

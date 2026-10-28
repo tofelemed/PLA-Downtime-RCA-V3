@@ -346,4 +346,39 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
     expect(day.body).toMatchObject({ code: 'DAY_NOT_READY' });
     expect(JSON.stringify(day.body)).toContain('NO_COMPUTABLE_SLICE');
   });
+
+  it('a recompute re-resolves the slices of a slice-less period', async () => {
+    const unit = env.world.unitA2;
+    const start = '2027-03-03T02:30:00.000Z';
+    // declared policy without accounting product, two approved profiles, no plan: no slice
+    await env.materialize([unit], start, '2027-03-03T10:30:00.000Z');
+    const id = await env.periodId(unit, start);
+    const bare = await env.recompute(id);
+    expect(bare.data.slices).toEqual([]);
+    expect(bare.data.warnings.map((w) => w.code)).toContain(
+      'ambiguous_default_product',
+    );
+
+    await env.rows(
+      `INSERT INTO accounting_policies (tenant_id, row_version, policy_kind, unit_id, scope_key, version, body,
+              effective_from, approved_at)
+       VALUES ($1, 1, 'loss_accounting', $2::uuid, $2, 2, $3::jsonb, '2026-01-01T00:00:00Z', now())`,
+      [
+        env.world.tenantA,
+        unit,
+        JSON.stringify({ ...POLICY, accountingProductId: env.products.p1 }),
+      ],
+    );
+    const resolved = await env.recompute(id);
+    expect(resolved.data.slices).toEqual([
+      expect.objectContaining({
+        productId: env.products.p1,
+        source: 'profile_default',
+      }),
+    ]);
+    expect(resolved.data.warnings.map((w) => w.code)).not.toContain(
+      'ambiguous_default_product',
+    );
+    expect((await env.view(id)).slices).toHaveLength(1);
+  });
 });
