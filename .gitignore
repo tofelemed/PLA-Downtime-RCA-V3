@@ -43,3 +43,6 @@ server/pro-act-backend/src/database/migrations-export-tmp*
 deploy/passwords-*.txt
 deploy/private/
 deploy/seed-users.csv
+# Release bundles and the last built version (deploy/build/)
+dist/bundle/
+deploy/build/.last-version

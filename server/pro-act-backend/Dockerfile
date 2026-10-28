@@ -24,19 +24,9 @@ RUN npm prune --omit=dev --legacy-peer-deps
 
 
 FROM node:24-bookworm-slim AS runtime
-# Release identity (deploy/BUILD-VARS.md): reported in the environment and as OCI labels
-ARG APP_VERSION=dev
-ARG GIT_COMMIT=unknown
-ARG BUILD_DATE=unknown
-LABEL org.opencontainers.image.title="traverse-forge-backend" \
-      org.opencontainers.image.version="$APP_VERSION" \
-      org.opencontainers.image.revision="$GIT_COMMIT" \
-      org.opencontainers.image.created="$BUILD_DATE"
 ENV NODE_ENV=production \
     PORT=4004 \
-    WORKER_PORT=4005 \
-    APP_VERSION=$APP_VERSION \
-    GIT_COMMIT=$GIT_COMMIT
+    WORKER_PORT=4005
 WORKDIR /app
 
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
@@ -56,6 +46,18 @@ VOLUME ["/app/storage/exports"]
 # against CRLF checkouts on Windows hosts.
 COPY docker/entrypoint.sh docker/healthcheck.js ./docker/
 RUN sed -i 's/\r$//' docker/entrypoint.sh && chmod 755 docker/entrypoint.sh
+
+# Release identity (deploy/BUILD-VARS.md): reported in the environment and as OCI labels. Declared last
+# so the node_modules and dist layers above stay cached from one version to the next.
+ARG APP_VERSION=dev
+ARG GIT_COMMIT=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.title="traverse-forge-backend" \
+      org.opencontainers.image.version="$APP_VERSION" \
+      org.opencontainers.image.revision="$GIT_COMMIT" \
+      org.opencontainers.image.created="$BUILD_DATE"
+ENV APP_VERSION=$APP_VERSION \
+    GIT_COMMIT=$GIT_COMMIT
 
 USER node
 # 4004 = API (PORT); 4005 = worker health probes (WORKER_PORT)

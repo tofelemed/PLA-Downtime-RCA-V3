@@ -7,22 +7,19 @@ Images: `traverse-forge-backend:${FORGE_VERSION}` (API and worker) and `traverse
 
 | Argument | Image | Source | Effect |
 |---|---|---|---|
-| `FORGE_VERSION` | both (tag) | `git describe --tags --always`, or `$(date +%Y%m%d)-$(git rev-parse --short HEAD)` | Image tag; also passed as `APP_VERSION` |
+| `FORGE_VERSION` | both (tag) | `build-images.sh --version <v>`, default `$(date +%Y%m%d)-$(git rev-parse --short HEAD)` | Image tag; also passed as `APP_VERSION` |
 | `APP_VERSION` | both | `= FORGE_VERSION` (default `dev`) | `ENV APP_VERSION`, label `org.opencontainers.image.version` |
-| `GIT_COMMIT` | both | `git rev-parse --short HEAD` (default `unknown`) | `ENV GIT_COMMIT`, label `org.opencontainers.image.revision` |
+| `GIT_COMMIT` | both | `git rev-parse HEAD` (default `unknown`) | `ENV GIT_COMMIT`, label `org.opencontainers.image.revision` |
 | `BUILD_DATE` | both | `date -u +%Y-%m-%dT%H:%M:%SZ` (default `unknown`) | label `org.opencontainers.image.created` |
 | `VITE_API_BASE_URL` | frontend | default `/api` (same origin through nginx) | Baked into the bundle |
 
 Label `org.opencontainers.image.title` is `traverse-forge-backend` / `traverse-forge-frontend`.
 
+The ARG/LABEL/ENV block sits at the end of each runtime stage, so a new version rebuilds only that layer.
+
 ```bash
-FORGE_VERSION="$(git describe --tags --always)"
-GIT_COMMIT="$(git rev-parse --short HEAD)"
-BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-docker build -t "traverse-forge-backend:$FORGE_VERSION" --build-arg "APP_VERSION=$FORGE_VERSION" \
-  --build-arg "GIT_COMMIT=$GIT_COMMIT" --build-arg "BUILD_DATE=$BUILD_DATE" server/pro-act-backend
-docker build -t "traverse-forge-frontend:$FORGE_VERSION" --build-arg "APP_VERSION=$FORGE_VERSION" \
-  --build-arg "GIT_COMMIT=$GIT_COMMIT" --build-arg "BUILD_DATE=$BUILD_DATE" .
+bash deploy/build/build-images.sh [--version <v>] [--allow-dirty]   # refuses a dirty tree without --allow-dirty
+bash deploy/build/package-bundle.sh [--version <v>] [--out <dir>]    # dist/bundle/traverse-forge-<v>.tar.gz
 ```
 
 ## Runtime variables
@@ -53,9 +50,12 @@ in their environment.
 Production (on the VM, from `$FORGE_HOME`):
 
 ```bash
-docker compose --project-directory "$FORGE_HOME" --env-file "$FORGE_HOME/.env" \
-  -f "$FORGE_HOME/releases/$FORGE_VERSION/docker-compose.forge.yml" up -d
+docker compose -p traverse-forge --project-directory "$FORGE_HOME" --env-file "$FORGE_HOME/.env" \
+  -f "$FORGE_HOME/releases/$FORGE_VERSION/docker-compose.forge.yml" up -d --remove-orphans
 ```
+
+`deploy/vm/load-and-start.sh <version>` runs exactly this (plus any `-f <file>` arguments in
+`FORGE_COMPOSE_EXTRA`); the VM procedure is `deploy/vm/VM-STEPS.template.md`.
 
 Rehearsal on a workstation with a bundled throwaway `postgres:15-alpine` (`forge-rehearsal-pg`, host
 `127.0.0.1:55436`, network `forge-rehearsal-pgnet`; set `DB_HOST=forge-rehearsal-pg` in the rehearsal env):

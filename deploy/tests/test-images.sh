@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Builds the production images with FORGE_VERSION=test and checks them without a database:
+# Builds the production images through deploy/build/build-images.sh (FORGE_VERSION=test) and checks them
+# without a database:
 # OCI labels, the non-root nginx (uid 101) with security headers and /piwebapi off when PI_SERVER is empty,
 # the backend's APP_VERSION, and that deploy/docker-compose.forge.yml renders with the fixture env.
-# Containers: forge-test-frontend (127.0.0.1:18095) and forge-test-backend, removed on exit.
+# Container: forge-test-frontend (127.0.0.1:<first free port from 18095>), removed on exit.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 deploy="$here/.."
-repo_root="$(cd "$here/../.." && pwd)"
 version=test
 frontend=forge-test-frontend
-backend=forge-test-backend
-port=18095
 
 cleanup() {
-  docker rm -f "$frontend" "$backend" >/dev/null 2>&1 || true
+  docker rm -f "$frontend" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
@@ -39,15 +37,13 @@ label() {
   docker inspect "$1" --format '{{index .Config.Labels "org.opencontainers.image.title"}}' 2>/dev/null || true
 }
 
-build_images() {
-  local commit created
-  commit="$(git -C "$repo_root" rev-parse --short HEAD)"
-  created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  docker build -q -t "traverse-forge-backend:$version" --build-arg "APP_VERSION=$version" \
-    --build-arg "GIT_COMMIT=$commit" --build-arg "BUILD_DATE=$created" \
-    "$repo_root/server/pro-act-backend" >/dev/null
-  docker build -q -t "traverse-forge-frontend:$version" --build-arg "APP_VERSION=$version" \
-    --build-arg "GIT_COMMIT=$commit" --build-arg "BUILD_DATE=$created" "$repo_root" >/dev/null
+# free_port <from>: the first loopback port from <from> on that nothing listens on.
+free_port() {
+  local candidate="$1"
+  while (exec 3<>"/dev/tcp/127.0.0.1/$candidate") 2>/dev/null; do
+    candidate=$((candidate + 1))
+  done
+  echo "$candidate"
 }
 
 # wait_http <url>: until the URL answers at all (any status), at most 30 s.
@@ -61,7 +57,8 @@ wait_http() {
 }
 
 cleanup
-build_images
+bash "$deploy/build/build-images.sh" --version "$version" --allow-dirty >/dev/null
+port="$(free_port 18095)"
 
 check "image labels name both images" "$(is "$(label "traverse-forge-frontend:$version")/$(label \
   "traverse-forge-backend:$version")" 'traverse-forge-frontend/traverse-forge-backend')"
@@ -77,10 +74,8 @@ check "x-content-type-options on /" \
 code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/piwebapi/x" || true)"
 check "piwebapi off without PI_SERVER (got $code)" "$(is "$code" 404)"
 
-docker run -d --name "$backend" -e PROCESS_ROLE=api -e PORT=3000 -e DB_HOST=127.0.0.1 \
-  "traverse-forge-backend:$version" >/dev/null
-app_version="$(MSYS_NO_PATHCONV=1 docker exec "$backend" node -e 'console.log(process.env.APP_VERSION)' \
-  2>/dev/null || true)"
+app_version="$(docker run --rm --entrypoint node "traverse-forge-backend:$version" \
+  -e 'console.log(process.env.APP_VERSION)' 2>/dev/null || true)"
 check "backend APP_VERSION (got '$app_version')" "$(is "$app_version" "$version")"
 
 rc=0
