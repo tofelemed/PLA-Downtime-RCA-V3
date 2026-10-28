@@ -1461,3 +1461,15 @@ Evidence: `deploy/PREP-LOG.md` Phases 3–8; procedure: `deploy/vm/VM-STEPS.temp
 - **Backups are private:** `backup-forge.sh` writes mode 600 files in a mode 700 folder (newest `BACKUP_KEEP`, default 14) and archives uploads with the running frontend image (no extra image on the air-gapped VM).
 - **A superuser `DB_USER` bypasses RLS outside requests, as in dev** (requests still `SET ROLE proact_rls_user`). A non-superuser `DB_USER` needs CREATEDB + CREATEROLE (or a DBA pre-creates the database, `proact_rls_user` and the grant) plus two superuser-only grants: `GRANT SET ON PARAMETER app.tenant_ids` (V001's functions set it) and `BYPASSRLS` (pg_dump of forced-RLS tables in `backup-forge.sh`); `00-create-db-and-roles.sh` checks them.
 - **The generated passwords file never sits inside a git work tree:** `30-seed-users.sh` and the CLI refuse such a path; the default is `$FORGE_HOME/private` (mode 700).
+
+## 2026-10-28 — Downtime-over-MQTT e2e findings (rulings while fixing F1–F6)
+
+Evidence: `docs/DOWNTIME_MQTT_E2E_REPORT.md`; plan `docs/superpowers/plans/2026-10-28-downtime-e2e-findings.md`.
+
+- **A period without computable figures cannot be submitted or certified, whatever its loss basis.** Submit refuses with `NO_COMPUTABLE_SLICE` when the validated run has no active slice or no plan-ledger total (same definition at certification → `DAY_NOT_READY`). An empty declared period now meets this gate before `DECLARED_LOSS_MISSING`.
+- **A recompute re-resolves the product slices of a period that has none** (the materializer's re-resolution skips periods that were once reconciled; a reopened day must compute on the current setup). The 28 Oct 2026 day of HDPE-TRAIN was repaired this way: revise (reza) → recompute → submit (sara) → approve (maryam, since the reopener may not approve) → certify (reza).
+- **OT never re-codes a stop; a differing `reason_code` on a later revision raises the review item `source_reason_changed`** (field `reason`, one open item per event, dismiss-only, auto-resolved when the source delivers the operator's code again). An unknown token keeps going to the `unknown_code` quarantine only.
+- **Causes & Pareto defaults to the stop-level "Downtime reasons" ranking on a declared plant**, since stops carry no lost production there; "Lost production" stays selectable with an explaining empty state.
+- **Subscribe-job counters:** `quarantined` keeps meaning rejected at decode; a new `quarantined_open` counts the connection's open normalisation quarantine items that are not parked (unknown unit, mapping, schema, order conflicts), refreshed on heartbeat like `parked`.
+- **Display:** a rolling window's "To" date is the production date of its last instant (half-open end); a source timestamp ahead of the server clock reads "ahead of the server clock" instead of "0 s ago".
+- Parked follow-ups: the certify page text for `DAY_NOT_READY` is still generic; the review item does not show the delivered code; a user re-code to the source's code does not auto-resolve the item; `reresolveSliceless` race hardening (`FOR UPDATE`).

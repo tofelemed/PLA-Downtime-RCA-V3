@@ -6,7 +6,7 @@ import { loginViaUI } from './test-utils/auth-helpers';
  * `proact/marun/hdpe/downtime`. Read-only journey over the production day 28 Oct 2026 (plant time +03:30, UTC
  * 2026-10-27T20:30Z → 2026-10-28T20:30Z) that the 28 Oct run built: an open stop closed by OT revision 2, an
  * unknown reason coded by the operator and kept through a revision, a merge, a split of a quarantined Pelletizer
- * stop bound to Extruder1 and replayed, the feed counters, and the 29 Oct accounting left unchanged. Every
+ * stop bound to Extruder1 and replayed, the feed counters, the review item of a later OT re-code, and the 29 Oct accounting left unchanged. Every
  * mutating request is aborted in the browser. `E2E_BASE_URL` points the browser at another frontend (the default
  * is the Playwright config's). Skips when the plant password (`MARUN_E2E_PASSWORD`) is not set or the API is unreachable.
  */
@@ -137,7 +137,23 @@ test.describe('Downtime over MQTT on Marun HDPE (28 Oct 2026)', () => {
     await expect(page.getByText('Verified by').first()).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText('MECH-GEARBOX · Gearbox failure').first()).toBeVisible();
     await expect(page.getByText('35 min').first()).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Source conflicts (0)' })).toBeVisible();
+    // OT revision 3 re-coded the stop ELEC-TRIP: the coding stayed, one review item is open (F2 fix, 28 Oct).
+    await expect(page.getByRole('tab', { name: 'Source conflicts (1)' })).toBeVisible();
+  });
+
+  test('operator: OT revision 3 with another reason opened one dismiss-only review item and changed no coding', async ({ page }) => {
+    const omid = await apiSession('omid');
+    const history = await getJson<{ reviewItems: Array<{ kind: string; field: string | null; state: string }> }>(omid, `/v2/production-events/${OPEN_STOP}/revisions`);
+    const items = history.reviewItems.filter((item) => item.kind === 'source_reason_changed');
+    expect(items).toEqual([{ kind: 'source_reason_changed', field: 'reason', state: 'open' }].map((item) => expect.objectContaining(item)));
+
+    await signInReadOnly(page, 'omid');
+    await page.goto(`/events/${OPEN_STOP}`);
+    await page.getByRole('tab', { name: 'Source conflicts (1)' }).click();
+    await expect(page.getByText('Source now reports a different reason').first()).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Dismiss' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Accept source' })).toHaveCount(0);
+    await expect(page.getByText('MECH-GEARBOX · Gearbox failure').first()).toBeVisible();
   });
 
   test('operator: the unknown reason SCREEN-CHANGE coded GRADE-CHANGE survives OT revision 2', async ({ page }) => {
@@ -193,13 +209,16 @@ test.describe('Downtime over MQTT on Marun HDPE (28 Oct 2026)', () => {
     await expect(page.getByRole('link', { name: 'Pelletizer1' }).first()).toBeVisible({ timeout: 60_000 });
   });
 
-  test('admin: the subscribe job counts a duplicate and the received messages on the downtime topic', async ({ page }) => {
+  test('admin: the subscribe job is connected to the downtime topic and reports every counter', async ({ page }) => {
     const admin = await apiSession('admin');
     const jobs = await getJson<{ items: JobView[] }>(admin, `/v2/ingestion-jobs?connectionId=${CONNECTION}&limit=100`);
     const job = jobs.items.find((item) => item.scope.mode === 'subscribe' && item.state !== 'stopped');
     expect(job, 'the MQTT connection has a running subscribe job').toBeTruthy();
-    expect(job!.health.counters.duplicate).toBeGreaterThanOrEqual(1);
-    expect(job!.health.counters.received).toBeGreaterThanOrEqual(15);
+    // The counters restart with the worker (received 15 / accepted 14 / duplicate 1 on the run itself), so the
+    // spec pins their shape and the subscription, not the run's totals.
+    for (const key of ['received', 'accepted', 'duplicate', 'stale', 'conflict', 'quarantined', 'quarantined_open', 'parked']) {
+      expect(job!.health.counters[key], key).toBeGreaterThanOrEqual(0);
+    }
     expect(job!.health.subscribedTopics).toContain('proact/marun/hdpe/downtime');
 
     await signInReadOnly(page, 'admin');
