@@ -53,12 +53,15 @@ must() {
   fi
 }
 
-# cli <passwords file>: the seed-users CLI against the scratch database; sets rc and out.
+# cli <passwords file> [csv] [db name] [extra args...]: the seed-users CLI against the scratch database;
+# sets rc and out. Passwords files live in the mktemp dir, outside the repo.
 cli() {
+  local file="$1" csv="${2:-$repo_root/deploy/seed-users.csv.example}" name="${3:-traverse_forge}"
+  shift 3 || shift $#
   rc=0
   out="$(cd "$backend" && DB_HOST=127.0.0.1 DB_PORT=$port DB_USERNAME=postgres DB_PASSWORD=postgres \
-    DB_NAME=traverse_forge DB_SCHEMA=forge npx ts-node scripts/deploy/seed-users.ts \
-    --csv "$repo_root/deploy/seed-users.csv.example" --tenant-code HDPE-TRAIN --out "$1" 2>&1)" || rc=$?
+    DB_NAME="$name" DB_SCHEMA=forge npx ts-node scripts/deploy/seed-users.ts \
+    --csv "$csv" --tenant-code HDPE-TRAIN --out "$file" "$@" 2>&1)" || rc=$?
 }
 
 start_container() {
@@ -107,6 +110,15 @@ check "no duplicate users" "$(sql "SELECT count(*) FROM forge.users WHERE email 
 
 cli "$work/passwords-1.txt"
 check "refuses an existing passwords file" "$([[ $rc -ne 0 ]] && echo refused)" refused
+
+printf 'email,name,role,scope_role\nbad.scope@example.invalid,Bad,Analyst,boss\n' > "$work/bad.csv"
+cli "$work/passwords-3.txt" "$work/bad.csv"
+check "unknown scope_role is refused" "$(grep -c 'line 2: unknown scope_role "boss"' <<<"$out" || true)" 1
+cli "$work/passwords-4.txt" "" " Proact "
+check "DB_NAME=proact is refused" "$(grep -c 'development database; refusing' <<<"$out" || true)" 1
+cli "$repo_root/deploy/passwords-test.txt"
+check "an output path inside the git work tree is refused" "$(grep -c 'inside a git work tree' <<<"$out" || true)" 1
+check "and no file was created there" "$([[ -e "$repo_root/deploy/passwords-test.txt" ]] && echo yes || echo no)" no
 
 total=$((passed + failed))
 if (( failed > 0 )); then

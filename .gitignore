@@ -40,3 +40,6 @@ uploads/
 deploy/.env.local
 db/seed/generated/
 server/pro-act-backend/src/database/migrations-export-tmp*
+deploy/passwords-*.txt
+deploy/private/
+deploy/seed-users.csv

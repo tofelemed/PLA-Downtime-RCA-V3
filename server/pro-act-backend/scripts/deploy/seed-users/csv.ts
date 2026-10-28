@@ -1,3 +1,5 @@
+import { SCOPE_ROLES } from '../../../src/auth/roles/role-model';
+
 export const SEED_ROLES = [
   'SuperAdmin',
   'OrgAdmin',
@@ -53,6 +55,9 @@ function parseRow(fields: string[], lineNo: number): SeedUser {
   if (!EMAIL_RE.test(email)) throw new Error(`line ${lineNo}: invalid e-mail`);
   if (!name) throw new Error(`line ${lineNo}: name is empty`);
   if (!isRole(role)) throw new Error(`line ${lineNo}: unknown role "${role}"`);
+  if (scopeRole && !(SCOPE_ROLES as readonly string[]).includes(scopeRole)) {
+    throw new Error(`line ${lineNo}: unknown scope_role "${scopeRole}"`);
+  }
   return { email, name, role, scopeRole: scopeRole || null };
 }
 

@@ -3,13 +3,14 @@
  *
  *   npm run deploy:seed-users -- --csv <file> --tenant-code HDPE-TRAIN --out <passwords file>
  *
- * Existing e-mails are skipped. Passwords go to --out (mode 0600, must not exist), never to stdout.
+ * Existing e-mails are skipped. --out inside a git work tree is refused unless --allow-work-tree. Passwords go to --out (mode 0600, must not exist), never to stdout.
  * Connection from DB_* / DB_SCHEMA as for the backend; the dev database proact is refused.
  */
 import 'dotenv/config';
 import { randomUUID } from 'crypto';
+import { execFileSync } from 'child_process';
 import { closeSync, openSync, readFileSync, writeSync } from 'fs';
-import { resolve } from 'path';
+import { dirname, resolve } from 'path';
 import * as bcrypt from 'bcryptjs';
 import { EntityManager } from 'typeorm';
 import { AppDataSource } from '../../src/database/data-source';
@@ -20,6 +21,7 @@ interface Args {
   csv: string;
   tenantCode: string;
   out: string;
+  allowWorkTree: boolean;
 }
 
 interface Tenant {
@@ -42,7 +44,25 @@ function parseArgs(argv: string[]): Args {
       'usage: deploy:seed-users -- --csv <file> --tenant-code <code> --out <passwords file>',
     );
   }
-  return { csv: resolve(csv), tenantCode, out: resolve(out) };
+  return {
+    csv: resolve(csv),
+    tenantCode,
+    out: resolve(out),
+    allowWorkTree: argv.includes('--allow-work-tree'),
+  };
+}
+
+function insideGitWorkTree(dir: string): boolean {
+  try {
+    const answer = execFileSync(
+      'git',
+      ['-C', dir, 'rev-parse', '--is-inside-work-tree'],
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+    return answer.toString().trim() === 'true';
+  } catch {
+    return false;
+  }
 }
 
 async function findTenant(code: string): Promise<Tenant> {
@@ -117,8 +137,15 @@ async function createUsers(
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  if ((process.env.DB_NAME ?? 'traverse_forge') === 'proact') {
+  if (
+    (process.env.DB_NAME ?? 'traverse_forge').trim().toLowerCase() === 'proact'
+  ) {
     throw new Error('DB_NAME=proact is the development database; refusing');
+  }
+  if (!args.allowWorkTree && insideGitWorkTree(dirname(args.out))) {
+    throw new Error(
+      `refusing to write passwords inside a git work tree: ${dirname(args.out)}; pass --allow-work-tree to override`,
+    );
   }
   const users = parseSeedUsers(readFileSync(args.csv, 'utf8'));
   const fd = openSync(args.out, 'wx', 0o600);

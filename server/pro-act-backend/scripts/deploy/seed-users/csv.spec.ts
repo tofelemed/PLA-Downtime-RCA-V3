@@ -31,6 +31,14 @@ describe('parseSeedUsers', () => {
     ).toThrow('line 3: invalid e-mail');
   });
 
+  it('rejects an unknown scope_role', () => {
+    expect(() =>
+      parseSeedUsers(`${header}
+a@example.invalid,A,Analyst,boss
+`),
+    ).toThrow('line 2: unknown scope_role "boss"');
+  });
+
   it('rejects a duplicate e-mail', () => {
     expect(() =>
       parseSeedUsers(
