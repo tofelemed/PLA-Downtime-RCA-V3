@@ -9,6 +9,7 @@ remain the authoring tool; the files here are exported from them and never edite
 | `migrations/V001__baseline.sql` | Schema built by the TypeORM migrations through `1794241400000` (144 files), plus their `migrations` / `typeorm_metadata` rows, in schema `forge` |
 | `migrations/V002__fk_indexes.sql` | TypeORM migration `FkIndexes1794242000000`: 34 foreign-key indexes |
 | `seed/reference/R0x0__*.sql` | Reference seed of plant `HDPE-TRAIN` / organisation `MPC-TRAIN`, extracted from the dev database by `deploy/db/extract-reference-from-dev.sh` (never hand-edited) |
+| `seed/reference/R060__connections_signals.sql` | The plant's integration connections and signals. Connections are seeded inactive without secrets; set the broker/PI endpoints and credentials in Settings → Integrations on the VM and activate them. |
 | `seed/manifest.json` | Source tenant / organisation ids, row count per seeded table, tables per seed file |
 | `seed/generated/U010__users.sql` | **Git-ignored.** The plant's accounts with their dev password hashes; carried to the VM by hand |
 | `CHECKSUMS.sha256` | SHA-256 of every `*.sql` under `db/` except `seed/generated/` (`<sha256>  <path relative to db/>`) |

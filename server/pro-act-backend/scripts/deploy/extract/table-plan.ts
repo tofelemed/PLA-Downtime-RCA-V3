@@ -1,11 +1,9 @@
 /**
  * What the reference extraction copies from the dev database (TF-PREP-001 task 4): the seed files, their
- * tables, and the row filter of each table. Class R* (integration_connections, secrets, PI and AF
- * configuration) and every transactional table stay out (deploy/ANALYSIS-REPORT.md §3.5).
- *
- * `signals` is left out pending a decision (task 4 report): every HDPE-TRAIN signal has a NOT NULL
- * `connection_id` into the R* table integration_connections, so it cannot load without its connection;
- * signals are bound again after the connections are configured on the VM.
+ * tables, and the row filter of each table. Class R* tables other than integration_connections
+ * (secrets, pi_connections, pi_mappings, af_bindings) and every transactional table stay out
+ * (deploy/ANALYSIS-REPORT.md §3.5). integration_connections is seeded so that signals (NOT NULL
+ * connection_id) load; its rows are made inactive and secret-less by transforms.ts.
  */
 
 export interface TableGroup {
@@ -79,6 +77,10 @@ export const TABLE_GROUPS: ReadonlyArray<TableGroup> = [
       'feature_flags',
       'app_settings',
     ],
+  },
+  {
+    file: 'R060__connections_signals',
+    tables: ['integration_connections', 'signals'],
   },
   { file: 'U010__users', tables: ['users', 'user_scopes', 'role_delegations'] },
 ];

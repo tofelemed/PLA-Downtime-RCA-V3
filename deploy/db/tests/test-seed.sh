@@ -87,6 +87,8 @@ check "units of the plant" "$(sql 'SELECT code FROM forge.units ORDER BY 1')" "E
 check "14 plant accounts" "$(sql "SELECT count(*) FROM forge.users WHERE email LIKE '%@hdpe-train.mpc'")" 14
 check "loss accounting v3 is daily" "$(sql "SELECT body->>'grain' FROM forge.accounting_policies
   WHERE policy_kind = 'loss_accounting' AND version = 3")" day
+check "state mappings resolve their signals" "$(sql 'SELECT count(*) FROM forge.unit_state_mappings m
+  WHERE NOT EXISTS (SELECT 1 FROM forge.signals s WHERE s.id = m.signal_id)')" 0
 check "self-referencing rows load parents first" "$(sql 'SELECT count(*) FROM forge.reason_codes
   WHERE parent_id IS NOT NULL AND parent_id NOT IN (SELECT id FROM forge.reason_codes)')" 0
 
@@ -94,6 +96,11 @@ run 20-seed-reference.sh --with-users
 must "second 20-seed-reference.sh"
 check "second seed ends with seed ok" "$(tail -1 <<<"$out")" "seed ok"
 check "second seed leaves the counts unchanged" "$(grep '^seed: ' <<<"$out")" "$first_counts"
+
+sql "INSERT INTO forge.crews (id, tenant_id, site_id, name, row_version)
+  SELECT gen_random_uuid(), tenant_id, site_id, 'Extra crew', 1 FROM forge.crews LIMIT 1;" >/dev/null
+run 20-seed-reference.sh --with-users
+check "a re-run passes on a database with extra rows" "$(tail -1 <<<"$out")" "seed ok"
 
 check "RLS shows the plant's units to its tenant" \
   "$(sql "SET ROLE proact_rls_user; SET app.tenant_ids = '$tenant_id'; SELECT count(*) FROM forge.units;")" 2

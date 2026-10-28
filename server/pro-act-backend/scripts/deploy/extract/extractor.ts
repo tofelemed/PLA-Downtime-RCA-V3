@@ -16,6 +16,7 @@ import {
   tableNames,
 } from './source-catalog';
 import { insertStatement, sqlFile } from './sql-writer';
+import { transformRow } from './transforms';
 import {
   assertTablesExist,
   groupPath,
@@ -110,7 +111,7 @@ async function tableStatements(
       : null,
   });
   const inserts = rows.map((row) =>
-    insertStatement(table, names, row, typeMap),
+    insertStatement(table, names, transformRow(table, row), typeMap),
   );
   return [`-- ${table}: ${rows.length} rows`, ...inserts];
 }

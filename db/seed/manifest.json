@@ -1,5 +1,5 @@
 {
-  "extractedAt": "2026-10-28T06:26:44.472Z",
+  "extractedAt": "2026-10-28T06:33:05.345Z",
   "sourceDatabase": "proact",
   "tenantCode": "HDPE-TRAIN",
   "organizationCode": "MPC-TRAIN",
@@ -50,6 +50,8 @@
     "source_mappings": 2,
     "feature_flags": 0,
     "app_settings": 1,
+    "integration_connections": 4,
+    "signals": 3,
     "users": 14,
     "user_scopes": 14,
     "role_delegations": 0
@@ -108,6 +110,10 @@
       "source_mappings",
       "feature_flags",
       "app_settings"
+    ],
+    "R060__connections_signals": [
+      "integration_connections",
+      "signals"
     ],
     "U010__users": [
       "users",

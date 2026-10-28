@@ -5,7 +5,8 @@
 # Verifies CHECKSUMS.sha256, applies db/seed/reference/R*.sql in name order (each file is one transaction
 # of INSERT ... ON CONFLICT DO NOTHING, so a re-run is a no-op), then with --with-users the git-ignored
 # db/seed/generated/U010__users.sql after checking its INSERT count per table against manifest.json.
-# Finally every seeded table's row count (manifest filters) must equal the manifest: `seed: <table> <n>`.
+# Finally every seeded table must hold at least the manifest's rows (manifest filters; a live database may
+# have more): `seed: <table> <actual>/<manifest>`.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -89,11 +90,11 @@ while read -r file table expected; do
   [[ "$file" != U010__users || "$with_users" == true ]] || continue
   [[ "$table" =~ ^[a-z_][a-z0-9_]*$ ]] || forge_die "unexpected table name in manifest.json: $table"
   actual="$(forge_psql "$DB_NAME" -X -q -At <<<"SELECT count(*) FROM \"$DB_SCHEMA\".$table WHERE $(where_for "$table");")"
-  echo "seed: $table $actual"
-  if [[ "$actual" != "$expected" ]]; then
-    echo "mismatch: $table has $actual rows, manifest.json says $expected" >&2
+  echo "seed: $table $actual/$expected"
+  if (( actual < expected )); then
+    echo "missing rows: $table has $actual rows, manifest.json says $expected" >&2
     bad=1
   fi
 done <<<"$entries"
-(( bad == 0 )) || forge_die "row counts differ from manifest.json"
+(( bad == 0 )) || forge_die "tables hold fewer rows than manifest.json"
 echo "seed ok"
