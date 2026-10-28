@@ -58,3 +58,26 @@ forge_python() {
     python "$@"
   fi
 }
+
+# forge_env_file [file]: print the env file to load: the given one, else ./.env, else $FORGE_HOME/.env.
+forge_env_file() {
+  if [[ -n "${1:-}" ]]; then
+    echo "$1"
+  elif [[ -f ./.env ]]; then
+    echo ./.env
+  elif [[ -n "${FORGE_HOME:-}" ]]; then
+    echo "$FORGE_HOME/.env"
+  else
+    forge_die "no env file: pass --env <file>, run from the directory holding .env, or set FORGE_HOME"
+  fi
+}
+
+# forge_check_db_env: DB_USER, DB_NAME and DB_SCHEMA (default forge) must be set and DB_SCHEMA a
+# lowercase identifier. The development database proact is refused: these scripts target traverse_forge.
+forge_check_db_env() {
+  [[ -n "${DB_USER:-}" ]] || forge_die "DB_USER is not set"
+  [[ -n "${DB_NAME:-}" ]] || forge_die "DB_NAME is not set"
+  [[ "$DB_NAME" != proact ]] || forge_die "DB_NAME=proact is the development database; refusing"
+  export DB_SCHEMA="${DB_SCHEMA:-forge}"
+  [[ "$DB_SCHEMA" =~ ^[a-z_][a-z0-9_]*$ ]] || forge_die "DB_SCHEMA must be a lowercase identifier"
+}

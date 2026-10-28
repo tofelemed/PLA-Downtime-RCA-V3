@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rewrite db/CHECKSUMS.sha256 from every db/**/*.sql, or verify it with --check.
+# Rewrite db/CHECKSUMS.sha256 from every db/**/*.sql, or verify it with --check. DB_DIR overrides db/.
 #   bash deploy/db/checksums.sh            # write
 #   bash deploy/db/checksums.sh --check    # exit 1 naming each mismatch
 set -euo pipefail
@@ -8,7 +8,7 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "$here/lib.sh"
 
-db_dir="$(cd "$here/../../db" && pwd)"
+db_dir="$(cd "${DB_DIR:-$here/../../db}" && pwd)"
 manifest="$db_dir/CHECKSUMS.sha256"
 
 list_sql() {
