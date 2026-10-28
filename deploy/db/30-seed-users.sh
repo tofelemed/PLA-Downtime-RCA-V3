@@ -40,11 +40,17 @@ if git -C "$out_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 out_name="passwords-$(date +%Y%m%d-%H%M%S).txt"
 
+# host_path <path>: the path as docker sees it for a bind mount (Windows form under Git Bash).
+host_path() {
+  if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else echo "$1"; fi
+}
+
 # --user: run as the invoking user so the (possibly 0600) CSV is readable and the 0700 out dir writable,
-# and the passwords file is owned by that user rather than by the image user.
+# and the passwords file is owned by that user rather than by the image user. --entrypoint node: the
+# image's entrypoint starts the API and would swallow the CLI arguments.
 MSYS_NO_PATHCONV=1 docker run --rm --user "$(id -u):$(id -g)" --network "$PG_NETWORK" --env-file "$env_file" \
-  -v "$csv_abs:/seed/users.csv:ro" -v "$out_dir:/seed/out" \
-  "traverse-forge-backend:$FORGE_VERSION" \
-  node dist/scripts/deploy/seed-users.js --csv /seed/users.csv \
+  -v "$(host_path "$csv_abs"):/seed/users.csv:ro" -v "$(host_path "$out_dir"):/seed/out" \
+  --entrypoint node "traverse-forge-backend:$FORGE_VERSION" \
+  dist/scripts/deploy/seed-users.js --csv /seed/users.csv \
   --tenant-code "${TENANT_CODE:-HDPE-TRAIN}" --out "/seed/out/$out_name"
 echo "passwords file: $out_dir/$out_name (read it once, store it securely, then delete it)"
