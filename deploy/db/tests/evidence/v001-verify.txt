@@ -1,0 +1,16 @@
+# V001 verification (TF-PREP-001 task 2), 2026-10-28T05:30Z
+# left : verify-schema.sh traverse_forge public  on forge-export-pg (fresh TypeORM migration:run, 144 migrations through 1794241400000)
+# right: verify-schema.sh traverse_forge forge   on forge-verify-pg (db/migrations/V001__baseline.sql applied with psql -v ON_ERROR_STOP=1)
+# diff of the two outputs: none (identical)
+
+public (TypeORM)       forge (V001 SQL)
+columns 2771           columns 2771
+constraints 551        constraints 551
+functions 23           functions 23
+indexes 708            indexes 708
+policies 144           policies 144
+sequences 2            sequences 2
+tables 154             tables 154
+triggers 38            triggers 38
+types 97               types 97
+views 4                views 4

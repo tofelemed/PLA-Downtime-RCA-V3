@@ -35,3 +35,8 @@ uploads/
 
 .superpowers/
 .playwright-mcp/
+
+# Deploy (TF-PREP-001): local env overrides, generated seed SQL, export-baseline staging copy
+deploy/.env.local
+db/seed/generated/
+server/pro-act-backend/src/database/migrations-export-tmp*
