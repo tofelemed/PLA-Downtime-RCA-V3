@@ -1,0 +1,3 @@
+email,name,role,scope_role
+forge.viewer@example.invalid,Plant viewer,Analyst,viewer
+forge.supervisor@example.invalid,Shift supervisor,Manager,manager_approver
