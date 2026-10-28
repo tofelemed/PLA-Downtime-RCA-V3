@@ -1,5 +1,5 @@
 // Jest projects (plan 0.3 step 6):
-//   unit         src/**/*.spec.ts                  no I/O, runs in parallel
+//   unit         src/**/*.spec.ts, scripts/**/*.spec.ts  no I/O, runs in parallel
 //   fixtures     test/fixtures/**/*.spec.ts        validates the spec §19 acceptance fixtures
 //   integration  test/integration/**/*.int-spec.ts real Postgres (proact_test); run serially (--runInBand)
 // Type errors are caught by `npx tsc --noEmit -p tsconfig.json`, so ts-jest runs transpile-only
@@ -22,7 +22,7 @@ module.exports = {
     {
       ...base,
       displayName: 'unit',
-      rootDir: 'src',
+      roots: ['<rootDir>/src', '<rootDir>/scripts'],
       testRegex: '.*\\.spec\\.ts$',
     },
     {

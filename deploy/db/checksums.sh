@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Rewrite db/CHECKSUMS.sha256 from every db/**/*.sql, or verify it with --check. DB_DIR overrides db/.
+# db/seed/generated/ (git-ignored users seed) is left out; 20-seed-reference.sh checks it by row count.
 #   bash deploy/db/checksums.sh            # write
 #   bash deploy/db/checksums.sh --check    # exit 1 naming each mismatch
 set -euo pipefail
@@ -12,7 +13,8 @@ db_dir="$(cd "${DB_DIR:-$here/../../db}" && pwd)"
 manifest="$db_dir/CHECKSUMS.sha256"
 
 list_sql() {
-  (cd "$db_dir" && find . -type f -name '*.sql' | sed 's|^\./||' | LC_ALL=C sort)
+  (cd "$db_dir" && find . -path ./seed/generated -prune -o -type f -name '*.sql' -print | sed 's|^\./||' |
+    LC_ALL=C sort)
 }
 
 tmp=""

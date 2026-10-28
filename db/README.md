@@ -8,7 +8,10 @@ remain the authoring tool; the files here are exported from them and never edite
 |------|---------|
 | `migrations/V001__baseline.sql` | Schema built by the TypeORM migrations through `1794241400000` (144 files), plus their `migrations` / `typeorm_metadata` rows, in schema `forge` |
 | `migrations/V002__fk_indexes.sql` | TypeORM migration `FkIndexes1794242000000`: 34 foreign-key indexes |
-| `CHECKSUMS.sha256` | SHA-256 of every `*.sql` under `db/` (`<sha256>  <path relative to db/>`) |
+| `seed/reference/R0x0__*.sql` | Reference seed of plant `HDPE-TRAIN` / organisation `MPC-TRAIN`, extracted from the dev database by `deploy/db/extract-reference-from-dev.sh` (never hand-edited) |
+| `seed/manifest.json` | Source tenant / organisation ids, row count per seeded table, tables per seed file |
+| `seed/generated/U010__users.sql` | **Git-ignored.** The plant's accounts with their dev password hashes; carried to the VM by hand |
+| `CHECKSUMS.sha256` | SHA-256 of every `*.sql` under `db/` except `seed/generated/` (`<sha256>  <path relative to db/>`) |
 
 ## Conventions
 
@@ -36,6 +39,9 @@ DB_CONTAINER=<container> DB_USER=<user> DB_PASSWORD=<password> bash deploy/db/ve
 # Rewrite-rule unit test; bootstrap + migrate end to end (forge-migrate-pg on 127.0.0.1:55434)
 bash deploy/db/tests/test-rewrite-schema.sh
 bash deploy/db/tests/test-migrate.sh
+# Re-extract the seed from dev (read-only) and refresh the checksums; seed end to end (forge-seed-pg, :55435)
+bash deploy/db/extract-reference-from-dev.sh
+bash deploy/db/tests/test-seed.sh
 ```
 
 Verification of V001: `deploy/db/tests/evidence/v001-verify.txt`.
@@ -67,6 +73,7 @@ On the VM (env file with `DB_CONTAINER`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `D
 bash deploy/db/00-create-db-and-roles.sh      # first install; idempotent, ok|skip per step
 bash deploy/db/10-migrate.sh --dry-run        # apply|skip per file
 bash deploy/db/10-migrate.sh                  # before load-and-start.sh
+bash deploy/db/20-seed-reference.sh --with-users   # first install; re-run is a no-op, ends with `seed ok`
 ```
 
 `10-migrate.sh` verifies `CHECKSUMS.sha256`, then applies each pending file in one transaction with its

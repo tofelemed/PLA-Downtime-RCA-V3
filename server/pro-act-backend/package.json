@@ -49,6 +49,7 @@
     "db:seed-demo-mqtt": "ts-node scripts/demo-mqtt/seed-demo-mqtt.ts",
     "db:seed-demo-showcase": "ts-node scripts/demo-showcase/seed-demo-showcase.ts",
     "db:bootstrap-admin": "ts-node scripts/bootstrap-admin.ts",
+    "deploy:extract-reference": "ts-node scripts/deploy/extract-reference.ts",
     "db:seed-marun-train": "ts-node scripts/marun-train/seed-marun-train.ts",
     "db:publish-marun-day": "ts-node scripts/marun-train/publish-production-day.ts",
     "mqtt:sim": "ts-node scripts/mqtt/publish-sim.ts",
