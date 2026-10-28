@@ -53,3 +53,114 @@ POST /api/auth/login   200 (admin@hdpe-train.mpc)
 Old names: the remaining `proact` mentions are intentional (dev tooling, localStorage keys, MQTT topics owned by data engineering, the RLS role `proact_rls_user`, test data). See `ANALYSIS-REPORT.md` §3.2.
 
 **Still open:** the dev `JWT_SECRET` in `server/pro-act-backend/.env` should be rotated by the owner, since `.env` files are not edited by the agent. Signing in again is needed afterwards.
+
+## Phase 3 — Database: baseline, migration export, bootstrap (2026-10-28)
+
+Commits `d448ba40`, `518b86e7`, `583129d9`, `bd856bf6`, `d13d20f2`, `3c9eeecb`, `a59901b4`, `01f100ab`, `7c17fc36`.
+
+| Step | Command | Result |
+|---|---|---|
+| FK indexes migration | `FkIndexes1794242000000` (34 `CREATE INDEX IF NOT EXISTS`); `DB_MIGRATIONS_DIR` selects a staged migrations folder | `npx jest src/database` green (`fk-indexes.spec.ts`, `connection-env.spec.ts`) |
+| V001 export | `bash deploy/db/export-baseline.sh --through 1794241400000` | `staged 144 migrations`, `executed 144 migrations`; `db/migrations/V001__baseline.sql` in schema `forge`, 144 ledger rows |
+| V001 verify | V001 on a scratch PG 15 vs the migrations on another; `deploy/db/verify-schema.sh` | identical: tables 154, columns 2771, constraints 551, indexes 708, policies 144, functions 23, triggers 38 (`deploy/db/tests/evidence/v001-verify.txt`) |
+| rewrite rules | `bash deploy/db/tests/test-rewrite-schema.sh` | `ok 25/25` |
+| export guards | `bash deploy/db/tests/test-export-guards.sh` | `ok 8/8` |
+| V002 export | `bash deploy/db/export-migration.sh --name FkIndexes1794242000000 --version 002 --slug fk_indexes` (logging path) | `applied 1, skipped 0`; `V002__fk_indexes.sql` (34 indexes, no `public`, no transaction control) |
+| bootstrap + apply | `00-create-db-and-roles.sh` → `10-migrate.sh` (ledger `forge.deploy_migrations`, checksums, RLS grants) | `bash deploy/db/tests/test-migrate.sh` → `ok 16/16` (fresh apply, idempotent re-run, tampered file refused, RLS role reads `forge`) |
+| checksums | `bash deploy/db/checksums.sh --check` | `ok` |
+
+## Phase 4 — Reference seed (2026-10-28)
+
+Commits `c46b70f7`, `ee727773`.
+
+| Step | Command | Result |
+|---|---|---|
+| extraction | backend `scripts/deploy/extract/` against tenant `HDPE-TRAIN` of the dev database (read-only) | `db/seed/reference/R010…R060`, `db/seed/manifest.json`, git-ignored `db/seed/generated/U010__users.sql` |
+| unit tests | `npx jest scripts/deploy` | `Tests: 18 passed` (FK order, SQL writer, table plan) |
+| seed | `20-seed-reference.sh [--with-users]` on a scratch PG 15 after 00 → 10 | `bash deploy/db/tests/test-seed.sh` → `ok 11/11` (counts ≥ manifest, idempotent re-run, no dangling state mapping, extra rows tolerated) |
+| connections | `integration_connections` seeded `is_active = false`, `secret_ref` NULL, with their signals (R060) | state and source mappings resolve; no secret in the repository |
+
+## Phase 5 — Users (2026-10-28)
+
+Commits `ab0ebb2f`, `3d39fb5d`.
+
+| Step | Command | Result |
+|---|---|---|
+| CLI unit tests | `npx jest scripts/deploy/seed-users` | 7/7 (CSV parsing, `scope_role` validation, password generator) |
+| CLI end to end | `bash deploy/db/tests/test-seed-users.sh` | `ok 12/12` (created 2 then skipped 2, scopes, no password on stdout; existing file, bad `scope_role`, `DB_NAME=proact` and an in-repo path refused) |
+| VM wrapper | `deploy/db/30-seed-users.sh --csv <file> --out-dir $FORGE_HOME/private` (the CLI in the backend image on `PG_NETWORK`) | first run in the Phase 8 rehearsal |
+
+## Phase 6 — Images and compose (2026-10-28)
+
+Commit `466646f7`.
+
+| Step | Command | Result |
+|---|---|---|
+| images | backend (Debian bookworm-slim) and frontend (`nginx-unprivileged`, uid 101, port 8080) with `APP_VERSION`, `GIT_COMMIT`, OCI labels | `bash deploy/tests/test-images.sh` → `ok 7/7` |
+| nginx | security headers; `/piwebapi` answers 404 unless `PI_SERVER` is set | covered by `test-images.sh` |
+| compose | `deploy/docker-compose.forge.yml` (project `traverse-forge`: backend, worker, frontend; volumes `forge-uploads`, `forge-exports`), `deploy/docker-compose.local.yml` (rehearsal postgres) | `docker compose config` renders with `deploy/tests/fixtures/forge.env` |
+| variables | `deploy/BUILD-VARS.md` | build arguments, runtime variables, compose commands |
+
+## Phase 7 — Build, bundle and VM scripts (2026-10-28)
+
+Commits `095e3d1a`, `98884575`.
+
+| Step | Command | Result |
+|---|---|---|
+| build + bundle + install | `bash deploy/tests/test-bundle.sh` (build `t1`, `package-bundle.sh`, `install.sh` into a temp `FORGE_HOME`, refusals of `load-and-start.sh`, `bash -n` on every script) | `ok 8/8` |
+| VM procedure | `deploy/vm/VM-STEPS.template.md` (first install, update, rollback; expected last line per step) | exercised end to end in Phase 8 |
+| backups | `backup-forge.sh`: `pg_dump -Fc -n forge` + uploads archive (frontend image's tar), mode 600 in a mode 700 folder, newest `BACKUP_KEEP` kept | exercised in Phase 8 |
+
+## Phase 8 — Rehearsal on a scratch PostgreSQL 15 (2026-10-28)
+
+`REHEARSAL_PASSWORD=… bash deploy/tests/rehearsal.sh --keep` (log: `deploy/tests/evidence/rehearsal-2026-10-28.log`;
+no secret in it, checked against `deploy/.env.local` and the dev password). It runs the operator's scripts in the
+order of `deploy/vm/VM-STEPS.template.md` (the database scripts from the installed release, as on the VM) against
+the bundled `forge-rehearsal-pg` (`postgres:15-alpine`, 127.0.0.1:55436, network `forge-rehearsal-pgnet`), with a
+temp `FORGE_HOME`, UI port 8096 and `FORGE_COMPOSE_EXTRA="-f deploy/docker-compose.local.yml"`.
+
+| Step | Command | Result (last line) |
+|---|---|---|
+| env | generated `deploy/.env.local` (`openssl rand`, git-ignored, mode 600) | `wrote deploy/.env.local (values not shown)` |
+| build | `build-images.sh --version rehearsal --allow-dirty` | `built traverse-forge-frontend:rehearsal` |
+| bundle | `package-bundle.sh --version rehearsal --out <tmp>` | `bundle …/traverse-forge-rehearsal.tar.gz (148M)` |
+| no local images | `docker rmi traverse-forge-*:rehearsal` (the VM has none) | removed; `load-and-start.sh` loads them from `images.tar` |
+| A.2 install | `install.sh <bundle>` | `installed rehearsal at <FORGE_HOME>/releases/rehearsal` |
+| A.3 env | `.env.local` copied to `$FORGE_HOME/.env` (the real flow edits the template) | copied |
+| database up | `vm_compose rehearsal up -d postgres`, `pg_isready -h 127.0.0.1` | `postgres ready: forge-rehearsal-pg (127.0.0.1:55436)` |
+| A.5 bootstrap | `$R/deploy/db/00-create-db-and-roles.sh --env $FORGE_HOME/.env` | `skip: pg_stat_statements not preloaded` |
+| A.6 migrate | `$R/deploy/db/10-migrate.sh` | `migrations: applied 2, skipped 0` |
+| A.7 seed | `$R/deploy/db/20-seed-reference.sh --with-users` | `seed ok` |
+| A.8 start | `$R/deploy/vm/load-and-start.sh rehearsal` (docker load, compose up, `verify.sh`) | `verify ok rehearsal` |
+| health | `GET :8096/api/health/ready`, `GET :8096/api/health` | `health: ready 200, version rehearsal (through :8096)` |
+| sign-in | `POST :8096/api/auth/login` as admin and reza (password from `REHEARSAL_PASSWORD`, sent on stdin) | HTTP 200 each, tenant `433c1a69-…` |
+| policy | `GET /api/v2/loss-accounting` + `GET /api/v2/units/<accountingUnitId>` | `loss accounting v3: grain day, lossBasis declared, unit HDPE Extruder 1` |
+| events | `GET /api/v2/production-events?limit=1` as reza | `items []` |
+| users | `$R/deploy/db/30-seed-users.sh --csv deploy/seed-users.csv.example --out-dir $FORGE_HOME/private` | `created 2, skipped 0`; passwords file in `$FORGE_HOME/private` |
+| A.10 backup | `$R/deploy/vm/backup-forge.sh` | `…/backups/traverse-forge-uploads-<utc>.tar.gz` |
+| A.10 restore | `$R/deploy/vm/restore-test.sh <dump>` | `restore ok: 155 tables (units 2 rows, users 16 rows) in traverse_forge_restore_…, dropped` |
+| C rollback | `$R/deploy/vm/rollback.sh` | refused, exit 1: `no previous version recorded …; nothing to roll back to` |
+| total | | `rehearsal ok (391s)` |
+
+Fix found by the rehearsal (first real run of `30-seed-users.sh`): the image's entrypoint started the API with the
+CLI arguments appended, so the container never exited; the script now runs `--entrypoint node`, and passes the CSV
+and output folder to `docker run -v` in host form (`cygpath -w` under Git Bash, as `backup-forge.sh` does).
+
+The screen check by role (admin, reza, omid, sara, leila, farid on `http://localhost:8096`) is recorded separately.
+Teardown: `bash deploy/tests/rehearsal.sh --teardown <FORGE_HOME>` (compose `down -v`, the `:rehearsal` images,
+the temp folder).
+
+Full checks (2026-10-28, after the rehearsal):
+
+```
+npm run typecheck (root)                          no errors
+npx tsc --noEmit -p tsconfig.json (backend)       no errors
+npx jest src/database scripts/deploy (backend)    Test Suites: 10 passed, 10 total; Tests: 45 passed, 45 total
+bash deploy/db/tests/test-rewrite-schema.sh       ok 25/25
+bash deploy/db/tests/test-export-guards.sh        ok 8/8
+bash deploy/db/tests/test-migrate.sh              ok 16/16
+bash deploy/db/tests/test-seed.sh                 ok 11/11
+bash deploy/db/tests/test-seed-users.sh           ok 12/12
+bash deploy/tests/test-images.sh                  ok 7/7
+bash deploy/tests/test-bundle.sh                  ok 8/8
+```

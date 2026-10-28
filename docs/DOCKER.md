@@ -255,6 +255,10 @@ to narrow a run.
 
 ## Production notes
 
+Production install: see `deploy/vm/VM-STEPS.template.md` (offline bundle, Traverse Forge compose
+`deploy/docker-compose.forge.yml`, database scripts under `deploy/db/`, variables in `deploy/BUILD-VARS.md`).
+The compose files in this guide are for development only.
+
 * Put TLS termination (a reverse proxy or load balancer) in front of the `frontend` container and drop the
   `BACKEND_PORT` mapping if the API should not be reachable directly.
 * The bundled `kafka` and `mqtt` services are development conveniences: single broker, no authentication, anonymous
