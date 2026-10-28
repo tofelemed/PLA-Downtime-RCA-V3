@@ -13,6 +13,8 @@ export interface ErrorFacts {
   messageList: readonly string[];
   /** no response at all (fetch `TypeError`) */
   network: boolean;
+  /** the envelope's `details` (e.g. the pending periods of DAY_NOT_READY) */
+  details: Readonly<Record<string, unknown>> | null;
 }
 
 const EMPTY: ErrorFacts = {
@@ -23,6 +25,7 @@ const EMPTY: ErrorFacts = {
   fieldErrors: [],
   messageList: [],
   network: false,
+  details: null,
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
@@ -49,6 +52,7 @@ function v1Facts(error: ApiError): ErrorFacts {
     correlationId: stringOrNull(body.correlationId),
     fieldErrors: fieldErrorsOf(body.fieldErrors),
     messageList: list,
+    details: isRecord(body.details) ? body.details : null,
   };
 }
 
@@ -60,6 +64,7 @@ function v2Facts(error: V2ApiError): ErrorFacts {
     serverMessage: stringOrNull(error.message),
     correlationId: error.correlationId,
     fieldErrors: error.fieldErrors,
+    details: error.details,
   };
 }
 

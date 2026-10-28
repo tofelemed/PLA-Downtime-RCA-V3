@@ -1,4 +1,5 @@
 import type { IngestionJobView, JobAction, JobState } from '@/api/v2/types/integrations';
+import { secondsSince } from '../mqtt/model/mqtt-health';
 
 export type Tone = 'ok' | 'busy' | 'idle' | 'warning' | 'error';
 
@@ -53,8 +54,6 @@ const FAILURE_LABELS: Record<string, string> = {
   response_too_large: 'Response too large',
 };
 
-const secondsSince = (iso: string | null, now: number): number | null => (iso ? Math.max(0, Math.round((now - Date.parse(iso)) / 1000)) : null);
-
 /** Badges of a job: failure codes, retries, a lost lease or missing heartbeat while it should run. */
 export function jobHealth(job: IngestionJobView, now: number): JobHealth {
   const labels = Object.keys(job.health).filter((code) => code in FAILURE_LABELS).map((code) => FAILURE_LABELS[code]);
@@ -68,7 +67,7 @@ export function jobHealth(job: IngestionJobView, now: number): JobHealth {
   return { tone: 'idle', labels: [JOB_STATE_DISPLAY[job.state].label] };
 }
 
-/** Age of the last heartbeat and of the last committed observation, in seconds (null = never). */
+/** Signed age of the last heartbeat and of the last committed observation, in seconds (null = never; negative = ahead of `now`). */
 export function jobAges(job: IngestionJobView, now: number): { heartbeat: number | null; observation: number | null } {
   return { heartbeat: secondsSince(job.heartbeatAt, now), observation: secondsSince(job.lastObservationAt, now) };
 }

@@ -33,3 +33,9 @@ export const CLOSE_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   },
   PERIOD_APPROVED: { title: 'The period is already approved', text: 'A late value reaches an approved period through a change proposal.' },
 };
+
+/** DAY_NOT_READY whose pending periods are approved but computed nothing (`reason: NO_COMPUTABLE_SLICE`). */
+export const DAY_NO_COMPUTABLE_FIGURES: ErrorMessage = {
+  title: 'A period of this day has no computable figures',
+  text: 'Revise and recompute it before certifying.',
+};

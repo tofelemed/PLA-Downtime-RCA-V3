@@ -47,6 +47,18 @@ describe('describeError', () => {
     expect(describeError(v2(422, 'INVALID_POLICY', 'x'), PLANT_WIDE_POLICY_MESSAGES).title).toBe(ERROR_MESSAGES.INVALID_POLICY.title);
   });
 
+  it('DAY_NOT_READY: a period without computable figures asks for a recompute; unapproved shifts keep the approval text', () => {
+    const dayRefusal = (pending: Array<Record<string, unknown>>) =>
+      new V2ApiError(422, { code: 'DAY_NOT_READY', message: 'x', correlationId: CORR, retryable: false, details: { pending } });
+    const empty = describeError(dayRefusal([{ periodId: 'p1', shiftName: 'A', workflow: 'approved', reason: 'NO_COMPUTABLE_SLICE' }]));
+    expect(empty.title).toBe('A period of this day has no computable figures');
+    expect(empty.message).toBe('Revise and recompute it before certifying.');
+    expectNothingInternal(`${empty.title} ${empty.message}`);
+    const unapproved = describeError(dayRefusal([{ periodId: 'p1', shiftName: 'A', workflow: 'in_review' }]));
+    expect(unapproved.title).toBe('The day is not ready to certify');
+    expect(unapproved.message).toBe('Every shift of the day has to be approved first.');
+  });
+
   it('a start or end in the future asks for a time up to now (DT-09)', () => {
     const friendly = describeError(
       v2(422, 'IN_FUTURE', 'endTime must not be in the future', [{ field: 'endTime', message: 'endTime must not be in the future' }]),

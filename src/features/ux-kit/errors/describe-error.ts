@@ -1,6 +1,7 @@
 import { factsOf, type ErrorFacts } from './error-facts';
 import { ERROR_MESSAGES, NETWORK_MESSAGE, statusMessage, type ErrorMessage } from './error-messages';
 import { fieldMessage, isHumanMessage, legacyFieldMessage, sentence, type FieldMessage } from './field-messages';
+import { variantMessage } from './message-variants';
 import type { FieldVocabulary } from './field-vocabulary';
 
 export { isHumanMessage } from './field-messages';
@@ -83,7 +84,7 @@ export function describeError(
 ): FriendlyError {
   const facts = factsOf(error);
   if (facts.network) return { title: NETWORK_MESSAGE.title, message: NETWORK_MESSAGE.text, fieldMessages: [], reference: null };
-  const specific = facts.code ? context?.[facts.code] : undefined;
+  const specific = (facts.code ? context?.[facts.code] : undefined) ?? variantMessage(facts);
   const fieldMessages = [
     ...facts.fieldErrors.map((entry) => fieldMessage(entry.field, entry.message, entry.constraint, fields)),
     ...facts.messageList.map((text) => legacyFieldMessage(text, fields)),

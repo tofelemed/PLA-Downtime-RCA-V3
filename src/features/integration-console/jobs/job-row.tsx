@@ -17,7 +17,12 @@ export interface JobRowProps {
   now: number;
 }
 
-const ago = (seconds: number | null) => (seconds === null ? 'never' : <><DurationText seconds={seconds} variant="compact" /> ago</>);
+/** "x ago", or "x ahead of the server clock" for a source clock running ahead (never a misleading "0 s ago"). */
+function ago(seconds: number | null) {
+  if (seconds === null) return 'never';
+  if (seconds < 0) return <><DurationText seconds={-seconds} variant="compact" /> ahead of the server clock</>;
+  return <><DurationText seconds={seconds} variant="compact" /> ago</>;
+}
 
 function JobFacts({ job, now }: { job: IngestionJobView; now: number }) {
   const { number } = useNumberFormat();

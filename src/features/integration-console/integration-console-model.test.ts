@@ -5,7 +5,7 @@ import { connectionHealth, diagnosticRows } from './model/diagnostics';
 import { sampleQuery, scopeTypeOfWebId } from './model/discovery';
 import { bindTargetOf, canReplayAfterDryRun, exceptionFacts, exceptionSummary, replayCounts, resolutionReducer } from './model/exception-flow';
 import { jobPurpose, presetJobBody } from './model/job-presets';
-import { allowedActions, jobHealth } from './model/job-states';
+import { allowedActions, jobAges, jobHealth } from './model/job-states';
 import { changedRules, patchRule, previewBody } from './model/mapping-draft';
 import { childPattern } from './model/mapping-form';
 import { refusalOf } from './model/refusal';
@@ -49,6 +49,11 @@ describe('job state machine display (ING02)', () => {
     expect(jobHealth(job({ leaseExpiry: '2026-10-10T07:00:00Z' }), NOW).tone).toBe('warning');
     expect(jobHealth(job({ health: { accepted: 12 } }), NOW)).toEqual({ tone: 'ok', labels: ['Healthy'] });
     expect(jobHealth(job({ state: 'paused' }), NOW)).toEqual({ tone: 'idle', labels: ['Paused'] });
+  });
+
+  it('ages are signed: a source clock ahead of the server gives a negative age, not 0', () => {
+    expect(jobAges(job({ lastObservationAt: '2026-10-10T08:05:00Z' }), NOW)).toEqual({ heartbeat: 30, observation: -300 });
+    expect(jobAges(job({ heartbeatAt: null, lastObservationAt: '2026-10-10T07:58:00Z' }), NOW)).toEqual({ heartbeat: null, observation: 120 });
   });
 
   it('presets: backfill days are bounded to 90, purpose is recorded in the scope, every kind starts', () => {

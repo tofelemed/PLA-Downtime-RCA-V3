@@ -105,6 +105,19 @@ describe('integration console flows (plan 3.7)', () => {
     expect(post?.headers.get('Idempotency-Key')).toBeTruthy();
   });
 
+  it('a last observation ahead of the server clock says so instead of "0 s ago"', () => {
+    reply = () => json(200, []);
+    const job: IngestionJobView = {
+      id: 'j2', connectionId: 'c1', scope: { mode: 'window' }, state: 'running', leaseOwner: null, leaseExpiry: null, heartbeatAt: '2026-10-10T07:59:00Z',
+      committedCursor: null, lastObservationAt: '2026-10-10T08:05:00Z', lastSuccessAt: null, retryCount: 0, lastError: null,
+      cadence: null, nextRunAt: null, health: {}, rowVersion: 1, createdAt: null, updatedAt: null,
+    };
+    wrap(<JobRow job={job} timezone="UTC" now={Date.parse('2026-10-10T08:00:00Z')} />);
+    const observation = screen.getByTestId('job-last-observation');
+    expect(observation).toHaveTextContent('ahead of the server clock');
+    expect(observation).not.toHaveTextContent('ago');
+  });
+
   it('quarantine: dry run counts first, then replay-and-resolve (202) shows the run', async () => {
     reply = (call) => {
       if (call.url.pathname.endsWith('/replays')) return json(202, { jobId: 'dry-1', statusUrl: '/api/v2/replay-runs/dry-1' });
