@@ -13,6 +13,8 @@ export const REVIEW_ITEM_KINDS = [
   'declared_window_mismatch',
   /** declared mode: another production loss event of the unit overlaps this window */
   'duplicate_declared_loss',
+  /** the source now reports a different reason code than the event's (the code stays; a person may dismiss) */
+  'source_reason_changed',
 ] as const;
 export type ReviewItemKind = (typeof REVIEW_ITEM_KINDS)[number];
 
@@ -21,6 +23,12 @@ export const DECLARED_REVIEW_KINDS: readonly ReviewItemKind[] = [
   'declared_identity_mismatch',
   'declared_window_mismatch',
   'duplicate_declared_loss',
+];
+
+/** Kinds a person may dismiss: the declared kinds and a source re-coding (which allows nothing else). */
+export const DISMISSABLE_REVIEW_KINDS: readonly ReviewItemKind[] = [
+  ...DECLARED_REVIEW_KINDS,
+  'source_reason_changed',
 ];
 
 export const REVIEW_ITEM_STATES = [

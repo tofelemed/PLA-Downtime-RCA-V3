@@ -21,7 +21,7 @@ const ENV: EventHubEnv = {
   unitName: () => 'Unit 1', reasonName: () => '—',
 };
 const EVENT = { id: 'e1', rowVersion: 1, startTime: '2026-10-09T06:00:00.000Z', endTime: null };
-const ITEM: EventReviewItemView = { id: 'ri1', eventId: 'e1', kind: 'source_conflict', field: 'reasonCodeId', state: 'open', resolvedBy: null, resolvedAt: null, createdAt: '2026-10-09T07:00:00.000Z' };
+const ITEM: EventReviewItemView = { id: 'ri1', eventId: 'e1', kind: 'source_vs_override_conflict', field: 'reasonCodeId', state: 'open', resolvedBy: null, resolvedAt: null, createdAt: '2026-10-09T07:00:00.000Z' };
 const STOP = {
   id: 'e1', unitId: 'u1', startTime: '2026-10-09T06:00:00.000Z', endTime: null, isOpen: true, durationSeconds: null, elapsedSeconds: 600, asOf: '2026-10-09T06:10:00.000Z',
   classification: { physicalType: 'downtime' }, states: { physical: 'open', coding: 'uncoded', rca: 'none' }, reasonCodeId: null, rowVersion: 1,

@@ -187,12 +187,22 @@ export interface EventCodingView {
 }
 
 export type ReviewItemState = 'open' | 'kept_override' | 'accepted_source' | 'dismissed';
+/** Backend `REVIEW_ITEM_KINDS` (event_review_item_kind). */
+export type ReviewItemKind =
+  | 'source_vs_override_conflict'
+  | 'late_correction'
+  | 'retraction'
+  | 'pending_source_confirmation'
+  | 'declared_identity_mismatch'
+  | 'declared_window_mismatch'
+  | 'duplicate_declared_loss'
+  | 'source_reason_changed';
 
 /** A decision owed on an event (backend `EventReviewItemView`, spec §5.3). */
 export interface EventReviewItemView {
   id: string;
   eventId: string;
-  kind: string;
+  kind: ReviewItemKind;
   field: string | null;
   state: ReviewItemState;
   resolvedBy: string | null;

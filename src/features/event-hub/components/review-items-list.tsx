@@ -3,7 +3,7 @@ import type { EventReviewItemView } from '@/api/v2/types/events';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCapabilities } from '@/features/auth/use-capabilities';
-import { DECLARED_REVIEW_KIND_LABELS, humanize, labelOf, REVIEW_ITEM_STATE_LABELS } from '@/features/ux-kit/labels';
+import { DISMISS_ONLY_REVIEW_KIND_LABELS, humanize, labelOf, REVIEW_ITEM_STATE_LABELS } from '@/features/ux-kit/labels';
 import { factLabel } from '../model/fact-display';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { CommandError } from './command-error';
@@ -13,7 +13,7 @@ export interface ReviewItemsListProps {
   items: readonly EventReviewItemView[];
 }
 
-/** §5.3 decisions owed on the event: keep the user's override or accept the source value; declared-mode checks are dismissed. */
+/** §5.3 decisions owed on the event: keep the user's override or accept the source value; declared-mode checks and source re-codings are dismissed. */
 export function ReviewItemsList({ event, items }: ReviewItemsListProps) {
   const { canWriteEvents } = useCapabilities();
   const { dateTime } = usePlantFormat();
@@ -27,7 +27,7 @@ export function ReviewItemsList({ event, items }: ReviewItemsListProps) {
         <div key={item.id} className="rounded border p-2 text-sm">
           <div className="flex items-center justify-between">
             <span>
-              {DECLARED_REVIEW_KIND_LABELS[item.kind] ?? humanize(item.kind)}
+              {DISMISS_ONLY_REVIEW_KIND_LABELS[item.kind] ?? humanize(item.kind)}
               {item.field && <span className="ml-1 text-xs text-muted-foreground">({factLabel(item.field)})</span>}
             </span>
             <Badge variant={item.state === 'open' ? 'secondary' : 'outline'}>{labelOf(REVIEW_ITEM_STATE_LABELS, item.state)}</Badge>
@@ -37,7 +37,7 @@ export function ReviewItemsList({ event, items }: ReviewItemsListProps) {
           </div>
           {item.state === 'open' && canWriteEvents && (
             <div className="mt-2 flex gap-2">
-              {item.kind in DECLARED_REVIEW_KIND_LABELS ? (
+              {item.kind in DISMISS_ONLY_REVIEW_KIND_LABELS ? (
                 <Button size="sm" variant="outline" disabled={resolve.isPending} onClick={() => decide(item, 'dismiss')}>
                   Dismiss
                 </Button>

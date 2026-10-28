@@ -11,7 +11,8 @@ export class ResolveReviewItemDto {
     enum: REVIEW_DECISIONS,
     description:
       'keep_override: the user value stays; accept_source: the latest source value replaces it; ' +
-      'dismiss: only for declared_identity_mismatch, declared_window_mismatch and duplicate_declared_loss items (state dismissed)',
+      'dismiss: only for declared_identity_mismatch, declared_window_mismatch, duplicate_declared_loss and ' +
+      'source_reason_changed items (state dismissed); source_reason_changed accepts dismiss only',
   })
   @IsIn(REVIEW_DECISIONS)
   decision!: ReviewDecision;

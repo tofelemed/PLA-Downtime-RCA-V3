@@ -30,6 +30,7 @@ import {
 import { EventReviewItem } from './event-review-item.entity';
 import { ActorKind, EventRevision } from './event-revision.entity';
 import { RevisionActor } from './revision-actor';
+import { reviewSourceCoding, SourceCoding } from './source-coding-review';
 import {
   confirmedOverrides,
   resolveConfirmed,
@@ -50,6 +51,8 @@ export interface SourceProvenance {
   /** the source's own version marker, e.g. the PI frame end time */
   sourceRevision?: string;
   reason?: string;
+  /** the reason the delivery coded the event as; never written to the event (codes are the user's, F2) */
+  sourceCoding?: SourceCoding;
 }
 
 export type SourceOutcome = 'duplicate' | 'revised';
@@ -72,7 +75,8 @@ const DATE_FIELDS: ReadonlySet<string> = new Set(['startTime', 'endTime']);
  * ING01/ING06: identical content is a duplicate delivery (counted, no revision). Otherwise the changed
  * source fields without a user override are written, overridden ones open a review item (unless the
  * source now confirms the user's value: the override is dropped and its open items resolved, plan 1.4),
- * and a source revision is recorded. Coding, RCA and workflow state are never reset (B5/I1).
+ * and a source revision is recorded. Coding, RCA and workflow state are never reset (B5/I1); a different
+ * reason the source coded opens a review item instead (F2).
  */
 export async function applySourceIn(
   manager: EntityManager,
@@ -115,6 +119,7 @@ export async function applySourceIn(
   });
   await openConflicts(manager, updated, stored, plan.conflicts);
   await resolveConfirmed(manager, eventId, plan.confirmed);
+  await reviewSourceCoding(manager, updated, stored, provenance.sourceCoding);
   if (existing.physicalState === 'superseded') {
     await openLateCorrection(manager, updated, stored);
   }

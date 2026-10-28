@@ -10,7 +10,7 @@ import { activeCodingRulesIn } from '../../rules/active-coding-rules';
 import { ProductionEvent } from '../production-event.entity';
 import { EventChangeMessage } from './event-change.notifier';
 import {
-  DECLARED_REVIEW_KINDS,
+  DISMISSABLE_REVIEW_KINDS,
   EventReviewItem,
   ReviewItemState,
 } from './event-review-item.entity';
@@ -70,17 +70,26 @@ const STATE_OF_DECISION: Record<ReviewDecision, ReviewItemState> = {
   dismiss: 'dismissed',
 };
 
-/** `dismiss` is for the declared-figures kinds only; the other kinds keep keep_override / accept_source. */
+/**
+ * `dismiss` is for the declared-figures kinds and `source_reason_changed` only; a source re-coding is
+ * dismiss-only (the reason code is the user's layer: there is no source value to accept or override to
+ * keep). The other kinds keep keep_override / accept_source.
+ */
 function assertDecisionAllowed(
   item: EventReviewItem,
   decision: ReviewDecision,
 ): void {
-  if (decision !== 'dismiss' || DECLARED_REVIEW_KINDS.includes(item.kind)) {
-    return;
-  }
+  const allowed =
+    item.kind === 'source_reason_changed'
+      ? decision === 'dismiss'
+      : decision !== 'dismiss' || DISMISSABLE_REVIEW_KINDS.includes(item.kind);
+  if (allowed) return;
   throw new UnprocessableEntityException({
     code: 'INVALID_DECISION',
-    message: 'Only declared-figures items can be dismissed',
+    message:
+      decision === 'dismiss'
+        ? 'Only declared-figures and source re-coding items can be dismissed'
+        : 'A source re-coding item can only be dismissed',
   });
 }
 

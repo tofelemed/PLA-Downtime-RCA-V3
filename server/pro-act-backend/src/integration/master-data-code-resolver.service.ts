@@ -8,11 +8,9 @@ import {
 import { CodeEntry, matchCode } from '../code-library/code-matching';
 import { ImpactCode } from '../impact-code/impact-code.entity';
 import { OEECode } from '../oee-code/oee-code.entity';
-import {
-  EventFacts,
-  FactValue,
-} from '../production-event/revisions/event-facts';
+import { EventFacts } from '../production-event/revisions/event-facts';
 import { ReasonCode } from '../reason-code/reason-code.entity';
+import { codeTokenOf } from './source-coding';
 
 interface TenantCodes {
   reasonCodeId: CodeEntry[];
@@ -72,11 +70,11 @@ export class MasterDataCodeResolverService {
     at: Date,
   ): Promise<CodeResolution> {
     const resolution: CodeResolution = { ids: {}, diagnostics: [] };
-    const present = CODE_FACTS.filter(([fact]) => nameOf(facts[fact]));
+    const present = CODE_FACTS.filter(([fact]) => codeTokenOf(facts[fact]));
     if (present.length === 0) return resolution;
     const codes = await this.codesOf(tenantId);
     for (const [fact, field] of present) {
-      const value = nameOf(facts[fact]) ?? '';
+      const value = codeTokenOf(facts[fact]) ?? '';
       const match = matchCode(codes[field], value, at);
       if (match.status === 'resolved') {
         resolution.ids[field] = match.id;
@@ -139,15 +137,4 @@ async function loadEntries<T extends LibraryRow>(
     effectiveFrom: row.effectiveFrom ?? null,
     effectiveTo: row.effectiveTo ?? (row.isActive ? null : row.updatedAt),
   }));
-}
-
-/** Text of a delivered code value: a string, or the Name of a digital state. */
-function nameOf(value: FactValue | undefined): string | null {
-  if (typeof value === 'string') return value.trim() || null;
-  if (typeof value === 'number') return String(value);
-  if (value && !Array.isArray(value) && typeof value === 'object') {
-    const name = (value as Record<string, unknown>).name;
-    return typeof name === 'string' && name.trim() ? name.trim() : null;
-  }
-  return null;
 }

@@ -25,6 +25,7 @@ describe('PiFrameIngestService', () => {
   let create: jest.Mock;
   let applySourceRevision: jest.Mock;
   let activeRules: jest.Mock;
+  let resolveFacts: jest.Mock;
   let placement: ResolvedMapping;
   let service: PiFrameIngestService;
 
@@ -33,6 +34,7 @@ describe('PiFrameIngestService', () => {
     create = jest.fn().mockResolvedValue({});
     applySourceRevision = jest.fn();
     activeRules = jest.fn().mockResolvedValue([]);
+    resolveFacts = jest.fn().mockResolvedValue({ ids: {}, diagnostics: [] });
     placement = {
       status: 'mapped',
       tier: 'af_binding',
@@ -53,9 +55,7 @@ describe('PiFrameIngestService', () => {
       stub({ createQueryBuilder: () => planQuery }),
       stub({ create }),
       stub({ applySourceRevision }),
-      stub({
-        resolveFacts: jest.fn().mockResolvedValue({ ids: {}, diagnostics: [] }),
-      }),
+      stub({ resolveFacts }),
       stub({ defaultsFor: jest.fn().mockResolvedValue({}) }),
       stub({ activeRules }),
     );
@@ -97,6 +97,31 @@ describe('PiFrameIngestService', () => {
     expect(provenance).toEqual({
       actorKind: 'connector',
       sourceRevision: '2026-10-08T07:00:00.000Z',
+      sourceCoding: { reasonCodeId: null, reasonToken: null },
+    });
+  });
+
+  it('hands the resolved reason to the revision beside the facts, never inside them (F2)', async () => {
+    findOne.mockResolvedValue(existing);
+    applySourceRevision.mockResolvedValue('revised');
+    resolveFacts.mockResolvedValue({
+      ids: { reasonCodeId: 'code-2' },
+      diagnostics: [],
+    });
+
+    await service.ingest(context(), FRAME, {
+      ReasonCode: { Name: 'Bearing', Value: 3, IsSystem: false },
+    });
+
+    const [, facts, provenance] = applySourceRevision.mock.calls[0] as [
+      string,
+      Record<string, unknown>,
+      Record<string, unknown>,
+    ];
+    expect(facts).not.toHaveProperty('reasonCodeId');
+    expect(provenance.sourceCoding).toEqual({
+      reasonCodeId: 'code-2',
+      reasonToken: 'Bearing',
     });
   });
 

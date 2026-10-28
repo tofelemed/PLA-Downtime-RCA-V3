@@ -109,6 +109,12 @@ export const DECLARED_REVIEW_KIND_LABELS: Readonly<Record<string, string>> = {
   duplicate_declared_loss: 'Another production loss event covers this window',
 };
 
+/** Review items a person can only dismiss: the declared-mode checks and a source re-coding of a coded stop. */
+export const DISMISS_ONLY_REVIEW_KIND_LABELS: Readonly<Record<string, string>> = {
+  ...DECLARED_REVIEW_KIND_LABELS,
+  source_reason_changed: 'Source now reports a different reason',
+};
+
 export const BULK_JOB_STATE_LABELS: Readonly<Record<BulkJobState, string>> = {
   queued: 'Queued',
   running: 'Running',

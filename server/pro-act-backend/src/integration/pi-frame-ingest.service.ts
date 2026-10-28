@@ -37,6 +37,7 @@ import { MasterDataCodeResolverService } from './master-data-code-resolver.servi
 import { NO_TEMPLATE_KEY } from './pi-event-mapper';
 import { normalizeFrame } from './pi/pi-frame-shape';
 import { piEndTime, piEndTimeIso } from './pi/pi-time';
+import { sourceCodingOf } from './source-coding';
 
 /** The fields of a PI event frame the bridge reads. */
 export interface PiEventFrame {
@@ -198,7 +199,10 @@ export class PiFrameIngestService {
     };
   }
 
-  /** Known event → source revision (codes are taken on create only, plan 1.2); new → create. */
+  /**
+   * Known event → source revision (codes are taken on create only, plan 1.2; a different resolved reason
+   * opens a review item, F2); new → create.
+   */
   private async store(
     context: FrameContext,
     dto: Record<string, unknown>,
@@ -216,6 +220,7 @@ export class PiFrameIngestService {
         {
           actorKind: 'connector',
           sourceRevision: version.sourceRevision ?? version.end?.toISOString(),
+          sourceCoding: sourceCodingOf(dto, facts.reason),
         },
         () => this.rulesFor(context),
       );

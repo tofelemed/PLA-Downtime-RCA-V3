@@ -93,6 +93,8 @@ To report a stop while it is still running:
 | `description` | no | Free text |
 | `status`, `plant`, `event_type` | no | Kept with the stop |
 
+A `reason_code` sent in a later revision never re-codes a stop that already has a reason: the stop keeps its code and, when the new code differs, the Event Hub shows a review item "Source now reports a different reason" that an operator can dismiss.
+
 ## What happens with a bad or unknown message
 
 Every such message goes to Connectivity → Quarantine, with the reason and the field named:
