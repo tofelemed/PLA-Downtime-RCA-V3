@@ -19,6 +19,9 @@ stdin -> stdout, standard library only. Rules (TF-PREP-001 task 2):
      public (bound to the dev login) is dropped with its comment block: 00-create-db-and-roles.sh sets the
      default privileges of the deploy login in forge before V001 runs.
   8. typeorm_metadata rows: the schema literal 'public' -> 'forge' (inside those INSERTs only).
+Guard: if a collected name is an extension member (uuid-ossp, btree_gist, pg_stat_statements objects) or
+an extension named in a CREATE EXTENSION line, the rewrite would move an extension object to forge, so it
+exits non-zero with a message instead.
 """
 import re
 import sys
@@ -36,6 +39,15 @@ DEFAULT_ACL = re.compile(
     r'ALTER DEFAULT PRIVILEGES FOR ROLE \S+ IN SCHEMA public [^\n]*\n(?:\n\n)?'
 )
 METADATA_ROW = re.compile(r'^INSERT INTO forge\.typeorm_metadata VALUES .*$', re.MULTILINE)
+EXTENSION_LINE = re.compile(r'^CREATE EXTENSION (?:IF NOT EXISTS )?("(?:[^"]|"")+"|\S+)', re.MULTILINE)
+EXTENSION_MEMBERS = frozenset({
+    'uuid_generate_v1', 'uuid_generate_v1mc', 'uuid_generate_v3', 'uuid_generate_v4', 'uuid_generate_v5',
+    'uuid_nil', 'uuid_ns_dns', 'uuid_ns_oid', 'uuid_ns_url', 'uuid_ns_x500',
+    'pg_stat_statements', 'pg_stat_statements_info', 'pg_stat_statements_reset',
+    'cash_dist', 'date_dist', 'float4_dist', 'float8_dist', 'int2_dist', 'int4_dist', 'int8_dist',
+    'interval_dist', 'oid_dist', 'time_dist', 'ts_dist', 'tstz_dist',
+})
+EXTENSION_MEMBER_PREFIXES = ('gbt_', 'gbtreekey')
 FUNCTION_SEARCH_PATH = re.compile(r"^(\s+SET search_path TO )(.*)$", re.MULTILINE)
 
 EMPTY_SEARCH_PATH = "SELECT pg_catalog.set_config('search_path', '', false);"
@@ -54,6 +66,17 @@ def collect_names(sql: str) -> set:
         names.update(match.groups())
     names.update(m.group(1) for m in CONSTRAINT_INDEX.finditer(sql))
     return names
+
+
+def assert_no_extension_members(sql: str, names: set) -> None:
+    extensions = {m.group(1).strip('"') for m in EXTENSION_LINE.finditer(sql)}
+    clashes = sorted(
+        name for name in names
+        if name.strip('"') in EXTENSION_MEMBERS | extensions
+        or name.strip('"').startswith(EXTENSION_MEMBER_PREFIXES)
+    )
+    if clashes:
+        sys.exit(f"rewrite-schema: refusing to move extension objects to forge: {', '.join(clashes)}")
 
 
 def requalify(sql: str, names: set) -> str:
@@ -87,6 +110,7 @@ def rewrite_metadata_rows(sql: str) -> str:
 
 
 def rewrite(sql: str) -> str:
+    assert_no_extension_members(sql, collect_names(sql))
     sql = drop_lines(rewrite_grants(sql))
     sql = requalify(sql, collect_names(sql))
     sql = rewrite_metadata_rows(sql)

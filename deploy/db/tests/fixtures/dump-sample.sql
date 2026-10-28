@@ -32,6 +32,8 @@ CREATE TABLE public.units (
     status public.units_status_enum DEFAULT 'active'::public.units_status_enum NOT NULL
 );
 
+COMMENT ON TABLE public.units IS 'not a reference: xpublic.units';
+
 CREATE TABLE public.units_y2026m10 (id uuid NOT NULL);
 
 CREATE INDEX "IDX_units_status" ON ONLY public.units USING btree (status);

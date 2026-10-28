@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
 # Export the TypeORM migrations up to a timestamp as one SQL file in schema forge (TF-PREP-001 task 2).
 #   bash deploy/db/export-baseline.sh --through 1794241400000 --out db/migrations/V001__baseline.sql [--keep]
+#   bash deploy/db/export-baseline.sh --through <ts> --stage-only   # stage + migration:run only (tests)
 # Runs the migrations on a throwaway postgres:15-alpine container (forge-export-pg, 127.0.0.1:55432),
 # dumps the schema (privileges kept: the GRANTs to proact_rls_user) and the migrations bookkeeping rows,
 # and rewrites public -> forge with rewrite-schema.py. --keep leaves the container running for checks.
+# --stage-only starts no container and writes no file: it stages the migrations, runs migration:run
+# against whatever DB_* points at, and checks that every staged migration was executed.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "$here/lib.sh"
+
+usage() {
+  echo "usage: export-baseline.sh --through <13-digit timestamp> (--out <file> [--keep] | --stage-only)" >&2
+  exit 2
+}
 
 repo_root="$(cd "$here/../.." && pwd)"
 backend="$repo_root/server/pro-act-backend"
@@ -18,27 +26,31 @@ image=postgres:15-alpine
 through=""
 out=""
 keep=false
+stage_only=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --through) through="${2:-}"; shift 2 ;;
-    --out) out="${2:-}"; shift 2 ;;
+    --through) [[ $# -ge 2 ]] || usage; through="$2"; shift 2 ;;
+    --out) [[ $# -ge 2 ]] || usage; out="$2"; shift 2 ;;
     --keep) keep=true; shift ;;
-    *) forge_die "unknown argument: $1" ;;
+    --stage-only) stage_only=true; shift ;;
+    *) usage ;;
   esac
 done
-[[ "$through" =~ ^[0-9]{13}$ ]] || forge_die "--through <13-digit migration timestamp> is required"
-[[ -n "$out" ]] || forge_die "--out <file> is required"
+[[ "$through" =~ ^[0-9]{13}$ ]] || usage
+[[ -n "$out" || "$stage_only" == true ]] || usage
 
 # Migrations import ../ helpers relative to src/database, so the copy sits next to migrations/.
 # The directory holds migration files only: TypeORM loads every file matching its glob.
 staging="$backend/src/database/migrations-export-tmp"
 run_log="$backend/src/database/migrations-export-tmp.log"
+dump_file="$backend/src/database/migrations-export-tmp.sql"
 
 cleanup() {
   rm -rf "$staging"
-  rm -f "$run_log"
-  if [[ "$keep" != true ]]; then
+  rm -f "$run_log" "$dump_file"
+  [[ -z "$out" ]] || rm -f "$out.tmp"
+  if [[ "$keep" != true && "$stage_only" != true ]]; then
     docker rm -f "$container" >/dev/null 2>&1 || true
   fi
 }
@@ -94,19 +106,26 @@ dump() {
 
 count="$(stage_migrations)"
 echo "staged $count migrations through $through"
-start_container
-echo "started $container on 127.0.0.1:$port"
-echo "executed $(run_migrations) migrations"
+if [[ "$stage_only" != true ]]; then
+  start_container
+  echo "started $container on 127.0.0.1:$port"
+fi
+executed="$(run_migrations)"
+[[ "$executed" == "$count" ]] || forge_die "expected $count migrations, executed $executed"
+echo "executed $executed migrations"
+[[ "$stage_only" != true ]] || exit 0
 
-sha="$(git -C "$repo_root" rev-parse --short HEAD)"
-tables="$(MSYS_NO_PATHCONV=1 docker exec "$container" psql -At -U postgres -d traverse_forge -c \
-  "SELECT count(*) FROM pg_class WHERE relnamespace = 'public'::regnamespace AND relkind IN ('r', 'p')")"
-mkdir -p "$(dirname "$out")"
 {
-  echo "-- V001 baseline: TypeORM migrations through $through ($count files) exported $(date -u +%Y-%m-%d) from $sha"
-  echo "-- $tables tables; the dev database's 155th is a runtime partition (measurement_samples_y2026m10)"
   dump --schema-only --no-owner
   dump --data-only --inserts --table=migrations --table=typeorm_metadata
-} | python "$here/rewrite-schema.py" > "$out.tmp"
+} > "$dump_file"
+tables="$(grep -c '^CREATE TABLE public\.' "$dump_file" || true)"
+commit="$(git -C "$repo_root" describe --always --dirty)"
+mkdir -p "$(dirname "$out")"
+{
+  echo "-- V001 baseline: TypeORM migrations through $through ($count files) exported $(date -u +%Y-%m-%d) from $commit"
+  echo "-- $tables tables"
+  forge_python "$here/rewrite-schema.py" < "$dump_file"
+} > "$out.tmp"
 mv "$out.tmp" "$out"
 echo "wrote $out ($(wc -c < "$out" | tr -d ' ') bytes)"

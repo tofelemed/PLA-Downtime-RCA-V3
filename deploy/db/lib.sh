@@ -48,3 +48,13 @@ forge_sha256() {
   fi
   echo "${digest%% *}"
 }
+
+# forge_python [args...]: run Python 3 as python3 when that works, else python (Windows ships a
+# python3 alias stub that only prints a Store hint, so being on PATH is not enough).
+forge_python() {
+  if python3 -c '' >/dev/null 2>&1; then
+    python3 "$@"
+  else
+    python "$@"
+  fi
+}

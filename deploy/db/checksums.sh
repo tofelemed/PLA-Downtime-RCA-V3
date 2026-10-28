@@ -15,13 +15,20 @@ list_sql() {
   (cd "$db_dir" && find . -type f -name '*.sql' | sed 's|^\./||' | LC_ALL=C sort)
 }
 
+tmp=""
+cleanup() {
+  if [[ -n "$tmp" ]]; then rm -f "$tmp"; fi
+}
+trap cleanup EXIT
+
 write_manifest() {
-  local path tmp
+  local path
   tmp="$(mktemp)"
   while IFS= read -r path; do
     printf '%s  %s\n' "$(forge_sha256 "$db_dir/$path")" "$path" >> "$tmp"
   done < <(list_sql)
   mv "$tmp" "$manifest"
+  tmp=""
   echo "wrote $(wc -l < "$manifest" | tr -d ' ') checksums to db/CHECKSUMS.sha256"
 }
 
@@ -41,7 +48,7 @@ check_manifest() {
     fi
   done < "$manifest"
   while IFS= read -r path; do
-    if ! grep -qF "  $path" "$manifest"; then
+    if ! cut -d' ' -f3- "$manifest" | grep -qxF -- "$path"; then
       echo "not in manifest: $path" >&2
       bad=1
     fi

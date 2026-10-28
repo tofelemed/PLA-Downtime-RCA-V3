@@ -3,3 +3,5 @@ src/api/v2/schema.d.ts text eol=lf
 # Line endings of deploy shell scripts and database SQL (TF-PREP-001)
 deploy/**/*.sh text eol=lf
 db/** text eol=lf
+deploy/**/*.py text eol=lf
+deploy/**/*.sql text eol=lf

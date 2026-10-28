@@ -5,13 +5,16 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 script="$here/../rewrite-schema.py"
 fixture="$here/fixtures/dump-sample.sql"
+clash_fixture="$here/fixtures/dump-extension-clash.sql"
+# shellcheck source=../lib.sh
+source "$here/../lib.sh"
 
 if [[ ! -f "$script" ]]; then
   echo "FAIL: $script is missing" >&2
   exit 1
 fi
 
-out="$(python "$script" < "$fixture")"
+out="$(forge_python "$script" < "$fixture")"
 passed=0
 failed=0
 
@@ -49,6 +52,19 @@ expect "default privileges are dropped" 'ALTER DEFAULT PRIVILEGES' absent
 expect "default privileges comment block is dropped" 'DEFAULT PRIVILEGES FOR TABLES' absent
 expect "typeorm_metadata row names schema forge" "INSERT INTO forge.typeorm_metadata VALUES ('GENERATED_COLUMN', 'traverse_forge', 'forge', 'units'" present
 expect "typeorm_metadata row keeps no public literal" "'traverse_forge', 'public'" absent
+expect "boundary: xpublic.units is not requalified" "'not a reference: xpublic.units'" present
+expect "boundary: the commented table itself moves" 'COMMENT ON TABLE forge.units' present
+
+# An extension member created in public must stop the rewrite instead of moving it to forge.
+if clash_err="$(forge_python "$script" < "$clash_fixture" 2>&1 >/dev/null)"; then
+  failed=$((failed + 1))
+  echo "not ok: extension member clash exits non-zero (exit 0)" >&2
+elif [[ "$clash_err" == *"refusing to move extension objects to forge: uuid_generate_v4"* ]]; then
+  passed=$((passed + 1))
+else
+  failed=$((failed + 1))
+  echo "not ok: extension member clash message (got: $clash_err)" >&2
+fi
 
 total=$((passed + failed))
 if (( failed > 0 )); then
