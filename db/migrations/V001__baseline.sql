@@ -1,5 +1,5 @@
--- V001 baseline: TypeORM migrations through 1794241400000 (144 files) exported 2026-10-28 from 518b86e7
--- 154 tables; the dev database's 155th is a runtime partition (measurement_samples_y2026m10)
+-- V001 baseline: TypeORM migrations through 1794241400000 (144 files) exported 2026-10-28 from d13d20f2
+-- 154 tables
 --
 -- PostgreSQL database dump
 --
