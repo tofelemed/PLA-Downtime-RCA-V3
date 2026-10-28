@@ -33,7 +33,7 @@ import { planFigures } from '../v2/period-overview/period-summary.view';
 import { CodingGateResult } from '../domain/reconciliation/coding-gate';
 import { assertCodingGate } from '../reconciliation/coding-gate.loader';
 import { loadDayCodingGate } from './day-coding-gate';
-import { dayLossBasis, declaredEmptyRevisions } from './day-loss-basis';
+import { dayLossBasis, emptyRunRevisions } from './day-loss-basis';
 import { dayPeriods, DayPeriodRow } from './day-periods';
 import { DayCertification } from './entities/day-certification.entity';
 
@@ -147,7 +147,7 @@ export class DayCertificationService {
         context.isSuperAdmin,
       );
       if (refusal) throw refusalError(refusal, before);
-      await assertDeclaredFigures(manager, tenantId, before);
+      await assertFigures(manager, tenantId, before);
       if (before.codingGate) assertCodingGate(before.codingGate);
       const row = await manager.save(
         manager.create(DayCertification, {
@@ -253,15 +253,18 @@ function assertDate(localDate: string): void {
   }
 }
 
-/** 422 DAY_NOT_READY when a declared shift of the day was approved without production loss figures. */
-async function assertDeclaredFigures(
+/**
+ * 422 DAY_NOT_READY when a shift of the day was approved without computable figures (no active slice or no
+ * plan-ledger total), whatever its loss basis.
+ */
+async function assertFigures(
   manager: EntityManager,
   tenantId: string,
   day: DaySnapshot,
 ): Promise<void> {
   const required = day.periods.filter(needsApproval);
   const empty = new Set(
-    await declaredEmptyRevisions(
+    await emptyRunRevisions(
       manager,
       tenantId,
       required.flatMap((p) => (p.revisionId ? [p.revisionId] : [])),
@@ -270,7 +273,8 @@ async function assertDeclaredFigures(
   if (empty.size === 0) return;
   throw new UnprocessableEntityException({
     code: 'DAY_NOT_READY',
-    message: 'No declared production loss figures for a period of the day',
+    message:
+      'A period of this day has no computable figures; revise and recompute it before certifying.',
     details: {
       pending: required
         .filter((p) => p.revisionId !== null && empty.has(p.revisionId))
@@ -278,7 +282,7 @@ async function assertDeclaredFigures(
           periodId: p.periodId,
           shiftName: p.shiftName,
           workflow: p.workflow,
-          reason: 'DECLARED_LOSS_MISSING',
+          reason: 'NO_COMPUTABLE_SLICE',
         })),
     },
   });

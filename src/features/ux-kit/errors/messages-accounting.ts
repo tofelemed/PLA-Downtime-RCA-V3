@@ -68,6 +68,7 @@ export const ACCOUNTING_MESSAGES: Readonly<Record<string, ErrorMessage>> = {
   NO_DRAFT: { title: 'There is no draft to submit', text: 'Save a draft first.' },
   NO_CALCULATION_RUN: { title: 'This period has not been calculated yet', text: 'Run the calculation first.' },
   RUN_NOT_VALIDATED: { title: 'The calculation has not been checked yet', text: 'Wait for the check to finish, then try again.' },
+  NO_COMPUTABLE_SLICE: { title: 'No computable slice — fix the setup and recompute' },
   ACTUALS_INCOMPLETE: { title: 'Some actual production data is missing', text: 'Wait for the data or enter it manually.' },
   ADJUSTMENT_GOOD_EXCEEDS_GROSS: { title: 'Good quantity is larger than gross', text: 'Correct the adjusted quantities.' },
   ADJUSTMENT_NEGATIVE_GOOD: { title: 'The adjustment makes good quantity negative', text: 'Correct the adjusted quantities.' },

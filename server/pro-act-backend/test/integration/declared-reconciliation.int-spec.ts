@@ -276,6 +276,41 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
     });
   });
 
+  it('an empty computed period (no slice, default policy) is not submittable or certifiable', async () => {
+    const unit = env.world.unitA2;
+    const starts = [
+      NEXT_DAY,
+      '2027-03-02T10:30:00.000Z',
+      '2027-03-02T18:30:00.000Z',
+    ];
+    await env.materialize([unit], NEXT_DAY, '2027-03-03T02:30:00.000Z');
+    const ids = await Promise.all(starts.map((at) => env.periodId(unit, at)));
+    for (const id of ids) await env.recompute(id);
+    const empty = await env.view(ids[0]);
+    expect(empty.slices).toEqual([]);
+    const refused = await env.submit(empty, env.admin, ids[0]).expect(422);
+    expect(refused.body).toMatchObject({
+      code: 'NO_COMPUTABLE_SLICE',
+      message:
+        'The calculation produced no computable slice; fix the period setup (see its warnings) and recompute before submitting.',
+    });
+
+    // approved before the gate existed: the day still cannot be certified
+    await env.rows(
+      `UPDATE accounting_revisions SET lifecycle = 'approved' WHERE period_id = ANY($1::uuid[])`,
+      [ids],
+    );
+    const certify = await env
+      .post(`production-days/${unit}/2027-03-02/certify`, {}, env.approver)
+      .expect(422);
+    expect(certify.body).toMatchObject({
+      code: 'DAY_NOT_READY',
+      message:
+        'A period of this day has no computable figures; revise and recompute it before certifying.',
+    });
+    expect(JSON.stringify(certify.body)).toContain('NO_COMPUTABLE_SLICE');
+  });
+
   it('an empty declared period (no slice) is not submittable, approvable or certifiable', async () => {
     const unit = env.world.unitA2;
     await env.rows(
@@ -291,10 +326,7 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
     const empty = await env.view(ids[0]);
     expect(empty.slices).toEqual([]);
     const refused = await env.submit(empty, env.admin, ids[0]).expect(422);
-    expect(refused.body).toMatchObject({
-      code: 'DECLARED_LOSS_MISSING',
-      message: 'No declared production loss figures for this period',
-    });
+    expect(refused.body).toMatchObject({ code: 'NO_COMPUTABLE_SLICE' });
 
     // approved before the gate existed: the day still cannot be certified
     await env.rows(
@@ -305,6 +337,6 @@ describe('declared-mode reconciliation workflow (spec §4.4, D8)', () => {
       .post(`production-days/${unit}/2027-03-01/certify`, {}, env.approver)
       .expect(422);
     expect(day.body).toMatchObject({ code: 'DAY_NOT_READY' });
-    expect(JSON.stringify(day.body)).toContain('DECLARED_LOSS_MISSING');
+    expect(JSON.stringify(day.body)).toContain('NO_COMPUTABLE_SLICE');
   });
 });

@@ -10,14 +10,32 @@ const issue = (
   sliceId: string | null = null,
 ): WorkflowIssue => ({ code, message, sliceId });
 
-function runIssues(state: RevisionState): WorkflowIssue[] {
+/**
+ * A validated run without an active product slice computed nothing: whatever the loss basis (a run resolved
+ * before the period's policy existed carries none), such a period is never submittable.
+ */
+function noComputableSlice(
+  state: Pick<RevisionState, 'slices'>,
+): WorkflowIssue | null {
+  if (state.slices.length > 0) return null;
+  return issue(
+    'NO_COMPUTABLE_SLICE',
+    'The calculation produced no computable slice; fix the period setup (see its warnings) and recompute before submitting.',
+  );
+}
+
+/** The current run exists, is validated and computed a slice (only the first failing condition is blamed). */
+export function runIssues(
+  state: Pick<RevisionState, 'run' | 'slices'>,
+): WorkflowIssue[] {
   if (!state.run)
     return [issue('NO_CALCULATION_RUN', 'the revision has no calculation run')];
   if (state.run.status !== 'validated')
     return [
       issue('RUN_NOT_VALIDATED', `the current run is ${state.run.status}`),
     ];
-  return [];
+  const empty = noComputableSlice(state);
+  return empty ? [empty] : [];
 }
 
 async function pendingIssues(
@@ -104,8 +122,8 @@ async function reviewIssues(
 
 /**
  * Gates of submission that depend on more than the reconciliation arithmetic (ACC10, WF02): a validated
- * current run, no queued or running recalculation, actuals meeting the coverage gate without a source
- * conflict, and no open review item on an evidence event. In declared mode the actual is the production
+ * current run with a computable slice, no queued or running recalculation, actuals meeting the coverage
+ * gate without a source conflict, and no open review item on an evidence event. In declared mode the actual is the production
  * loss event's figure, not a measurement: the coverage gate does not apply (`DECLARED_LOSS_MISSING`
  * covers a missing event).
  */
