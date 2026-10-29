@@ -234,7 +234,7 @@ test.describe('Downtime over MQTT on Marun HDPE (28 Oct 2026)', () => {
     await signInReadOnly(page, 'reza');
     await page.goto(PERIOD_PAGE);
     await expect(page.getByText('Stops cross-check:').first()).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByText('16.33').first()).toBeVisible();
+    await expect(page.getByText('41.53').first()).toBeVisible();
     const statement = page.getByTestId('loss-statement');
     await expect(statement).toBeVisible({ timeout: 60_000 });
     await expectStatement(statement, OWNER_DAY);

@@ -11,7 +11,7 @@ Companion: `docs/MQTT_FEEDS_PAYLOADS.md` (the message template), `docs/PLA_DOWNT
 | OT → stop | Open message creates an ongoing stop; the closing revision ends it; a duplicate delivery is counted and ignored; an unknown reason creates the stop uncoded with a quarantine note; an unknown unit is parked until bound and replayed |
 | Event Hub | Current stops shows the ongoing stop with elapsed time; the operator codes, the engineer merges and splits, the manager verifies; every edit keeps the OT fields read-only and the audit history |
 | Source revisions after user edits | A later OT revision keeps the operator's coding and updates the source-owned fields; a revision of a stop users merged lands on the superseded original and opens a `late_correction` review item |
-| Loss accounting | Unchanged, as declared mode intends: no loss line from any stop; the 29 Oct statement stays 240 / 208 / 32 / 0 with "Stops cross-check: 16.33 t recorded in stops" |
+| Loss accounting | Unchanged, as declared mode intends: no loss line from any stop; the 29 Oct statement stays 240 / 208 / 32 / 0 with "Stops cross-check: 16.33 t recorded in stops" (refreshed to 41.53 t by revision 2 on 29 Oct, after three more stops of that day arrived; see `docs/DEMO_GUIDE_PLA_AND_DOWNTIME_JOURNEYS.md`) |
 | Roles | admin, reza, omid, sara, leila, farid all checked on screen (see §4) |
 | Findings | 1 Important (pre-existing), 4 Low (see §5) |
 
