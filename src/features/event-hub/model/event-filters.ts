@@ -187,6 +187,11 @@ export function currentStopsQuery(state: EventFilterState): ProductionEventFilte
 const EVENT_WINDOW_KEYS: readonly RelativeWindowKey[] = ['8h', '24h', '7d', '30d'];
 export const WINDOW_PRESETS: readonly RelativeWindow[] = RELATIVE_WINDOWS.filter((entry) => EVENT_WINDOW_KEYS.includes(entry.key));
 
+/** The presets a plant is offered: one that accounts by production day has no figure for a window shorter than a day. */
+export function offeredPresets(isDay: boolean): readonly RelativeWindow[] {
+  return isDay ? WINDOW_PRESETS.filter((preset) => preset.hours >= 24) : WINDOW_PRESETS;
+}
+
 /** The list window ends this far after now, so stops starting before the next re-resolve stay listed. */
 export const EVENT_WINDOW_LOOKAHEAD_MS = HOUR_MS;
 

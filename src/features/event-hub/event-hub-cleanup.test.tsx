@@ -15,14 +15,16 @@ vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user'
 vi.mock('@/contexts/PlantSelectionContext', () => ({ usePlantSelection: () => ({ selection: null }) }));
 vi.mock('./hooks/use-asset-options', () => ({ useAssetOptions: () => [] }));
 vi.mock('@/api/v2/queries/units', () => ({ useShiftInstances: () => ({ data: undefined }) }));
+const downtimeReport = { coverageRatio: 1 };
 vi.mock('@/api/v2/queries/reports', () => ({
   useDowntimeReport: () => ({
-    data: { isProvisional: true, coverage: { ratio: 1 }, dataQuality: { missingCount: 0 }, data: { total: 3600, calculationRunIds: ['r1'] } },
+    data: { isProvisional: true, coverage: { ratio: downtimeReport.coverageRatio }, dataQuality: { missingCount: 0 }, data: { total: 3600, calculationRunIds: ['r1'] } },
     isLoading: false,
     isError: false,
     isSuccess: true,
   }),
 }));
+vi.mock('@/features/accounting-mode/use-loss-accounting-mode', () => ({ useLossAccountingMode: () => ({ isDeclared: false, isDay: false, isLoading: false }) }));
 
 const { nameRepeats, sameName } = await import('./model/name-repeats');
 const { UnitLabel } = await import('./components/unit-label');
@@ -147,6 +149,20 @@ describe('Event Hub cleanup (daily operations, 24 Oct 2026)', () => {
     expect(within(card).getByText('Downtime')).toBeInTheDocument();
     expect(card).not.toHaveTextContent('in window');
     expect(card).toHaveTextContent('Provisional');
+  });
+
+  it('no period starts in the window (a day-grain plant on "Last 8 h"): the incomplete banner says so instead of "only calculated periods"', () => {
+    downtimeReport.coverageRatio = 0;
+    try {
+      const filters = defaultFilters({ from: '2026-10-28T23:15:00.000Z', to: '2026-10-29T07:15:00.000Z', label: 'Last 8 h' });
+      wrap(<QuickStats filters={filters} />);
+      const card = screen.getByTestId('quick-stats');
+      expect(card).toHaveTextContent('Incomplete data');
+      expect(card).toHaveTextContent('No accounting period starts in this window; choose a whole production day or a longer window.');
+      expect(card).not.toHaveTextContent('Only calculated periods are counted.');
+    } finally {
+      downtimeReport.coverageRatio = 1;
+    }
   });
 
   it('no ongoing stop: the strip says "Current stops (0)" only', async () => {

@@ -20,6 +20,10 @@ vi.mock('./hooks/use-asset-options', () => ({
   useAssetOptions: (unitIds: readonly string[]) => (unitIds.length > 0 ? [{ value: 'a1', label: 'Extruder 1' }] : []),
 }));
 vi.mock('@/features/ux-kit/labels/use-user-names', () => ({ useUserNames: () => ({ nameOf: () => 'A. Karimi', isLoading: false }) }));
+const accounting = { isDay: false };
+vi.mock('@/features/accounting-mode/use-loss-accounting-mode', () => ({
+  useLossAccountingMode: () => ({ isDeclared: accounting.isDay, isDay: accounting.isDay, isLoading: false }),
+}));
 vi.mock('./components/code-event-dialog', () => ({
   CodeEventDialog: ({ onDone }: { onDone: () => void }) => <button onClick={onDone}>finish code</button>,
 }));
@@ -29,6 +33,7 @@ vi.mock('./components/bulk-code-dialog', () => ({
 
 const { EventFormFields } = await import('./components/event-form-fields');
 const { WindowSelect } = await import('./components/window-select');
+const { offeredPresets } = await import('./model/event-filters');
 const { EventListDialogs } = await import('./components/event-list-dialogs');
 const { SourceOverrideBanner } = await import('./components/source-override-banner');
 const { VerificationChip } = await import('./components/verification-chip');
@@ -152,6 +157,21 @@ describe('window select (E-2)', () => {
     expect(onChange).toHaveBeenLastCalledWith({ from: '2026-10-18T06:00:00.000Z', to: '2026-10-18T14:00:00.000Z', label: 'Current shift (Morning)' });
     fireEvent.change(screen.getByTestId('event-window'), { target: { value: 'preset:8h' } });
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ label: 'Last 8 h', relative: '8h' }));
+  });
+
+  it('a plant that accounts by day is offered no window shorter than a day, and the ⓘ says why', () => {
+    accounting.isDay = true;
+    try {
+      wrap(<WindowSelect unitIds={['u1']} label="Last 24 h" bounds={{ from: null, to: null }} onChange={vi.fn()} />);
+      const options = Array.from(screen.getByTestId('event-window').querySelectorAll('option')).map((option) => option.value);
+      expect(options).not.toContain('preset:8h');
+      expect(options).toEqual(expect.arrayContaining(['preset:24h', 'preset:7d', 'preset:30d']));
+      expect(screen.getByRole('button', { name: 'About Window' })).toBeInTheDocument();
+      expect(offeredPresets(true).map((preset) => preset.key)).toEqual(['24h', '7d', '30d']);
+      expect(offeredPresets(false).map((preset) => preset.key)).toEqual(['8h', '24h', '7d', '30d']);
+    } finally {
+      accounting.isDay = false;
+    }
   });
 
   it('applies a custom range on the plant clock as explicit bounds', async () => {
