@@ -53,7 +53,13 @@ const FIELD_LABEL: Readonly<Record<keyof EventFormValues, string>> = {
   declaredActual: 'Actual (t)',
   declaredShortfall: 'Shortfall (t)',
   declaredStatus: 'OT status',
+  codingNote: 'Coding note',
+  splitEnabled: 'Split across several reasons',
+  splitMode: 'Shares entered as',
+  splitRows: 'Reason shares',
 };
+
+type FormValue = EventFormValues[keyof EventFormValues];
 
 /**
  * 412 STALE_REVISION review (UX04): the latest server values next to the user's changes for every
@@ -68,8 +74,9 @@ export function ConflictDialog({ open, eventId, draft, onApplyMine, onDiscardMin
   }, [open, refetch]);
   const server = latest.data ? formValuesOf(latest.data, env.timezone) : null;
   const fields = changedFields(draft.initial, draft.values);
-  const show = (field: keyof EventFormValues, value: string | boolean) => {
+  const show = (field: keyof EventFormValues, value: FormValue) => {
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (Array.isArray(value)) return value.map((row) => `${env.reasonName(row.reasonCodeId || null)} ${row.value}`).join(', ') || '—';
     return field === 'reasonCodeId' ? env.reasonName(value || null) : value || '—';
   };
   return (

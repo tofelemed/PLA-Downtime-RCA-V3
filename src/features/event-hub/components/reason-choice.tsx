@@ -13,13 +13,18 @@ export interface ReasonChoiceProps {
   split: ReasonSplitState;
   reasonCodeId: string;
   onReason: (value: string) => void;
+  /** id of the single-reason picker (the dialog's `code-reason`, the edit page's `reasonCodeId`) */
+  selectId?: string;
+  error?: string;
+  /** edit page: "no reason" clears the code */
+  allowEmpty?: boolean;
 }
 
 /**
- * The reason part of the code dialog: one reason, or (for the roles that may) a split across several (D-T5).
- * A split the user may not change is shown as stored, with why the dialog is closed to them.
+ * The reason part of the code dialog and the edit page: one reason, or (for the roles that may) a split
+ * across several (D-T5). A split the user may not change is shown as stored, with why it is closed to them.
  */
-export function ReasonChoice({ event, split, reasonCodeId, onReason }: ReasonChoiceProps) {
+export function ReasonChoice({ event, split, reasonCodeId, onReason, selectId = 'code-reason', error, allowEmpty = false }: ReasonChoiceProps) {
   const { canSplitReasons } = useCapabilities();
   if (splitLocked(event, canSplitReasons) && hasSplit(event.reasonWeights)) {
     return (
@@ -31,7 +36,7 @@ export function ReasonChoice({ event, split, reasonCodeId, onReason }: ReasonCho
   }
   return (
     <>
-      {!split.enabled && <ReasonCodeSelect id="code-reason" value={reasonCodeId} onChange={onReason} allowEmpty={false} />}
+      {!split.enabled && <ReasonCodeSelect id={selectId} value={reasonCodeId} onChange={onReason} error={error} allowEmpty={allowEmpty} />}
       {canSplitReasons && <ReasonSplitSection split={split} />}
     </>
   );

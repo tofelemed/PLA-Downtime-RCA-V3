@@ -128,7 +128,7 @@ Screens to open, in order:
 
 ### A.3 Live on stage: the 30 Oct day is already waiting, uncoded
 
-A PLA message for 30 Oct (`MARUN-HDPE-20261030`, planned 240, actual 215, shortfall 25, DETECTED) was published this morning and created event `a241ec20…`, uncoded. The Event Hub shows the banner "Production loss to code". (`demo-02-omid-pla-30oct-uncoded.png`)
+A PLA message for 30 Oct (`MARUN-HDPE-20261030`, planned 240, actual 215, shortfall 25, DETECTED) was published this morning and created event `a241ec20…`, uncoded. The Event Hub shows the banner "Production loss to code". (`demo-02-omid-pla-30oct-uncoded.png`) Since the 30 Oct checks of the reason split, this event carries leila's split (15 t FEED-STARVED + 10 t QUALITY-DOWNGRADE) and a coding note; to show it uncoded on stage again, untick the split and clear the reason code on its Edit page first (or re-run the live steps on a fresh day's message).
 
 Do this live in two steps. As **omid** (operator): open `http://localhost:8070/events/a241ec20-d833-4162-9f9a-f032faf64372` → Edit / code → one reason (SPEED-LOSS) → save with a change reason. Then as **leila** (production engineer): the same event → Edit / code → tick "Split across several reasons" → Tonnes → 15 t SPEED-LOSS + 10 t MECH-GEARBOX → save. Operators are not offered the split (decision 2026-10-30; the server answers 403 `REASON_SPLIT_ROLE`). The "Per reason" block and the day's draft accounting update at once. Before coding, the statement reads "net accounted 0 t + unaccounted 25 t"; after coding, unaccounted 0.
 
@@ -152,15 +152,17 @@ Within a few seconds the Event Hub lists a new Production loss for 31 Oct. To ta
 
 ### A.4 Where several reasons are entered (decision 2026-10-30)
 
-Two places offer "Split across several reasons", and only to the splitting roles (production engineer, reliability engineer, manager approver; SuperAdmin / OrgAdmin). The event's **Edit / code** page carries one reason code only.
+Three places offer "Split across several reasons", and only to the splitting roles (production engineer, reliability engineer, manager approver; SuperAdmin / OrgAdmin).
 
 | Where | Who | What it looks like |
 |---|---|---|
 | Event Hub list → **Code** on an uncoded row (also the Current stops panel) → tick "Split across several reasons" → Percent or Tonnes (a production loss) / Minutes (an ended stop) → one row per reason, "Add reason", the balance line says when the shares add up | leila | `demo-2026-10-29/split-01-leila-code-dialog-tonnes.png` |
 | The same dialog as an operator: one reason code, no split; a stop that already carries a split is shown as stored with "A production engineer, reliability engineer or manager changes its reasons." and Save disabled | omid | `demo-2026-10-29/split-02-omid-code-dialog-single-reason.png` |
 | Event Hub list → select rows → **Bulk code** → "Split across several reasons" (percent only, the stops differ in length) | leila | `demo-2026-10-29/split-03-leila-bulk-code-split.png` |
+| Event page → **Edit / code** (`/events/:id/edit`) → the reason section at the top of a stop's form (at the bottom of a production loss form): the same choice as the dialog, a stored split comes up as rows, and "Coding note" sits under it; the split and the note are saved with the rest of the form, and the event page then lists every reason with its share | leila | `demo-2026-10-29/split-06-leila-edit-page-split.png`, `demo-2026-10-29/split-09-leila-event-page-after-edit-save.png` |
+| The same Edit page as an operator: the stored split is shown as it is with "A production engineer, reliability engineer or manager changes its reasons."; the note stays editable | omid | `demo-2026-10-29/split-07-omid-edit-page-locked-note.png` |
 
-Every coder may add a **Note (optional, in your own words)** in the same dialog, beside the code(s): it is shown as "Coding note" on the event page and kept in the history. It never replaces the reason code, which stays the attribution (decision 2026-10-30). (`demo-2026-10-29/split-04-leila-code-dialog-note.png`, `demo-2026-10-29/split-05-omid-event-page-coding-note.png`)
+Every coder may add a **Note (optional, in your own words)** in the code dialog and on the Edit page ("Coding note"), beside the code(s): it is shown as "Coding note" on the event page and kept in the history. It never replaces the reason code, which stays the attribution (decision 2026-10-30). (`demo-2026-10-29/split-04-leila-code-dialog-note.png`, `demo-2026-10-29/split-05-omid-event-page-coding-note.png`)
 
 The server is the authority: an operator's `reasonWeights` with two or more reasons, or a re-code that would drop a stored split, answers 403 `REASON_SPLIT_ROLE` (verified 30 Oct on the 30 Oct event and the split 29 Oct event).
 

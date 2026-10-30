@@ -79,7 +79,7 @@ export function EventFormFields({ form, mode, event = null }: EventFormFieldsPro
     applies ? <SourceOwnedField fields={fields} overrides={overrides} className={className}>{children}</SourceOwnedField> : children;
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      {reasonFirst && <ReasonFields form={form} />}
+      {reasonFirst && <ReasonFields form={form} event={event} />}
       <UnitAndType form={form} mode={mode} overrides={overrides} />
       <IntervalFields form={form} mode={mode} event={event} sourceName={overrides.intervalOwned ? overrides.source : null} />
       {owned(['assetId'], true)(<AssetField form={form} />)}
@@ -100,7 +100,7 @@ export function EventFormFields({ form, mode, event = null }: EventFormFieldsPro
       {owned(['failureMode'], values.physicalType === 'downtime', 'sm:col-span-2')(<FailureFields form={form} assetId={values.assetId || null} />)}
       {owned(['quantity', 'quantityUom'], QUANTITY_TYPES.includes(values.physicalType), 'sm:col-span-2')(<QualityFields form={form} />)}
       {values.physicalType === 'production_loss' && <DeclaredFields form={form} />}
-      {!reasonFirst && <ReasonFields form={form} />}
+      {!reasonFirst && <ReasonFields form={form} event={event} />}
       {owned(['description'], true, 'sm:col-span-2')(
         <div className="sm:col-span-2">
           <Field id="description" label="Description" error={errors.description}>

@@ -47,6 +47,8 @@ const downtime: EventFormValues = {
   originUnitId: ID(4),
   originAssetId: ID(5),
   plannedEndLocal: '2026-10-18T09:00',
+  codingNote: 'Gearbox tripped twice',
+  splitRows: [{ key: 0, reasonCodeId: ID(3), value: '60' }, { key: 1, reasonCodeId: ID(7), value: '40' }],
 };
 
 const quality: EventFormValues = { ...downtime, physicalType: 'quality_loss', quantity: '12.5', quantityUom: 't', dispositionClass: 'rework' };
@@ -76,6 +78,12 @@ const CASES: ReadonlyArray<{ name: string; route: string; method: 'post' | 'put'
     route: '/api/v2/production-events/{id}',
     method: 'patch',
     body: () => toPatchBody({ ...EMPTY_FORM, unitId: ID(1), startLocal: '2026-10-18T07:00' }, { ...quality, changeReason: 'Operator note' }, TZ),
+  },
+  {
+    name: 'event edit (split across several reasons, coding note)',
+    route: '/api/v2/production-events/{id}',
+    method: 'patch',
+    body: () => toPatchBody(downtime, { ...downtime, splitEnabled: true, splitMode: 'minutes', codingNote: 'Gearbox tripped twice, belt slipped after' }, TZ),
   },
   { name: 'asset create', route: '/api/v2/assets', method: 'post', body: () => assetBodyOf({ ...assetDraftOf(null, ID(1)), code: 'P-101', name: 'Pump', description: 'd', manufacturer: 'm', model: 'x', serialNumber: 's', location: 'l' }) },
   { name: 'asset change', route: '/api/v2/assets/{id}', method: 'patch', body: () => assetBodyOf({ ...assetDraftOf(null, ID(1)), code: 'P-101', name: 'Pump' }) },

@@ -81,7 +81,10 @@ export const draftStore = {
   },
 };
 
+/** Equal values; a list (the split rows) compares by content, so a draft read back from storage is unchanged. */
+const sameValue = (a: unknown, b: unknown): boolean => a === b || (Array.isArray(a) && JSON.stringify(a) === JSON.stringify(b));
+
 /** Fields whose value differs between two value sets (conflict view, "changed" markers). */
 export function changedFields(a: EventFormValues, b: EventFormValues): Array<keyof EventFormValues> {
-  return (Object.keys(a) as Array<keyof EventFormValues>).filter((field) => field !== 'intervalMode' && a[field] !== b[field]);
+  return (Object.keys(a) as Array<keyof EventFormValues>).filter((field) => field !== 'intervalMode' && !sameValue(a[field], b[field]));
 }

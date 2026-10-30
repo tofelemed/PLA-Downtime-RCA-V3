@@ -8,6 +8,7 @@ import { parseDurationInput } from './duration-input';
 import { EMPTY_FAILURE, failureCreateFields, failurePatchFields, failureValuesOf, type FailureValues } from './failure-form';
 import { plantLocalToUtc, utcToPlantLocal } from './plant-local-time';
 import { EMPTY_QUALITY, qualityCreateFields, qualityPatchFields, qualityValuesOf, type QualityValues } from './quality-form';
+import { EMPTY_REASON_FORM, reasonFormErrors, reasonPatchFields, reasonValuesOf, type ReasonFormValues } from './reason-form';
 
 /** E-4: how the event's end is given — an end time, or a duration from the start (an explicit choice). */
 export type IntervalMode = 'end' | 'duration';
@@ -19,7 +20,7 @@ export type IntervalMode = 'end' | 'duration';
  * end time is after the start (QA audit F3, shown at the End field); the server stays the authority for
  * every interval rule (end after start, end and duration agreeing within 1 s) and answers 422 field errors.
  */
-export interface EventFormValues extends FailureValues, QualityValues, DeclaredValues {
+export interface EventFormValues extends FailureValues, QualityValues, DeclaredValues, ReasonFormValues {
   unitId: string;
   /** A-1: the asset that stopped (one of the unit's assets); '' = not recorded */
   assetId: string;
@@ -78,6 +79,7 @@ export const EMPTY_FORM: EventFormValues = {
   ...EMPTY_FAILURE,
   ...EMPTY_QUALITY,
   ...EMPTY_DECLARED,
+  ...EMPTY_REASON_FORM,
 };
 
 export function formValuesOf(event: ProductionEventView, timezone: string): EventFormValues {
@@ -104,6 +106,7 @@ export function formValuesOf(event: ProductionEventView, timezone: string): Even
     ...failureValuesOf(event),
     ...qualityValuesOf(event),
     ...declaredValuesOf(event),
+    ...reasonValuesOf(event),
   };
 }
 
@@ -174,7 +177,7 @@ export function validateEventForm(values: EventFormValues, mode: 'create' | 'edi
     if (!values.quantityUom.trim()) errors.quantityUom = 'Enter the quantity unit';
   }
   if (values.physicalType === 'slowdown' && !values.quantity.trim() && !values.impactPercent.trim()) errors.impactPercent = 'Enter a lost quantity or the share of output lost';
-  return { ...errors, ...declaredErrors(values) };
+  return { ...errors, ...declaredErrors(values), ...(mode === 'edit' ? reasonFormErrors(values) : {}) };
 }
 
 const optional = (value: string) => (value === '' ? undefined : value);
@@ -206,6 +209,8 @@ export function toCreateBody(values: EventFormValues, timezone: string): CreateE
   Object.assign(body, failureCreateFields(values), qualityCreateFields(values), declaredCreateFields(values));
   const description = optional(values.description.trim());
   if (description) body.description = description;
+  const codingNote = optional(values.codingNote.trim());
+  if (codingNote) body.codingNote = codingNote;
   return body;
 }
 
@@ -241,7 +246,6 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
   if (values.oeeComponent !== initial.oeeComponent && values.oeeComponent) {
     changes.oeeComponent = values.oeeComponent as PatchBody['oeeComponent'];
   }
-  if (values.reasonCodeId !== initial.reasonCodeId) changes.reasonCodeId = values.reasonCodeId || null;
   if (values.investigationPending !== initial.investigationPending) changes.investigationPending = values.investigationPending;
   if (values.assetId !== initial.assetId) changes.assetId = values.assetId || null;
   if (values.description !== initial.description) changes.description = values.description.trim() || null;
@@ -254,7 +258,7 @@ export function toPatchBody(initial: EventFormValues, values: EventFormValues, t
     changes.impactMode = values.impactPercent ? 'fractional' : values.quantity ? 'measured' : null;
     changes.impactFraction = values.impactPercent ? fractionOf(values.impactPercent) : null;
   }
-  Object.assign(changes, failurePatchFields(initial, values), qualityPatchFields(initial, values), declaredPatchFields(initial, values, event));
+  Object.assign(changes, reasonPatchFields(initial, values), failurePatchFields(initial, values), qualityPatchFields(initial, values), declaredPatchFields(initial, values, event));
   const impactChanged = values.impactMode !== initial.impactMode || (values.impactMode === 'fractional' && values.impactPercent !== initial.impactPercent);
   if (impactChanged && values.impactMode && values.physicalType === 'downtime') {
     changes.impactMode = values.impactMode as PatchBody['impactMode'];
@@ -281,6 +285,8 @@ const SERVER_FIELDS: Readonly<Record<string, EventFormField>> = {
   scheduleClass: 'scheduleClass',
   oeeComponent: 'oeeComponent',
   reasonCodeId: 'reasonCodeId',
+  reasonWeights: 'splitRows',
+  codingNote: 'codingNote',
   description: 'description',
   impactMode: 'impactMode',
   impactFraction: 'impactPercent',

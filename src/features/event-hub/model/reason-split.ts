@@ -61,3 +61,12 @@ export function reasonWeightsBody(rows: readonly SplitRow[], mode: SplitMode): R
 export function hasSplit(weights: readonly ReasonWeightView[] | null | undefined): weights is ReasonWeightView[] {
   return Array.isArray(weights) && weights.length > 1;
 }
+
+/** What the split section adds to a PATCH: the entered weights, `null` to remove a stored split, or nothing. */
+export type SplitChange = { reasonWeights: ReasonWeightInput[] | null } | Record<string, never>;
+
+/** The split's PATCH as the coding dialog sends it: weights while enabled, else `null` when one is stored. */
+export function splitChange(stored: readonly ReasonWeightView[] | null | undefined, split: { enabled: boolean; rows: readonly SplitRow[]; mode: SplitMode }): SplitChange {
+  if (split.enabled) return { reasonWeights: reasonWeightsBody(split.rows, split.mode) };
+  return hasSplit(stored) ? { reasonWeights: null } : {};
+}
