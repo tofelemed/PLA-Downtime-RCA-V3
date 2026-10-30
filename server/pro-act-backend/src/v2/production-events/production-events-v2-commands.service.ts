@@ -60,6 +60,7 @@ import { clearedReason } from './cleared-reason';
 import { reasonColumns } from './reason-columns';
 import { figuresOf, lossColumnsOf } from './production-loss-columns';
 import { patchReasonWeights } from './reason-weight-columns';
+import { assertMaySplitReasons } from './reason-split-roles';
 import { EventFacts } from '../../production-event/revisions/event-facts';
 import { latestSourceRevision } from '../../production-event/revisions/revision-store';
 
@@ -167,6 +168,11 @@ export class ProductionEventsV2CommandService {
       existing,
       dto,
     });
+    assertMaySplitReasons(
+      context,
+      existing.reasonWeights,
+      weighted.reasonWeights,
+    );
     const coded = await this.withCodeDefaults(
       tenantId,
       { ...dto, reasonCodeId: weighted.reasonCodeId ?? dto.reasonCodeId },

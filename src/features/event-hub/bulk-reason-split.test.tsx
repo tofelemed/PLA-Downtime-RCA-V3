@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { configureV2Session } from '@/api/v2/config';
 import type { BulkTarget } from '@/api/v2/types/events';
+import { actAs } from '@/test/acting-user';
 import { EventHubEnvContext, type EventHubEnv } from './use-event-hub-env';
 
 vi.mock('@/contexts/AuthContext', async () => (await import('@/test/acting-user')).authContextMock());
@@ -29,7 +30,10 @@ beforeEach(() => {
   );
   configureV2Session({ getAccessToken: () => 'a.b.c', getTenantId: () => 'tenant-a', refresh: async () => false, onSessionExpired: () => undefined });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  actAs('SuperAdmin');
+});
 
 describe('bulk coding: split across several reasons (D-T5)', () => {
   it('sends the percents as codes.reasonWeights and leaves reasonCodeId to the server', () => {
@@ -63,5 +67,22 @@ describe('bulk coding: split across several reasons (D-T5)', () => {
     expect(screen.queryByRole('radio', { name: /Minutes/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Preview' })).toBeDisabled();
     expect(screen.getByText(/every row of the split/)).toBeInTheDocument();
+  });
+});
+
+describe('bulk coding: the operator records one reason (owner decision 2026-10-30)', () => {
+  it('offers an operator the reason code without the split section', () => {
+    actAs('operator');
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <EventHubEnvContext.Provider value={ENV}>
+            <BulkCodeDialog events={EVENTS} onClose={() => undefined} />
+          </EventHubEnvContext.Provider>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByTestId('split-enabled')).toBeNull();
+    expect(screen.getByLabelText('Reason code')).toBeInTheDocument();
   });
 });

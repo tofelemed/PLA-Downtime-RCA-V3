@@ -29,6 +29,7 @@ import {
 } from './event-operation.view';
 import { ProductionEventsV2Service } from './production-events-v2.service';
 import { bulkReasonWeights } from './reason-weight-columns';
+import { assertMaySplitReasons } from './reason-split-roles';
 
 /** Result of `POST /production-events/bulk-code`: a preview, an atomic apply, or an accepted job. */
 export type BulkCodeOutcome =
@@ -116,6 +117,7 @@ export class ProductionEventOperationsV2Service {
       reason: dto.reason,
     };
     assertSomeCode(command);
+    assertMaySplitReasons(context, null, command.codes.reasonWeights);
     if (command.codes.reasonCodeId) {
       await this.references.assertReasonCodeOwned(
         tenantId,

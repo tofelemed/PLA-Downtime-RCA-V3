@@ -158,6 +158,32 @@ describe('Code dialog: split across several reasons (D-T5)', () => {
   });
 });
 
+describe('Code dialog: the operator records one reason (owner decision 2026-10-30)', () => {
+  it('offers an operator no split: one reason, saved as reasonCodeId', async () => {
+    actAs('operator');
+    const onDone = vi.fn();
+    wrap(<CodeEventDialog event={{ ...STOP, reasonCodeId: null, reasonWeights: null, states: { ...STOP.states, coding: 'uncoded' } }} onClose={() => undefined} onDone={onDone} />);
+    expect(screen.queryByTestId('split-enabled')).toBeNull();
+    expect(screen.getByLabelText('Reason code')).toBeInTheDocument();
+  });
+
+  it('shows an operator a stored split as it is and keeps Save disabled, saying who changes it', () => {
+    actAs('operator');
+    wrap(<CodeEventDialog event={STOP} onClose={() => undefined} onDone={() => undefined} />);
+    expect(screen.queryByTestId('split-enabled')).toBeNull();
+    expect(screen.getByTestId('split-locked')).toHaveTextContent('Motor trip');
+    expect(screen.getByTestId('split-locked')).toHaveTextContent('Belt slip');
+    expect(screen.getByTestId('disabled-reason')).toHaveTextContent('A production engineer, reliability engineer or manager changes its reasons.');
+    expect(screen.getByRole('button', { name: 'Save reason' })).toBeDisabled();
+  });
+
+  it.each(['production_engineer', 'reliability_engineer', 'manager_approver'])('offers a %s the split', (role) => {
+    actAs(role);
+    wrap(<CodeEventDialog event={STOP} onClose={() => undefined} onDone={() => undefined} />);
+    expect(screen.getByTestId('split-enabled')).toHaveAttribute('data-state', 'checked');
+  });
+});
+
 describe('event detail: weights as stored', () => {
   it('lists each reason with its share, the primary first', () => {
     wrap(<ReasonWeightsText weights={STOP.reasonWeights ?? []} />);

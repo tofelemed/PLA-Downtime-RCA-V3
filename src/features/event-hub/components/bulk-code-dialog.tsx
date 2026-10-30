@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { OEE_COMPONENTS, SCHEDULE_CLASSES } from '../model/event-filters';
 import { DisabledReason } from '@/features/ux-kit/disabled-reason';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { labelOf, OEE_COMPONENT_LABELS, SCHEDULE_CLASS_LABELS } from '@/features/ux-kit/labels';
 import { useBulkCodeFlow } from '../hooks/use-bulk-code-flow';
 import { BulkExtraFields } from './bulk-extra-fields';
@@ -57,11 +58,12 @@ type BulkCodeFlow = ReturnType<typeof useBulkCodeFlow>;
 
 /** The codes to set (only chosen ones are sent) and why. */
 function BulkCodeFields({ events, flow }: { events: readonly BulkTarget[]; flow: BulkCodeFlow }) {
+  const { canSplitReasons } = useCapabilities();
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <div className="space-y-3 sm:col-span-2">
         {!flow.split.enabled && <ReasonCodeSelect id="bulk-reason-code" value={flow.codes.reasonCodeId} onChange={(v) => flow.edit('reasonCodeId', v)} />}
-        <ReasonSplitSection split={flow.split} percentOnly />
+        {canSplitReasons && <ReasonSplitSection split={flow.split} percentOnly />}
       </div>
       <EnumSelect id="bulk-schedule" label="Schedule class" values={SCHEDULE_CLASSES} labels={SCHEDULE_CLASS_LABELS} value={flow.codes.scheduleClass} onChange={(v) => flow.edit('scheduleClass', v)} />
       <EnumSelect id="bulk-oee" label="OEE component" values={OEE_COMPONENTS} labels={OEE_COMPONENT_LABELS} value={flow.codes.oeeComponent} onChange={(v) => flow.edit('oeeComponent', v)} />

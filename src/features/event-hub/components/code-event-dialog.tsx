@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { useCodeEvent, type CodeChanges } from '../hooks/use-code-and-close';
 import { usePlantFormat } from '../hooks/use-plant-format';
 import { useSavedReasonToast } from '../hooks/use-saved-reason-toast';
+import { useCapabilities } from '@/features/auth/use-capabilities';
 import { useReasonSplit, type ReasonSplitState } from '../hooks/use-reason-split';
 import { isProductionLoss, shortfallOf } from '../model/production-loss';
 import { useEventHubEnv } from '../use-event-hub-env';
+import { SPLIT_LOCKED_ID, splitLocked } from '../model/split-lock';
 import { CommandError } from './command-error';
-import { ReasonCodeSelect } from './reason-code-select';
-import { ReasonSplitSection } from './reason-split-section';
+import { ReasonChoice } from './reason-choice';
 
 export interface CodeEventDialogProps {
   event: ProductionEventView;
@@ -49,6 +50,8 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
   const [reasonCodeId, setReasonCodeId] = useState(event.reasonCodeId ?? '');
   const [pending, setPending] = useState(event.investigationPending === true);
   const split = useReasonSplit(event, shortfallOf(event));
+  const { canSplitReasons } = useCapabilities();
+  const locked = splitLocked(event, canSplitReasons);
   const changes = changesOf(event, { reasonCodeId, pending }, split);
   const reasonGiven = split.enabled ? split.complete : Boolean(reasonCodeId);
   const save = async () => {
@@ -65,8 +68,7 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
             {env.unitName(event.unitId)}, {event.endTime ? `${dateTime(event.startTime)} – ${dateTime(event.endTime)}` : `since ${dateTime(event.startTime)}`}
           </DialogDescription>
         </DialogHeader>
-        {!split.enabled && <ReasonCodeSelect id="code-reason" value={reasonCodeId} onChange={setReasonCodeId} allowEmpty={false} />}
-        <ReasonSplitSection split={split} />
+        <ReasonChoice event={event} split={split} reasonCodeId={reasonCodeId} onReason={setReasonCodeId} />
         <div className="flex items-center gap-2">
           <Checkbox id="code-investigation-pending" data-testid="code-investigation-pending" checked={pending} onCheckedChange={(value) => setPending(value === true)} />
           <Label htmlFor="code-investigation-pending" className="font-normal">Investigation pending (no specific reason known yet)</Label>
@@ -74,7 +76,11 @@ export function CodeEventDialog({ event, onClose, onDone }: CodeEventDialogProps
         <CommandError error={code.error} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button disabled={Object.keys(changes).length === 0 || (!reasonGiven && !pending) || !split.complete || code.pending} onClick={() => void save()}>
+          <Button
+            disabled={locked || Object.keys(changes).length === 0 || (!reasonGiven && !pending) || !split.complete || code.pending}
+            aria-describedby={locked ? SPLIT_LOCKED_ID : undefined}
+            onClick={() => void save()}
+          >
             Save reason
           </Button>
         </DialogFooter>

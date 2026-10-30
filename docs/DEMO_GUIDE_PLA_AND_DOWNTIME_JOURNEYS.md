@@ -4,10 +4,10 @@ Traverse Forge on the Marun HDPE plant (tenant HDPE-TRAIN), 29 Oct 2026. Two OT 
 
 | Use case | OT topic | One message = | Lands as | Who acts | Ends as |
 |---|---|---|---|---|---|
-| A. PLA (production loss accounting) | `proact/marun/hdpe/pla` | one production day of one unit: planned, actual, shortfall | a **Production loss** event in the Event Hub | operator codes the reason split, accountant submits, manager approves and certifies | the day's **loss statement** (240 / 208 / 32 / 0) |
+| A. PLA (production loss accounting) | `proact/marun/hdpe/pla` | one production day of one unit: planned, actual, shortfall | a **Production loss** event in the Event Hub | operator codes one reason, engineer splits it across reasons, accountant submits, manager approves and certifies | the day's **loss statement** (240 / 208 / 32 / 0) |
 | B. Downtime | `proact/marun/hdpe/downtime` | one stop: unit, equipment, start, end, reason | a **Stop** in the Event Hub | OT closes it by revision, operator codes, engineer merges or splits, manager verifies | reliability, Pareto, RCA, and the **stops cross-check** on the day |
 
-The plant runs **declared mode**: the loss of the day is what OT declares, the operator's reason split is the attribution, and stops are evidence that never change an approved figure. Everything below is real data on the dev stack (`proact` database, web UI `http://localhost:8070`).
+The plant runs **declared mode**: the loss of the day is what OT declares, the reason split (one reason from the operator, refined by the production engineer) is the attribution, and stops are evidence that never change an approved figure. Everything below is real data on the dev stack (`proact` database, web UI `http://localhost:8070`).
 
 Logins: `<name>@hdpe-train.mpc`, one shared password (see the testing logins in `CLAUDE.md`). Personas used: **omid** (operator), **leila** (production engineer), **sara** (production accountant), **maryam** and **reza** (managers, approvers; reza certifies), **farid** (reliability engineer), **admin**.
 
@@ -89,13 +89,15 @@ sequenceDiagram
   participant TF as Traverse Forge intake
   participant Hub as Event Hub
   participant Omid as omid (operator)
+  participant Leila as leila (engineer, splits)
   participant Acc as Loss accounting
   participant Sara as sara / leila (submit)
   participant Mgr as maryam / reza (approve, certify)
 
   OT->>TF: PLA rev 1, status DETECTED (240 / 208 / 32)
   TF->>Hub: Production loss event, uncoded, 32 t
-  Omid->>Hub: Edit / code: 20 t MECH-GEARBOX + 12 t FEED-STARVED
+  Omid->>Hub: Edit / code: one reason, MECH-GEARBOX
+  Leila->>Hub: Edit / code: split 20 t MECH-GEARBOX + 12 t FEED-STARVED
   Hub->>Acc: declared ledger: two lines, unaccounted 0
   OT->>TF: PLA rev 2, status CONFIRMED (same figures)
   TF->>Hub: revision 4 on the event, coding kept
@@ -111,7 +113,7 @@ What happened on the real record (event `e78d7f6f…`, period `be984a0f…`):
 |---|---|---|---|---|
 | Message received | 27 Oct 13:08 | OT | Connectivity → connection "Marun OT feeds (UI e2e)" → subscribe job | counters: received / accepted / duplicate / quarantined; the PLA topic subscribed |
 | Event created | 27 Oct 13:08 | system (revision 1, "created") | Event Hub, kind Production loss | "Production loss declared by the plant (PLA feed)", chip "MQTT · From a connected source", Declared figures 240 / 208 / 32, OT status DETECTED, plan PLAN-20261029 rev 1 approved |
-| Coded | 27 Oct 13:09 and 13:10 | omid (revisions 2 and 3) | Event page → Edit / code | reason split 62.5 % MECH-GEARBOX (20 t) + 37.5 % FEED-STARVED (12 t); the "Per reason (on the loss lines)" block shows the two lines |
+| Coded | 27 Oct 13:09 and 13:10 | omid (revisions 2 and 3; since 30 Oct an operator codes one reason and the split is leila's step, decision 2026-10-30) | Event page → Edit / code | reason split 62.5 % MECH-GEARBOX (20 t) + 37.5 % FEED-STARVED (12 t); the "Per reason (on the loss lines)" block shows the two lines |
 | Confirmed by OT | 27 Oct 13:12 | source (revision 4) | Event page → History | status CONFIRMED, coding unchanged |
 | Submitted, approved | 27 Oct 13:11 to 13:13 | leila submit, reza approve | Period page → Approvals | revision 1 |
 | Reopened and recertified | **29 Oct 07:03 to 07:05** | reza revise, sara recompute + submit, maryam approve, reza certify | Period page | revision 2 ("Approved: revision 2"), reason "Three OT stops of 29 Oct arrived after certification" |
@@ -128,7 +130,7 @@ Screens to open, in order:
 
 A PLA message for 30 Oct (`MARUN-HDPE-20261030`, planned 240, actual 215, shortfall 25, DETECTED) was published this morning and created event `a241ec20…`, uncoded. The Event Hub shows the banner "Production loss to code". (`demo-02-omid-pla-30oct-uncoded.png`)
 
-Do this live, as **omid**: open `http://localhost:8070/events/a241ec20-d833-4162-9f9a-f032faf64372` → Edit / code → give the reason (one code, or split by tonnes, for example 15 t SPEED-LOSS + 10 t MECH-GEARBOX) → save with a change reason. The "Per reason" block and the day's draft accounting update at once. Before coding, the statement reads "net accounted 0 t + unaccounted 25 t"; after coding, unaccounted 0.
+Do this live in two steps. As **omid** (operator): open `http://localhost:8070/events/a241ec20-d833-4162-9f9a-f032faf64372` → Edit / code → one reason (SPEED-LOSS) → save with a change reason. Then as **leila** (production engineer): the same event → Edit / code → tick "Split across several reasons" → Tonnes → 15 t SPEED-LOSS + 10 t MECH-GEARBOX → save. Operators are not offered the split (decision 2026-10-30; the server answers 403 `REASON_SPLIT_ROLE`). The "Per reason" block and the day's draft accounting update at once. Before coding, the statement reads "net accounted 0 t + unaccounted 25 t"; after coding, unaccounted 0.
 
 If you want to show the arrival itself, publish a new day instead of reusing 30 Oct (same `event_id` with the same revision is a duplicate and writes nothing):
 
@@ -147,6 +149,18 @@ Within a few seconds the Event Hub lists a new Production loss for 31 Oct. To ta
 - Approval needs separation of duties: the approver is neither the submitter nor the person who reopened the day (reza reopened 29 Oct, so maryam approved and reza certified).
 
 ---
+
+### A.4 Where several reasons are entered (decision 2026-10-30)
+
+Two places offer "Split across several reasons", and only to the splitting roles (production engineer, reliability engineer, manager approver; SuperAdmin / OrgAdmin). The event's **Edit / code** page carries one reason code only.
+
+| Where | Who | What it looks like |
+|---|---|---|
+| Event Hub list → **Code** on an uncoded row (also the Current stops panel) → tick "Split across several reasons" → Percent or Tonnes (a production loss) / Minutes (an ended stop) → one row per reason, "Add reason", the balance line says when the shares add up | leila | `demo-2026-10-29/split-01-leila-code-dialog-tonnes.png` |
+| The same dialog as an operator: one reason code, no split; a stop that already carries a split is shown as stored with "A production engineer, reliability engineer or manager changes its reasons." and Save disabled | omid | `demo-2026-10-29/split-02-omid-code-dialog-single-reason.png` |
+| Event Hub list → select rows → **Bulk code** → "Split across several reasons" (percent only, the stops differ in length) | leila | `demo-2026-10-29/split-03-leila-bulk-code-split.png` |
+
+The server is the authority: an operator's `reasonWeights` with two or more reasons, or a re-code that would drop a stored split, answers 403 `REASON_SPLIT_ROLE` (verified 30 Oct on the 30 Oct event and the split 29 Oct event).
 
 ## B. Downtime: one stop, end to end
 
@@ -314,7 +328,7 @@ flowchart TB
 | What if OT corrects a day after approval? | A higher `event_revision` updates the event and the day becomes stale; a manager reopens, and the day goes through submit / approve / certify again with the history kept. |
 | What if the same message is sent twice? | Same `event_id` and revision: duplicate, nothing written, counter +1. Same revision with other figures (PLA): quarantine `order_conflict`. |
 | What if the unit or the reason code is unknown? | Unit: quarantine `unknown_unit`, admin binds the code to a unit once, replays, and the mapping is remembered. Reason: the stop is created uncoded with a quarantine item that resolves itself when an operator codes it. |
-| Who can do what? | omid codes and closes stops; leila merges and splits; sara recomputes and submits; maryam and reza approve (never their own submission or reopen) and reza certifies; farid runs RCA; admin binds sources and replays. |
+| Who can do what? | omid codes (one reason) and closes stops; leila splits a stop or a day across several reasons, merges and time-splits stops; sara recomputes and submits; maryam and reza approve (never their own submission or reopen) and reza certifies; farid runs RCA; admin binds sources and replays. |
 | Is anything written when a page is opened? | No. Both journeys are covered by read-only Playwright specs (`e2e/pla-declared-mode.spec.ts`, `e2e/downtime-mqtt-journey.spec.ts`, 15 tests, green on 29 Oct 07:12 UTC) that abort every mutating request and assert none was attempted. |
 
 ---

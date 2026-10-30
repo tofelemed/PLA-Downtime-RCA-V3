@@ -28,6 +28,7 @@ const PINS: ReadonlyArray<[mirror: readonly string[], file: string, name: string
   [Mirror.STOP_VERIFIERS, 'v2/production-events/verification-roles.ts', 'STOP_VERIFIERS'],
   [Mirror.FAILURE_VALIDATORS, 'v2/production-events/verification-roles.ts', 'FAILURE_VALIDATORS'],
   [Mirror.EVENT_WRITERS, 'v2/production-events/event-write-roles.ts', 'EVENT_WRITERS'],
+  [Mirror.REASON_SPLITTERS, 'v2/production-events/reason-split-roles.ts', 'REASON_SPLITTERS'],
   [Mirror.BUDGET_WRITERS, 'v2/uncertainty/uncertainty-roles.ts', 'BUDGET_WRITERS'],
   [Mirror.BUDGET_APPROVERS, 'v2/uncertainty/uncertainty-roles.ts', 'BUDGET_APPROVERS'],
   [Mirror.TOLERANCE_ADOPTERS, 'v2/uncertainty/uncertainty-roles.ts', 'TOLERANCE_ADOPTERS'],

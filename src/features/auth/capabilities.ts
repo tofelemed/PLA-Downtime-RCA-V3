@@ -158,6 +158,11 @@ export interface Capabilities {
    * read-only coding)
    */
   canWriteEvents: boolean;
+  /**
+   * owner decision 2026-10-30 (`REASON_SPLITTERS`): split a stop or a production loss across several reasons, or
+   * remove such a split; the operator records one reason
+   */
+  canSplitReasons: boolean;
   /** tasks: any member whose role is not read-only (WriteAccessGuard) */
   canWriteTasks: boolean;
   /**
@@ -227,6 +232,7 @@ function writeCapabilitiesOf(held: readonly string[], readOnly: boolean): WriteC
     canVerifyStops: may(ServerRoles.STOP_VERIFIERS),
     canValidateFailures: may(ServerRoles.FAILURE_VALIDATORS),
     canWriteEvents: may(ServerRoles.EVENT_WRITERS),
+    canSplitReasons: may(ServerRoles.REASON_SPLITTERS),
     canWriteTasks: !readOnly,
     canManagePlantSettings: may(PLANT_SETTINGS_WRITERS),
   };

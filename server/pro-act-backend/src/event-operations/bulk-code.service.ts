@@ -33,6 +33,23 @@ import {
 } from './bulk-code.types';
 import { BulkJob } from './bulk-job.entity';
 import { lockScopedEvents } from './operation-support';
+import { assertMaySplitReasons } from '../v2/production-events/reason-split-roles';
+
+/**
+ * The coding columns of one target, after the role rule on splits (owner decision 2026-10-30): a bulk
+ * code that sets a split, or re-codes a split event to another reason (which removes its split), needs
+ * a reason splitter; checked against each event's stored weights, on preview and on the locked row.
+ */
+function patchFor(
+  context: RequestContext,
+  event: ProductionEvent,
+  codes: BulkCodes,
+  defaults: CodeDefaults,
+): Partial<ProductionEvent> {
+  const patch = codingPatch(event, codes, defaults);
+  assertMaySplitReasons(context, event.reasonWeights, patch.reasonWeights);
+  return patch;
+}
 
 /**
  * DT10 bulk coding: preview (before/after per event, exclusions, affected windows), atomic apply of up
@@ -74,7 +91,12 @@ export class BulkCodeService {
       const before = codingSnapshot(event);
       const after = codingSnapshot({
         ...event,
-        ...codingPatch(event, command.codes, defaults.get(event.id) ?? {}),
+        ...patchFor(
+          context,
+          event,
+          command.codes,
+          defaults.get(event.id) ?? {},
+        ),
       });
       return {
         eventId: event.id,
@@ -199,7 +221,7 @@ export class BulkCodeService {
         tenantId,
         expectedRowVersion: item.expectedVersion,
         patch: (event) =>
-          codingPatch(event, command.codes, defaults.get(event.id) ?? {}),
+          patchFor(context, event, command.codes, defaults.get(event.id) ?? {}),
         reason: `bulk code: ${command.reason}`,
       });
       applied.applied += 1;

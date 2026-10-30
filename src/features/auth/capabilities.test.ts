@@ -137,6 +137,7 @@ describe('capabilitiesOf', () => {
       ['canVerifyStops', Roles.STOP_VERIFIERS],
       ['canValidateFailures', Roles.FAILURE_VALIDATORS],
       ['canWriteEvents', Roles.EVENT_WRITERS],
+      ['canSplitReasons', Roles.REASON_SPLITTERS],
       ['canWriteUncertaintyBudgets', Roles.BUDGET_WRITERS],
       ['canApproveUncertaintyBudgets', Roles.BUDGET_APPROVERS],
       ['canAdoptTolerance', Roles.TOLERANCE_ADOPTERS],
