@@ -107,6 +107,8 @@ export interface ProductionEventV2View {
   sourceKind: SourceKind;
   severity: string | null;
   description: string | null;
+  /** the coder's free-text note beside the reason code(s) (owner decision 2026-10-30) */
+  codingNote: string | null;
   startTime: string;
   endTime: string | null;
   /** still running: no end and not superseded or retracted (a split parent without an end is false) */
@@ -226,6 +228,7 @@ export function toProductionEventV2View(
     sourceKind: event.sourceKind,
     severity: event.severity ?? null,
     description: event.description ?? null,
+    codingNote: event.codingNote ?? null,
     startTime: interval.start.toISOString(),
     endTime: interval.end?.toISOString() ?? null,
     isOpen: isOpenEvent(interval.end, event.physicalState),

@@ -184,6 +184,34 @@ describe('Code dialog: the operator records one reason (owner decision 2026-10-3
   });
 });
 
+describe('Code dialog: a note in the coder’s own words (owner decision 2026-10-30)', () => {
+  it('sends the trimmed note as codingNote beside the reason', async () => {
+    const onDone = vi.fn();
+    const uncoded = { ...STOP, reasonCodeId: null, reasonWeights: null, states: { ...STOP.states, coding: 'uncoded' } } as unknown as ProductionEventView;
+    reply = { status: 200, body: uncoded };
+    wrap(<CodeEventDialog event={uncoded} onClose={() => undefined} onDone={onDone} />);
+    fireEvent.change(screen.getByTestId('code-note'), { target: { value: '  Bearing noise since the night shift  ' } });
+    fireEvent.click(screen.getByTestId('code-investigation-pending'));
+    save();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sent).toEqual([{ investigationPending: true, codingNote: 'Bearing noise since the night shift' }]);
+  });
+
+  it('lets an operator add a note to a split event without touching the split; emptying a stored note sends null', async () => {
+    actAs('operator');
+    const onDone = vi.fn();
+    const noted = { ...STOP, codingNote: 'old note' } as unknown as ProductionEventView;
+    wrap(<CodeEventDialog event={noted} onClose={() => undefined} onDone={onDone} />);
+    expect(screen.getByTestId('split-locked')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save reason' })).toBeDisabled();
+    fireEvent.change(screen.getByTestId('code-note'), { target: { value: '' } });
+    expect(screen.getByRole('button', { name: 'Save reason' })).toBeEnabled();
+    save();
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sent).toEqual([{ codingNote: null }]);
+  });
+});
+
 describe('event detail: weights as stored', () => {
   it('lists each reason with its share, the primary first', () => {
     wrap(<ReasonWeightsText weights={STOP.reasonWeights ?? []} />);

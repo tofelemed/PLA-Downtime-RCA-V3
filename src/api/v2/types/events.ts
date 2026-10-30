@@ -97,6 +97,8 @@ export interface ProductionEventView {
   declaredFigures?: DeclaredFigures | null;
   /** SME D12: explicitly under investigation (no specific reason yet) */
   investigationPending?: boolean;
+  /** the coder's free-text note beside the reason code(s) (owner decision 2026-10-30) */
+  codingNote?: string | null;
   /** SME D13: supervisor verification of the coding, maintenance validation of the failure detail */
   verification?: {
     verifiedBy: string | null;

@@ -3344,7 +3344,7 @@ export interface paths {
         put?: never;
         /**
          * Submit the draft for approval (gates, tolerance adjustments, submitted hash)
-         * @description Requires `Idempotency-Key`. 409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, BASELINE_CHANGED, OPEN_REVIEW_ITEMS; declared mode: DECLARED_LOSS_MISSING, DECLARED_DUPLICATE, DECLARED_IDENTITY_MISMATCH; a block coding gate: CODING_INCOMPLETE with LOSS_EVENT_UNCODED / CODING_COVERAGE_LOW (details.issues lists all).
+         * @description Requires `Idempotency-Key`. 409 RUN_CHANGED / CONTENT_CHANGED for a stale view; 422 NO_COMPUTABLE_SLICE, RESIDUAL_UNEXPLAINED, OVER_ACCOUNTED, OVERPRODUCTION_CONFLICT, ACTUALS_INCOMPLETE, SOURCE_CONFLICT, RECALCULATION_PENDING, MISSING_CODE, BASELINE_CHANGED, OPEN_REVIEW_ITEMS; declared mode: DECLARED_LOSS_MISSING, DECLARED_DUPLICATE, DECLARED_IDENTITY_MISMATCH; a block coding gate: CODING_INCOMPLETE with LOSS_EVENT_UNCODED / CODING_COVERAGE_LOW (details.issues lists all).
          */
         post: operations["ReconciliationV2Controller_submit_v2"];
         delete?: never;
@@ -8244,6 +8244,8 @@ export interface components {
             /** @description SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target) */
             investigationPending?: boolean;
             description?: Record<string, never> | null;
+            /** @description Coding note: what happened in the coder’s own words, beside the reason code(s) (owner decision 2026-10-30); shown on the event and kept in its history. null clears it */
+            codingNote?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
             /** @example t */
@@ -8367,6 +8369,8 @@ export interface components {
             /** @description SME D12: no specific reason yet — the stop is explicitly under investigation (meets the per-stop rule of the shift submission gate, not the coded-time target) */
             investigationPending?: boolean;
             description?: Record<string, never> | null;
+            /** @description Coding note: what happened in the coder’s own words, beside the reason code(s) (owner decision 2026-10-30); shown on the event and kept in its history. null clears it */
+            codingNote?: Record<string, never> | null;
             /** @example 12.5 */
             quantity?: Record<string, never> | null;
             /** @example t */
@@ -8384,7 +8388,7 @@ export interface components {
         };
         ResolveReviewItemDto: {
             /**
-             * @description keep_override: the user value stays; accept_source: the latest source value replaces it; dismiss: only for declared_identity_mismatch, declared_window_mismatch and duplicate_declared_loss items (state dismissed)
+             * @description keep_override: the user value stays; accept_source: the latest source value replaces it; dismiss: only for declared_identity_mismatch, declared_window_mismatch, duplicate_declared_loss and source_reason_changed items (state dismissed); source_reason_changed accepts dismiss only
              * @enum {string}
              */
             decision: "keep_override" | "accept_source" | "dismiss";

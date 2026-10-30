@@ -310,6 +310,10 @@ export class ProductionEvent {
   @Column({ name: 'description', type: 'text', nullable: true })
   description?: string;
 
+  /** Owner decision 2026-10-30: the coder's free-text note beside the reason code(s); never a reason itself */
+  @Column({ name: 'coding_note', type: 'text', nullable: true })
+  codingNote?: string | null;
+
   @Column({ name: 'start_time', type: 'timestamptz' })
   startTime: Date;
 

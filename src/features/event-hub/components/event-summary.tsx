@@ -99,6 +99,12 @@ export function EventSummary({ event }: { event: ProductionEventView }) {
         <span className="text-muted-foreground">Description: </span>
         {event.description ?? '—'}
       </div>
+      {event.codingNote && (
+        <div className="text-sm" data-testid="detail-coding-note">
+          <span className="text-muted-foreground">Coding note: </span>
+          {event.codingNote}
+        </div>
+      )}
     </div>
   );
 }

@@ -316,6 +316,18 @@ export class ProductionEventV2EditableDto {
   @MaxLength(4000)
   description?: string | null;
 
+  @ApiPropertyOptional({
+    maxLength: 1000,
+    nullable: true,
+    description:
+      'Coding note: what happened in the coder’s own words, beside the reason code(s) (owner decision 2026-10-30); shown on the event and kept in its history. null clears it',
+  })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(1000)
+  codingNote?: string | null;
+
   @ApiPropertyOptional({ example: '12.5', nullable: true })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)

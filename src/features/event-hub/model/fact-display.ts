@@ -67,6 +67,7 @@ const LOCAL_FIELD_LABELS: Readonly<Record<string, string>> = {
   solType: 'Safe operating limit type',
   rcaState: 'Investigation state',
   rcaId: 'Investigation',
+  codingNote: 'Coding note',
 };
 
 const ID_RESOLVERS: Readonly<Record<string, Resolver>> = {

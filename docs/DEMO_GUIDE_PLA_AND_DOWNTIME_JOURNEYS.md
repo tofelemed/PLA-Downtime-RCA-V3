@@ -160,6 +160,8 @@ Two places offer "Split across several reasons", and only to the splitting roles
 | The same dialog as an operator: one reason code, no split; a stop that already carries a split is shown as stored with "A production engineer, reliability engineer or manager changes its reasons." and Save disabled | omid | `demo-2026-10-29/split-02-omid-code-dialog-single-reason.png` |
 | Event Hub list → select rows → **Bulk code** → "Split across several reasons" (percent only, the stops differ in length) | leila | `demo-2026-10-29/split-03-leila-bulk-code-split.png` |
 
+Every coder may add a **Note (optional, in your own words)** in the same dialog, beside the code(s): it is shown as "Coding note" on the event page and kept in the history. It never replaces the reason code, which stays the attribution (decision 2026-10-30). (`demo-2026-10-29/split-04-leila-code-dialog-note.png`, `demo-2026-10-29/split-05-omid-event-page-coding-note.png`)
+
 The server is the authority: an operator's `reasonWeights` with two or more reasons, or a re-code that would drop a stored split, answers 403 `REASON_SPLIT_ROLE` (verified 30 Oct on the 30 Oct event and the split 29 Oct event).
 
 ## B. Downtime: one stop, end to end

@@ -405,6 +405,7 @@ function editableColumns(
     originAssetId: dto.originAssetId,
     reasonCodeId: dto.reasonCodeId,
     description: dto.description,
+    codingNote: dto.codingNote,
     quantity: dto.quantity,
     quantityUom: dto.quantityUom,
     cost: dto.cost,

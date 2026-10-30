@@ -98,6 +98,7 @@ export const CODING_FIELDS = [
   'impactMode',
   'impactFraction',
   'description',
+  'codingNote',
 ] as const;
 
 /** Derived classification and workflow state carried in every effective snapshot. */

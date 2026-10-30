@@ -8,6 +8,8 @@ export interface CodeChanges {
   investigationPending?: boolean;
   /** entered weights (the server normalises them and sets the reason), or null to remove a stored split */
   reasonWeights?: ReasonWeightInput[] | null;
+  /** free-text note beside the code(s); null clears it */
+  codingNote?: string | null;
 }
 
 export interface CloseStopInput {

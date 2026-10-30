@@ -27385,6 +27385,12 @@
             "maxLength": 4000,
             "nullable": true
           },
+          "codingNote": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true,
+            "description": "Coding note: what happened in the coder’s own words, beside the reason code(s) (owner decision 2026-10-30); shown on the event and kept in its history. null clears it"
+          },
           "quantity": {
             "type": "object",
             "example": "12.5",
@@ -27623,6 +27629,12 @@
             "type": "object",
             "maxLength": 4000,
             "nullable": true
+          },
+          "codingNote": {
+            "type": "object",
+            "maxLength": 1000,
+            "nullable": true,
+            "description": "Coding note: what happened in the coder’s own words, beside the reason code(s) (owner decision 2026-10-30); shown on the event and kept in its history. null clears it"
           },
           "quantity": {
             "type": "object",
